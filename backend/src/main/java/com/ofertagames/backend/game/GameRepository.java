@@ -16,8 +16,8 @@ public interface GameRepository extends JpaRepository<Game, Long> {
 
     @Query(value = """
         SELECT
-            g.slug,
-            g.title,
+            g.slug AS slug,
+            g.title AS title,
             g.cover_url AS coverUrl,
             MIN(o.price) AS minPrice
         FROM
@@ -28,6 +28,7 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             g.id, g.slug, g.title, g.cover_url
         ORDER BY
             g.title
+        LIMIT :#{#pageable.pageSize} OFFSET :#{#pageable.offset}
     """, nativeQuery = true)
     List<GameSummaryProjection> findAllWithMinPrice(Pageable pageable);
 }
