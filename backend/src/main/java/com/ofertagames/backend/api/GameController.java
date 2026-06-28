@@ -1,7 +1,7 @@
 package com.ofertagames.backend.api;
 
 import com.ofertagames.backend.game.GameRepository;
-import com.ofertagames.backend.game.GameSummary;
+import com.ofertagames.backend.game.GameSummaryProjection;
 import com.ofertagames.backend.offer.Offer;
 import com.ofertagames.backend.offer.OfferRepository;
 import org.springframework.data.domain.PageRequest;
@@ -24,7 +24,7 @@ public class GameController {
     }
 
     @GetMapping
-    public List<GameSummary> listGames(
+    public List<GameSummaryProjection> listGames(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {

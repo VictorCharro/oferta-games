@@ -14,14 +14,12 @@ public interface GameRepository extends JpaRepository<Game, Long> {
 
     Optional<Game> findBySlug(String slug);
 
-    @Query("""
-        SELECT new com.ofertagames.backend.game.GameSummary(
-            g.slug, g.title, g.coverUrl, MIN(o.price)
-        )
-        FROM Game g
-        JOIN Offer o ON o.game = g
-        GROUP BY g.slug, g.title, g.coverUrl
+    @Query(value = """
+        SELECT g.slug, g.title, g.cover_url AS coverUrl, MIN(o.price) AS minPrice
+        FROM games g
+        JOIN offers o ON o.game_id = g.id
+        GROUP BY g.id, g.slug, g.title, g.cover_url
         ORDER BY g.title
-    """)
-    List<GameSummary> findAllWithMinPrice(Pageable pageable);
+    """, nativeQuery = true)
+    List<GameSummaryProjection> findAllWithMinPrice(Pageable pageable);
 }
