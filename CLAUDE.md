@@ -8,28 +8,42 @@ Site de catálogo de promoções de jogos. A ideia central: o usuário entra, v�
 
 Não é uma loja própria — é um agregador/comparador de preços.
 
-## Decisões de arquitetura (e por quê)
+## Stack
 
-- **Backend:** Node.js + TypeScript, deploy como serverless functions no Vercel. Migrado do Java/Spring Boot em 2026-06-28 — o Render (onde o Java estava hospedado) bloqueava conexões com o Supabase no free tier, inviabilizando o deploy gratuito.
-- **Frontend:** Angular (última versão estável). Decisão do usuário, sem alternativa considerada.
-- **Banco:** PostgreSQL, hospedado no Supabase. Conexão via **transaction pooler** (porta 6543) — obrigatório no free tier, pois a conexão direta (porta 5432) é bloqueada em ambientes cloud gratuitos.
-- **Deploy:**
-  - Backend → Vercel (serverless functions, pasta `backend/`, root directory `backend`).
-  - Frontend → Vercel (pasta `frontend/`, root directory `frontend`).
-  - Dois projetos separados no Vercel apontando para o mesmo repositório.
-- **Sincronização de preços:** GitHub Actions chama `POST /api/sync` a cada 6h. O endpoint é protegido por chave secreta via header `X-Sync-Key` (variável `SYNC_SECRET_KEY`).
+- **Backend:** Node.js + TypeScript, serverless functions no Vercel.
+- **Frontend:** Angular (última versão estável), hospedado no Vercel.
+- **Banco:** PostgreSQL no Supabase. Conexão via transaction pooler (porta 6543).
+
+## Deploy
+
+Dois projetos separados no Vercel, mesmo repositório:
+
+| Projeto | Root Directory |
+|---|---|
+| Backend | `backend` |
+| Frontend | `frontend` |
+
+Sincronização de preços: GitHub Actions chama `POST /api/sync` a cada 6h, protegido por `X-Sync-Key`.
+
+## Variáveis de ambiente (backend)
+
+| Variável | Descrição |
+|---|---|
+| `DATABASE_URL` | URL do pooler do Supabase — formato `postgresql://...` |
+| `ITAD_API_KEY` | Chave da API do IsThereAnyDeal |
+| `SYNC_SECRET_KEY` | Chave secreta para o endpoint `/api/sync` |
 
 ## Fontes de dados de preços
 
 | Fonte | Status | Como integra |
 |---|---|---|
-| **IsThereAnyDeal (ITAD)** | Fonte principal, em uso | API oficial. Cobre Steam, Nuuvem, GOG, Epic, etc. Preços pedidos em BRL. |
-| **Eneba** | Planejada, ainda não implementada | Feed de afiliados XML/CSV após aprovação no cadastro. |
-| **Instant Gaming** | Sem integração automática possível | Cadastro manual (`source = 'manual'` na tabela `offers`). |
+| **IsThereAnyDeal (ITAD)** | Fonte principal, em uso | API oficial. Cobre Steam, Nuuvem, GOG, Epic, etc. Preços em BRL. |
+| **Eneba** | Planejada | Feed de afiliados XML/CSV após aprovação no cadastro. |
+| **Instant Gaming** | Sem integração automática | Cadastro manual (`source = 'manual'` na tabela `offers`). |
 
 Todas as fontes gravam na mesma tabela `offers`, diferenciadas pela coluna `source`.
 
-## Schema do banco (atual)
+## Schema do banco
 
 ```sql
 games
@@ -53,10 +67,9 @@ offers
   UNIQUE (game_id, source, store_name)
 ```
 
-Decisões sobre o schema:
-- Não existe coluna "menor preço" em `games`. O menor preço é sempre calculado via query (`MIN(price)` agrupado por `game_id`).
-- Campo `currency` existe desde já, mas por enquanto o sistema só trata **BRL**.
-- Sem suporte a usuário logado/favoritos/alertas nesta fase. Catálogo é público.
+- Menor preço calculado via query (`MIN(price)`), não armazenado.
+- Somente BRL por enquanto. Multi-moeda é possibilidade futura.
+- Sem autenticação/usuários nesta fase.
 
 ## Endpoints da API
 
@@ -66,9 +79,8 @@ Decisões sobre o schema:
 
 ## Estrutura de pastas
 
-Monorepo:
 ```
-/backend               → Node.js/TypeScript (Vercel serverless)
+/backend
   api/
     games/
       index.ts         → GET /api/games
@@ -76,7 +88,7 @@ Monorepo:
     sync/
       index.ts         → POST /api/sync
   lib/
-    db.ts              → conexão Supabase (postgres, SSL, prepare:false para PgBouncer)
+    db.ts              → conexão Supabase
   package.json
   tsconfig.json
   vercel.json
@@ -84,32 +96,22 @@ Monorepo:
 /frontend              → Angular
 ```
 
-## Variáveis de ambiente (backend no Vercel)
+## O que NÃO fazer
 
-| Variável | Descrição |
-|---|---|
-| `DATABASE_URL` | URL do pooler do Supabase — formato `postgresql://...` (sem `jdbc:`) |
-| `ITAD_API_KEY` | Chave da API do IsThereAnyDeal |
-| `SYNC_SECRET_KEY` | Chave secreta para o endpoint `/api/sync` |
-
-## O que NÃO fazer (escopo intencionalmente fora por agora)
-
-- Sem scraping de sites (Steam, Eneba, Instant Gaming) — frágil, viola termos de uso.
+- Sem scraping de sites — frágil e viola termos de uso.
 - Sem autenticação/cadastro de usuário nesta fase.
-- Sem multi-moeda funcional (campo existe, lógica não).
+- Sem multi-moeda funcional.
 - Sem Docker.
-- Sem `@Scheduled` ou cron interno — sincronização sempre via GitHub Actions externo.
+- Sem cron interno — sincronização sempre via GitHub Actions externo.
 
-## Estado atual do projeto
+## Estado atual
 
-- [x] Arquitetura decidida (stack, hospedagem, schema, fontes de dados)
-- [x] Estrutura do backend gerada (Node.js/TypeScript, Vercel serverless)
-- [x] Integração com a API do ITAD implementada (client + sync)
-- [x] Lógica do `/api/sync` implementada (upsert em games/offers)
+- [x] Arquitetura definida
+- [x] Backend Node.js/TypeScript estruturado (endpoints + integração ITAD)
 - [ ] Deploy configurado no Vercel (backend + frontend)
 - [ ] GitHub Actions configurado (sync a cada 6h)
-- [ ] Telas do Angular (catálogo e detalhe) implementadas
-- [ ] Integração com Eneba (feed de afiliado)
+- [ ] Telas do Angular implementadas (catálogo e detalhe)
+- [ ] Integração com Eneba
 - [ ] Cadastro manual de ofertas (Instant Gaming)
 
-> Atualize esta seção (e o restante do arquivo) conforme cada item avançar ou novas decisões forem tomadas.
+> Atualize esta seção conforme cada item avançar ou novas decisões forem tomadas.
