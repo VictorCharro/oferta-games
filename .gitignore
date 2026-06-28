@@ -46,4 +46,4 @@ application-local.properties
 ### Node / Angular ###
 frontend/node_modules/
 frontend/dist/
-frontend/.angular/
+frontend/.angular/.idea/
