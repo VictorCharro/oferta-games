@@ -10,26 +10,24 @@ Não é uma loja própria — é um agregador/comparador de preços.
 
 ## Decisões de arquitetura (e por quê)
 
-- **Backend:** Java 21 + Spring Boot 4.1.0 (Maven). Decisão do usuário, sem alternativa considerada.
+- **Backend:** Node.js + TypeScript, deploy como serverless functions no Vercel. Migrado do Java/Spring Boot em 2026-06-28 — o Render (onde o Java estava hospedado) bloqueava conexões com o Supabase no free tier, inviabilizando o deploy gratuito.
 - **Frontend:** Angular (última versão estável). Decisão do usuário, sem alternativa considerada.
-- **Banco:** PostgreSQL, hospedado no Supabase.
+- **Banco:** PostgreSQL, hospedado no Supabase. Conexão via **transaction pooler** (porta 6543) — obrigatório no free tier, pois a conexão direta (porta 5432) é bloqueada em ambientes cloud gratuitos.
 - **Deploy:**
-  - Backend → Render (free tier).
-  - Frontend → Vercel.
-  - **Importante:** Spring Boot não roda na Vercel (Vercel é serverless/frontend). Por isso o backend foi separado pro Render.
-- **Sincronização de preços:** NÃO usa `@Scheduled` dentro do Spring. Em vez disso, GitHub Actions chama um endpoint `POST /api/sync` a cada 6h. Motivo: o Render free tier "dorme" sem tráfego, e depender de `@Scheduled` interno é frágil nesse cenário — a chamada externa do Actions já acorda o serviço se necessário.
-  - Workflow extra do GitHub Actions: ping de health-check a cada ~10 min, só pra manter o Render acordado.
-  - O endpoint `/api/sync` é protegido por uma chave secreta via header (variável `SYNC_SECRET_KEY`), configurada como GitHub Secret.
+  - Backend → Vercel (serverless functions, pasta `backend/`, root directory `backend`).
+  - Frontend → Vercel (pasta `frontend/`, root directory `frontend`).
+  - Dois projetos separados no Vercel apontando para o mesmo repositório.
+- **Sincronização de preços:** GitHub Actions chama `POST /api/sync` a cada 6h. O endpoint é protegido por chave secreta via header `X-Sync-Key` (variável `SYNC_SECRET_KEY`).
 
 ## Fontes de dados de preços
 
 | Fonte | Status | Como integra |
 |---|---|---|
-| **IsThereAnyDeal (ITAD)** | Fonte principal, em uso | API oficial. Cobre Steam, Nuuvem, GOG, Epic, etc. Preços podem ser pedidos em BRL. |
-| **Eneba** | Planejada, ainda não implementada | Tem programa de afiliados com feed de preços em XML/CSV (após aprovação no cadastro). Não é a API GraphQL deles (essa é só pra sellers). |
-| **Instant Gaming** | Sem integração automática possível | Não existe feed de preços/API pública. Só programa de afiliados informal (link `?igr=codigo`, comissão por clique/venda). Se for incluído no catálogo, será via **cadastro manual** (`source = 'manual'` na tabela `offers`). |
+| **IsThereAnyDeal (ITAD)** | Fonte principal, em uso | API oficial. Cobre Steam, Nuuvem, GOG, Epic, etc. Preços pedidos em BRL. |
+| **Eneba** | Planejada, ainda não implementada | Feed de afiliados XML/CSV após aprovação no cadastro. |
+| **Instant Gaming** | Sem integração automática possível | Cadastro manual (`source = 'manual'` na tabela `offers`). |
 
-Todas as fontes (atuais e futuras) gravam na mesma tabela `offers`, diferenciadas pela coluna `source`. Isso permite adicionar uma fonte nova sem alterar o schema — só escrever um novo "adapter" que busca os dados e grava no formato comum.
+Todas as fontes gravam na mesma tabela `offers`, diferenciadas pela coluna `source`.
 
 ## Schema do banco (atual)
 
@@ -57,48 +55,60 @@ offers
 
 Decisões sobre o schema:
 - Não existe coluna "menor preço" em `games`. O menor preço é sempre calculado via query (`MIN(price)` agrupado por `game_id`).
-- Campo `currency` existe desde já, mas por enquanto o sistema só trata **BRL**. Multi-moeda é possibilidade futura, não implementada.
+- Campo `currency` existe desde já, mas por enquanto o sistema só trata **BRL**.
 - Sem suporte a usuário logado/favoritos/alertas nesta fase. Catálogo é público.
 
-## Endpoints da API (planejados/atuais)
+## Endpoints da API
 
-- `GET /api/games` — lista paginada de jogos, cada um já com o menor preço.
+- `GET /api/games?page=0&size=20` — lista paginada de jogos com menor preço.
 - `GET /api/games/{slug}` — detalhe do jogo + todas as ofertas ordenadas por preço.
-- `POST /api/sync` — protegido por chave secreta, dispara a busca de preços (hoje: ITAD; no futuro: também Eneba).
+- `POST /api/sync` — protegido por `X-Sync-Key`, dispara busca de preços (ITAD).
 
 ## Estrutura de pastas
 
 Monorepo:
 ```
-/backend   → Spring Boot
-/frontend  → Angular
+/backend               → Node.js/TypeScript (Vercel serverless)
+  api/
+    games/
+      index.ts         → GET /api/games
+      [slug].ts        → GET /api/games/:slug
+    sync/
+      index.ts         → POST /api/sync
+  lib/
+    db.ts              → conexão Supabase (postgres, SSL, prepare:false para PgBouncer)
+  package.json
+  tsconfig.json
+  vercel.json
+
+/frontend              → Angular
 ```
 
-Pacotes do backend (`com.ofertagames.backend`):
-```
-game/          → entidade Game, repositório
-offer/         → entidade Offer, repositório
-source/itad/   → cliente da API do ITAD
-api/           → controllers REST
-config/        → configuração geral
-```
+## Variáveis de ambiente (backend no Vercel)
+
+| Variável | Descrição |
+|---|---|
+| `DATABASE_URL` | URL do pooler do Supabase — formato `postgresql://...` (sem `jdbc:`) |
+| `ITAD_API_KEY` | Chave da API do IsThereAnyDeal |
+| `SYNC_SECRET_KEY` | Chave secreta para o endpoint `/api/sync` |
 
 ## O que NÃO fazer (escopo intencionalmente fora por agora)
 
-- Sem scraping de sites (Steam, Eneba, Instant Gaming) — frágil, viola termos de uso, evitar.
+- Sem scraping de sites (Steam, Eneba, Instant Gaming) — frágil, viola termos de uso.
 - Sem autenticação/cadastro de usuário nesta fase.
 - Sem multi-moeda funcional (campo existe, lógica não).
-- Sem Docker (decisão explícita do usuário: deploy direto Render/Vercel).
-- Sem `@Scheduled` interno pra sincronização — sempre via GitHub Actions externo.
+- Sem Docker.
+- Sem `@Scheduled` ou cron interno — sincronização sempre via GitHub Actions externo.
 
 ## Estado atual do projeto
 
 - [x] Arquitetura decidida (stack, hospedagem, schema, fontes de dados)
-- [ ] Estrutura inicial do backend e frontend gerada
-- [ ] Integração real com a API do ITAD implementada
-- [ ] Lógica do `/api/sync` implementada (upsert em games/offers)
+- [x] Estrutura do backend gerada (Node.js/TypeScript, Vercel serverless)
+- [x] Integração com a API do ITAD implementada (client + sync)
+- [x] Lógica do `/api/sync` implementada (upsert em games/offers)
+- [ ] Deploy configurado no Vercel (backend + frontend)
+- [ ] GitHub Actions configurado (sync a cada 6h)
 - [ ] Telas do Angular (catálogo e detalhe) implementadas
-- [ ] Deploy configurado (Render, Vercel, GitHub Actions)
 - [ ] Integração com Eneba (feed de afiliado)
 - [ ] Cadastro manual de ofertas (Instant Gaming)
 
