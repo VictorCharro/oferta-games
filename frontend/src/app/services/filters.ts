@@ -1,4 +1,5 @@
-const DLC_PATTERNS = [
+const NON_GAME_PATTERNS = [
+  // DLCs e conteúdo adicional
   /\bDLC\b/i,
   /\bSeason Pass\b/i,
   /\bSoundtrack\b/i,
@@ -9,8 +10,14 @@ const DLC_PATTERNS = [
   /\bCosmetic\b/i,
   /\bBooster Pack\b/i,
   / - .*(Pack|Bundle|Boost|Content|Expansion|Add-?on|Extra|Bonus|Upgrade|Digital Content)/i,
+  // Guias e livros
+  /\bDetonado\b/i,
+  /\bGuide Book\b/i,
+  /\bPrima Guide\b/i,
+  /\bStrategy Guide\b/i,
+  /\bMaking of\b/i,
 ];
 
 export function isDlc(title: string): boolean {
-  return DLC_PATTERNS.some(p => p.test(title));
+  return NON_GAME_PATTERNS.some(p => p.test(title));
 }
