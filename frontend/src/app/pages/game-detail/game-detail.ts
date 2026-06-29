@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { GameService, GameDetail as GameDetailModel, Offer } from '../../services/game';
 
@@ -14,13 +14,13 @@ export class GameDetail implements OnInit {
   refreshing = false;
   refreshMsg = '';
 
-  constructor(private route: ActivatedRoute, private gameService: GameService) {}
+  constructor(private route: ActivatedRoute, private gameService: GameService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     const slug = this.route.snapshot.paramMap.get('slug')!;
     this.gameService.getGame(slug).subscribe({
-      next: (data) => { this.game = data; this.loading = false; },
-      error: () => { this.loading = false; }
+      next: (data) => { this.game = data; this.loading = false; this.cdr.detectChanges(); },
+      error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
   }
 
@@ -28,13 +28,23 @@ export class GameDetail implements OnInit {
     if (!this.game || this.refreshing) return;
     this.refreshing = true;
     this.refreshMsg = '';
-    this.gameService.refreshGame(this.game.slug).subscribe({
+    this.cdr.detectChanges();
+    const slug = this.game.slug;
+    this.gameService.refreshGame(slug).subscribe({
       next: (res) => {
-        this.refreshMsg = `${res.updated} ofertas atualizadas`;
+        this.refreshMsg = `${res.updated} oferta(s) atualizada(s)`;
         this.refreshing = false;
-        this.gameService.getGame(this.game!.slug).subscribe(d => this.game = d);
+        this.cdr.detectChanges();
+        this.gameService.getGame(slug).subscribe({
+          next: (d) => { this.game = d; this.cdr.detectChanges(); },
+          error: () => {}
+        });
       },
-      error: () => { this.refreshMsg = 'Erro ao atualizar'; this.refreshing = false; }
+      error: () => {
+        this.refreshMsg = 'Erro ao atualizar. Tente novamente.';
+        this.refreshing = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
