@@ -25,6 +25,8 @@ export class Promotions implements OnInit {
     });
   }
 
+  isDlc(title: string): boolean { return isDlc(title); }
+
   formatPrice(price: number | string | null): string {
     const n = Number(price);
     if (price == null || isNaN(n)) return '—';

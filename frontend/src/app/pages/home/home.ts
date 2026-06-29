@@ -44,6 +44,8 @@ export class Home implements OnInit {
     this.featuredIndex = (this.featuredIndex + 1) % this.topDeals.length;
   }
 
+  isDlc(title: string): boolean { return isDlc(title); }
+
   formatPrice(price: number | string | null): string {
     const n = Number(price);
     if (price == null || isNaN(n)) return '—';
