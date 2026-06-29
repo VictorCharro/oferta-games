@@ -9,24 +9,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sortByRank = req.query.sort === 'rank';
 
   const deals = await sql`
-    SELECT
-      g.slug,
-      g.title,
-      g.cover_url AS "coverUrl",
-      g.rank,
-      o.store_name AS "storeName",
-      o.price,
-      o.regular_price AS "regularPrice",
-      o.url,
-      ROUND((1 - o.price / o.regular_price) * 100) AS "discountPct"
-    FROM offers o
-    JOIN games g ON g.id = o.game_id
-    WHERE o.regular_price IS NOT NULL
-      AND o.regular_price > 0
-      AND o.price < o.regular_price
-      AND o.price < o.regular_price * 0.99
+    SELECT * FROM (
+      SELECT DISTINCT ON (g.id)
+        g.slug,
+        g.title,
+        g.cover_url AS "coverUrl",
+        g.rank,
+        o.store_name AS "storeName",
+        o.price,
+        o.regular_price AS "regularPrice",
+        o.url,
+        ROUND((1 - o.price / o.regular_price) * 100) AS "discountPct"
+      FROM offers o
+      JOIN games g ON g.id = o.game_id
+      WHERE o.regular_price IS NOT NULL
+        AND o.regular_price > 0
+        AND o.price < o.regular_price
+        AND o.price < o.regular_price * 0.99
+      ORDER BY g.id, o.price ASC
+    ) sub
     ORDER BY
-      ${sortByRank ? sql`g.rank ASC NULLS LAST, "discountPct" DESC` : sql`"discountPct" DESC, g.rank ASC NULLS LAST`}
+      ${sortByRank ? sql`rank ASC NULLS LAST, "discountPct" DESC` : sql`"discountPct" DESC, rank ASC NULLS LAST`}
     LIMIT ${size}
   `;
 
