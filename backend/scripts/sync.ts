@@ -4,6 +4,7 @@ const sql = postgres(process.env.DATABASE_URL!, { ssl: 'require', prepare: false
 
 const ITAD_BASE = 'https://api.isthereanydeal.com';
 const PAGE_SIZE = 100;
+const MAX_DEALS = 15000;
 const API_KEY = process.env.ITAD_API_KEY!;
 
 interface Deal {
@@ -29,7 +30,7 @@ function toSlug(title: string) {
 }
 
 async function syncPage(offset: number): Promise<{ count: number; hasMore: boolean }> {
-  const res = await fetch(`${ITAD_BASE}/deals/v2?country=BR&shops=50,6,36,37,24,42,19,61,16,4,52,48,62&limit=${PAGE_SIZE}&offset=${offset}`, {
+  const res = await fetch(`${ITAD_BASE}/deals/v2?country=BR&shops=50,6,36,37,24,42,19,61,16,4,52,48,62&sort=rank&limit=${PAGE_SIZE}&offset=${offset}`, {
     headers: { 'ITAD-API-Key': API_KEY },
   });
 
@@ -80,7 +81,7 @@ async function main() {
     const { count, hasMore } = await syncPage(offset);
     total += count;
     console.log(`Synced ${total} deals (offset ${offset})`);
-    if (!hasMore || count === 0) break;
+    if (!hasMore || count === 0 || total >= MAX_DEALS) break;
     offset += PAGE_SIZE;
   }
 
