@@ -17,9 +17,10 @@ export class GameCard {
     return this.discountPct ?? 0;
   }
 
-  formatPrice(price: number | null): string {
-    if (!price) return '—';
-    return price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  formatPrice(price: number | string | null): string {
+    const n = Number(price);
+    if (price == null || isNaN(n)) return '—';
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
   toggleFavorite(event: Event) {

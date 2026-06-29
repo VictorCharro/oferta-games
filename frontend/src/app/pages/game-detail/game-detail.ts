@@ -48,7 +48,9 @@ export class GameDetail implements OnInit {
     return Math.round((1 - offer.price / offer.regularPrice) * 100);
   }
 
-  formatPrice(price: number): string {
-    return price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  formatPrice(price: number | string | null): string {
+    const n = Number(price);
+    if (price == null || isNaN(n)) return '—';
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 }

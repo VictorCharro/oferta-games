@@ -20,7 +20,9 @@ export class Promotions implements OnInit {
     });
   }
 
-  formatPrice(price: number): string {
-    return price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  formatPrice(price: number | string | null): string {
+    const n = Number(price);
+    if (price == null || isNaN(n)) return '—';
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 }

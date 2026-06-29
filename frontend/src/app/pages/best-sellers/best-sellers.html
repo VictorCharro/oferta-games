@@ -10,7 +10,7 @@
       <img [src]="game.coverUrl || 'assets/no-cover.png'" [alt]="game.title" class="rank-cover" />
       <span class="rank-title">{{ game.title }}</span>
       <span class="rank-price price-current" *ngIf="game.minPrice != null">
-        {{ game.minPrice | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+        {{ (+game.minPrice).toLocaleString('pt-BR', {style:'currency',currency:'BRL'}) }}
       </span>
       <span class="rank-price text-muted" *ngIf="game.minPrice == null">—</span>
     </a>
