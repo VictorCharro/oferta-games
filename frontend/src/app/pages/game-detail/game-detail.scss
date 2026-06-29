@@ -1,0 +1,138 @@
+.game-hero {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  margin-bottom: 32px;
+
+  .hero-overlay {
+    background: linear-gradient(90deg, rgba(8,13,24,0.97) 40%, rgba(8,13,24,0.4) 100%);
+    padding: 48px;
+  }
+}
+
+.hero-content {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.hero-cover {
+  width: 180px;
+  height: 240px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+}
+
+.hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  h1 { font-size: 32px; font-weight: 800; }
+}
+
+.hero-best {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  .label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .large { font-size: 28px; }
+}
+
+.refresh-btn { width: fit-content; }
+
+.refresh-msg {
+  font-size: 13px;
+  color: var(--color-green);
+}
+
+.offers-section {
+  h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+}
+
+.offers-table {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.offer-header {
+  display: grid;
+  grid-template-columns: 1fr 80px 140px 140px 100px;
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.offer-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 140px 140px 100px;
+  padding: 16px 20px;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.15s;
+  cursor: pointer;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: var(--bg-card-hover); }
+}
+
+.offer-store { font-size: 14px; font-weight: 600; }
+
+.offer-discount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-green);
+  &.none { color: var(--text-muted); }
+}
+
+.offer-cta {
+  font-size: 13px;
+  color: var(--color-purple);
+  font-weight: 600;
+}
+
+.no-offers {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.skeleton-hero {
+  height: 340px;
+  border-radius: var(--border-radius);
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  margin-bottom: 32px;
+}
+
+.skeleton-table {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.skeleton-row {
+  height: 56px;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  &:last-child { border-bottom: none; }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.error-state { text-align: center; padding: 80px 0; color: var(--text-muted); }
