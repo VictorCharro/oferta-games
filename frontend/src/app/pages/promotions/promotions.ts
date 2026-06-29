@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { GameService, TopDeal } from '../../services/game';
+import { isDlc } from '../../services/filters';
 
 @Component({
   selector: 'app-promotions',
@@ -16,7 +17,7 @@ export class Promotions implements OnInit {
   ngOnInit() {
     this.gameService.getTopDeals(50).subscribe({
       next: (data) => {
-        this.deals = data.filter(d => Number(d.discountPct) < 100);
+        this.deals = data.filter(d => Number(d.discountPct) < 100 && !isDlc(d.title));
         this.loading = false;
         this.cdr.detectChanges();
       },

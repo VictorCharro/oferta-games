@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { GameService, TopDeal, GameSummary } from '../../services/game';
+import { isDlc } from '../../services/filters';
 
 @Component({
   selector: 'app-home',
@@ -18,7 +19,7 @@ export class Home implements OnInit {
   ngOnInit() {
     this.gameService.getTopDeals(20).subscribe({
       next: (deals) => {
-        const paid = deals.filter(d => Number(d.discountPct) < 100);
+        const paid = deals.filter(d => Number(d.discountPct) < 100 && !isDlc(d.title));
         this.topDeals = paid.slice(0, 5);
         this.recentDeals = paid.slice(5, 10);
         this.loading = false;

@@ -18,7 +18,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     FROM games g
     LEFT JOIN offers o ON o.game_id = g.id
     GROUP BY g.id, g.slug, g.title, g.cover_url
-    ORDER BY g.title
+    ORDER BY
+      (MIN(o.price) IS NOT NULL) DESC,
+      g.id ASC
     LIMIT ${size} OFFSET ${offset}
   `;
 
