@@ -1,0 +1,33 @@
+.page-header {
+  margin-bottom: 32px;
+  h1 { font-size: 28px; font-weight: 700; }
+  p { color: var(--text-secondary); margin-top: 4px; }
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.skeleton-card {
+  border-radius: var(--border-radius);
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  aspect-ratio: 3/4;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.load-more, .loading-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+}

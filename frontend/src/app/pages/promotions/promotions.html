@@ -1,0 +1,27 @@
+<div class="page-content">
+  <div class="page-header">
+    <h1>Promoções</h1>
+    <p>Maiores descontos do momento entre todas as lojas</p>
+  </div>
+
+  <div class="deals-grid" *ngIf="!loading">
+    <a *ngFor="let deal of deals" class="deal-card" [routerLink]="['/jogo', deal.slug]">
+      <div class="deal-cover">
+        <img [src]="deal.coverUrl || 'assets/no-cover.png'" [alt]="deal.title" loading="lazy" />
+        <span class="badge-discount">-{{ deal.discountPct }}%</span>
+      </div>
+      <div class="deal-info">
+        <p class="deal-title">{{ deal.title }}</p>
+        <div class="deal-prices">
+          <span class="price-current">{{ formatPrice(deal.price) }}</span>
+          <span class="price-original">{{ formatPrice(deal.regularPrice) }}</span>
+        </div>
+        <span class="deal-store">{{ deal.storeName }}</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="deals-grid" *ngIf="loading">
+    <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10,11,12]"></div>
+  </div>
+</div>
