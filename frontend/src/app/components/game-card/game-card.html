@@ -11,7 +11,7 @@
     <h3 class="card-title">{{ game.title }}</h3>
     <div class="card-price">
       <span class="price-current">{{ formatPrice(game.minPrice) }}</span>
-      <span *ngIf="discount > 0" class="price-original">{{ formatPrice(game.regularPrice) }}</span>
+      <span *ngIf="discount > 0" class="price-original">{{ formatPrice(game.regularPrice ?? null) }}</span>
     </div>
     <div *ngIf="storeName" class="card-store">{{ storeName }}</div>
   </div>

@@ -30,6 +30,7 @@ export interface TopDeal {
   slug: string;
   title: string;
   coverUrl: string | null;
+  rank: number | null;
   storeName: string;
   price: number;
   regularPrice: number;
