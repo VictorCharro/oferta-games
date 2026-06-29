@@ -1,0 +1,206 @@
+.banner {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  margin-bottom: 40px;
+  min-height: 320px;
+
+  .banner-overlay {
+    background: linear-gradient(90deg, rgba(8,13,24,0.95) 30%, rgba(8,13,24,0.2) 100%);
+    padding: 48px;
+    display: flex;
+    align-items: center;
+    min-height: 320px;
+    position: relative;
+  }
+
+  .banner-content {
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+
+    h1 { font-size: 36px; font-weight: 800; line-height: 1.1; }
+  }
+
+  .banner-tag {
+    background: var(--color-purple);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    width: fit-content;
+    letter-spacing: 1px;
+  }
+
+  .banner-price {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 22px;
+  }
+
+  .banner-store {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .banner-nav {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    &:hover { background: rgba(255,255,255,0.2); }
+    &.prev { left: 16px; }
+    &.next { right: 16px; }
+  }
+
+  .banner-dots {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      cursor: pointer;
+      transition: background 0.2s;
+      &.active { background: var(--color-purple); }
+    }
+  }
+}
+
+.section { margin-bottom: 40px; }
+
+.deals-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.deal-card {
+  flex: 0 0 200px;
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  transition: transform 0.2s, border-color 0.2s;
+  cursor: pointer;
+
+  &:hover { transform: translateY(-4px); border-color: var(--color-purple); }
+
+  &.skeleton {
+    min-height: 220px;
+    background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.deal-cover {
+  position: relative;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  background: var(--bg-input);
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+  .badge-discount { position: absolute; top: 8px; left: 8px; }
+}
+
+.deal-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deal-title {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deal-prices { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.deal-store { font-size: 11px; color: var(--text-muted); }
+
+.price-table {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 1fr 100px 120px 120px;
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 120px 120px;
+  padding: 14px 20px;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.15s;
+  cursor: pointer;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: var(--bg-card-hover); }
+}
+
+.table-game {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 500;
+
+  img {
+    width: 44px;
+    height: 28px;
+    object-fit: cover;
+    border-radius: 4px;
+    background: var(--bg-input);
+  }
+}
+
+.table-discount {
+  color: var(--color-red);
+  font-weight: 700;
+  font-size: 14px;
+}
