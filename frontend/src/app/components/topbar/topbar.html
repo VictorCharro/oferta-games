@@ -1,0 +1,33 @@
+<header class="topbar">
+  <div class="search-wrapper">
+    <span class="search-icon">🔍</span>
+    <input
+      type="text"
+      placeholder="Pesquisar jogos, lojas, categorias..."
+      [(ngModel)]="searchQuery"
+      (keydown)="onSearch($event)"
+      class="search-input"
+    />
+    <span class="search-shortcut">Ctrl K</span>
+  </div>
+
+  <div class="topbar-actions">
+    <button class="action-btn" (click)="theme.toggle()" [title]="theme.isDark() ? 'Modo claro' : 'Modo escuro'">
+      {{ theme.isDark() ? '☀️' : '🌙' }}
+    </button>
+    <button class="action-btn">
+      ❤️ <span>Favoritos</span>
+    </button>
+    <button class="action-btn notif">
+      🔔
+      <span class="badge">3</span>
+    </button>
+    <div class="avatar">
+      <div class="avatar-circle">U</div>
+      <div class="avatar-info">
+        <span class="avatar-name">Usuário</span>
+        <span class="avatar-level">Nível 1</span>
+      </div>
+    </div>
+  </div>
+</header>

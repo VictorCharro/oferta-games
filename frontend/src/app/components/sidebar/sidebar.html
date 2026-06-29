@@ -1,0 +1,41 @@
+<aside class="sidebar">
+  <div class="logo">
+    <span class="logo-icon">🎮</span>
+    <span class="logo-text"><span class="logo-oferta">Oferta</span>Games</span>
+  </div>
+
+  <nav class="nav-section">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-item">
+      <span class="nav-icon">🏠</span> Início
+    </a>
+    <a routerLink="/catalogo" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">📦</span> Catálogo
+    </a>
+    <a routerLink="/promocoes" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">🏷️</span> Promoções
+    </a>
+    <a routerLink="/mais-vendidos" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">📈</span> Mais Vendidos
+    </a>
+  </nav>
+
+  <div class="nav-label">BIBLIOTECA</div>
+  <nav class="nav-section">
+    <a routerLink="/favoritos" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">❤️</span> Favoritos
+    </a>
+  </nav>
+
+  <div class="nav-label">CONTA</div>
+  <nav class="nav-section">
+    <a class="nav-item"><span class="nav-icon">👤</span> Perfil</a>
+    <a class="nav-item"><span class="nav-icon">⚙️</span> Configurações</a>
+    <a class="nav-item"><span class="nav-icon">🚪</span> Sair</a>
+  </nav>
+
+  <div class="pro-card">
+    <div class="pro-crown">👑 Oferta Games PRO</div>
+    <p>Remova anúncios, tenha acesso a recursos exclusivos e apoie o projeto!</p>
+    <button class="btn-pro">Seja PRO</button>
+  </div>
+</aside>
