@@ -74,6 +74,7 @@ offers
 ## Endpoints da API
 
 - `GET /api/games?page=0&size=20` — lista paginada de jogos com menor preço.
+- `GET /api/games/search?q=nome` — busca jogos no banco; se não achar, busca na ITAD e insere automaticamente.
 - `GET /api/games/{slug}` — detalhe do jogo + todas as ofertas ordenadas por preço.
 - `POST /api/games/{slug}/refresh` — atualiza preços de um jogo específico na ITAD (chamado pelo botão no frontend).
 - `POST /api/sync?page=0` — dispara busca de uma página de deals da ITAD (uso interno/Actions).
@@ -85,6 +86,7 @@ offers
   api/
     games/
       index.ts         → GET /api/games
+      search.ts        → GET /api/games/search?q=
       [slug].ts        → GET /api/games/:slug
       [slug]/
         refresh.ts     → POST /api/games/:slug/refresh
