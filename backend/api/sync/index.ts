@@ -2,8 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import sql from '../../lib/db';
 
 const ITAD_BASE = 'https://api.isthereanydeal.com';
-const PAGE_SIZE = 100;
-const MAX_PAGES = 20;
+const PAGE_SIZE = 50;
 
 interface Deal {
   id: string;
@@ -33,55 +32,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const apiKey = process.env.ITAD_API_KEY!;
-  let synced = 0;
+  const page = Math.max(0, Number(req.query.page) || 0);
+  const offset = page * PAGE_SIZE;
 
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const offset = page * PAGE_SIZE;
-    const response = await fetch(
-      `${ITAD_BASE}/deals/v2?country=BR&limit=${PAGE_SIZE}&offset=${offset}`,
-      { headers: { 'ITAD-API-Key': apiKey } }
-    );
+  const response = await fetch(
+    `${ITAD_BASE}/deals/v2?country=BR&limit=${PAGE_SIZE}&offset=${offset}`,
+    { headers: { 'ITAD-API-Key': process.env.ITAD_API_KEY! } }
+  );
 
-    if (!response.ok) {
-      const err = await response.text();
-      return res.status(500).json({ error: `ITAD error ${response.status}`, detail: err });
-    }
-
-    const data: DealsResponse = await response.json();
-    if (!data.list?.length) break;
-
-    for (const item of data.list) {
-      const slug = item.slug || item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const coverUrl = item.assets?.banner400 ?? null;
-
-      const [game] = await sql`
-        INSERT INTO games (itad_id, title, slug, cover_url)
-        VALUES (${item.id}::uuid, ${item.title}, ${slug}, ${coverUrl})
-        ON CONFLICT (itad_id) DO UPDATE
-          SET title = EXCLUDED.title, cover_url = EXCLUDED.cover_url
-        RETURNING id
-      `;
-
-      await sql`
-        INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
-        VALUES (
-          ${game.id}, 'itad', ${item.deal.shop.name},
-          ${item.deal.price.amount}, ${item.deal.regular?.amount ?? null},
-          'BRL', ${item.deal.url}, NOW()
-        )
-        ON CONFLICT (game_id, source, store_name) DO UPDATE
-          SET price = EXCLUDED.price,
-              regular_price = EXCLUDED.regular_price,
-              url = EXCLUDED.url,
-              updated_at = NOW()
-      `;
-
-      synced++;
-    }
-
-    if (!data.hasMore) break;
+  if (!response.ok) {
+    const err = await response.text();
+    return res.status(500).json({ error: `ITAD error ${response.status}`, detail: err });
   }
 
-  return res.status(200).json({ ok: true, synced });
+  const data: DealsResponse = await response.json();
+  const items = data.list ?? [];
+
+  if (!items.length) {
+    return res.status(200).json({ ok: true, synced: 0, hasMore: false });
+  }
+
+  // Batch upsert games
+  const games = items.map(item => ({
+    itad_id: item.id,
+    title: item.title,
+    slug: item.slug || item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+    cover_url: item.assets?.banner400 ?? null,
+  }));
+
+  await sql`
+    INSERT INTO games (itad_id, title, slug, cover_url)
+    SELECT * FROM unnest(
+      ${sql.array(games.map(g => g.itad_id))}::uuid[],
+      ${sql.array(games.map(g => g.title))}::text[],
+      ${sql.array(games.map(g => g.slug))}::text[],
+      ${sql.array(games.map(g => g.cover_url))}::text[]
+    ) AS t(itad_id, title, slug, cover_url)
+    ON CONFLICT (itad_id) DO UPDATE
+      SET title = EXCLUDED.title, cover_url = EXCLUDED.cover_url
+  `;
+
+  // Fetch inserted game ids
+  const dbGames = await sql<{ id: number; itad_id: string }[]>`
+    SELECT id, itad_id::text FROM games WHERE itad_id = ANY(${sql.array(games.map(g => g.itad_id))}::uuid[])
+  `;
+
+  const idMap = Object.fromEntries(dbGames.map(g => [g.itad_id, g.id]));
+
+  // Batch upsert offers
+  const offers = items
+    .filter(item => idMap[item.id])
+    .map(item => ({
+      game_id: idMap[item.id],
+      store_name: item.deal.shop.name,
+      price: item.deal.price.amount,
+      regular_price: item.deal.regular?.amount ?? null,
+      url: item.deal.url,
+    }));
+
+  await sql`
+    INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
+    SELECT * FROM unnest(
+      ${sql.array(offers.map(o => o.game_id))}::bigint[],
+      ${sql.array(offers.map(() => 'itad'))}::text[],
+      ${sql.array(offers.map(o => o.store_name))}::text[],
+      ${sql.array(offers.map(o => o.price))}::numeric[],
+      ${sql.array(offers.map(o => o.regular_price))}::numeric[],
+      ${sql.array(offers.map(() => 'BRL'))}::text[],
+      ${sql.array(offers.map(o => o.url))}::text[],
+      ${sql.array(offers.map(() => new Date().toISOString()))}::timestamptz[]
+    ) AS t(game_id, source, store_name, price, regular_price, currency, url, updated_at)
+    ON CONFLICT (game_id, source, store_name) DO UPDATE
+      SET price = EXCLUDED.price,
+          regular_price = EXCLUDED.regular_price,
+          url = EXCLUDED.url,
+          updated_at = EXCLUDED.updated_at
+  `;
+
+  return res.status(200).json({ ok: true, synced: offers.length, hasMore: data.hasMore, nextPage: page + 1 });
 }
