@@ -43,7 +43,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       { headers: { 'ITAD-API-Key': apiKey } }
     );
 
-    if (!response.ok) break;
+    if (!response.ok) {
+      const err = await response.text();
+      return res.status(500).json({ error: `ITAD error ${response.status}`, detail: err });
+    }
 
     const data: DealsResponse = await response.json();
     if (!data.list?.length) break;
