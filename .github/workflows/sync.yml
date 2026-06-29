@@ -1,16 +1,31 @@
-name: Sync Prices
+name: Sync ITAD Prices
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 3 * * *' # todo dia às 03:00 UTC
+  workflow_dispatch: # permite rodar manualmente
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
-      - name: Trigger sync endpoint
-        run: |
-          curl -X POST "${{ secrets.BACKEND_URL }}/api/sync" \
-            -H "X-Sync-Key: ${{ secrets.SYNC_SECRET_KEY }}" \
-            -f --retry 3 --retry-delay 10
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
+        run: npx tsx scripts/sync.ts

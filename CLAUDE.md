@@ -75,7 +75,8 @@ offers
 
 - `GET /api/games?page=0&size=20` — lista paginada de jogos com menor preço.
 - `GET /api/games/{slug}` — detalhe do jogo + todas as ofertas ordenadas por preço.
-- `POST /api/sync` — protegido por `X-Sync-Key`, dispara busca de preços (ITAD).
+- `POST /api/games/{slug}/refresh` — atualiza preços de um jogo específico na ITAD (chamado pelo botão no frontend).
+- `POST /api/sync?page=0` — dispara busca de uma página de deals da ITAD (uso interno/Actions).
 
 ## Estrutura de pastas
 
@@ -85,15 +86,22 @@ offers
     games/
       index.ts         → GET /api/games
       [slug].ts        → GET /api/games/:slug
+      [slug]/
+        refresh.ts     → POST /api/games/:slug/refresh
     sync/
       index.ts         → POST /api/sync
   lib/
     db.ts              → conexão Supabase
+  scripts/
+    sync.ts            → script de sync completo (rodado pelo GitHub Actions)
   package.json
   tsconfig.json
   vercel.json
 
 /frontend              → Angular
+
+/.github/workflows/
+  sync.yml             → roda scripts/sync.ts todo dia às 03:00 UTC
 ```
 
 ## O que NÃO fazer
@@ -110,7 +118,7 @@ offers
 - [x] Backend Node.js/TypeScript estruturado (endpoints + integração ITAD)
 - [x] Deploy configurado no Vercel (backend)
 - [ ] Deploy configurado no Vercel (frontend)
-- [ ] GitHub Actions configurado (sync a cada 6h)
+- [x] GitHub Actions configurado (sync completo diário às 03:00 UTC)
 - [ ] Telas do Angular implementadas (catálogo e detalhe)
 - [ ] Integração com Eneba
 - [ ] Cadastro manual de ofertas (Instant Gaming)
