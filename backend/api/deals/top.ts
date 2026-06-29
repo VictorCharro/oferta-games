@@ -5,7 +5,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).end();
 
-  const size = Math.min(100, Math.max(1, Number(req.query.size) || 20));
+  const size = Math.min(200, Math.max(1, Number(req.query.size) || 20));
+  const sortByRank = req.query.sort === 'rank';
 
   const deals = await sql`
     SELECT
@@ -23,7 +24,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     WHERE o.regular_price IS NOT NULL
       AND o.regular_price > 0
       AND o.price < o.regular_price
-    ORDER BY "discountPct" DESC, g.rank ASC NULLS LAST
+      AND o.price < o.regular_price * 0.99
+    ORDER BY
+      ${sortByRank ? sql`g.rank ASC NULLS LAST, "discountPct" DESC` : sql`"discountPct" DESC, g.rank ASC NULLS LAST`}
     LIMIT ${size}
   `;
 

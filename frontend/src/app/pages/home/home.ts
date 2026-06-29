@@ -18,20 +18,10 @@ export class Home implements OnInit {
   constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
-    this.gameService.getTopDeals(200).subscribe({
+    this.gameService.getTopDeals(50, 'rank').subscribe({
       next: (deals) => {
         const paid = deals.filter(d => Number(d.discountPct) < 100);
-        const allGames = paid.filter(d => !isDlc(d.title));
-
-        // Jogos famosos (rank baixo) com melhor desconto
-        const famous = allGames
-          .filter(d => d.rank != null && d.rank < 3000)
-          .sort((a, b) => Number(b.discountPct) - Number(a.discountPct));
-
-        // Se não tiver famosos suficientes, complementa com o restante
-        const fallback = allGames.filter(d => d.rank == null || d.rank >= 3000);
-        const games = famous.length >= 10 ? famous : [...famous, ...fallback];
-
+        const games = paid.filter(d => !isDlc(d.title));
         this.topDeals = games.slice(0, 5);
         this.recentDeals = games.slice(5, 10);
         this.dlcDeals = paid.filter(d => isDlc(d.title)).slice(0, 5);
