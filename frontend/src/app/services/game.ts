@@ -6,7 +6,8 @@ export interface GameSummary {
   slug: string;
   title: string;
   coverUrl: string | null;
-  minPrice: number | null;
+  minPrice: number | string | null;
+  regularPrice?: number | string | null;
 }
 
 export interface Offer {

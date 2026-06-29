@@ -14,7 +14,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       g.slug,
       g.title,
       g.cover_url AS "coverUrl",
-      MIN(o.price) AS "minPrice"
+      MIN(o.price) AS "minPrice",
+      MAX(o.regular_price) AS "regularPrice"
     FROM games g
     LEFT JOIN offers o ON o.game_id = g.id
     GROUP BY g.id, g.slug, g.title, g.cover_url

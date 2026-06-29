@@ -15,7 +15,11 @@ export class GameCard {
   favorited = false;
 
   get discount(): number {
-    return this.discountPct ?? 0;
+    if (this.discountPct != null) return this.discountPct;
+    const min = Number(this.game?.minPrice);
+    const reg = Number(this.game?.regularPrice);
+    if (!reg || !min || reg <= min) return 0;
+    return Math.round((1 - min / reg) * 100);
   }
 
   get isDlcGame(): boolean {
