@@ -1,0 +1,59 @@
+.search-header {
+  margin-bottom: 32px;
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 20px; }
+}
+
+.search-form {
+  display: flex;
+  gap: 12px;
+  max-width: 600px;
+}
+
+.search-input {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+  &:focus { border-color: var(--color-purple); }
+  &::placeholder { color: var(--text-muted); }
+}
+
+.results-count {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.no-results {
+  padding: 64px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  p { font-size: 18px; font-weight: 600; }
+  span { color: var(--text-muted); font-size: 14px; }
+}
+
+.skeleton-card {
+  border-radius: var(--border-radius);
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  aspect-ratio: 3/4;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

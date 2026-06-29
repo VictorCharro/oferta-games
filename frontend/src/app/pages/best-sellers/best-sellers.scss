@@ -1,0 +1,70 @@
+.page-header {
+  margin-bottom: 32px;
+  h1 { font-size: 28px; font-weight: 700; }
+  p { color: var(--text-secondary); margin-top: 4px; }
+}
+
+.rank-list {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.15s;
+  cursor: pointer;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: var(--bg-card-hover); }
+}
+
+.rank-pos {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-muted);
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+
+  &.top3 { color: var(--color-purple); }
+}
+
+.rank-cover {
+  width: 56px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--bg-input);
+  flex-shrink: 0;
+}
+
+.rank-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rank-price { font-size: 14px; font-weight: 600; flex-shrink: 0; }
+
+.skeleton-row {
+  height: 64px;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  &:last-child { border-bottom: none; }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

@@ -1,0 +1,22 @@
+<div class="page-content">
+  <div class="page-header">
+    <h1>Mais Vendidos</h1>
+    <p>Os jogos mais populares com os melhores preços</p>
+  </div>
+
+  <div class="rank-list" *ngIf="!loading">
+    <a *ngFor="let game of games; let i = index" class="rank-row" [routerLink]="['/jogo', game.slug]">
+      <span class="rank-pos" [class.top3]="i < 3">#{{ i + 1 }}</span>
+      <img [src]="game.coverUrl || 'assets/no-cover.png'" [alt]="game.title" class="rank-cover" />
+      <span class="rank-title">{{ game.title }}</span>
+      <span class="rank-price price-current" *ngIf="game.minPrice != null">
+        {{ game.minPrice | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+      </span>
+      <span class="rank-price text-muted" *ngIf="game.minPrice == null">—</span>
+    </a>
+  </div>
+
+  <div class="rank-list" *ngIf="loading">
+    <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]"></div>
+  </div>
+</div>
