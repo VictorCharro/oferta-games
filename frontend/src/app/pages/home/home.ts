@@ -11,17 +11,20 @@ import { isDlc } from '../../services/filters';
 export class Home implements OnInit {
   topDeals: TopDeal[] = [];
   recentDeals: TopDeal[] = [];
+  dlcDeals: TopDeal[] = [];
   featuredIndex = 0;
   loading = true;
 
   constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
-    this.gameService.getTopDeals(20).subscribe({
+    this.gameService.getTopDeals(50).subscribe({
       next: (deals) => {
-        const paid = deals.filter(d => Number(d.discountPct) < 100 && !isDlc(d.title));
-        this.topDeals = paid.slice(0, 5);
-        this.recentDeals = paid.slice(5, 10);
+        const paid = deals.filter(d => Number(d.discountPct) < 100);
+        const games = paid.filter(d => !isDlc(d.title));
+        this.topDeals = games.slice(0, 5);
+        this.recentDeals = games.slice(5, 10);
+        this.dlcDeals = paid.filter(d => isDlc(d.title)).slice(0, 5);
         this.loading = false;
         this.cdr.detectChanges();
       },

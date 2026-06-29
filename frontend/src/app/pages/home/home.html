@@ -78,4 +78,29 @@
     </div>
   </section>
 
+  <!-- DLCs em Promoção -->
+  <section class="section" *ngIf="dlcDeals.length">
+    <div class="section-header">
+      <h2>🎮 DLCs em Promoção</h2>
+      <a routerLink="/promocoes">Ver todas</a>
+    </div>
+    <div class="price-table">
+      <div class="table-header">
+        <span>DLC</span>
+        <span>Desconto</span>
+        <span>Preço Atual</span>
+        <span>Loja</span>
+      </div>
+      <a *ngFor="let deal of dlcDeals" class="table-row" [routerLink]="['/jogo', deal.slug]">
+        <div class="table-game">
+          <img [src]="deal.coverUrl || 'assets/no-cover.png'" [alt]="deal.title" />
+          <span>{{ deal.title }}</span>
+        </div>
+        <span class="table-discount">-{{ deal.discountPct }}%</span>
+        <span class="price-current">{{ formatPrice(deal.price) }}</span>
+        <span style="font-size:12px;color:var(--text-muted)">{{ deal.storeName }}</span>
+      </a>
+    </div>
+  </section>
+
 </div>
