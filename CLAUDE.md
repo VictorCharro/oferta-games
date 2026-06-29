@@ -37,7 +37,7 @@ Sincronização de preços: GitHub Actions chama `POST /api/sync` a cada 6h, pro
 
 | Fonte | Status | Como integra |
 |---|---|---|
-| **IsThereAnyDeal (ITAD)** | Fonte principal, em uso | API oficial. Cobre Steam, Nuuvem, GOG, Epic, etc. Preços em BRL. |
+| **IsThereAnyDeal (ITAD)** | Fonte principal, em uso | API oficial. Lojas configuradas: Nuuvem (50), Fanatical (6), GreenManGaming (36), Humble Store (37), GamersGate (24), IndieGala (42), 2game (19), Steam (61), Epic (16), Blizzard (4), EA Store (52), Microsoft Store (48), Ubisoft Store (62). |
 | **Eneba** | Planejada | Feed de afiliados XML/CSV após aprovação no cadastro. |
 | **Instant Gaming** | Sem integração automática | Cadastro manual (`source = 'manual'` na tabela `offers`). |
 

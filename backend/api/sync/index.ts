@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const offset = page * PAGE_SIZE;
 
   const response = await fetch(
-    `${ITAD_BASE}/deals/v2?country=BR&limit=${PAGE_SIZE}&offset=${offset}`,
+    `${ITAD_BASE}/deals/v2?country=BR&shops=50,6,36,37,24,42,19,61,16,4,52,48,62&limit=${PAGE_SIZE}&offset=${offset}`,
     { headers: { 'ITAD-API-Key': process.env.ITAD_API_KEY! } }
   );
 
