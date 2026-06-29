@@ -77,6 +77,7 @@ offers
 - `GET /api/games/search?q=nome` — busca jogos no banco; se não achar, busca na ITAD e insere automaticamente.
 - `GET /api/games/{slug}` — detalhe do jogo + todas as ofertas ordenadas por preço.
 - `POST /api/games/{slug}/refresh` — atualiza preços de um jogo específico na ITAD (chamado pelo botão no frontend).
+- `GET /api/deals/top?size=20` — melhores descontos do momento, ordenados por percentual de desconto.
 - `POST /api/sync?page=0` — dispara busca de uma página de deals da ITAD (uso interno/Actions).
 
 ## Estrutura de pastas
