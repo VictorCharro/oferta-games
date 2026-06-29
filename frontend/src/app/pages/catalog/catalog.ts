@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { GameService, GameSummary } from '../../services/game';
 
 @Component({
@@ -14,7 +14,7 @@ export class Catalog implements OnInit {
   hasMore = true;
   readonly pageSize = 20;
 
-  constructor(private gameService: GameService) {}
+  constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() { this.loadPage(); }
 
@@ -25,8 +25,9 @@ export class Catalog implements OnInit {
         this.games = [...this.games, ...data];
         this.hasMore = data.length === this.pageSize;
         this.loading = false;
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading = false; }
+      error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
   }
 

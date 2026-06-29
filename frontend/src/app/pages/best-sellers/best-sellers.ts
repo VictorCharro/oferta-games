@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { GameService, GameSummary } from '../../services/game';
 
 @Component({
@@ -11,12 +11,12 @@ export class BestSellers implements OnInit {
   games: GameSummary[] = [];
   loading = true;
 
-  constructor(private gameService: GameService) {}
+  constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.gameService.getGames(0, 40).subscribe({
-      next: (data) => { this.games = data; this.loading = false; },
-      error: () => { this.loading = false; }
+      next: (data) => { this.games = data; this.loading = false; this.cdr.detectChanges(); },
+      error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
   }
 }

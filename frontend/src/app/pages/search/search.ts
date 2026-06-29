@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GameService, GameSummary } from '../../services/game';
 
@@ -17,7 +17,8 @@ export class Search implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private gameService: GameService
+    private gameService: GameService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -35,8 +36,8 @@ export class Search implements OnInit {
     this.loading = true;
     this.searched = false;
     this.gameService.searchGames(this.query).subscribe({
-      next: (data) => { this.results = data; this.loading = false; this.searched = true; },
-      error: () => { this.loading = false; this.searched = true; }
+      next: (data) => { this.results = data; this.loading = false; this.searched = true; this.cdr.detectChanges(); },
+      error: () => { this.loading = false; this.searched = true; this.cdr.detectChanges(); }
     });
   }
 

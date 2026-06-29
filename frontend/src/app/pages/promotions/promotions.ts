@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { GameService, TopDeal } from '../../services/game';
 
 @Component({
@@ -11,12 +11,16 @@ export class Promotions implements OnInit {
   deals: TopDeal[] = [];
   loading = true;
 
-  constructor(private gameService: GameService) {}
+  constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.gameService.getTopDeals(50).subscribe({
-      next: (data) => { this.deals = data; this.loading = false; },
-      error: () => { this.loading = false; }
+      next: (data) => {
+        this.deals = data.filter(d => Number(d.discountPct) < 100);
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
   }
 
