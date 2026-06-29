@@ -18,8 +18,9 @@ export class Home implements OnInit {
   ngOnInit() {
     this.gameService.getTopDeals(20).subscribe({
       next: (deals) => {
-        this.topDeals = deals.slice(0, 5);
-        this.recentDeals = deals.slice(5, 10);
+        const paid = deals.filter(d => Number(d.discountPct) < 100);
+        this.topDeals = paid.slice(0, 5);
+        this.recentDeals = paid.slice(5, 10);
         this.loading = false;
         this.cdr.detectChanges();
       },

@@ -6,6 +6,7 @@ import { Promotions } from './pages/promotions/promotions';
 import { BestSellers } from './pages/best-sellers/best-sellers';
 import { GameDetail } from './pages/game-detail/game-detail';
 import { Search } from './pages/search/search';
+import { FreeGames } from './pages/free-games/free-games';
 
 const routes: Routes = [
   { path: '', component: Home },
@@ -14,6 +15,7 @@ const routes: Routes = [
   { path: 'mais-vendidos', component: BestSellers },
   { path: 'jogo/:slug', component: GameDetail },
   { path: 'busca', component: Search },
+  { path: 'gratuitos', component: FreeGames },
   { path: '**', redirectTo: '' },
 ];
 

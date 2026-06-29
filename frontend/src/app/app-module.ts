@@ -14,6 +14,7 @@ import { Promotions } from './pages/promotions/promotions';
 import { BestSellers } from './pages/best-sellers/best-sellers';
 import { GameDetail } from './pages/game-detail/game-detail';
 import { Search } from './pages/search/search';
+import { FreeGames } from './pages/free-games/free-games';
 
 @NgModule({
   declarations: [
@@ -27,6 +28,7 @@ import { Search } from './pages/search/search';
     BestSellers,
     GameDetail,
     Search,
+    FreeGames,
   ],
   imports: [BrowserModule, AppRoutingModule, HttpClientModule, FormsModule],
   providers: [provideBrowserGlobalErrorListeners()],

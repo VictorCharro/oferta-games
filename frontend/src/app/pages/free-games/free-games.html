@@ -1,0 +1,33 @@
+<div class="page-content">
+  <div class="page-header">
+    <h1>🎁 Gratuitos Agora</h1>
+    <p>Jogos disponíveis gratuitamente nas principais lojas neste momento</p>
+  </div>
+
+  <div class="free-grid" *ngIf="!loading && games.length">
+    <a *ngFor="let game of games" class="free-card" [routerLink]="['/jogo', game.slug]">
+      <div class="free-cover">
+        <img [src]="game.coverUrl || 'assets/no-cover.png'" [alt]="game.title" loading="lazy" />
+        <span class="free-badge">GRÁTIS</span>
+      </div>
+      <div class="free-info">
+        <p class="free-title">{{ game.title }}</p>
+        <div class="free-prices">
+          <span class="price-original">{{ formatPrice(game.regularPrice) }}</span>
+          <span class="free-tag">Grátis</span>
+        </div>
+        <span class="free-store">{{ game.storeName }}</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="free-grid" *ngIf="loading">
+    <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6,7,8]"></div>
+  </div>
+
+  <div class="empty-state" *ngIf="!loading && !games.length">
+    <div class="empty-icon">🎮</div>
+    <h3>Nenhum jogo gratuito no momento</h3>
+    <p>Volte mais tarde ou confira as <a routerLink="/promocoes">melhores promoções</a>.</p>
+  </div>
+</div>
