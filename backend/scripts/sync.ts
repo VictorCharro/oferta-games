@@ -39,52 +39,36 @@ async function syncPage(offset: number): Promise<{ count: number; hasMore: boole
   const items = data.list ?? [];
   if (!items.length) return { count: 0, hasMore: false };
 
-  await sql`
-    INSERT INTO games (itad_id, title, slug, cover_url)
-    SELECT * FROM unnest(
-      ${sql.array(items.map(i => i.id))}::uuid[],
-      ${sql.array(items.map(i => i.title))}::text[],
-      ${sql.array(items.map(i => i.slug || toSlug(i.title)))}::text[],
-      ${sql.array(items.map(i => i.assets?.banner400 ?? null))}::text[]
-    ) AS t(itad_id, title, slug, cover_url)
-    ON CONFLICT (itad_id) DO UPDATE
-      SET title = EXCLUDED.title, cover_url = EXCLUDED.cover_url
-  `;
+  const now = new Date().toISOString();
 
-  const dbGames = await sql<{ id: number; itad_id: string }[]>`
-    SELECT id, itad_id::text FROM games WHERE itad_id = ANY(${sql.array(items.map(i => i.id))}::uuid[])
-  `;
+  for (const item of items) {
+    const slug = item.slug || toSlug(item.title);
+    const coverUrl = item.assets?.banner400 ?? null;
 
-  const idMap = Object.fromEntries(dbGames.map(g => [g.itad_id, g.id]));
+    const [game] = await sql<{ id: number }[]>`
+      INSERT INTO games (itad_id, title, slug, cover_url)
+      VALUES (${item.id}::uuid, ${item.title}, ${slug}, ${coverUrl})
+      ON CONFLICT (itad_id) DO UPDATE
+        SET title = EXCLUDED.title, cover_url = EXCLUDED.cover_url
+      RETURNING id
+    `;
 
-  const offers = items.filter(i => idMap[i.id]).map(i => ({
-    game_id: idMap[i.id],
-    store_name: i.deal.shop.name,
-    price: i.deal.price.amount,
-    regular_price: i.deal.regular?.amount ?? null,
-    url: i.deal.url,
-  }));
+    await sql`
+      INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
+      VALUES (
+        ${game.id}, 'itad', ${item.deal.shop.name},
+        ${item.deal.price.amount}, ${item.deal.regular?.amount ?? null},
+        'BRL', ${item.deal.url}, ${now}::timestamptz
+      )
+      ON CONFLICT (game_id, source, store_name) DO UPDATE
+        SET price = EXCLUDED.price,
+            regular_price = EXCLUDED.regular_price,
+            url = EXCLUDED.url,
+            updated_at = EXCLUDED.updated_at
+    `;
+  }
 
-  await sql`
-    INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
-    SELECT * FROM unnest(
-      ${sql.array(offers.map(o => o.game_id))}::bigint[],
-      ${sql.array(offers.map(() => 'itad'))}::text[],
-      ${sql.array(offers.map(o => o.store_name))}::text[],
-      ${sql.array(offers.map(o => o.price))}::numeric[],
-      ${sql.array(offers.map(o => o.regular_price))}::numeric[],
-      ${sql.array(offers.map(() => 'BRL'))}::text[],
-      ${sql.array(offers.map(o => o.url))}::text[],
-      ${sql.array(offers.map(() => new Date().toISOString()))}::timestamptz[]
-    ) AS t(game_id, source, store_name, price, regular_price, currency, url, updated_at)
-    ON CONFLICT (game_id, source, store_name) DO UPDATE
-      SET price = EXCLUDED.price,
-          regular_price = EXCLUDED.regular_price,
-          url = EXCLUDED.url,
-          updated_at = EXCLUDED.updated_at
-  `;
-
-  return { count: offers.length, hasMore: data.hasMore };
+  return { count: items.length, hasMore: data.hasMore };
 }
 
 async function main() {
