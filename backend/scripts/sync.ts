@@ -42,15 +42,16 @@ async function syncPage(offset: number): Promise<{ count: number; hasMore: boole
 
   const now = new Date().toISOString();
 
-  for (const item of items) {
+  for (const [i, item] of items.entries()) {
     const slug = item.slug || toSlug(item.title);
     const coverUrl = item.assets?.banner400 ?? null;
+    const rank = offset + i;
 
     const [game] = await sql<{ id: number }[]>`
-      INSERT INTO games (itad_id, title, slug, cover_url)
-      VALUES (${item.id}::uuid, ${item.title}, ${slug}, ${coverUrl})
+      INSERT INTO games (itad_id, title, slug, cover_url, rank)
+      VALUES (${item.id}::uuid, ${item.title}, ${slug}, ${coverUrl}, ${rank})
       ON CONFLICT (itad_id) DO UPDATE
-        SET title = EXCLUDED.title, cover_url = EXCLUDED.cover_url
+        SET title = EXCLUDED.title, cover_url = EXCLUDED.cover_url, rank = EXCLUDED.rank
       RETURNING id
     `;
 

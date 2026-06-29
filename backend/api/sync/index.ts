@@ -53,23 +53,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Batch upsert games
-  const games = items.map(item => ({
+  const games = items.map((item, i) => ({
     itad_id: item.id,
     title: item.title,
     slug: item.slug || item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
     cover_url: item.assets?.banner400 ?? null,
+    rank: offset + i,
   }));
 
   await sql`
-    INSERT INTO games (itad_id, title, slug, cover_url)
+    INSERT INTO games (itad_id, title, slug, cover_url, rank)
     SELECT * FROM unnest(
       ${sql.array(games.map(g => g.itad_id))}::uuid[],
       ${sql.array(games.map(g => g.title))}::text[],
       ${sql.array(games.map(g => g.slug))}::text[],
-      ${sql.array(games.map(g => g.cover_url))}::text[]
-    ) AS t(itad_id, title, slug, cover_url)
+      ${sql.array(games.map(g => g.cover_url))}::text[],
+      ${sql.array(games.map(g => g.rank))}::integer[]
+    ) AS t(itad_id, title, slug, cover_url, rank)
     ON CONFLICT (itad_id) DO UPDATE
-      SET title = EXCLUDED.title, cover_url = EXCLUDED.cover_url
+      SET title = EXCLUDED.title, cover_url = EXCLUDED.cover_url, rank = EXCLUDED.rank
   `;
 
   // Fetch inserted game ids

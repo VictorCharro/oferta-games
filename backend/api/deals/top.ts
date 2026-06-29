@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     WHERE o.regular_price IS NOT NULL
       AND o.regular_price > 0
       AND o.price < o.regular_price
-    ORDER BY "discountPct" DESC
+    ORDER BY "discountPct" DESC, g.rank ASC NULLS LAST
     LIMIT ${size}
   `;
 

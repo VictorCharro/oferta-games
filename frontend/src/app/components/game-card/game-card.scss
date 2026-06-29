@@ -37,6 +37,20 @@
     z-index: 1;
   }
 
+  .badge-dlc {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--color-purple);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 3px 6px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    z-index: 1;
+  }
+
   .btn-favorite {
     position: absolute;
     top: 8px;

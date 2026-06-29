@@ -20,6 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     GROUP BY g.id, g.slug, g.title, g.cover_url
     ORDER BY
       (MIN(o.price) IS NOT NULL) DESC,
+      g.rank ASC NULLS LAST,
       g.id ASC
     LIMIT ${size} OFFSET ${offset}
   `;

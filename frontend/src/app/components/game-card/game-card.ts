@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { GameSummary } from '../../services/game';
+import { isDlc } from '../../services/filters';
 
 @Component({
   selector: 'app-game-card',
@@ -15,6 +16,10 @@ export class GameCard {
 
   get discount(): number {
     return this.discountPct ?? 0;
+  }
+
+  get isDlcGame(): boolean {
+    return isDlc(this.game?.title ?? '');
   }
 
   formatPrice(price: number | string | null): string {
