@@ -108,7 +108,8 @@ offers
 
 - [x] Arquitetura definida
 - [x] Backend Node.js/TypeScript estruturado (endpoints + integração ITAD)
-- [ ] Deploy configurado no Vercel (backend + frontend)
+- [x] Deploy configurado no Vercel (backend)
+- [ ] Deploy configurado no Vercel (frontend)
 - [ ] GitHub Actions configurado (sync a cada 6h)
 - [ ] Telas do Angular implementadas (catálogo e detalhe)
 - [ ] Integração com Eneba
