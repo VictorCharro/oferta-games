@@ -2,7 +2,6 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { Home } from './pages/home/home';
 import { Catalog } from './pages/catalog/catalog';
-import { Promotions } from './pages/promotions/promotions';
 import { BestSellers } from './pages/best-sellers/best-sellers';
 import { GameDetail } from './pages/game-detail/game-detail';
 import { Search } from './pages/search/search';
@@ -11,7 +10,7 @@ import { FreeGames } from './pages/free-games/free-games';
 const routes: Routes = [
   { path: '', component: Home },
   { path: 'catalogo', component: Catalog },
-  { path: 'promocoes', component: Promotions },
+  { path: 'promocoes', redirectTo: 'catalogo', pathMatch: 'full' },
   { path: 'mais-vendidos', component: BestSellers },
   { path: 'jogo/:slug', component: GameDetail },
   { path: 'busca', component: Search },

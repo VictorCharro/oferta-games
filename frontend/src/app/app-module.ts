@@ -10,7 +10,6 @@ import { Topbar } from './components/topbar/topbar';
 import { GameCard } from './components/game-card/game-card';
 import { Home } from './pages/home/home';
 import { Catalog } from './pages/catalog/catalog';
-import { Promotions } from './pages/promotions/promotions';
 import { BestSellers } from './pages/best-sellers/best-sellers';
 import { GameDetail } from './pages/game-detail/game-detail';
 import { Search } from './pages/search/search';
@@ -24,7 +23,6 @@ import { FreeGames } from './pages/free-games/free-games';
     GameCard,
     Home,
     Catalog,
-    Promotions,
     BestSellers,
     GameDetail,
     Search,

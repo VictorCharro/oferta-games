@@ -44,8 +44,13 @@ export class GameService {
 
   constructor(private http: HttpClient) {}
 
-  getGames(page = 0, size = 20): Observable<GameSummary[]> {
-    return this.http.get<GameSummary[]>(`${this.api}/games?page=${page}&size=${size}`);
+  getGames(page = 0, size = 20, filters: { sort?: string; minPrice?: number | null; maxPrice?: number | null; type?: string } = {}): Observable<GameSummary[]> {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (filters.sort) params.set('sort', filters.sort);
+    if (filters.minPrice != null) params.set('minPrice', String(filters.minPrice));
+    if (filters.maxPrice != null) params.set('maxPrice', String(filters.maxPrice));
+    if (filters.type && filters.type !== 'all') params.set('type', filters.type);
+    return this.http.get<GameSummary[]>(`${this.api}/games?${params}`);
   }
 
   getGame(slug: string): Observable<GameDetail> {
