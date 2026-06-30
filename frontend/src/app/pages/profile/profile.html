@@ -1,0 +1,28 @@
+<div class="page-content">
+  <div class="settings-page">
+    <div class="settings-header">
+      <div class="avatar-big">{{ auth.displayName.charAt(0).toUpperCase() }}</div>
+      <div>
+        <h1>{{ auth.displayName }}</h1>
+        <p>{{ auth.user?.email }}</p>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <h2>Informações pessoais</h2>
+      <div class="field">
+        <label>Nome</label>
+        <input type="text" [(ngModel)]="name" placeholder="Seu nome" />
+      </div>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" [value]="email" disabled />
+      </div>
+      <p class="msg-success" *ngIf="success">{{ success }}</p>
+      <p class="msg-error" *ngIf="error">{{ error }}</p>
+      <button class="btn-primary" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Salvando...' : 'Salvar alterações' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -11,15 +11,6 @@
   </div>
 
   <div class="topbar-actions">
-    <button class="action-btn" (click)="theme.toggle()" [title]="theme.isDark() ? 'Modo claro' : 'Modo escuro'">
-      <img [src]="theme.isDark() ? 'sol-tema-claro.png' : 'lua-tema-escuro.png'" style="width:20px;height:20px;object-fit:contain;" />
-    </button>
-
-    <button class="action-btn notif">
-      <img src="notificacao.png" alt="Notificações" style="width:20px;height:20px;object-fit:contain;" />
-      <span class="badge">3</span>
-    </button>
-
     <!-- Logado: avatar com dropdown -->
     <div class="user-menu" *ngIf="auth.isLoggedIn">
       <div class="avatar" (click)="toggleDropdown()">
@@ -48,5 +39,9 @@
       <a routerLink="/login" class="btn-outline btn-sm">Entrar</a>
       <a routerLink="/login" [queryParams]="{mode: 'register'}" class="btn-primary btn-sm">Criar conta</a>
     </div>
+
+    <button class="action-btn" (click)="theme.toggle()" [title]="theme.isDark() ? 'Modo claro' : 'Modo escuro'">
+      <img [src]="theme.isDark() ? 'sol-tema-claro.png' : 'lua-tema-escuro.png'" style="width:20px;height:20px;object-fit:contain;" />
+    </button>
   </div>
 </header>

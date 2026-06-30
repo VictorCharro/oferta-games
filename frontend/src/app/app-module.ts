@@ -16,6 +16,8 @@ import { GameDetail } from './pages/game-detail/game-detail';
 import { Search } from './pages/search/search';
 import { FreeGames } from './pages/free-games/free-games';
 import { Login } from './pages/login/login';
+import { Profile } from './pages/profile/profile';
+import { Settings } from './pages/settings/settings';
 
 @NgModule({
   declarations: [
@@ -30,6 +32,8 @@ import { Login } from './pages/login/login';
     Search,
     FreeGames,
     Login,
+    Profile,
+    Settings,
   ],
   imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule, FormsModule],
   providers: [provideBrowserGlobalErrorListeners()],
