@@ -12,7 +12,7 @@
 
   <div class="topbar-actions">
     <button class="action-btn" (click)="theme.toggle()" [title]="theme.isDark() ? 'Modo claro' : 'Modo escuro'">
-      {{ theme.isDark() ? '☀️' : '🌙' }}
+      <img [src]="theme.isDark() ? 'sol-tema-claro.png' : 'lua-tema-escuro.png'" style="width:20px;height:20px;object-fit:contain;" />
     </button>
     <button class="action-btn">
       ❤️ <span>Favoritos</span>
