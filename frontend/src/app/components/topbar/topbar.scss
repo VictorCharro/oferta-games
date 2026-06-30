@@ -14,10 +14,11 @@
 }
 
 .search-wrapper {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
   max-width: 560px;
-  margin: 0 auto;
-  position: relative;
   display: flex;
   align-items: center;
 
