@@ -23,9 +23,9 @@
     <!-- Logado: avatar com dropdown -->
     <div class="user-menu" *ngIf="auth.isLoggedIn">
       <div class="avatar" (click)="toggleDropdown()">
-        <div class="avatar-circle">{{ auth.user?.name?.charAt(0)?.toUpperCase() }}</div>
+        <div class="avatar-circle">{{ auth.displayName.charAt(0).toUpperCase() }}</div>
         <div class="avatar-info">
-          <span class="avatar-name">{{ auth.user?.name }}</span>
+          <span class="avatar-name">{{ auth.displayName }}</span>
           <span class="avatar-level">Nível 1</span>
         </div>
       </div>

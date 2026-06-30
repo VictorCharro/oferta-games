@@ -95,4 +95,5 @@ form {
 
 .btn-full { width: 100%; justify-content: center; margin-top: 4px; }
 
-.error { color: var(--color-red); font-size: 13px; text-align: center; margin: 0; }
+.msg-error { color: var(--color-red); font-size: 13px; text-align: center; margin: 0; }
+.msg-success { color: var(--color-green); font-size: 13px; text-align: center; margin: 0; }

@@ -1,33 +1,51 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-
-export interface User {
-  name: string;
-  email: string;
-}
+import { BehaviorSubject } from 'rxjs';
+import { supabase } from './supabase';
+import type { User, Session } from '@supabase/supabase-js';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private _user: User | null = null;
+  private _user = new BehaviorSubject<User | null>(null);
+  user$ = this._user.asObservable();
 
   constructor(private router: Router) {
-    const saved = localStorage.getItem('og_user');
-    if (saved) this._user = JSON.parse(saved);
+    // Carrega sessão existente
+    supabase.auth.getSession().then(({ data }) => {
+      this._user.next(data.session?.user ?? null);
+    });
+
+    // Escuta mudanças de sessão
+    supabase.auth.onAuthStateChange((_event, session) => {
+      this._user.next(session?.user ?? null);
+    });
   }
 
-  get user(): User | null { return this._user; }
-  get isLoggedIn(): boolean { return this._user !== null; }
+  get user(): User | null { return this._user.value; }
+  get isLoggedIn(): boolean { return this._user.value !== null; }
 
-  login(email: string, password: string): boolean {
-    // Mock: aceita qualquer email/senha por enquanto
-    this._user = { name: email.split('@')[0], email };
-    localStorage.setItem('og_user', JSON.stringify(this._user));
-    return true;
+  get displayName(): string {
+    const u = this._user.value;
+    if (!u) return '';
+    return u.user_metadata?.['name'] || u.email?.split('@')[0] || 'Usuário';
   }
 
-  logout() {
-    this._user = null;
-    localStorage.removeItem('og_user');
+  async login(email: string, password: string): Promise<string | null> {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return error?.message ?? null;
+  }
+
+  async register(email: string, password: string, name: string): Promise<string | null> {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } }
+    });
+    return error?.message ?? null;
+  }
+
+  async logout() {
+    await supabase.auth.signOut();
     this.router.navigate(['/']);
   }
 }

@@ -5,11 +5,15 @@
     <p class="login-sub">{{ mode === 'login' ? 'Entre na sua conta' : 'Crie sua conta grátis' }}</p>
 
     <div class="mode-tabs">
-      <button [class.active]="mode === 'login'" (click)="mode = 'login'">Entrar</button>
-      <button [class.active]="mode === 'register'" (click)="mode = 'register'">Criar conta</button>
+      <button [class.active]="mode === 'login'" (click)="mode = 'login'; error = ''; success = ''">Entrar</button>
+      <button [class.active]="mode === 'register'" (click)="mode = 'register'; error = ''; success = ''">Criar conta</button>
     </div>
 
     <form (submit)="submit(); $event.preventDefault()">
+      <div class="field" *ngIf="mode === 'register'">
+        <label>Nome</label>
+        <input type="text" [(ngModel)]="name" name="name" placeholder="Seu nome" />
+      </div>
       <div class="field">
         <label>E-mail</label>
         <input type="email" [(ngModel)]="email" name="email" placeholder="seu@email.com" />
@@ -18,9 +22,12 @@
         <label>Senha</label>
         <input type="password" [(ngModel)]="password" name="password" placeholder="••••••••" />
       </div>
-      <p class="error" *ngIf="error">{{ error }}</p>
-      <button type="submit" class="btn-primary btn-full">
-        {{ mode === 'login' ? 'Entrar' : 'Criar conta' }}
+
+      <p class="msg-error" *ngIf="error">{{ error }}</p>
+      <p class="msg-success" *ngIf="success">{{ success }}</p>
+
+      <button type="submit" class="btn-primary btn-full" [disabled]="loading">
+        {{ loading ? 'Aguarde...' : (mode === 'login' ? 'Entrar' : 'Criar conta') }}
       </button>
     </form>
   </div>
