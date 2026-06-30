@@ -14,19 +14,39 @@
     <button class="action-btn" (click)="theme.toggle()" [title]="theme.isDark() ? 'Modo claro' : 'Modo escuro'">
       <img [src]="theme.isDark() ? 'sol-tema-claro.png' : 'lua-tema-escuro.png'" style="width:20px;height:20px;object-fit:contain;" />
     </button>
-    <button class="action-btn">
-      ❤️ <span>Favoritos</span>
-    </button>
+
     <button class="action-btn notif">
       <img src="notificacao.png" alt="Notificações" style="width:20px;height:20px;object-fit:contain;" />
       <span class="badge">3</span>
     </button>
-    <div class="avatar">
-      <div class="avatar-circle">U</div>
-      <div class="avatar-info">
-        <span class="avatar-name">Usuário</span>
-        <span class="avatar-level">Nível 1</span>
+
+    <!-- Logado: avatar com dropdown -->
+    <div class="user-menu" *ngIf="auth.isLoggedIn">
+      <div class="avatar" (click)="toggleDropdown()">
+        <div class="avatar-circle">{{ auth.user?.name?.charAt(0)?.toUpperCase() }}</div>
+        <div class="avatar-info">
+          <span class="avatar-name">{{ auth.user?.name }}</span>
+          <span class="avatar-level">Nível 1</span>
+        </div>
       </div>
+      <div class="dropdown" *ngIf="dropdownOpen">
+        <a routerLink="/perfil" class="dropdown-item" (click)="dropdownOpen = false">
+          <img src="perfil.png" /> Perfil
+        </a>
+        <a routerLink="/configuracoes" class="dropdown-item" (click)="dropdownOpen = false">
+          <img src="configuracoes.png" /> Configurações
+        </a>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item danger" (click)="logout()">
+          <img src="logout.png" /> Sair
+        </button>
+      </div>
+    </div>
+
+    <!-- Não logado: botões de login/cadastro -->
+    <div class="auth-buttons" *ngIf="!auth.isLoggedIn">
+      <a routerLink="/login" class="btn-outline btn-sm">Entrar</a>
+      <a routerLink="/login" [queryParams]="{mode: 'register'}" class="btn-primary btn-sm">Criar conta</a>
     </div>
   </div>
 </header>

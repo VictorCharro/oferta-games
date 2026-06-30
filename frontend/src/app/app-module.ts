@@ -1,5 +1,5 @@
 import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
+import { BrowserModule, CommonModule } from '@angular/platform-browser';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 
@@ -14,6 +14,7 @@ import { BestSellers } from './pages/best-sellers/best-sellers';
 import { GameDetail } from './pages/game-detail/game-detail';
 import { Search } from './pages/search/search';
 import { FreeGames } from './pages/free-games/free-games';
+import { Login } from './pages/login/login';
 
 @NgModule({
   declarations: [
@@ -27,8 +28,9 @@ import { FreeGames } from './pages/free-games/free-games';
     GameDetail,
     Search,
     FreeGames,
+    Login,
   ],
-  imports: [BrowserModule, AppRoutingModule, HttpClientModule, FormsModule],
+  imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule, FormsModule],
   providers: [provideBrowserGlobalErrorListeners()],
   bootstrap: [App],
 })

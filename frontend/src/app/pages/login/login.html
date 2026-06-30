@@ -1,0 +1,27 @@
+<div class="login-page">
+  <div class="login-card">
+    <img src="logo.png" class="login-logo" alt="Oferta Games" />
+    <h1><span class="logo-oferta">Oferta</span>Games</h1>
+    <p class="login-sub">{{ mode === 'login' ? 'Entre na sua conta' : 'Crie sua conta grátis' }}</p>
+
+    <div class="mode-tabs">
+      <button [class.active]="mode === 'login'" (click)="mode = 'login'">Entrar</button>
+      <button [class.active]="mode === 'register'" (click)="mode = 'register'">Criar conta</button>
+    </div>
+
+    <form (submit)="submit(); $event.preventDefault()">
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" [(ngModel)]="email" name="email" placeholder="seu@email.com" />
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" [(ngModel)]="password" name="password" placeholder="••••••••" />
+      </div>
+      <p class="error" *ngIf="error">{{ error }}</p>
+      <button type="submit" class="btn-primary btn-full">
+        {{ mode === 'login' ? 'Entrar' : 'Criar conta' }}
+      </button>
+    </form>
+  </div>
+</div>

@@ -1,5 +1,8 @@
-<app-sidebar></app-sidebar>
-<app-topbar></app-topbar>
-<main class="app-main">
+<ng-container *ngIf="showShell">
+  <app-sidebar></app-sidebar>
+  <app-topbar></app-topbar>
+  <main class="app-main"><router-outlet></router-outlet></main>
+</ng-container>
+<ng-container *ngIf="!showShell">
   <router-outlet></router-outlet>
-</main>
+</ng-container>
