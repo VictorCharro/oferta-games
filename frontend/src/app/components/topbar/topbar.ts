@@ -1,5 +1,6 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ThemeService } from '../../services/theme';
 import { AuthService } from '../../services/auth';
 
@@ -9,11 +10,18 @@ import { AuthService } from '../../services/auth';
   templateUrl: './topbar.html',
   styleUrl: './topbar.scss',
 })
-export class Topbar {
+export class Topbar implements OnInit, OnDestroy {
   searchQuery = '';
   dropdownOpen = false;
+  private sub!: Subscription;
 
-  constructor(public theme: ThemeService, public auth: AuthService, private router: Router) {}
+  constructor(public theme: ThemeService, public auth: AuthService, private router: Router, private cdr: ChangeDetectorRef) {}
+
+  ngOnInit() {
+    this.sub = this.auth.user$.subscribe(() => this.cdr.detectChanges());
+  }
+
+  ngOnDestroy() { this.sub.unsubscribe(); }
 
   onSearch(event: KeyboardEvent) {
     if (event.key === 'Enter' && this.searchQuery.trim()) {
