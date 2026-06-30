@@ -14,6 +14,7 @@ export class Catalog implements OnInit {
   hasMore = true;
   readonly pageSize = 20;
 
+  viewMode: 'compact' | 'large' = 'compact';
   sort = 'rank';
   type = 'all';
   minPrice: number | null = null;
