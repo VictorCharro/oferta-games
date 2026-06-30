@@ -12,12 +12,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Busca primeiro no banco local
   const local = await sql`
-    SELECT g.slug, g.title, g.cover_url AS "coverUrl", MIN(o.price) AS "minPrice"
+    SELECT g.slug, g.title, g.cover_url AS "coverUrl",
+      MIN(o.price) AS "minPrice", MAX(o.regular_price) AS "regularPrice"
     FROM games g
     LEFT JOIN offers o ON o.game_id = g.id
     WHERE g.title ILIKE ${'%' + q + '%'}
     GROUP BY g.id, g.slug, g.title, g.cover_url
-    ORDER BY g.title
+    ORDER BY g.rank ASC NULLS LAST, g.title
     LIMIT 20
   `;
 
@@ -53,7 +54,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Retorna os jogos inseridos (sem preço ainda, preço vem quando o usuário entrar no jogo)
   const inserted = await sql`
-    SELECT g.slug, g.title, g.cover_url AS "coverUrl", MIN(o.price) AS "minPrice"
+    SELECT g.slug, g.title, g.cover_url AS "coverUrl",
+      MIN(o.price) AS "minPrice", MAX(o.regular_price) AS "regularPrice"
     FROM games g
     LEFT JOIN offers o ON o.game_id = g.id
     WHERE g.itad_id = ANY(${sql.array(itadGames.map(g => g.id))}::uuid[])
