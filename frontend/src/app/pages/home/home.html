@@ -1,19 +1,20 @@
 <div class="page-content">
 
   <!-- Banner principal -->
-  <div class="banner" *ngIf="featured" [style.backgroundImage]="'url(' + (featured.coverUrl || '') + ')'">
+  <ng-container *ngIf="featured as f">
+  <div class="banner" [style.backgroundImage]="'url(' + (f.coverUrl || '') + ')'">
     <div class="banner-overlay">
       <button class="banner-nav prev" (click)="prevFeatured()">‹</button>
       <div class="banner-content">
         <span class="banner-tag">MELHOR OFERTA</span>
-        <h1>{{ featured.title }}</h1>
+        <h1>{{ f.title }}</h1>
         <div class="banner-price">
-          <span class="badge-discount">-{{ featured.discountPct }}%</span>
-          <span class="price-current">{{ formatPrice(featured.price) }}</span>
-          <span class="price-original">{{ formatPrice(featured.regularPrice) }}</span>
+          <span class="badge-discount">-{{ f.discountPct }}%</span>
+          <span class="price-current">{{ formatPrice(f.price) }}</span>
+          <span class="price-original">{{ formatPrice(f.regularPrice) }}</span>
         </div>
         <p class="banner-store">Menor preço histórico!</p>
-        <a [href]="featured.url" target="_blank" class="btn-primary">Ver oferta</a>
+        <a [href]="f.url" target="_blank" class="btn-primary">Ver oferta</a>
       </div>
       <button class="banner-nav next" (click)="nextFeatured()">›</button>
     </div>
@@ -23,6 +24,7 @@
             (click)="featuredIndex = i"></span>
     </div>
   </div>
+  </ng-container>
 
   <!-- Melhores Promoções -->
   <section class="section">
