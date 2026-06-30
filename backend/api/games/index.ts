@@ -15,11 +15,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const DLC_PATTERN = '%DLC%|%Season Pass%|%Soundtrack%|% OST%|%Art Book%|%Skin Set%|%Skin Pack%|%Booster Pack%|%Expansion%|%Add-on%';
 
+  // Ordenação padrão (rank): top 200 com desconto ativo sobem ao topo ordenados por desconto,
+  // restante vem por popularidade — faz o catálogo rotacionar conforme promoções do dia
   const orderBy =
     sort === 'discount' ? sql`ROUND((1 - MIN(o.price) / NULLIF(MAX(o.regular_price), 0)) * 100) DESC NULLS LAST, g.rank ASC NULLS LAST` :
     sort === 'price_asc' ? sql`MIN(o.price) ASC NULLS LAST` :
     sort === 'price_desc' ? sql`MIN(o.price) DESC NULLS LAST` :
-    sql`(MIN(o.price) IS NOT NULL) DESC, g.rank ASC NULLS LAST, g.id ASC`;
+    sql`
+      CASE
+        WHEN g.rank <= 200
+          AND MIN(o.price) IS NOT NULL
+          AND MAX(o.regular_price) IS NOT NULL
+          AND MIN(o.price) < MAX(o.regular_price) * 0.99
+        THEN 0 ELSE 1
+      END ASC,
+      CASE
+        WHEN g.rank <= 200
+          AND MIN(o.price) IS NOT NULL
+          AND MAX(o.regular_price) IS NOT NULL
+          AND MIN(o.price) < MAX(o.regular_price) * 0.99
+        THEN ROUND((1 - MIN(o.price) / NULLIF(MAX(o.regular_price), 0)) * 100)
+        ELSE NULL
+      END DESC NULLS LAST,
+      g.rank ASC NULLS LAST,
+      g.id ASC
+    `;
 
   const typeFilter =
     type === 'dlc' ? sql`AND (g.title ILIKE '%DLC%' OR g.title ILIKE '%Season Pass%' OR g.title ILIKE '%Soundtrack%' OR g.title ILIKE '% OST%' OR g.title ILIKE '%Art Book%' OR g.title ILIKE '%Skin Set%' OR g.title ILIKE '%Skin Pack%' OR g.title ILIKE '%Booster Pack%' OR g.title ILIKE '%Expansion%' OR g.title ILIKE '%Add-on%')` :
