@@ -5,6 +5,10 @@
     <div class="settings-card">
       <h2>Alterar senha</h2>
       <div class="field">
+        <label>Senha atual</label>
+        <input type="password" [(ngModel)]="currentPassword" placeholder="••••••••" />
+      </div>
+      <div class="field">
         <label>Nova senha</label>
         <input type="password" [(ngModel)]="newPassword" placeholder="••••••••" />
       </div>

@@ -20,15 +20,28 @@ export class Settings {
 
   async changePassword() {
     this.success = ''; this.error = '';
-    if (!this.newPassword || !this.confirmPassword) { this.error = 'Preencha todos os campos.'; return; }
+    if (!this.currentPassword || !this.newPassword || !this.confirmPassword) { this.error = 'Preencha todos os campos.'; return; }
     if (this.newPassword !== this.confirmPassword) { this.error = 'As senhas não coincidem.'; return; }
     if (this.newPassword.length < 6) { this.error = 'A senha deve ter pelo menos 6 caracteres.'; return; }
 
     this.saving = true;
+
+    const email = this.auth.user?.email;
+    const { error: authError } = await supabase.auth.signInWithPassword({ email: email!, password: this.currentPassword });
+    if (authError) {
+      this.saving = false;
+      this.error = 'Senha atual incorreta.';
+      this.cdr.detectChanges();
+      return;
+    }
+
     const { error } = await supabase.auth.updateUser({ password: this.newPassword });
     this.saving = false;
     if (error) { this.error = 'Erro ao alterar senha. Tente novamente.'; }
-    else { this.success = 'Senha alterada com sucesso!'; this.newPassword = ''; this.confirmPassword = ''; }
+    else {
+      this.success = 'Senha alterada com sucesso!';
+      this.currentPassword = ''; this.newPassword = ''; this.confirmPassword = '';
+    }
     this.cdr.detectChanges();
   }
 
