@@ -1,8 +1,4 @@
 <div class="page-content">
-  <div class="page-header">
-    <h1>Catálogo</h1>
-    <p>Todos os jogos com menor preço entre as principais lojas</p>
-  </div>
   <div class="catalog-layout">
 
     <!-- Painel de filtros -->
@@ -58,6 +54,10 @@
 
     <!-- Grid de jogos -->
     <div class="catalog-main">
+      <div class="page-header">
+        <h1>Catálogo</h1>
+        <p>Todos os jogos com menor preço entre as principais lojas</p>
+      </div>
       <div class="view-toggle">
         <button [class.active]="viewMode === 'compact'" (click)="viewMode = 'compact'" title="Grade compacta">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
