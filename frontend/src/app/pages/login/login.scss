@@ -93,6 +93,59 @@ form {
   }
 }
 
+.social-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.btn-social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  border: none;
+
+  &:hover { opacity: 0.85; transform: translateY(-1px); }
+  &:active { transform: translateY(0); }
+
+  &.google {
+    background: #fff;
+    color: #444;
+    border: 1px solid #ddd;
+  }
+
+  &.discord {
+    background: #5865F2;
+    color: #fff;
+  }
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 12px;
+
+  &::before, &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+  }
+}
+
 .btn-full { width: 100%; justify-content: center; margin-top: 4px; }
 
 .msg-error { color: var(--color-red); font-size: 13px; text-align: center; margin: 0; }

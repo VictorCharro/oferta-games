@@ -44,6 +44,20 @@ export class AuthService {
     return error?.message ?? null;
   }
 
+  async loginWithGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+  }
+
+  async loginWithDiscord() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'discord',
+      options: { redirectTo: window.location.origin }
+    });
+  }
+
   async logout() {
     await supabase.auth.signOut();
     this.router.navigate(['/']);

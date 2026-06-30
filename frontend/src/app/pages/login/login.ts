@@ -31,6 +31,9 @@ export class Login implements OnInit {
     });
   }
 
+  loginWithGoogle() { this.auth.loginWithGoogle(); }
+  loginWithDiscord() { this.auth.loginWithDiscord(); }
+
   async submit() {
     this.error = '';
     this.success = '';

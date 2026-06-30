@@ -1,4 +1,8 @@
 <header class="topbar">
+  <button class="action-btn theme-btn" (click)="theme.toggle()" [title]="theme.isDark() ? 'Modo claro' : 'Modo escuro'">
+    <img [src]="theme.isDark() ? 'sol-tema-claro.png' : 'lua-tema-escuro.png'" style="width:20px;height:20px;object-fit:contain;" />
+  </button>
+
   <div class="search-wrapper">
     <img class="search-icon" src="pesquisar.png" alt="Pesquisar" />
     <input
@@ -39,9 +43,5 @@
       <a routerLink="/login" class="btn-outline btn-sm">Entrar</a>
       <a routerLink="/login" [queryParams]="{mode: 'register'}" class="btn-primary btn-sm">Criar conta</a>
     </div>
-
-    <button class="action-btn" (click)="theme.toggle()" [title]="theme.isDark() ? 'Modo claro' : 'Modo escuro'">
-      <img [src]="theme.isDark() ? 'sol-tema-claro.png' : 'lua-tema-escuro.png'" style="width:20px;height:20px;object-fit:contain;" />
-    </button>
   </div>
 </header>
