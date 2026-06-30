@@ -1,21 +1,4 @@
 <div class="page-content">
-  <div class="search-header">
-    <h1>Buscar Jogos</h1>
-    <form class="search-form" (submit)="onSubmit()">
-      <input
-        type="text"
-        [(ngModel)]="query"
-        name="q"
-        class="search-input"
-        placeholder="Nome do jogo..."
-        autofocus
-      />
-      <button type="submit" class="btn-primary" [disabled]="loading">
-        {{ loading ? 'Buscando...' : 'Buscar' }}
-      </button>
-    </form>
-  </div>
-
   <div class="search-results" *ngIf="searched && !loading">
     <p class="results-count" *ngIf="results.length">{{ results.length }} resultado(s) para "{{ query }}"</p>
     <div class="games-grid" *ngIf="results.length">
