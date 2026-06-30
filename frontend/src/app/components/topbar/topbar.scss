@@ -39,8 +39,10 @@
   .search-icon {
     position: absolute;
     left: 14px;
-    font-size: 14px;
-    color: var(--text-muted);
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    opacity: 0.5;
   }
 
   .search-input {
