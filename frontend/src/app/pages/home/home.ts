@@ -29,6 +29,8 @@ export class Home implements OnInit, OnDestroy {
   featuredIndex = 0;
   loading = true;
   private favSub!: Subscription;
+  private autoplayTimer?: ReturnType<typeof setInterval>;
+  private readonly autoplayIntervalMs = 6000;
 
   constructor(
     private gameService: GameService,
@@ -42,6 +44,7 @@ export class Home implements OnInit, OnDestroy {
         const paid = deals.filter(d => Number(d.discountPct) < 100 && !isDlc(d.title));
         this.featuredDeals = this.shuffle(paid).slice(0, 5);
         this.loading = false;
+        this.startAutoplay();
         this.cdr.detectChanges();
       },
       error: () => { this.loading = false; this.cdr.detectChanges(); }
@@ -76,18 +79,36 @@ export class Home implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.favSub?.unsubscribe();
-  }
-
-  get featured(): TopDeal | null {
-    return this.featuredDeals[this.featuredIndex] ?? null;
+    this.stopAutoplay();
   }
 
   prevFeatured() {
-    this.featuredIndex = (this.featuredIndex - 1 + this.featuredDeals.length) % this.featuredDeals.length;
+    this.goToFeatured((this.featuredIndex - 1 + this.featuredDeals.length) % this.featuredDeals.length);
   }
 
   nextFeatured() {
-    this.featuredIndex = (this.featuredIndex + 1) % this.featuredDeals.length;
+    this.goToFeatured((this.featuredIndex + 1) % this.featuredDeals.length);
+  }
+
+  goToFeatured(i: number) {
+    this.featuredIndex = i;
+    this.startAutoplay();
+  }
+
+  private startAutoplay() {
+    this.stopAutoplay();
+    if (this.featuredDeals.length <= 1) return;
+    this.autoplayTimer = setInterval(() => {
+      this.featuredIndex = (this.featuredIndex + 1) % this.featuredDeals.length;
+      this.cdr.detectChanges();
+    }, this.autoplayIntervalMs);
+  }
+
+  private stopAutoplay() {
+    if (this.autoplayTimer) {
+      clearInterval(this.autoplayTimer);
+      this.autoplayTimer = undefined;
+    }
   }
 
   isDlc(title: string): boolean { return isDlc(title); }

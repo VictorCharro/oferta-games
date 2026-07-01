@@ -1,30 +1,32 @@
 <div class="page-content">
 
   <!-- Banner principal / carrossel -->
-  <ng-container *ngIf="featured as f">
-  <div class="banner">
+  <div class="banner" *ngIf="featuredDeals.length">
     <button class="banner-nav prev" (click)="prevFeatured()">‹</button>
-    <a class="banner-inner" [routerLink]="['/jogo', f.slug]">
-      <img class="banner-cover" [src]="f.coverUrl || 'assets/no-cover.png'" [alt]="f.title" />
-      <div class="banner-info">
-        <span class="banner-tag">Melhor oferta</span>
-        <h1>{{ f.title }}</h1>
-        <div class="banner-price">
-          <span class="badge-discount">-{{ f.discountPct }}%</span>
-          <span class="price-current">{{ formatPrice(f.price) }}</span>
-          <span class="price-original">{{ formatPrice(f.regularPrice) }}</span>
-        </div>
-        <p class="banner-store">{{ f.storeName }}</p>
+    <div class="banner-viewport">
+      <div class="banner-track" [style.transform]="'translateX(-' + (featuredIndex * 100) + '%)'">
+        <a class="banner-slide" *ngFor="let f of featuredDeals" [routerLink]="['/jogo', f.slug]">
+          <img class="banner-cover" [src]="f.coverUrl || 'assets/no-cover.png'" [alt]="f.title" />
+          <div class="banner-info">
+            <span class="banner-tag">Melhor oferta</span>
+            <h1>{{ f.title }}</h1>
+            <div class="banner-price">
+              <span class="badge-discount">-{{ f.discountPct }}%</span>
+              <span class="price-current">{{ formatPrice(f.price) }}</span>
+              <span class="price-original">{{ formatPrice(f.regularPrice) }}</span>
+            </div>
+            <p class="banner-store">{{ f.storeName }}</p>
+          </div>
+        </a>
       </div>
-    </a>
+    </div>
     <button class="banner-nav next" (click)="nextFeatured()">›</button>
     <div class="banner-dots">
       <span *ngFor="let d of featuredDeals; let i = index"
             class="dot" [class.active]="i === featuredIndex"
-            (click)="featuredIndex = i"></span>
+            (click)="goToFeatured(i)"></span>
     </div>
   </div>
-  </ng-container>
 
   <!-- Favoritos -->
   <section class="section" *ngIf="favoritesDeals.length">
