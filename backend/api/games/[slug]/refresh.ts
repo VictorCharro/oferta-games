@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import sql from '../../../lib/db';
+import { steamCoverFromUrl } from '../../../lib/steam-cover';
 
 const ITAD_BASE = 'https://api.isthereanydeal.com';
 
@@ -19,8 +20,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { slug } = req.query;
 
-  const [game] = await sql<{ id: number; itad_id: string }[]>`
-    SELECT id, itad_id::text FROM games WHERE slug = ${slug as string}
+  const [game] = await sql<{ id: number; itad_id: string; coverUrl: string | null }[]>`
+    SELECT id, itad_id::text, cover_url AS "coverUrl" FROM games WHERE slug = ${slug as string}
   `;
 
   if (!game) return res.status(404).json({ error: 'Game not found' });
@@ -72,6 +73,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           url = EXCLUDED.url,
           updated_at = EXCLUDED.updated_at
   `;
+
+  if (!game.coverUrl) {
+    const steamOffer = result.deals.find(d => d.shop.name === 'Steam');
+    const cover = steamOffer ? steamCoverFromUrl(steamOffer.url) : null;
+    if (cover) {
+      await sql`UPDATE games SET cover_url = ${cover} WHERE id = ${game.id}`;
+    }
+  }
 
   return res.status(200).json({ ok: true, updated: offers.length });
 }

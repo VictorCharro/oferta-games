@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       INSERT INTO games (itad_id, title, slug, cover_url)
       VALUES (${g.id}::uuid, ${g.title}, ${slug}, ${g.assets?.banner400 ?? null})
       ON CONFLICT (itad_id) DO UPDATE
-        SET title = EXCLUDED.title, cover_url = EXCLUDED.cover_url
+        SET title = EXCLUDED.title, cover_url = COALESCE(EXCLUDED.cover_url, games.cover_url)
     `;
   }
 
