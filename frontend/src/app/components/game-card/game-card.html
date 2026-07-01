@@ -4,7 +4,13 @@
     <span *ngIf="discount > 0" class="badge-discount">-{{ discount }}%</span>
     <span *ngIf="isDlcGame" class="badge-dlc">DLC</span>
     <button class="btn-favorite" (click)="toggleFavorite($event)" [class.active]="favorited">
-      <img src="favorito.png" alt="Favoritar" />
+      <span class="favorite-bg"></span>
+      <svg class="heart-icon" viewBox="0 0 24 24" width="16" height="16"
+        [attr.fill]="favorited ? '#29A8E0' : 'none'"
+        [attr.stroke]="favorited ? '#29A8E0' : '#fff'"
+        stroke-width="2">
+        <path d="M12 21s-6.716-4.35-9.428-8.485C.257 9.028 1.11 5.5 4.108 4.06 6.64 2.84 9.5 3.66 12 6.5c2.5-2.84 5.36-3.66 7.892-2.44 2.998 1.44 3.85 4.968 1.536 8.455C18.716 16.65 12 21 12 21z"/>
+      </svg>
     </button>
   </div>
   <div class="card-body">
