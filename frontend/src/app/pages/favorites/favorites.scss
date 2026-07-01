@@ -1,0 +1,41 @@
+.page-header {
+  margin-bottom: 32px;
+  h1 { font-size: 28px; font-weight: 700; }
+  p { color: var(--text-secondary); margin-top: 4px; }
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.skeleton-card {
+  border-radius: var(--border-radius);
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  aspect-ratio: 3/4;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 32px;
+  color: var(--text-secondary);
+
+  .empty-icon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    margin-bottom: 16px;
+    opacity: 0.6;
+  }
+
+  h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+  a { color: var(--color-purple); }
+}

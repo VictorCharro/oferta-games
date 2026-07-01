@@ -1,6 +1,10 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { GameSummary } from '../../services/game';
 import { isDlc } from '../../services/filters';
+import { FavoritesService } from '../../services/favorites';
+import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-game-card',
@@ -8,11 +12,31 @@ import { isDlc } from '../../services/filters';
   templateUrl: './game-card.html',
   styleUrl: './game-card.scss',
 })
-export class GameCard {
+export class GameCard implements OnInit, OnDestroy {
   @Input() game!: GameSummary;
   @Input() discountPct?: number;
   @Input() storeName?: string;
-  favorited = false;
+
+  private sub!: Subscription;
+
+  constructor(
+    private favoritesService: FavoritesService,
+    private auth: AuthService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit() {
+    this.sub = this.favoritesService.slugs$.subscribe(() => this.cdr.detectChanges());
+  }
+
+  ngOnDestroy() {
+    this.sub.unsubscribe();
+  }
+
+  get favorited(): boolean {
+    return this.favoritesService.isFavorited(this.game?.slug);
+  }
 
   get discount(): number {
     if (this.discountPct != null) return this.discountPct;
@@ -35,6 +59,10 @@ export class GameCard {
   toggleFavorite(event: Event) {
     event.preventDefault();
     event.stopPropagation();
-    this.favorited = !this.favorited;
+    if (!this.auth.isLoggedIn) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.favoritesService.toggle(this.game);
   }
 }

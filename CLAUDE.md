@@ -33,6 +33,8 @@ Sincronização de preços: GitHub Actions chama `POST /api/sync` a cada 6h, pro
 | `DATABASE_URL` | URL do pooler do Supabase — formato `postgresql://...` |
 | `ITAD_API_KEY` | Chave da API do IsThereAnyDeal |
 | `SYNC_SECRET_KEY` | Chave secreta para o endpoint `/api/sync` |
+| `SUPABASE_URL` | URL do projeto Supabase, usada para validar o token do usuário nos endpoints de favoritos |
+| `SUPABASE_ANON_KEY` | Chave anônima do Supabase (pública), usada com `supabase.auth.getUser(token)` para autenticar requisições |
 
 ## Fontes de dados de preços
 
@@ -67,6 +69,13 @@ offers
   url           text NOT NULL
   updated_at    timestamptz NOT NULL
   UNIQUE (game_id, source, store_name)
+
+favorites
+  id            bigserial PK
+  user_id       uuid NOT NULL       -- referencia auth.users(id) do Supabase
+  game_id       bigint FK -> games.id
+  created_at    timestamptz DEFAULT now()
+  UNIQUE (user_id, game_id)
 ```
 
 - Menor preço calculado via query (`MIN(price)`), não armazenado.
@@ -84,6 +93,9 @@ offers
 - `POST /api/games/{slug}/refresh` — atualiza preços de um jogo específico na ITAD.
 - `GET /api/deals/top?size=20&sort=discount` — melhores descontos. `sort=rank` retorna famosos com desconto deduplicados por jogo.
 - `POST /api/sync?page=0` — dispara busca de uma página de deals da ITAD (uso interno/Actions).
+- `GET /api/favorites` — lista jogos favoritados do usuário autenticado (header `Authorization: Bearer <token>`).
+- `POST /api/favorites` — adiciona jogo aos favoritos (`{ slug }`).
+- `DELETE /api/favorites/{slug}` — remove jogo dos favoritos.
 
 ## Estrutura de pastas
 
@@ -100,8 +112,12 @@ offers
       top.ts           → GET /api/deals/top
     sync/
       index.ts         → POST /api/sync
+    favorites/
+      index.ts         → GET/POST /api/favorites
+      [slug].ts        → DELETE /api/favorites/:slug
   lib/
     db.ts              → conexão Supabase
+    auth.ts            → valida token do usuário via Supabase Auth
   scripts/
     sync.ts            → script de sync completo (rodado pelo GitHub Actions)
 
@@ -114,16 +130,18 @@ offers
       game-detail/     → detalhe do jogo + comparação de preços
       free-games/      → jogos gratuitos (discountPct=100)
       search/          → busca de jogos
-      login/           → login e cadastro (Supabase Auth)
+      login/           → login e cadastro (Supabase Auth, Google e Discord OAuth)
       profile/         → editar nome do perfil
-      settings/        → alterar senha, encerrar sessão
+      settings/        → alterar senha (exige senha atual), encerrar sessão
+      favorites/       → jogos favoritados pelo usuário
     components/
       sidebar/         → navegação lateral com ícones PNG
       topbar/          → busca central, toggle de tema, avatar/dropdown ou botões login
-      game-card/       → card reutilizável com badge de desconto e DLC
+      game-card/       → card reutilizável com badge de desconto, DLC e botão de favoritar
     services/
       game.ts          → chamadas à API do backend
-      auth.ts          → AuthService com Supabase Auth
+      auth.ts          → AuthService com Supabase Auth (email/senha, Google, Discord)
+      favorites.ts     → FavoritesService, sincroniza favoritos com o backend
       supabase.ts      → cliente Supabase
       theme.ts         → toggle dark/light mode
       filters.ts       → isDlc() heurística por título
@@ -162,7 +180,8 @@ offers
 - [x] Página de gratuitos (/gratuitos)
 - [x] DLC badge e detecção automática por título
 - [x] rank populado no sync para ordenação por popularidade
-- [ ] Página de favoritos (requer tabela no banco)
+- [x] Login social com Google e Discord (Supabase Auth OAuth)
+- [x] Página de favoritos (tabela `favorites` + endpoints `/api/favorites`)
 - [ ] Integração com Eneba
 - [ ] Integração com Instant Gaming (aguardando afiliados)
 

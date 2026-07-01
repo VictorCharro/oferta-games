@@ -9,6 +9,7 @@ import { FreeGames } from './pages/free-games/free-games';
 import { Login } from './pages/login/login';
 import { Profile } from './pages/profile/profile';
 import { Settings } from './pages/settings/settings';
+import { Favorites } from './pages/favorites/favorites';
 import { authGuard } from './guards/auth.guard';
 
 const routes: Routes = [
@@ -22,7 +23,7 @@ const routes: Routes = [
   { path: 'login', component: Login },
   { path: 'perfil', canActivate: [authGuard], component: Profile },
   { path: 'configuracoes', canActivate: [authGuard], component: Settings },
-  { path: 'favoritos', canActivate: [authGuard], component: Home },
+  { path: 'favoritos', canActivate: [authGuard], component: Favorites },
   { path: '**', redirectTo: '' },
 ];
 

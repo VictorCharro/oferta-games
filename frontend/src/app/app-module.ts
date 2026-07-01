@@ -18,6 +18,7 @@ import { FreeGames } from './pages/free-games/free-games';
 import { Login } from './pages/login/login';
 import { Profile } from './pages/profile/profile';
 import { Settings } from './pages/settings/settings';
+import { Favorites } from './pages/favorites/favorites';
 
 @NgModule({
   declarations: [
@@ -34,6 +35,7 @@ import { Settings } from './pages/settings/settings';
     Login,
     Profile,
     Settings,
+    Favorites,
   ],
   imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule, FormsModule],
   providers: [provideBrowserGlobalErrorListeners()],

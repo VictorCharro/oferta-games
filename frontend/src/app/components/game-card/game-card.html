@@ -4,7 +4,7 @@
     <span *ngIf="discount > 0" class="badge-discount">-{{ discount }}%</span>
     <span *ngIf="isDlcGame" class="badge-dlc">DLC</span>
     <button class="btn-favorite" (click)="toggleFavorite($event)" [class.active]="favorited">
-      {{ favorited ? '❤️' : '🤍' }}
+      <img src="favorito.png" alt="Favoritar" />
     </button>
   </div>
   <div class="card-body">

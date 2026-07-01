@@ -1,0 +1,20 @@
+<div class="page-content">
+  <div class="page-header">
+    <h1>Favoritos</h1>
+    <p>Jogos que você marcou para acompanhar</p>
+  </div>
+
+  <div class="games-grid" *ngIf="!loading && games.length">
+    <app-game-card *ngFor="let game of games" [game]="game"></app-game-card>
+  </div>
+
+  <div class="games-grid" *ngIf="loading">
+    <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6]"></div>
+  </div>
+
+  <div class="empty-state" *ngIf="!loading && !games.length">
+    <img src="favorito.png" class="empty-icon" alt="" />
+    <h3>Nenhum favorito ainda</h3>
+    <p>Clique no coração dos jogos no <a routerLink="/catalogo">catálogo</a> para acompanhá-los aqui.</p>
+  </div>
+</div>

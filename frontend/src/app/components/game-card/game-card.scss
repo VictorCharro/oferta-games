@@ -62,12 +62,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, background 0.2s;
+
+    img {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      opacity: 0.85;
+    }
 
     .game-card:hover & { opacity: 1; }
-    &.active { opacity: 1; }
+    &.active {
+      opacity: 1;
+      background: var(--color-purple);
+
+      img { filter: none; opacity: 1; }
+    }
   }
 }
 
