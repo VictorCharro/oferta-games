@@ -9,6 +9,7 @@ import { App } from './app';
 import { Sidebar } from './components/sidebar/sidebar';
 import { Topbar } from './components/topbar/topbar';
 import { GameCard } from './components/game-card/game-card';
+import { DealsCarousel } from './components/deals-carousel/deals-carousel';
 import { Home } from './pages/home/home';
 import { Catalog } from './pages/catalog/catalog';
 import { BestSellers } from './pages/best-sellers/best-sellers';
@@ -26,6 +27,7 @@ import { Favorites } from './pages/favorites/favorites';
     Sidebar,
     Topbar,
     GameCard,
+    DealsCarousel,
     Home,
     Catalog,
     BestSellers,

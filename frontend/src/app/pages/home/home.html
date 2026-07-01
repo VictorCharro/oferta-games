@@ -1,109 +1,68 @@
 <div class="page-content">
 
-  <!-- Banner principal -->
+  <!-- Banner principal / carrossel -->
   <ng-container *ngIf="featured as f">
-  <div class="banner" [style.backgroundImage]="'url(' + (f.coverUrl || '') + ')'">
-    <div class="banner-overlay">
-      <button class="banner-nav prev" (click)="prevFeatured()">‹</button>
-      <div class="banner-content">
-        <span class="banner-tag">MELHOR OFERTA</span>
+  <div class="banner">
+    <button class="banner-nav prev" (click)="prevFeatured()">‹</button>
+    <a class="banner-inner" [routerLink]="['/jogo', f.slug]">
+      <img class="banner-cover" [src]="f.coverUrl || 'assets/no-cover.png'" [alt]="f.title" />
+      <div class="banner-info">
+        <span class="banner-tag">Melhor oferta</span>
         <h1>{{ f.title }}</h1>
         <div class="banner-price">
           <span class="badge-discount">-{{ f.discountPct }}%</span>
           <span class="price-current">{{ formatPrice(f.price) }}</span>
           <span class="price-original">{{ formatPrice(f.regularPrice) }}</span>
         </div>
-        <p class="banner-store">Menor preço histórico!</p>
-        <a [href]="f.url" target="_blank" class="btn-primary">Ver oferta</a>
+        <p class="banner-store">{{ f.storeName }}</p>
       </div>
-      <button class="banner-nav next" (click)="nextFeatured()">›</button>
-    </div>
+    </a>
+    <button class="banner-nav next" (click)="nextFeatured()">›</button>
     <div class="banner-dots">
-      <span *ngFor="let d of topDeals; let i = index"
+      <span *ngFor="let d of featuredDeals; let i = index"
             class="dot" [class.active]="i === featuredIndex"
             (click)="featuredIndex = i"></span>
     </div>
   </div>
   </ng-container>
 
-  <!-- Melhores Promoções -->
-  <section class="section">
+  <!-- Favoritos -->
+  <section class="section" *ngIf="favoritesDeals.length">
     <div class="section-header">
-      <h2>🔥 Melhores Promoções de Hoje</h2>
-      <a routerLink="/promocoes">Ver todas</a>
+      <h2>Favoritos</h2>
+      <a routerLink="/favoritos">Ver todos</a>
     </div>
-    <div class="deals-row" *ngIf="!loading; else skeletonRow">
-      <a *ngFor="let deal of topDeals" class="deal-card" [routerLink]="['/jogo', deal.slug]">
-        <div class="deal-cover">
-          <img [src]="deal.coverUrl || 'assets/no-cover.png'" [alt]="deal.title" loading="lazy" />
-          <span class="badge-discount">-{{ deal.discountPct }}%</span>
-          <span *ngIf="isDlc(deal.title)" class="badge-dlc">DLC</span>
-        </div>
-        <div class="deal-info">
-          <p class="deal-title">{{ deal.title }}</p>
-          <div class="deal-prices">
-            <span class="price-current">{{ formatPrice(deal.price) }}</span>
-            <span class="price-original">{{ formatPrice(deal.regularPrice) }}</span>
-          </div>
-          <span class="deal-store">{{ deal.storeName }}</span>
-        </div>
-      </a>
-    </div>
-    <ng-template #skeletonRow>
-      <div class="deals-row">
-        <div class="deal-card skeleton" *ngFor="let i of [1,2,3,4,5]"></div>
-      </div>
-    </ng-template>
+    <app-deals-carousel [deals]="favoritesDeals"></app-deals-carousel>
   </section>
 
-  <!-- Quedas de Preço Recentes -->
-  <section class="section">
+  <!-- Grátis da semana -->
+  <section class="section" *ngIf="loading || freeWeek.length">
     <div class="section-header">
-      <h2>⚡ Quedas de Preço Recentes</h2>
-      <a routerLink="/promocoes">Ver todas</a>
+      <h2>Grátis da semana</h2>
+      <a routerLink="/gratuitos">Ver todos</a>
     </div>
-    <div class="price-table">
-      <div class="table-header">
-        <span>Jogo</span>
-        <span>Desconto</span>
-        <span>Preço Atual</span>
-        <span>Menor Preço</span>
-      </div>
-      <a *ngFor="let deal of recentDeals" class="table-row" [routerLink]="['/jogo', deal.slug]">
-        <div class="table-game">
-          <img [src]="deal.coverUrl || 'assets/no-cover.png'" [alt]="deal.title" />
-          <span>{{ deal.title }}</span>
-        </div>
-        <span class="table-discount">-{{ deal.discountPct }}%</span>
-        <span class="price-current">{{ formatPrice(deal.price) }}</span>
-        <span class="price-current">{{ formatPrice(deal.price) }}</span>
-      </a>
+    <div class="deals-row" *ngIf="loading">
+      <div class="deal-card skeleton" *ngFor="let i of [1,2,3,4,5,6,7,8]"></div>
     </div>
+    <app-deals-carousel *ngIf="!loading" [deals]="freeWeek"></app-deals-carousel>
   </section>
 
-  <!-- DLCs em Promoção -->
-  <section class="section" *ngIf="dlcDeals.length">
+  <!-- Maiores descontos (jogos) -->
+  <section class="section" *ngIf="topDiscountGames.length">
     <div class="section-header">
-      <h2>🎮 DLCs em Promoção</h2>
-      <a routerLink="/promocoes">Ver todas</a>
+      <h2>Maiores descontos</h2>
+      <a routerLink="/catalogo">Ver todos</a>
     </div>
-    <div class="price-table">
-      <div class="table-header">
-        <span>DLC</span>
-        <span>Desconto</span>
-        <span>Preço Atual</span>
-        <span>Loja</span>
-      </div>
-      <a *ngFor="let deal of dlcDeals" class="table-row" [routerLink]="['/jogo', deal.slug]">
-        <div class="table-game">
-          <img [src]="deal.coverUrl || 'assets/no-cover.png'" [alt]="deal.title" />
-          <span>{{ deal.title }}</span>
-        </div>
-        <span class="table-discount">-{{ deal.discountPct }}%</span>
-        <span class="price-current">{{ formatPrice(deal.price) }}</span>
-        <span style="font-size:12px;color:var(--text-muted)">{{ deal.storeName }}</span>
-      </a>
+    <app-deals-carousel [deals]="topDiscountGames"></app-deals-carousel>
+  </section>
+
+  <!-- Maiores descontos (DLCs) -->
+  <section class="section" *ngIf="topDiscountDlcs.length">
+    <div class="section-header">
+      <h2>Maiores descontos em DLCs</h2>
+      <a routerLink="/catalogo">Ver todos</a>
     </div>
+    <app-deals-carousel [deals]="topDiscountDlcs"></app-deals-carousel>
   </section>
 
 </div>

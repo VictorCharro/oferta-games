@@ -1,0 +1,22 @@
+<div class="carousel">
+  <button class="carousel-nav prev" #prevBtn (click)="scroll(-1)">‹</button>
+  <div class="deals-row" #row (scroll)="onScroll()">
+    <a *ngFor="let deal of deals" class="deal-card" [routerLink]="['/jogo', deal.slug]">
+      <div class="deal-cover">
+        <img [src]="deal.coverUrl || 'assets/no-cover.png'" [alt]="deal.title" loading="lazy" />
+        <span *ngIf="deal.discountPct > 0 && deal.discountPct < 100" class="badge-discount">-{{ deal.discountPct }}%</span>
+        <span *ngIf="isDlc(deal.title)" class="badge-dlc">DLC</span>
+      </div>
+      <div class="deal-info">
+        <p class="deal-title">{{ deal.title }}</p>
+        <div class="deal-prices" *ngIf="deal.discountPct < 100; else freeLabel">
+          <span class="price-current">{{ formatPrice(deal.price) }}</span>
+          <span class="price-original" *ngIf="deal.regularPrice">{{ formatPrice(deal.regularPrice) }}</span>
+        </div>
+        <ng-template #freeLabel><span class="price-current">Grátis</span></ng-template>
+        <span *ngIf="deal.storeName" class="deal-store">{{ deal.storeName }}</span>
+      </div>
+    </a>
+  </div>
+  <button class="carousel-nav next" #nextBtn (click)="scroll(1)">›</button>
+</div>

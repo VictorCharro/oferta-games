@@ -124,8 +124,8 @@ favorites
 /frontend              → Angular (NgModule, não standalone)
   src/app/
     pages/
-      home/            → tela inicial com banner + deals do dia
-      catalog/         → catálogo com filtros (sort, tipo, faixa de preço, toggle de grade)
+      home/            → tela inicial: banner/carrossel de melhores ofertas + seções em carrossel (favoritos, grátis da semana, maiores descontos, maiores descontos em DLCs)
+      catalog/         → catálogo com filtros (sort, tipo, faixa de preço, toggle de grade), scroll infinito
       best-sellers/    → mais populares por rank
       game-detail/     → detalhe do jogo + comparação de preços
       free-games/      → jogos gratuitos (discountPct=100)
@@ -138,6 +138,7 @@ favorites
       sidebar/         → navegação lateral com ícones PNG
       topbar/          → busca central, toggle de tema, avatar/dropdown ou botões login
       game-card/       → card reutilizável com badge de desconto, DLC e botão de favoritar
+      deals-carousel/  → carrossel horizontal reutilizável de jogos (usado nas seções da home), setas aparecem só quando há overflow, scroll animado com easing
     services/
       game.ts          → chamadas à API do backend
       auth.ts          → AuthService com Supabase Auth (email/senha, Google, Discord)
@@ -160,6 +161,8 @@ favorites
 - **Deduplicação de deals:** `DISTINCT ON (g.id)` mantém apenas a oferta mais barata por jogo
 - **Catálogo rotativo:** top 200 por rank com desconto ativo sobem ao topo — muda conforme promoções do dia
 - Página de login sem sidebar/topbar (app shell oculto em `/login`)
+- **Home:** banner do melhor deal (rank-sorted) linkando direto pro jogo (sem botão externo); seções secundárias em carrossel de até 15-20 jogos, ordenadas: Favoritos (só se logado e com favoritos) → Grátis da semana → Maiores descontos (jogos) → Maiores descontos (DLCs), filtradas por `rank != null` para relevância
+- **Catálogo:** scroll infinito via `window:scroll` com throttle por `requestAnimationFrame` (não usa `IntersectionObserver` — instável com o `position: sticky` do painel de filtros); rechecagem automática após cada carga para o caso do usuário continuar dentro da zona de gatilho
 
 ## O que NÃO fazer
 

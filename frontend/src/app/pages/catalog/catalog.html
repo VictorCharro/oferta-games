@@ -84,9 +84,6 @@
         <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10,11,12]"></div>
       </div>
 
-      <div class="load-more" *ngIf="hasMore && !loading">
-        <button class="btn-outline" (click)="loadMore()">Carregar mais</button>
-      </div>
       <div class="loading-more" *ngIf="loading && games.length > 0">
         <span>Carregando...</span>
       </div>

@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, HostListener, ChangeDetectorRef } from '@angular/core';
 import { GameService, GameSummary } from '../../services/game';
 
 @Component({
@@ -29,9 +29,30 @@ export class Catalog implements OnInit {
     { value: 'price_desc', label: 'Maior preço' },
   ];
 
+  private scrollTicking = false;
+
   constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() { this.load(true); }
+
+  @HostListener('window:scroll')
+  onWindowScroll() {
+    if (this.scrollTicking) return;
+    this.scrollTicking = true;
+    requestAnimationFrame(() => {
+      this.scrollTicking = false;
+      this.checkLoadMore();
+    });
+  }
+
+  private checkLoadMore() {
+    if (!this.hasMore || this.loading) return;
+    const scrolledToBottom =
+      window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 600;
+    if (scrolledToBottom) {
+      this.loadMore();
+    }
+  }
 
   load(reset = false) {
     if (reset) { this.page = 0; this.games = []; }
@@ -47,6 +68,7 @@ export class Catalog implements OnInit {
         this.hasMore = data.length === this.pageSize;
         this.loading = false;
         this.cdr.detectChanges();
+        setTimeout(() => this.checkLoadMore());
       },
       error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
