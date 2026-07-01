@@ -23,7 +23,7 @@
   text-decoration: none;
   color: inherit;
 
-  img.logo-icon { width: 36px; height: 36px; object-fit: contain; border-radius: 50%; }
+  svg.logo-icon { width: 36px; height: 36px; flex-shrink: 0; }
   .logo-text { line-height: 1; }
   .logo-oferta { color: var(--color-purple); }
 }
