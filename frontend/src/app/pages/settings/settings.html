@@ -4,17 +4,25 @@
 
     <div class="settings-card">
       <h2>Alterar senha</h2>
+
+      <!-- campos-isca invisíveis para absorver o autofill do navegador -->
+      <input type="text" style="display:none" autocomplete="username" />
+      <input type="password" style="display:none" autocomplete="new-password" />
+
       <div class="field">
         <label>Senha atual</label>
-        <input type="password" name="currentPassword" autocomplete="current-password" [(ngModel)]="currentPassword" placeholder="••••••••" />
+        <input type="password" name="currentPassword" autocomplete="off" readonly #curPwd
+          (focus)="curPwd.removeAttribute('readonly')" [(ngModel)]="currentPassword" placeholder="••••••••" />
       </div>
       <div class="field">
         <label>Nova senha</label>
-        <input type="password" name="newPassword" autocomplete="new-password" [(ngModel)]="newPassword" placeholder="••••••••" />
+        <input type="password" name="newPassword" autocomplete="off" readonly #newPwd
+          (focus)="newPwd.removeAttribute('readonly')" [(ngModel)]="newPassword" placeholder="••••••••" />
       </div>
       <div class="field">
         <label>Confirmar nova senha</label>
-        <input type="password" name="confirmPassword" autocomplete="new-password" [(ngModel)]="confirmPassword" placeholder="••••••••" />
+        <input type="password" name="confirmPassword" autocomplete="off" readonly #confirmPwd
+          (focus)="confirmPwd.removeAttribute('readonly')" [(ngModel)]="confirmPassword" placeholder="••••••••" />
       </div>
       <p class="msg-success" *ngIf="success">{{ success }}</p>
       <p class="msg-error" *ngIf="error">{{ error }}</p>

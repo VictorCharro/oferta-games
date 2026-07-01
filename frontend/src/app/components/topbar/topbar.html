@@ -2,9 +2,12 @@
   <div class="search-wrapper">
     <img class="search-icon" src="pesquisar.png" alt="Pesquisar" />
     <input
-      type="text"
+      type="search"
       name="topbarSearch"
       autocomplete="off"
+      readonly
+      #searchInput
+      (focus)="searchInput.removeAttribute('readonly')"
       placeholder="Pesquisar jogos, lojas, categorias..."
       [(ngModel)]="searchQuery"
       (keydown)="onSearch($event)"
