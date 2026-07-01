@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { GameService, TopDeal, GameSummary } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
@@ -80,6 +80,15 @@ export class Home implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.favSub?.unsubscribe();
     this.stopAutoplay();
+  }
+
+  @HostListener('document:visibilitychange')
+  onVisibilityChange() {
+    if (document.hidden) {
+      this.stopAutoplay();
+    } else {
+      this.startAutoplay();
+    }
   }
 
   prevFeatured() {

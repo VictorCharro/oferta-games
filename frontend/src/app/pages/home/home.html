@@ -5,7 +5,7 @@
     <button class="banner-nav prev" (click)="prevFeatured()">‹</button>
     <div class="banner-viewport">
       <div class="banner-track" [style.transform]="'translateX(-' + (featuredIndex * 100) + '%)'">
-        <a class="banner-slide" *ngFor="let f of featuredDeals" [routerLink]="['/jogo', f.slug]">
+        <a class="banner-slide" *ngFor="let f of featuredDeals; let i = index" [class.active]="i === featuredIndex" [routerLink]="['/jogo', f.slug]">
           <img class="banner-cover" [src]="f.coverUrl || 'no-cover.svg'" [alt]="f.title" />
           <div class="banner-info">
             <span class="banner-tag">Melhor oferta</span>
