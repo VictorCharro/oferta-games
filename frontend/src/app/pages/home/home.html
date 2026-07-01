@@ -6,7 +6,7 @@
     <div class="banner-viewport">
       <div class="banner-track" [style.transform]="'translateX(-' + (featuredIndex * 100) + '%)'">
         <a class="banner-slide" *ngFor="let f of featuredDeals" [routerLink]="['/jogo', f.slug]">
-          <img class="banner-cover" [src]="f.coverUrl || 'assets/no-cover.png'" [alt]="f.title" />
+          <img class="banner-cover" [src]="f.coverUrl || 'no-cover.svg'" [alt]="f.title" />
           <div class="banner-info">
             <span class="banner-tag">Melhor oferta</span>
             <h1>{{ f.title }}</h1>

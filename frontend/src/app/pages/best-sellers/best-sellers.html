@@ -7,7 +7,7 @@
   <div class="rank-list" *ngIf="!loading">
     <a *ngFor="let game of games; let i = index" class="rank-row" [routerLink]="['/jogo', game.slug]">
       <span class="rank-pos" [class.top3]="i < 3">#{{ i + 1 }}</span>
-      <img [src]="game.coverUrl || 'assets/no-cover.png'" [alt]="game.title" class="rank-cover" />
+      <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" class="rank-cover" />
       <span class="rank-title">{{ game.title }}</span>
       <span class="rank-price price-current" *ngIf="game.minPrice != null">
         {{ (+game.minPrice).toLocaleString('pt-BR', {style:'currency',currency:'BRL'}) }}

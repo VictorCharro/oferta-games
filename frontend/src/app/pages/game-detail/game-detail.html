@@ -2,7 +2,7 @@
   <div class="game-hero" [style.backgroundImage]="'url(' + (game.coverUrl || '') + ')'">
     <div class="hero-overlay">
       <div class="hero-content">
-        <img [src]="game.coverUrl || 'assets/no-cover.png'" [alt]="game.title" class="hero-cover" />
+        <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" class="hero-cover" />
         <div class="hero-info">
           <h1>{{ game.title }}</h1>
           <div class="hero-best" *ngIf="game.offers.length">

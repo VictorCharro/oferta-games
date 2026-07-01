@@ -1,6 +1,6 @@
 <a class="game-card" [routerLink]="['/jogo', game.slug]">
   <div class="card-image">
-    <img [src]="game.coverUrl || 'assets/no-cover.png'" [alt]="game.title" loading="lazy" />
+    <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" loading="lazy" />
     <span *ngIf="discount > 0" class="badge-discount">-{{ discount }}%</span>
     <span *ngIf="isDlcGame" class="badge-dlc">DLC</span>
     <button class="btn-favorite" (click)="toggleFavorite($event)" [class.active]="favorited">

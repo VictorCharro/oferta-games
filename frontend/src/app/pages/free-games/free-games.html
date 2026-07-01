@@ -7,7 +7,7 @@
   <div class="free-grid" *ngIf="!loading && games.length">
     <a *ngFor="let game of games" class="free-card" [routerLink]="['/jogo', game.slug]">
       <div class="free-cover">
-        <img [src]="game.coverUrl || 'assets/no-cover.png'" [alt]="game.title" loading="lazy" />
+        <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" loading="lazy" />
         <span class="free-badge">GRÁTIS</span>
       </div>
       <div class="free-info">
