@@ -76,7 +76,6 @@
     .game-card:hover & { opacity: 1; }
     &.active {
       opacity: 1;
-      background: var(--color-purple);
 
       img { filter: none; opacity: 1; }
     }
