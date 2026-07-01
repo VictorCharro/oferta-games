@@ -48,3 +48,6 @@ frontend/node_modules/
 frontend/dist/
 frontend/.angular/.idea/
 backend/node_modules/
+
+### Claude Code (config pessoal, pode conter segredos em permissões) ###
+.claude/settings.local.json
