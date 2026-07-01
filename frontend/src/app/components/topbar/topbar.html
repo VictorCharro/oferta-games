@@ -3,6 +3,8 @@
     <img class="search-icon" src="pesquisar.png" alt="Pesquisar" />
     <input
       type="text"
+      name="topbarSearch"
+      autocomplete="off"
       placeholder="Pesquisar jogos, lojas, categorias..."
       [(ngModel)]="searchQuery"
       (keydown)="onSearch($event)"

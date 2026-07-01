@@ -25,15 +25,15 @@
     <form (submit)="submit(); $event.preventDefault()">
       <div class="field" *ngIf="mode === 'register'">
         <label>Nome</label>
-        <input type="text" [(ngModel)]="name" name="name" placeholder="Seu nome" />
+        <input type="text" [(ngModel)]="name" name="name" autocomplete="name" placeholder="Seu nome" />
       </div>
       <div class="field">
         <label>E-mail</label>
-        <input type="email" [(ngModel)]="email" name="email" placeholder="seu@email.com" />
+        <input type="email" [(ngModel)]="email" name="email" autocomplete="username" placeholder="seu@email.com" />
       </div>
       <div class="field">
         <label>Senha</label>
-        <input type="password" [(ngModel)]="password" name="password" placeholder="••••••••" />
+        <input type="password" [(ngModel)]="password" name="password" [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'" placeholder="••••••••" />
       </div>
 
       <p class="msg-error" *ngIf="error">{{ error }}</p>
