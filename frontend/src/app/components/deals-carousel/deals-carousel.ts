@@ -1,6 +1,6 @@
 import { Component, Input, ElementRef, ViewChild, AfterViewInit, OnChanges, OnDestroy, HostListener } from '@angular/core';
 import { DealCardView } from '../../pages/home/home';
-import { isDlc } from '../../services/filters';
+import { resolveDlc } from '../../services/filters';
 
 @Component({
   selector: 'app-deals-carousel',
@@ -77,8 +77,8 @@ export class DealsCarousel implements AfterViewInit, OnChanges, OnDestroy {
     requestAnimationFrame(step);
   }
 
-  isDlc(title: string): boolean {
-    return isDlc(title);
+  isDlc(deal: DealCardView): boolean {
+    return resolveDlc(deal.title, deal.isDlc);
   }
 
   formatPrice(price: number | string | null): string {

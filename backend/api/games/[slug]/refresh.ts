@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import sql from '../../../lib/db';
-import { steamCoverFromUrl } from '../../../lib/steam-cover';
+import { extractSteamAppId, fetchSteamAppDetails } from '../../../lib/steam';
 
 const ITAD_BASE = 'https://api.isthereanydeal.com';
 
@@ -20,8 +20,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { slug } = req.query;
 
-  const [game] = await sql<{ id: number; itad_id: string; coverUrl: string | null }[]>`
-    SELECT id, itad_id::text, cover_url AS "coverUrl" FROM games WHERE slug = ${slug as string}
+  const [game] = await sql<{ id: number; itad_id: string; coverUrl: string | null; isDlc: boolean | null }[]>`
+    SELECT id, itad_id::text, cover_url AS "coverUrl", is_dlc AS "isDlc" FROM games WHERE slug = ${slug as string}
   `;
 
   if (!game) return res.status(404).json({ error: 'Game not found' });
@@ -74,11 +74,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           updated_at = EXCLUDED.updated_at
   `;
 
-  if (!game.coverUrl) {
+  if (!game.coverUrl || game.isDlc === null) {
     const steamOffer = result.deals.find(d => d.shop.name === 'Steam');
-    const cover = steamOffer ? steamCoverFromUrl(steamOffer.url) : null;
-    if (cover) {
-      await sql`UPDATE games SET cover_url = ${cover} WHERE id = ${game.id}`;
+    const appid = steamOffer ? extractSteamAppId(steamOffer.url) : null;
+    const details = appid ? await fetchSteamAppDetails(appid) : null;
+    if (details) {
+      await sql`
+        UPDATE games
+        SET is_dlc = ${details.isDlc}, cover_url = COALESCE(cover_url, ${details.headerImage})
+        WHERE id = ${game.id}
+      `;
     }
   }
 

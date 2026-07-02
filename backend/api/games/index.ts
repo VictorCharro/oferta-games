@@ -13,8 +13,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const maxPrice = req.query.maxPrice ? Number(req.query.maxPrice) : null;
   const type = (req.query.type as string) || 'all'; // 'all' | 'game' | 'dlc'
 
-  const DLC_PATTERN = '%DLC%|%Season Pass%|%Soundtrack%|% OST%|%Art Book%|%Skin Set%|%Skin Pack%|%Booster Pack%|%Expansion%|%Add-on%';
-
   // Ordenação padrão (rank): top 200 com desconto ativo sobem ao topo ordenados por desconto,
   // restante vem por popularidade — faz o catálogo rotacionar conforme promoções do dia
   const orderBy =
@@ -41,9 +39,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       g.id ASC
     `;
 
+  const titleIsDlc = sql`(g.title ILIKE '%DLC%' OR g.title ILIKE '%Season Pass%' OR g.title ILIKE '%Soundtrack%' OR g.title ILIKE '% OST%' OR g.title ILIKE '%Art Book%' OR g.title ILIKE '%Skin Set%' OR g.title ILIKE '%Skin Pack%' OR g.title ILIKE '%Booster Pack%' OR g.title ILIKE '%Expansion%' OR g.title ILIKE '%Add-on%')`;
+
+  // Prefere a classificação real vinda da Steam (g.is_dlc); cai para a heurística
+  // por título só quando o jogo ainda não foi classificado (is_dlc IS NULL).
   const typeFilter =
-    type === 'dlc' ? sql`AND (g.title ILIKE '%DLC%' OR g.title ILIKE '%Season Pass%' OR g.title ILIKE '%Soundtrack%' OR g.title ILIKE '% OST%' OR g.title ILIKE '%Art Book%' OR g.title ILIKE '%Skin Set%' OR g.title ILIKE '%Skin Pack%' OR g.title ILIKE '%Booster Pack%' OR g.title ILIKE '%Expansion%' OR g.title ILIKE '%Add-on%')` :
-    type === 'game' ? sql`AND NOT (g.title ILIKE '%DLC%' OR g.title ILIKE '%Season Pass%' OR g.title ILIKE '%Soundtrack%' OR g.title ILIKE '% OST%' OR g.title ILIKE '%Art Book%' OR g.title ILIKE '%Skin Set%' OR g.title ILIKE '%Skin Pack%' OR g.title ILIKE '%Booster Pack%' OR g.title ILIKE '%Expansion%' OR g.title ILIKE '%Add-on%')` :
+    type === 'dlc' ? sql`AND (g.is_dlc = true OR (g.is_dlc IS NULL AND ${titleIsDlc}))` :
+    type === 'game' ? sql`AND (g.is_dlc = false OR (g.is_dlc IS NULL AND NOT ${titleIsDlc}))` :
     sql``;
 
   const priceFilter =
@@ -57,13 +59,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       g.slug,
       g.title,
       g.cover_url AS "coverUrl",
+      g.is_dlc AS "isDlc",
       MIN(o.price) AS "minPrice",
       MAX(o.regular_price) AS "regularPrice"
     FROM games g
     LEFT JOIN offers o ON o.game_id = g.id
     WHERE 1=1
     ${typeFilter}
-    GROUP BY g.id, g.slug, g.title, g.cover_url
+    GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
     ${priceFilter}
     ORDER BY ${orderBy}
     LIMIT ${size} OFFSET ${offset}

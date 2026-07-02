@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import { steamCoverFromUrl } from '../lib/steam-cover';
+import { steamCoverFromUrl, extractSteamAppId, fetchSteamAppDetails } from '../lib/steam';
 
 const sql = postgres(process.env.DATABASE_URL!, { ssl: 'require', prepare: false });
 
@@ -76,6 +76,43 @@ async function syncPage(offset: number): Promise<{ count: number; hasMore: boole
   return { count: items.length, hasMore: data.hasMore };
 }
 
+const STEAM_BACKFILL_LIMIT = 300;
+const STEAM_BACKFILL_DELAY_MS = 250;
+
+async function backfillSteamMetadata(limit = STEAM_BACKFILL_LIMIT) {
+  const rows = await sql<{ id: number; url: string }[]>`
+    SELECT g.id, o.url
+    FROM games g
+    JOIN offers o ON o.game_id = g.id AND o.store_name = 'Steam'
+    WHERE g.is_dlc IS NULL
+    ORDER BY g.id
+    LIMIT ${limit}
+  `;
+
+  console.log(`Backfilling Steam metadata for ${rows.length} games...`);
+  let updated = 0;
+
+  for (const row of rows) {
+    const appid = extractSteamAppId(row.url);
+    if (!appid) continue;
+
+    const details = await fetchSteamAppDetails(appid);
+    if (details) {
+      await sql`
+        UPDATE games
+        SET is_dlc = ${details.isDlc},
+            cover_url = COALESCE(cover_url, ${details.headerImage})
+        WHERE id = ${row.id}
+      `;
+      updated++;
+    }
+
+    await new Promise(r => setTimeout(r, STEAM_BACKFILL_DELAY_MS));
+  }
+
+  console.log(`Steam metadata backfill complete. Updated: ${updated}/${rows.length}`);
+}
+
 async function main() {
   console.log('Starting full ITAD sync...');
   let offset = 0;
@@ -90,6 +127,9 @@ async function main() {
   }
 
   console.log(`Sync complete. Total: ${total} deals.`);
+
+  await backfillSteamMetadata();
+
   await sql.end();
 }
 

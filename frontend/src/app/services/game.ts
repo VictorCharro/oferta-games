@@ -8,6 +8,7 @@ export interface GameSummary {
   coverUrl: string | null;
   minPrice: number | string | null;
   regularPrice?: number | string | null;
+  isDlc?: boolean | null;
 }
 
 export interface Offer {
@@ -30,6 +31,7 @@ export interface TopDeal {
   slug: string;
   title: string;
   coverUrl: string | null;
+  isDlc?: boolean | null;
   rank: number | null;
   storeName: string;
   price: number;

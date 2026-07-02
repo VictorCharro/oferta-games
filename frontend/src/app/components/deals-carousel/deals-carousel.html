@@ -5,7 +5,7 @@
       <div class="deal-cover">
         <img [src]="deal.coverUrl || 'no-cover.svg'" [alt]="deal.title" loading="lazy" />
         <span *ngIf="deal.discountPct > 0 && deal.discountPct < 100" class="badge-discount">-{{ deal.discountPct }}%</span>
-        <span *ngIf="isDlc(deal.title)" class="badge-dlc">DLC</span>
+        <span *ngIf="isDlc(deal)" class="badge-dlc">DLC</span>
       </div>
       <div class="deal-info">
         <p class="deal-title">{{ deal.title }}</p>

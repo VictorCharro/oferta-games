@@ -14,6 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         g.slug,
         g.title,
         g.cover_url AS "coverUrl",
+        g.is_dlc AS "isDlc",
         g.rank,
         o.store_name AS "storeName",
         o.price,

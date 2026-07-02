@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@
 import { Subscription } from 'rxjs';
 import { GameService, TopDeal, GameSummary } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
-import { isDlc } from '../../services/filters';
+import { resolveDlc } from '../../services/filters';
 
 export interface DealCardView {
   slug: string;
@@ -12,6 +12,7 @@ export interface DealCardView {
   price: number | string | null;
   regularPrice: number | string | null;
   storeName?: string | null;
+  isDlc?: boolean | null;
 }
 
 @Component({
@@ -22,6 +23,7 @@ export interface DealCardView {
 })
 export class Home implements OnInit, OnDestroy {
   featuredDeals: TopDeal[] = [];
+  famousGames: DealCardView[] = [];
   favoritesDeals: DealCardView[] = [];
   freeWeek: DealCardView[] = [];
   topDiscountGames: DealCardView[] = [];
@@ -41,7 +43,7 @@ export class Home implements OnInit, OnDestroy {
   ngOnInit() {
     this.gameService.getTopDeals(50, 'rank').subscribe({
       next: (deals) => {
-        const paid = deals.filter(d => Number(d.discountPct) < 100 && !isDlc(d.title));
+        const paid = deals.filter(d => Number(d.discountPct) < 100 && !resolveDlc(d.title, d.isDlc));
         this.featuredDeals = this.shuffle(paid).slice(0, 5);
         this.loading = false;
         this.startAutoplay();
@@ -53,18 +55,23 @@ export class Home implements OnInit, OnDestroy {
     this.gameService.getTopDeals(200, 'discount').subscribe({
       next: (deals) => {
         this.freeWeek = deals
-          .filter(d => Number(d.discountPct) === 100 && !isDlc(d.title))
+          .filter(d => Number(d.discountPct) === 100 && !resolveDlc(d.title, d.isDlc))
           .slice(0, 15)
           .map(d => this.fromTopDeal(d));
 
         const active = deals.filter(d => Number(d.discountPct) < 100);
-        this.topDiscountGames = active.filter(d => d.rank != null && !isDlc(d.title)).slice(0, 20).map(d => this.fromTopDeal(d));
+        this.topDiscountGames = active.filter(d => d.rank != null && !resolveDlc(d.title, d.isDlc)).slice(0, 20).map(d => this.fromTopDeal(d));
         this.cdr.detectChanges();
       }
     });
 
     this.gameService.getGames(0, 20, { sort: 'discount', type: 'dlc' }).subscribe(games => {
       this.topDiscountDlcs = games.map(g => this.fromGameSummary(g));
+      this.cdr.detectChanges();
+    });
+
+    this.gameService.getGames(0, 50, { sort: 'rank', type: 'game' }).subscribe(games => {
+      this.famousGames = this.shuffle(games.map(g => this.fromGameSummary(g)));
       this.cdr.detectChanges();
     });
 
@@ -120,8 +127,6 @@ export class Home implements OnInit, OnDestroy {
     }
   }
 
-  isDlc(title: string): boolean { return isDlc(title); }
-
   private shuffle<T>(arr: T[]): T[] {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -146,6 +151,7 @@ export class Home implements OnInit, OnDestroy {
       price: d.price,
       regularPrice: d.regularPrice,
       storeName: d.storeName,
+      isDlc: d.isDlc,
     };
   }
 
@@ -161,6 +167,7 @@ export class Home implements OnInit, OnDestroy {
       price: g.minPrice,
       regularPrice: g.regularPrice ?? null,
       storeName: null,
+      isDlc: g.isDlc,
     };
   }
 }

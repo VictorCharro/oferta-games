@@ -56,6 +56,7 @@ games
   slug          text UNIQUE NOT NULL
   cover_url     text NULL
   rank          integer NULL         -- posição no feed ITAD (popularidade)
+  is_dlc        boolean NULL         -- classificação real via Steam (NULL = ainda não verificado, cai no heurístico por título)
   created_at    timestamptz DEFAULT now()
 
 offers
@@ -118,13 +119,14 @@ favorites
   lib/
     db.ts              → conexão Supabase
     auth.ts            → valida token do usuário via Supabase Auth
+    steam.ts           → extrai appid da URL da oferta Steam, deriva capa via CDN e classifica DLC via appdetails
   scripts/
     sync.ts            → script de sync completo (rodado pelo GitHub Actions)
 
 /frontend              → Angular (NgModule, não standalone)
   src/app/
     pages/
-      home/            → tela inicial: banner/carrossel de melhores ofertas + seções em carrossel (favoritos, grátis da semana, maiores descontos, maiores descontos em DLCs)
+      home/            → tela inicial: banner/carrossel de melhores ofertas (autoplay) + seções em carrossel (jogos mais famosos, favoritos, grátis da semana, maiores descontos, maiores descontos em DLCs)
       catalog/         → catálogo com filtros (sort, tipo, faixa de preço, toggle de grade), scroll infinito
       best-sellers/    → mais populares por rank
       game-detail/     → detalhe do jogo + comparação de preços
@@ -145,7 +147,7 @@ favorites
       favorites.ts     → FavoritesService, sincroniza favoritos com o backend
       supabase.ts      → cliente Supabase
       theme.ts         → toggle dark/light mode
-      filters.ts       → isDlc() heurística por título
+      filters.ts       → isDlc() heurística por título, resolveDlc() prioriza is_dlc real vindo da API
     guards/
       auth.guard.ts    → redireciona para /login se não autenticado
 
@@ -157,11 +159,12 @@ favorites
 
 - **Cor principal:** `#29A8E0` (azul)
 - **Ícones:** PNGs em `frontend/public/` (home, catalogo, mais-vendidos, gratuito, favorito, perfil, configuracoes, logout, pesquisar, notificacao, sol-tema-claro, lua-tema-escuro, logo)
-- **DLC detection:** heurística por regex no título (`isDlc()` em `filters.ts`)
+- **DLC detection:** classificação real via Steam quando disponível (`games.is_dlc`, preenchida pelo `backend/lib/steam.ts` a partir do campo `type` do endpoint público `store.steampowered.com/api/appdetails`, sem precisar de chave); cai para heurística por regex no título (`isDlc()`/`resolveDlc()` em `filters.ts`) enquanto `is_dlc IS NULL`. Backfill roda no sync completo (até 300 jogos/execução, throttled) e no refresh individual do jogo
 - **Deduplicação de deals:** `DISTINCT ON (g.id)` mantém apenas a oferta mais barata por jogo
 - **Catálogo rotativo:** top 200 por rank com desconto ativo sobem ao topo — muda conforme promoções do dia
 - Página de login sem sidebar/topbar (app shell oculto em `/login`)
-- **Home:** banner do melhor deal (rank-sorted) linkando direto pro jogo (sem botão externo); seções secundárias em carrossel de até 15-20 jogos, ordenadas: Favoritos (só se logado e com favoritos) → Grátis da semana → Maiores descontos (jogos) → Maiores descontos (DLCs), filtradas por `rank != null` para relevância
+- **Home:** banner com autoplay (6s, pausa quando a aba fica em segundo plano via `visibilitychange`) sorteando 5 entre os top 50 por rank, linkando direto pro jogo (sem botão externo), com transição deslizante via `transform`; seções secundárias em carrossel de até 15-20 jogos, ordenadas: Jogos mais famosos (top 50 por rank, embaralhados) → Favoritos (só se logado e com favoritos) → Grátis da semana → Maiores descontos (jogos) → Maiores descontos (DLCs), filtradas por `rank != null` para relevância
+- **Capa ausente:** fallback visual em `no-cover.svg` (ícone da marca sobre fundo escuro); no backend, se a ITAD não retorna capa mas há oferta Steam, deriva a capa oficial extraindo o `appid` da própria URL da oferta e montando `cdn.akamai.steamstatic.com/steam/apps/{appid}/header.jpg` (sem scraping nem chamada extra de API) — aplicado no sync completo e no refresh individual do jogo
 - **Catálogo:** scroll infinito via `window:scroll` com throttle por `requestAnimationFrame` (não usa `IntersectionObserver` — instável com o `position: sticky` do painel de filtros); rechecagem automática após cada carga para o caso do usuário continuar dentro da zona de gatilho
 
 ## O que NÃO fazer

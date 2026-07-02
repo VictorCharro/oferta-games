@@ -21,3 +21,9 @@ const NON_GAME_PATTERNS = [
 export function isDlc(title: string): boolean {
   return NON_GAME_PATTERNS.some(p => p.test(title));
 }
+
+// Usa a classificação real vinda da Steam quando disponível; cai para a
+// heurística por título só quando o jogo ainda não foi classificado.
+export function resolveDlc(title: string, isDlcFlag?: boolean | null): boolean {
+  return isDlcFlag ?? isDlc(title);
+}

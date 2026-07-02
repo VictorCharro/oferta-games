@@ -2,7 +2,7 @@ import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { GameSummary } from '../../services/game';
-import { isDlc } from '../../services/filters';
+import { resolveDlc } from '../../services/filters';
 import { FavoritesService } from '../../services/favorites';
 import { AuthService } from '../../services/auth';
 
@@ -47,7 +47,7 @@ export class GameCard implements OnInit, OnDestroy {
   }
 
   get isDlcGame(): boolean {
-    return isDlc(this.game?.title ?? '');
+    return resolveDlc(this.game?.title ?? '', this.game?.isDlc);
   }
 
   formatPrice(price: number | string | null): string {
