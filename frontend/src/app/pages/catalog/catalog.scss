@@ -55,6 +55,27 @@
   }
 }
 
+.search-field {
+  display: flex;
+  align-items: center;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 10px;
+
+  input {
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+    color: var(--text-primary);
+    font-family: inherit;
+
+    &::placeholder { color: var(--text-muted); }
+  }
+}
+
 .price-inputs {
   display: flex;
   flex-direction: column;

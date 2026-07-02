@@ -1,5 +1,7 @@
-import { Component, OnInit, HostListener, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { GameService, GameSummary } from '../../services/game';
 
 @Component({
@@ -8,7 +10,7 @@ import { GameService, GameSummary } from '../../services/game';
   templateUrl: './catalog.html',
   styleUrl: './catalog.scss',
 })
-export class Catalog implements OnInit {
+export class Catalog implements OnInit, OnDestroy {
   games: GameSummary[] = [];
   loading = true;
   page = 0;
@@ -18,10 +20,14 @@ export class Catalog implements OnInit {
   viewMode: 'compact' | 'large' = 'compact';
   sort = 'rank';
   type = 'all';
+  query = '';
   minPrice: number | null = null;
   maxPrice: number | null = null;
   minPriceInput = '';
   maxPriceInput = '';
+
+  private query$ = new Subject<string>();
+  private querySub!: Subscription;
 
   readonly sortOptions = [
     { value: 'rank', label: 'Mais relevantes' },
@@ -44,7 +50,19 @@ export class Catalog implements OnInit {
     const sort = params.get('sort');
     if (type && ['all', 'game', 'dlc'].includes(type)) this.type = type;
     if (sort && this.sortOptions.some(o => o.value === sort)) this.sort = sort;
+
+    this.querySub = this.query$.pipe(debounceTime(300), distinctUntilChanged()).subscribe(() => this.load(true));
+
     this.load(true);
+  }
+
+  ngOnDestroy() {
+    this.querySub?.unsubscribe();
+  }
+
+  onQueryInput(value: string) {
+    this.query = value;
+    this.query$.next(value);
   }
 
   @HostListener('window:scroll')
@@ -74,6 +92,7 @@ export class Catalog implements OnInit {
       type: this.type,
       minPrice: this.minPrice,
       maxPrice: this.maxPrice,
+      q: this.query,
     }).subscribe({
       next: (data) => {
         this.games = [...this.games, ...data];
@@ -95,6 +114,7 @@ export class Catalog implements OnInit {
   clearFilters() {
     this.sort = 'rank';
     this.type = 'all';
+    this.query = '';
     this.minPrice = null;
     this.maxPrice = null;
     this.minPriceInput = '';

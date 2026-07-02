@@ -7,12 +7,22 @@
       autocomplete="off"
       readonly
       #searchInput
-      (focus)="searchInput.removeAttribute('readonly')"
+      (focus)="searchInput.removeAttribute('readonly'); onSearchFocus()"
       placeholder="Pesquisar jogos, lojas, categorias..."
       [(ngModel)]="searchQuery"
+      (ngModelChange)="onSearchInput($event)"
       (keydown)="onSearch($event)"
       class="search-input"
     />
+    <div class="search-suggestions" *ngIf="showSuggestions">
+      <a *ngFor="let g of suggestions" class="suggestion-item" [routerLink]="['/jogo', g.slug]" (click)="closeSuggestions()">
+        <img [src]="g.coverUrl || 'no-cover.svg'" [alt]="g.title" />
+        <div class="suggestion-info">
+          <span class="suggestion-title">{{ g.title }}</span>
+          <span class="suggestion-price">{{ formatPrice(g.minPrice) }}</span>
+        </div>
+      </a>
+    </div>
   </div>
 
   <div class="topbar-actions">

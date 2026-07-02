@@ -1,8 +1,10 @@
 import { Component, HostListener, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Router, NavigationEnd } from '@angular/router';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, switchMap } from 'rxjs/operators';
 import { ThemeService } from '../../services/theme';
 import { AuthService } from '../../services/auth';
+import { GameService, GameSummary } from '../../services/game';
 
 @Component({
   selector: 'app-topbar',
@@ -13,20 +15,88 @@ import { AuthService } from '../../services/auth';
 export class Topbar implements OnInit, OnDestroy {
   searchQuery = '';
   dropdownOpen = false;
+  suggestions: GameSummary[] = [];
+  showSuggestions = false;
+  private isCatalogPage = false;
   private sub!: Subscription;
+  private routeSub!: Subscription;
+  private searchSub!: Subscription;
+  private searchInput$ = new Subject<string>();
 
-  constructor(public theme: ThemeService, public auth: AuthService, private router: Router, private cdr: ChangeDetectorRef) {}
+  constructor(
+    public theme: ThemeService,
+    public auth: AuthService,
+    private router: Router,
+    private gameService: GameService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.sub = this.auth.user$.subscribe(() => this.cdr.detectChanges());
+
+    this.isCatalogPage = this.router.url.startsWith('/catalogo');
+    this.routeSub = this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(e => {
+        this.isCatalogPage = e.urlAfterRedirects.startsWith('/catalogo');
+        this.showSuggestions = false;
+        this.cdr.detectChanges();
+      });
+
+    this.searchSub = this.searchInput$
+      .pipe(
+        debounceTime(250),
+        distinctUntilChanged(),
+        switchMap(q => {
+          const trimmed = q.trim();
+          if (trimmed.length < 2 || this.isCatalogPage) return [];
+          return this.gameService.searchGames(trimmed);
+        })
+      )
+      .subscribe(results => {
+        this.suggestions = results.slice(0, 6);
+        this.showSuggestions = this.suggestions.length > 0;
+        this.cdr.detectChanges();
+      });
   }
 
-  ngOnDestroy() { this.sub.unsubscribe(); }
+  ngOnDestroy() {
+    this.sub.unsubscribe();
+    this.routeSub?.unsubscribe();
+    this.searchSub?.unsubscribe();
+  }
+
+  onSearchInput(value: string) {
+    if (!value.trim()) {
+      this.suggestions = [];
+      this.showSuggestions = false;
+    }
+    this.searchInput$.next(value);
+  }
+
+  onSearchFocus() {
+    if (this.suggestions.length && !this.isCatalogPage) this.showSuggestions = true;
+  }
 
   onSearch(event: KeyboardEvent) {
     if (event.key === 'Enter' && this.searchQuery.trim()) {
+      this.showSuggestions = false;
       this.router.navigate(['/busca'], { queryParams: { q: this.searchQuery.trim() } });
+    } else if (event.key === 'Escape') {
+      this.showSuggestions = false;
     }
+  }
+
+  closeSuggestions() {
+    this.showSuggestions = false;
+    this.searchQuery = '';
+    this.suggestions = [];
+  }
+
+  formatPrice(price: number | string | null): string {
+    const n = Number(price);
+    if (price == null || isNaN(n)) return '—';
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
   toggleDropdown() { this.dropdownOpen = !this.dropdownOpen; }
@@ -35,6 +105,7 @@ export class Topbar implements OnInit, OnDestroy {
   onDocumentClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (!target.closest('.user-menu')) this.dropdownOpen = false;
+    if (!target.closest('.search-wrapper')) this.showSuggestions = false;
   }
 
   logout() {

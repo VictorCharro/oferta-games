@@ -12,6 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const minPrice = req.query.minPrice ? Number(req.query.minPrice) : null;
   const maxPrice = req.query.maxPrice ? Number(req.query.maxPrice) : null;
   const type = (req.query.type as string) || 'all'; // 'all' | 'game' | 'dlc'
+  const q = (req.query.q as string)?.trim() || null;
 
   // Ordenação padrão (rank): top 200 com desconto ativo sobem ao topo ordenados por desconto,
   // restante vem por popularidade — faz o catálogo rotacionar conforme promoções do dia
@@ -54,6 +55,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     maxPrice !== null ? sql`HAVING MIN(o.price) <= ${maxPrice}` :
     sql``;
 
+  const searchFilter = q ? sql`AND g.title ILIKE ${'%' + q + '%'}` : sql``;
+
   const games = await sql`
     SELECT
       g.slug,
@@ -66,6 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     LEFT JOIN offers o ON o.game_id = g.id
     WHERE 1=1
     ${typeFilter}
+    ${searchFilter}
     GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
     ${priceFilter}
     ORDER BY ${orderBy}
