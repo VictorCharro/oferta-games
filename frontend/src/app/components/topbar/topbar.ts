@@ -5,6 +5,7 @@ import { debounceTime, distinctUntilChanged, filter, switchMap } from 'rxjs/oper
 import { ThemeService } from '../../services/theme';
 import { AuthService } from '../../services/auth';
 import { GameService, GameSummary } from '../../services/game';
+import { SearchService } from '../../services/search';
 
 @Component({
   selector: 'app-topbar',
@@ -28,6 +29,7 @@ export class Topbar implements OnInit, OnDestroy {
     public auth: AuthService,
     private router: Router,
     private gameService: GameService,
+    private searchService: SearchService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -39,7 +41,10 @@ export class Topbar implements OnInit, OnDestroy {
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe(e => {
         this.isCatalogPage = e.urlAfterRedirects.startsWith('/catalogo');
+        this.searchQuery = '';
+        this.suggestions = [];
         this.showSuggestions = false;
+        this.searchService.setQuery('');
         this.cdr.detectChanges();
       });
 
@@ -49,7 +54,7 @@ export class Topbar implements OnInit, OnDestroy {
         distinctUntilChanged(),
         switchMap(q => {
           const trimmed = q.trim();
-          if (trimmed.length < 2 || this.isCatalogPage) return [];
+          if (trimmed.length < 2) return [];
           return this.gameService.searchGames(trimmed);
         })
       )
@@ -67,6 +72,12 @@ export class Topbar implements OnInit, OnDestroy {
   }
 
   onSearchInput(value: string) {
+    if (this.isCatalogPage) {
+      this.suggestions = [];
+      this.showSuggestions = false;
+      this.searchService.setQuery(value);
+      return;
+    }
     if (!value.trim()) {
       this.suggestions = [];
       this.showSuggestions = false;
@@ -79,7 +90,7 @@ export class Topbar implements OnInit, OnDestroy {
   }
 
   onSearch(event: KeyboardEvent) {
-    if (event.key === 'Enter' && this.searchQuery.trim()) {
+    if (event.key === 'Enter' && this.searchQuery.trim() && !this.isCatalogPage) {
       this.showSuggestions = false;
       this.router.navigate(['/busca'], { queryParams: { q: this.searchQuery.trim() } });
     } else if (event.key === 'Escape') {

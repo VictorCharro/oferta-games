@@ -1,8 +1,9 @@
 import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { Subject, Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged, skip } from 'rxjs/operators';
 import { GameService, GameSummary } from '../../services/game';
+import { SearchService } from '../../services/search';
 
 @Component({
   selector: 'app-catalog',
@@ -26,7 +27,6 @@ export class Catalog implements OnInit, OnDestroy {
   minPriceInput = '';
   maxPriceInput = '';
 
-  private query$ = new Subject<string>();
   private querySub!: Subscription;
 
   readonly sortOptions = [
@@ -41,7 +41,8 @@ export class Catalog implements OnInit, OnDestroy {
   constructor(
     private gameService: GameService,
     private cdr: ChangeDetectorRef,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private searchService: SearchService
   ) {}
 
   ngOnInit() {
@@ -51,18 +52,19 @@ export class Catalog implements OnInit, OnDestroy {
     if (type && ['all', 'game', 'dlc'].includes(type)) this.type = type;
     if (sort && this.sortOptions.some(o => o.value === sort)) this.sort = sort;
 
-    this.querySub = this.query$.pipe(debounceTime(300), distinctUntilChanged()).subscribe(() => this.load(true));
+    this.searchService.setQuery('');
+    this.querySub = this.searchService.query$
+      .pipe(skip(1), debounceTime(300), distinctUntilChanged())
+      .subscribe(q => {
+        this.query = q;
+        this.load(true);
+      });
 
     this.load(true);
   }
 
   ngOnDestroy() {
     this.querySub?.unsubscribe();
-  }
-
-  onQueryInput(value: string) {
-    this.query = value;
-    this.query$.next(value);
   }
 
   @HostListener('window:scroll')
@@ -119,6 +121,7 @@ export class Catalog implements OnInit, OnDestroy {
     this.maxPrice = null;
     this.minPriceInput = '';
     this.maxPriceInput = '';
+    this.searchService.setQuery('');
     this.load(true);
   }
 

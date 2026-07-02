@@ -4,19 +4,6 @@
     <!-- Painel de filtros -->
     <aside class="filters-panel">
       <div class="filter-group">
-        <h3>Buscar</h3>
-        <div class="search-field">
-          <input
-            type="search"
-            autocomplete="off"
-            placeholder="Nome do jogo..."
-            [ngModel]="query"
-            (ngModelChange)="onQueryInput($event)"
-          />
-        </div>
-      </div>
-
-      <div class="filter-group">
         <h3>Ordenar por</h3>
         <div class="sort-options">
           <label *ngFor="let opt of sortOptions" class="radio-option" [class.active]="sort === opt.value">
