@@ -62,7 +62,7 @@
   <section class="section" *ngIf="topDiscountGames.length">
     <div class="section-header">
       <h2>Maiores descontos em Jogos</h2>
-      <a routerLink="/catalogo">Ver todos</a>
+      <a routerLink="/catalogo" [queryParams]="{ type: 'game', sort: 'discount' }">Ver todos</a>
     </div>
     <app-deals-carousel [deals]="topDiscountGames"></app-deals-carousel>
   </section>
@@ -71,7 +71,7 @@
   <section class="section" *ngIf="topDiscountDlcs.length">
     <div class="section-header">
       <h2>Maiores descontos em DLCs</h2>
-      <a routerLink="/catalogo">Ver todos</a>
+      <a routerLink="/catalogo" [queryParams]="{ type: 'dlc', sort: 'discount' }">Ver todos</a>
     </div>
     <app-deals-carousel [deals]="topDiscountDlcs"></app-deals-carousel>
   </section>

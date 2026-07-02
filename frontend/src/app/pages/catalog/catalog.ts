@@ -1,4 +1,5 @@
 import { Component, OnInit, HostListener, ChangeDetectorRef } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { GameService, GameSummary } from '../../services/game';
 
 @Component({
@@ -31,9 +32,20 @@ export class Catalog implements OnInit {
 
   private scrollTicking = false;
 
-  constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private gameService: GameService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
+  ) {}
 
-  ngOnInit() { this.load(true); }
+  ngOnInit() {
+    const params = this.route.snapshot.queryParamMap;
+    const type = params.get('type');
+    const sort = params.get('sort');
+    if (type && ['all', 'game', 'dlc'].includes(type)) this.type = type;
+    if (sort && this.sortOptions.some(o => o.value === sort)) this.sort = sort;
+    this.load(true);
+  }
 
   @HostListener('window:scroll')
   onWindowScroll() {
