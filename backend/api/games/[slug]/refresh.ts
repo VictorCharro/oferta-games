@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import sql from '../../../lib/db';
-import { extractSteamAppId, fetchSteamAppDetails } from '../../../lib/steam';
+import { resolveSteamAppId, fetchSteamAppDetails, titleLooksLikeDlc } from '../../../lib/steam';
 
 const ITAD_BASE = 'https://api.isthereanydeal.com';
 
@@ -20,8 +20,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { slug } = req.query;
 
-  const [game] = await sql<{ id: number; itad_id: string; coverUrl: string | null; isDlc: boolean | null }[]>`
-    SELECT id, itad_id::text, cover_url AS "coverUrl", is_dlc AS "isDlc" FROM games WHERE slug = ${slug as string}
+  const [game] = await sql<{ id: number; title: string; itad_id: string; coverUrl: string | null; isDlc: boolean | null }[]>`
+    SELECT id, title, itad_id::text, cover_url AS "coverUrl", is_dlc AS "isDlc" FROM games WHERE slug = ${slug as string}
   `;
 
   if (!game) return res.status(404).json({ error: 'Game not found' });
@@ -76,14 +76,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!game.coverUrl || game.isDlc === null) {
     const steamOffer = result.deals.find(d => d.shop.name === 'Steam');
-    const appid = steamOffer ? extractSteamAppId(steamOffer.url) : null;
+    const appid = steamOffer ? await resolveSteamAppId(steamOffer.url) : null;
     const details = appid ? await fetchSteamAppDetails(appid) : null;
-    if (details) {
+
+    if (game.isDlc === null && steamOffer) {
+      // Marca como classificado mesmo sem resposta da Steam (ex: oferta
+      // aponta pra um bundle), caindo pra heurística por título.
+      const isDlc = details ? details.isDlc : titleLooksLikeDlc(game.title);
       await sql`
         UPDATE games
-        SET is_dlc = ${details.isDlc}, cover_url = COALESCE(cover_url, ${details.headerImage})
+        SET is_dlc = ${isDlc}, cover_url = COALESCE(cover_url, ${details?.headerImage ?? null})
         WHERE id = ${game.id}
       `;
+    } else if (details?.headerImage) {
+      await sql`UPDATE games SET cover_url = COALESCE(cover_url, ${details.headerImage}) WHERE id = ${game.id}`;
     }
   }
 

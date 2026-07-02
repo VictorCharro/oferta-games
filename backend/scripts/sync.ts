@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import { steamCoverFromUrl, extractSteamAppId, fetchSteamAppDetails } from '../lib/steam';
+import { resolveSteamAppId, fetchSteamAppDetails, titleLooksLikeDlc } from '../lib/steam';
 
 const sql = postgres(process.env.DATABASE_URL!, { ssl: 'require', prepare: false });
 
@@ -45,7 +45,10 @@ async function syncPage(offset: number): Promise<{ count: number; hasMore: boole
 
   for (const [i, item] of items.entries()) {
     const slug = item.slug || toSlug(item.title);
-    const coverUrl = item.assets?.banner400 ?? (item.deal.shop.name === 'Steam' ? steamCoverFromUrl(item.deal.url) : null);
+    // A capa oficial da Steam é preenchida depois, no backfill assíncrono
+    // (a URL da oferta aqui é sempre um redirecionador da ITAD, não dá pra
+    // extrair o appid sem seguir o redirect).
+    const coverUrl = item.assets?.banner400 ?? null;
     const rank = offset + i;
 
     const [game] = await sql<{ id: number }[]>`
@@ -80,8 +83,8 @@ const STEAM_BACKFILL_LIMIT = 300;
 const STEAM_BACKFILL_DELAY_MS = 250;
 
 async function backfillSteamMetadata(limit = STEAM_BACKFILL_LIMIT) {
-  const rows = await sql<{ id: number; url: string }[]>`
-    SELECT g.id, o.url
+  const rows = await sql<{ id: number; title: string; url: string }[]>`
+    SELECT g.id, g.title, o.url
     FROM games g
     JOIN offers o ON o.game_id = g.id AND o.store_name = 'Steam'
     WHERE g.is_dlc IS NULL
@@ -90,27 +93,29 @@ async function backfillSteamMetadata(limit = STEAM_BACKFILL_LIMIT) {
   `;
 
   console.log(`Backfilling Steam metadata for ${rows.length} games...`);
-  let updated = 0;
+  let fromSteam = 0;
 
   for (const row of rows) {
-    const appid = extractSteamAppId(row.url);
-    if (!appid) continue;
+    const appid = await resolveSteamAppId(row.url);
+    const details = appid ? await fetchSteamAppDetails(appid) : null;
 
-    const details = await fetchSteamAppDetails(appid);
-    if (details) {
-      await sql`
-        UPDATE games
-        SET is_dlc = ${details.isDlc},
-            cover_url = COALESCE(cover_url, ${details.headerImage})
-        WHERE id = ${row.id}
-      `;
-      updated++;
-    }
+    // Sempre marca como classificado, mesmo sem resposta da Steam (ex: oferta
+    // aponta pra um bundle), pra não ficar tentando o mesmo jogo pra sempre —
+    // cai pra heurística por título nesse caso.
+    const isDlc = details ? details.isDlc : titleLooksLikeDlc(row.title);
+    if (details) fromSteam++;
+
+    await sql`
+      UPDATE games
+      SET is_dlc = ${isDlc},
+          cover_url = COALESCE(cover_url, ${details?.headerImage ?? null})
+      WHERE id = ${row.id}
+    `;
 
     await new Promise(r => setTimeout(r, STEAM_BACKFILL_DELAY_MS));
   }
 
-  console.log(`Steam metadata backfill complete. Updated: ${updated}/${rows.length}`);
+  console.log(`Steam metadata backfill complete. Classified: ${rows.length} (${fromSteam} via Steam, ${rows.length - fromSteam} via heurística por título).`);
 }
 
 async function main() {
