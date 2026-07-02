@@ -1,4 +1,11 @@
 <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
   <rect width="320" height="180" fill="#1a2234" />
-  <image href="favicon.png" x="130" y="50" width="60" height="60" opacity="0.55" />
+  <g transform="translate(130,60)" opacity="0.6">
+    <circle cx="30" cy="30" r="30" fill="#29A8E0" />
+    <rect x="12" y="23.5" width="36" height="16" rx="8" fill="#0B1220" />
+    <rect x="18.5" y="27" width="3" height="9" rx="1.5" fill="#fff" />
+    <rect x="16" y="29.5" width="9" height="3" rx="1.5" fill="#fff" />
+    <circle cx="40" cy="27.5" r="2.3" fill="#7dd3fc" />
+    <circle cx="40" cy="34.2" r="2.3" fill="#7dd3fc" />
+  </g>
 </svg>
