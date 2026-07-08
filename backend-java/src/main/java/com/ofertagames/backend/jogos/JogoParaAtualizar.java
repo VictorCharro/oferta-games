@@ -2,8 +2,8 @@ package com.ofertagames.backend.jogos;
 
 public record JogoParaAtualizar(
     Long id,
-    String title,
+    String titulo,
     String itadId,
-    String coverUrl,
-    Boolean isDlc
+    String capaUrl,
+    Boolean ehDlc
 ) {}

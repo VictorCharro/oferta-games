@@ -1,5 +1,9 @@
 package com.ofertagames.backend.steam;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -23,9 +27,13 @@ public class ServicoSteam {
   };
 
   private final RestClient restClient;
+  private final HttpClient clienteHttp;
 
   ServicoSteam(RestClient.Builder restClientBuilder) {
     this.restClient = restClientBuilder.build();
+    this.clienteHttp = HttpClient.newBuilder()
+        .followRedirects(HttpClient.Redirect.ALWAYS)
+        .build();
   }
 
   public boolean tituloPareceDlc(String titulo) {
@@ -39,15 +47,10 @@ public class ServicoSteam {
 
   public Optional<String> resolverAppIdSteam(String urlOferta) {
     try {
-      String urlFinal = restClient.get()
-          .uri(urlOferta)
-          .retrieve()
-          .toBodilessEntity()
-          .getHeaders()
-          .getLocation()
-          .toString();
-      return extrairAppIdSteam(urlFinal);
-    } catch (RuntimeException | NullPointerException ignored) {
+      HttpRequest requisicao = HttpRequest.newBuilder(URI.create(urlOferta)).GET().build();
+      HttpResponse<Void> resposta = clienteHttp.send(requisicao, HttpResponse.BodyHandlers.discarding());
+      return extrairAppIdSteam(resposta.uri().toString());
+    } catch (Exception ignored) {
       return extrairAppIdSteam(urlOferta);
     }
   }

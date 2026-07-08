@@ -1,25 +1,28 @@
 # Backend Java
 
-Backend Spring Boot que vai substituir gradualmente o backend serverless em Node/Vercel.
+Backend Spring Boot do Oferta Games.
 
-## Decisao de arquitetura
+## Arquitetura
 
-- Frontend Angular continua no Vercel.
-- Banco e autenticacao continuam no Supabase.
-- Backend Java roda em uma VM Oracle Cloud Always Free, preferencialmente Ampere A1.
-- O contrato HTTP deve continuar igual ao backend atual para evitar refatoracao grande no frontend.
-- Classes, pacotes, metodos e variaveis do backend Java devem ficar em portugues para facilitar manutencao.
+- Java 21 + Spring Boot 3.
+- PostgreSQL no Supabase via `DATABASE_URL`.
+- Supabase Auth para autenticar favoritos.
+- ITAD como fonte principal de ofertas.
+- Steam usado para complementar capa e classificar DLC quando existe oferta da loja Steam.
+- Frontend Angular continua hospedado separadamente no Vercel.
+- Deploy planejado em VM Oracle Cloud Always Free, preferencialmente Ampere A1.
 
-## Recursos Oracle recomendados
+## Padrao de codigo
 
-Pelo Always Free da Oracle, o melhor alvo para este backend e:
+Use portugues nos nomes do codigo Java:
 
-- Compute: `VM.Standard.A1.Flex`
-- Limite Always Free: ate 2 OCPUs e 12 GB de memoria no total da tenancy
-- Imagem: Ubuntu
-- Disco: volume de boot padrao, contando dentro dos 200 GB de Block Volume Always Free
+- `ControladorJogos`
+- `RepositorioJogos`
+- `ServicoCatalogo`
+- `ServicoAutenticacao`
+- `ConfiguracaoBancoDados`
 
-Evite usar a micro AMD de 1 GB para Spring Boot em producao. Ela serve para testes simples, mas fica apertada.
+Termos externos ou marcas podem permanecer como no original, por exemplo `ITAD`, `Steam`, `Spring`, `Bearer` e nomes dos campos JSON que o frontend ja consome.
 
 ## Variaveis de ambiente
 
@@ -33,7 +36,36 @@ CORS_ALLOWED_ORIGINS=https://seu-front.vercel.app,http://localhost:4200
 PORT=8080
 ```
 
-`DATABASE_URL` pode continuar no formato do Supabase pooler. A aplicacao converte internamente para JDBC e usa `sslmode=require`.
+`DATABASE_URL` pode continuar no formato do Supabase pooler. A aplicacao converte internamente para JDBC e usa `sslmode=require` quando a URL nao trouxer query string.
+
+## Endpoints
+
+- `GET /api/games?page=0&size=20&sort=rank&type=all&minPrice=&maxPrice=&q=`
+- `GET /api/games/search?q=nome`
+- `GET /api/games/{slug}`
+- `POST /api/games/{slug}/refresh`
+- `GET /api/deals/top?size=20&sort=discount`
+- `POST /api/sync?page=0`
+- `GET /api/favorites`
+- `POST /api/favorites`
+- `DELETE /api/favorites/{slug}`
+
+## Sync
+
+O endpoint `POST /api/sync` exige o header:
+
+```http
+X-Sync-Key: valor-de-SYNC_SECRET_KEY
+```
+
+Ele sincroniza uma pagina da ITAD, salva jogos/ofertas e executa um pequeno backfill de metadados Steam para preencher `is_dlc` e capa quando possivel.
+
+O workflow `.github/workflows/sync.yml` chama esse endpoint em paginas sucessivas usando os secrets:
+
+```bash
+BACKEND_API_URL=https://api.seu-dominio.com
+SYNC_SECRET_KEY=sua-chave-sync
+```
 
 ## Rodando localmente
 
@@ -44,32 +76,4 @@ cd backend-java
 mvn spring-boot:run
 ```
 
-Como o Maven ainda nao esta instalado nesta maquina, o proximo passo local e instalar Maven ou adicionar Maven Wrapper.
-
-## Endpoints iniciados
-
-- `GET /api/games`
-- `GET /api/games/search?q=nome`
-- `GET /api/games/{slug}`
-- `GET /api/deals/top`
-- `GET /api/favorites`
-- `POST /api/favorites`
-- `DELETE /api/favorites/{slug}`
-
-## Padrao de codigo
-
-Use portugues nos nomes do codigo Java:
-
-- `ControladorJogos`
-- `RepositorioJogos`
-- `ServicoAutenticacao`
-- `ConfiguracaoBancoDados`
-
-Termos externos ou marcas podem permanecer como no original, por exemplo `ITAD`, `Steam`, `Spring`, `Bearer` e nomes dos campos JSON que o frontend ja consome.
-
-## Proximas etapas
-
-- Implementar `POST /api/sync`.
-- Implementar `POST /api/games/{slug}/refresh`.
-- Implementar busca externa na ITAD quando `/api/games/search` nao encontrar resultados locais.
-- Adicionar guia de deploy com `systemd`, Nginx e Certbot.
+Nesta maquina o Maven ainda nao esta instalado no PATH, entao o build local precisa desse passo antes.

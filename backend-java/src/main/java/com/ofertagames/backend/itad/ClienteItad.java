@@ -41,7 +41,7 @@ public class ClienteItad {
             .build())
         .header("ITAD-API-Key", chaveApi)
         .retrieve()
-        .body(new ParameterizedTypeReference<>() {});
+        .body(new ParameterizedTypeReference<List<ResultadoBuscaItad>>() {});
   }
 
   public List<ResultadoPrecoItad> buscarPrecos(String itadId) {
@@ -50,6 +50,6 @@ public class ClienteItad {
         .header("ITAD-API-Key", chaveApi)
         .body(List.of(itadId))
         .retrieve()
-        .body(new ParameterizedTypeReference<>() {});
+        .body(new ParameterizedTypeReference<List<ResultadoPrecoItad>>() {});
   }
 }

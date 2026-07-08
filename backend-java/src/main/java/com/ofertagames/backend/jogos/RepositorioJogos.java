@@ -82,6 +82,66 @@ public class RepositorioJogos {
         .optional();
   }
 
+  public long salvarJogoItad(String itadId, String titulo, String slug, String capa, Integer rank) {
+    return jdbc.sql("""
+        INSERT INTO games (itad_id, title, slug, cover_url, rank)
+        VALUES (CAST(:itadId AS uuid), :titulo, :slug, :capa, :rank)
+        ON CONFLICT (itad_id) DO UPDATE
+          SET title = EXCLUDED.title,
+              cover_url = COALESCE(EXCLUDED.cover_url, games.cover_url),
+              rank = COALESCE(EXCLUDED.rank, games.rank)
+        RETURNING id
+        """)
+        .param("itadId", itadId)
+        .param("titulo", titulo)
+        .param("slug", slug)
+        .param("capa", capa)
+        .param("rank", rank)
+        .query(Long.class)
+        .single();
+  }
+
+  public List<ResumoJogo> listarPorItadIds(List<String> itadIds) {
+    return jdbc.sql("""
+        SELECT
+          g.slug,
+          g.title,
+          g.cover_url AS cover_url,
+          g.is_dlc AS is_dlc,
+          MIN(o.price) AS min_price,
+          MAX(o.regular_price) AS regular_price
+        FROM games g
+        LEFT JOIN offers o ON o.game_id = g.id
+        WHERE g.itad_id::text IN (:itadIds)
+        GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
+        ORDER BY g.title
+        """)
+        .param("itadIds", itadIds)
+        .query(RepositorioJogos::mapearResumo)
+        .list();
+  }
+
+  public void salvarOferta(OfertaParaSalvar oferta) {
+    jdbc.sql("""
+        INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
+        VALUES (:jogoId, :fonte, :loja, :preco, :precoNormal, :moeda, :url, now())
+        ON CONFLICT (game_id, source, store_name) DO UPDATE
+          SET price = EXCLUDED.price,
+              regular_price = EXCLUDED.regular_price,
+              currency = EXCLUDED.currency,
+              url = EXCLUDED.url,
+              updated_at = EXCLUDED.updated_at
+        """)
+        .param("jogoId", oferta.jogoId())
+        .param("fonte", oferta.fonte())
+        .param("loja", oferta.loja())
+        .param("preco", oferta.preco())
+        .param("precoNormal", oferta.precoNormal())
+        .param("moeda", oferta.moeda())
+        .param("url", oferta.url())
+        .update();
+  }
+
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {
     return jdbc.sql("""
         SELECT id, title, itad_id::text AS itad_id, cover_url, is_dlc
@@ -109,6 +169,23 @@ public class RepositorioJogos {
         .param("capaSteam", capaSteam)
         .param("jogoId", jogoId)
         .update();
+  }
+
+  public List<JogoSteamPendente> listarPendentesSteam(int limite) {
+    return jdbc.sql("""
+        SELECT g.id, g.title, o.url
+        FROM games g
+        JOIN offers o ON o.game_id = g.id AND o.store_name = 'Steam'
+        WHERE g.is_dlc IS NULL
+        ORDER BY g.id
+        LIMIT :limite
+        """)
+        .param("limite", limite)
+        .query((rs, linha) -> new JogoSteamPendente(
+            rs.getLong("id"),
+            rs.getString("title"),
+            rs.getString("url")))
+        .list();
   }
 
   private List<OfertaJogo> listarOfertas(long jogoId) {
