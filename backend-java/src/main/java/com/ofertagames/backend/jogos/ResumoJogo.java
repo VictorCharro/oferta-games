@@ -1,8 +1,8 @@
-package com.ofertagames.backend.games;
+package com.ofertagames.backend.jogos;
 
 import java.math.BigDecimal;
 
-public record GameSummary(
+public record ResumoJogo(
     String slug,
     String title,
     String coverUrl,

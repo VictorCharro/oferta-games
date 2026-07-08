@@ -5,9 +5,10 @@ Backend Spring Boot que vai substituir gradualmente o backend serverless em Node
 ## Decisao de arquitetura
 
 - Frontend Angular continua no Vercel.
-- Banco e Auth continuam no Supabase.
+- Banco e autenticacao continuam no Supabase.
 - Backend Java roda em uma VM Oracle Cloud Always Free, preferencialmente Ampere A1.
 - O contrato HTTP deve continuar igual ao backend atual para evitar refatoracao grande no frontend.
+- Classes, pacotes, metodos e variaveis do backend Java devem ficar em portugues para facilitar manutencao.
 
 ## Recursos Oracle recomendados
 
@@ -54,6 +55,17 @@ Como o Maven ainda nao esta instalado nesta maquina, o proximo passo local e ins
 - `GET /api/favorites`
 - `POST /api/favorites`
 - `DELETE /api/favorites/{slug}`
+
+## Padrao de codigo
+
+Use portugues nos nomes do codigo Java:
+
+- `ControladorJogos`
+- `RepositorioJogos`
+- `ServicoAutenticacao`
+- `ConfiguracaoBancoDados`
+
+Termos externos ou marcas podem permanecer como no original, por exemplo `ITAD`, `Steam`, `Spring`, `Bearer` e nomes dos campos JSON que o frontend ja consome.
 
 ## Proximas etapas
 

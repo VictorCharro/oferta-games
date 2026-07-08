@@ -1,11 +1,11 @@
-package com.ofertagames.backend.games;
+package com.ofertagames.backend.jogos;
 
 import java.util.List;
 
-public record GameDetail(
+public record DetalheJogo(
     Long id,
     String slug,
     String title,
     String coverUrl,
-    List<OfferDto> offers
+    List<OfertaJogo> offers
 ) {}

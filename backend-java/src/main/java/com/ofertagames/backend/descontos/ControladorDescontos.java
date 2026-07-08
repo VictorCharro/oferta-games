@@ -1,4 +1,4 @@
-package com.ofertagames.backend.deals;
+package com.ofertagames.backend.descontos;
 
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -8,19 +8,19 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/deals")
-public class DealsController {
-  private final DealsRepository deals;
+public class ControladorDescontos {
+  private final RepositorioDescontos descontos;
 
-  DealsController(DealsRepository deals) {
-    this.deals = deals;
+  ControladorDescontos(RepositorioDescontos descontos) {
+    this.descontos = descontos;
   }
 
   @GetMapping("/top")
-  List<DealDto> top(
+  List<DescontoJogo> listarMelhores(
       @RequestParam(defaultValue = "20") int size,
       @RequestParam(defaultValue = "discount") String sort
   ) {
-    int safeSize = Math.min(200, Math.max(1, size));
-    return deals.findTopDeals(safeSize, sort);
+    int tamanhoSeguro = Math.min(200, Math.max(1, size));
+    return descontos.listarMelhores(tamanhoSeguro, sort);
   }
 }

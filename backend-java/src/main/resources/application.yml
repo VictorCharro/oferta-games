@@ -10,6 +10,8 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   sync:
     secret-key: ${SYNC_SECRET_KEY:}
+  itad:
+    api-key: ${ITAD_API_KEY:}
   supabase:
     url: ${SUPABASE_URL:}
     anon-key: ${SUPABASE_ANON_KEY:}

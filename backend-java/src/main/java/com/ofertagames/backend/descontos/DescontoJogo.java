@@ -1,8 +1,8 @@
-package com.ofertagames.backend.deals;
+package com.ofertagames.backend.descontos;
 
 import java.math.BigDecimal;
 
-public record DealDto(
+public record DescontoJogo(
     String slug,
     String title,
     String coverUrl,

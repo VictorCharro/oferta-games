@@ -1,9 +1,9 @@
-package com.ofertagames.backend.favorites;
+package com.ofertagames.backend.favoritos;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
-public record FavoriteDto(
+public record FavoritoJogo(
     String slug,
     String title,
     String coverUrl,

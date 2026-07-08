@@ -1,19 +1,19 @@
-package com.ofertagames.backend.deals;
+package com.ofertagames.backend.descontos;
 
 import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class DealsRepository {
+public class RepositorioDescontos {
   private final JdbcClient jdbc;
 
-  DealsRepository(JdbcClient jdbc) {
+  RepositorioDescontos(JdbcClient jdbc) {
     this.jdbc = jdbc;
   }
 
-  public List<DealDto> findTopDeals(int size, String sort) {
-    String orderBy = "rank".equals(sort)
+  public List<DescontoJogo> listarMelhores(int tamanho, String ordenacao) {
+    String ordenarPor = "rank".equals(ordenacao)
         ? "rank ASC NULLS LAST, discount_pct DESC"
         : "discount_pct DESC, rank ASC NULLS LAST";
 
@@ -39,12 +39,12 @@ public class DealsRepository {
           ORDER BY g.id, o.price ASC
         ) sub
         ORDER BY %s
-        LIMIT :size
-        """.formatted(orderBy);
+        LIMIT :tamanho
+        """.formatted(ordenarPor);
 
     return jdbc.sql(sql)
-        .param("size", size)
-        .query((rs, rowNum) -> new DealDto(
+        .param("tamanho", tamanho)
+        .query((rs, linha) -> new DescontoJogo(
             rs.getString("slug"),
             rs.getString("title"),
             rs.getString("cover_url"),
