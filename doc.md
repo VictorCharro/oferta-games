@@ -1,5 +1,14 @@
 # doc.md
 
+## Migração backend Java
+
+- Decisão: manter frontend Angular no Vercel e Supabase como PostgreSQL/Auth.
+- Novo backend em criação: `backend-java`, com Java 21 + Spring Boot 3.
+- Hospedagem planejada: VM Oracle Cloud Always Free, preferencialmente `VM.Standard.A1.Flex`.
+- Limite Always Free relevante para o backend: até 2 OCPUs e 12 GB de memória no total da tenancy para Ampere A1; 200 GB de Block Volume Always Free.
+- Estratégia: migrar endpoint por endpoint mantendo o mesmo contrato HTTP do backend Node atual.
+- Endpoints Java iniciados: `GET /api/games`, `GET /api/games/search`, `GET /api/games/{slug}`, `GET /api/deals/top`, `GET/POST/DELETE /api/favorites`.
+
 > Este arquivo DEVE ser atualizado sempre que houver uma mudança significativa no projeto (nova decisão de arquitetura, nova fonte de dados, nova tecnologia, mudança de schema, etc). É a fonte de verdade sobre o que o projeto é e onde ele está.
 
 ## Objetivo do projeto
