@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 > Este arquivo DEVE ser atualizado sempre que houver uma mudança significativa no projeto (nova decisão de arquitetura, nova fonte de dados, nova tecnologia, mudança de schema, etc). É a fonte de verdade sobre o que o projeto é e onde ele está.
 
