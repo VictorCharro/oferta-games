@@ -114,7 +114,14 @@ public class ServicoCatalogo {
 
     List<OfertaParaSalvar> ofertasParaSalvar = new ArrayList<>();
     for (ItemOfertaItad item : itens) {
-      if (item == null || item.id() == null || item.deal() == null || item.deal().shop() == null || item.deal().price() == null || item.deal().url() == null) {
+      if (item == null
+          || item.id() == null
+          || item.deal() == null
+          || item.deal().shop() == null
+          || item.deal().shop().name() == null || item.deal().shop().name().isBlank()
+          || item.deal().price() == null
+          || item.deal().price().amount() == null
+          || item.deal().url() == null || item.deal().url().isBlank()) {
         continue;
       }
       Long jogoId = mapaIds.get(item.id());

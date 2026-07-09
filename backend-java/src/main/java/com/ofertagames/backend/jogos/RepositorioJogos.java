@@ -2,6 +2,7 @@ package com.ofertagames.backend.jogos;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -87,21 +88,35 @@ public class RepositorioJogos {
         .optional();
   }
 
+  public long salvarJogoItad(String itadId, String titulo, String slug, String capa, Integer rank) {
+    try {
+      return jdbc.sql("""
+          INSERT INTO games (itad_id, title, slug, cover_url, rank)
+          VALUES (CAST(:itadId AS uuid), :titulo, :slug, :capa, :rank)
+          ON CONFLICT (itad_id) DO UPDATE
+            SET title = EXCLUDED.title,
+                cover_url = COALESCE(EXCLUDED.cover_url, games.cover_url),
+                rank = COALESCE(EXCLUDED.rank, games.rank)
+          RETURNING id
+          """)
+          .param("itadId", itadId)
+          .param("titulo", titulo)
+          .param("slug", slug)
+          .param("capa", capa)
+          .param("rank", rank)
+          .query(Long.class)
+          .single();
+    } catch (DuplicateKeyException conflito) {
+      return buscarIdPorSlug(slug).orElseThrow(() -> conflito);
+    }
+  }
+
   public List<IdJogoItad> salvarJogosItad(List<JogoParaSalvar> jogos) {
-    String sql = """
-        INSERT INTO games (itad_id, title, slug, cover_url, rank)
-        SELECT itad_id, title, slug, cover_url, rank
-        FROM UNNEST(?)
-        ON CONFLICT (itad_id) DO UPDATE
-          SET title = EXCLUDED.title,
-              cover_url = COALESCE(EXCLUDED.cover_url, games.cover_url),
-              rank = COALESCE(EXCLUDED.rank, games.rank)
-        RETURNING id, itad_id::text
-        """;
-    return jdbc.sql(sql)
-        .param(1, jogos.toArray(new JogoParaSalvar[0]))
-        .query((rs, linha) -> new IdJogoItad(rs.getLong("id"), rs.getString("itad_id")))
-        .list();
+    return jogos.stream()
+        .map(jogo -> new IdJogoItad(
+            salvarJogoItad(jogo.itadId(), jogo.title(), jogo.slug(), jogo.coverUrl(), jogo.rank()),
+            jogo.itadId()))
+        .toList();
   }
 
   public List<ResumoJogo> listarPorItadIds(List<String> itadIds) {
@@ -165,7 +180,10 @@ public class RepositorioJogos {
       ps.setString(6, o.moeda());
       ps.setString(7, o.url());
     });
-    return Arrays.stream(updateCounts).flatMapToInt(Arrays::stream).sum();
+    return Arrays.stream(updateCounts)
+        .flatMapToInt(Arrays::stream)
+        .map(contagem -> contagem == Statement.SUCCESS_NO_INFO ? 1 : Math.max(contagem, 0))
+        .sum();
   }
 
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {

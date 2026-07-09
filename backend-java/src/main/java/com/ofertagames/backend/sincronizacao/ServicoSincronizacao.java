@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ServicoSincronizacao {
-  private static final int TAMANHO_PAGINA = 500;
+  private static final int TAMANHO_PAGINA = 50;
   private static final int LIMITE_BACKFILL_STEAM = 0;
 
   private final ClienteItad itad;
@@ -27,14 +27,8 @@ public class ServicoSincronizacao {
     RespostaOfertasItad resposta = itad.buscarOfertas(TAMANHO_PAGINA, deslocamento);
     List<ItemOfertaItad> itens = resposta == null ? List.of() : Objects.requireNonNullElse(resposta.list(), List.of());
 
-    int sincronizadas = 0;
-    int ignoradas = 0;
-    try {
-      sincronizadas = catalogo.salvarOfertasDoSync(itens, deslocamento);
-      ignoradas = itens.size() - sincronizadas;
-    } catch (RuntimeException ignored) {
-      ignoradas = itens.size();
-    }
+    int sincronizadas = catalogo.salvarOfertasDoSync(itens, deslocamento);
+    int ignoradas = itens.size() - sincronizadas;
 
     boolean temMais = Boolean.TRUE.equals(resposta == null ? null : resposta.hasMore());
     int steamAtualizados;
