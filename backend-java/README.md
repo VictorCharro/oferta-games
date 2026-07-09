@@ -10,8 +10,7 @@ Backend Spring Boot do Oferta Games.
 - ITAD como fonte principal de ofertas.
 - Steam usado para complementar capa e classificar DLC quando existe oferta da loja Steam.
 - Frontend Angular continua hospedado separadamente no Vercel.
-- Deploy temporario em Oracle Cloud Always Free `VM.Standard.E2.1.Micro`.
-- Deploy definitivo planejado em Oracle Cloud Always Free Ampere A1 quando houver capacidade.
+- Deploy do backend no Render via Docker.
 
 ## Padrao de codigo
 
@@ -50,6 +49,7 @@ PORT=8080
 - `GET /api/favorites`
 - `POST /api/favorites`
 - `DELETE /api/favorites/{slug}`
+- `GET /actuator/health`
 
 ## Sync
 
@@ -64,8 +64,14 @@ Ele sincroniza uma pagina da ITAD, salva jogos/ofertas e executa um pequeno back
 O workflow `.github/workflows/sync.yml` chama esse endpoint em paginas sucessivas usando os secrets:
 
 ```bash
-BACKEND_API_URL=https://api.seu-dominio.com
+BACKEND_API_URL=https://seu-backend.onrender.com
 SYNC_SECRET_KEY=sua-chave-sync
+```
+
+O workflow `.github/workflows/keepalive.yml` chama o health check usando:
+
+```bash
+BACKEND_URL=https://seu-backend.onrender.com
 ```
 
 ## Rodando localmente
@@ -77,18 +83,18 @@ cd backend-java
 mvn spring-boot:run
 ```
 
-Nesta maquina o Maven ainda nao esta instalado no PATH, entao o build local precisa desse passo antes.
+## Deploy no Render
 
-## Deploy na Oracle VM
+Criacao manual:
 
-Na `VM.Standard.E2.1.Micro`, rode sem Docker para economizar memoria:
+- Runtime: `Docker`
+- Root Directory: `backend-java`
+- Health Check Path: `/actuator/health`
+- Plan: `Free` por enquanto
 
-```bash
-sudo apt update
-sudo apt install -y openjdk-21-jdk maven git nginx
-```
+Tambem existe `render.yaml` na raiz do repositorio para criar via Blueprint.
 
-Variaveis obrigatorias no ambiente do servico:
+Variaveis obrigatorias no Render:
 
 ```bash
 DATABASE_URL=postgresql://...
@@ -97,10 +103,4 @@ SUPABASE_ANON_KEY=...
 ITAD_API_KEY=...
 SYNC_SECRET_KEY=...
 CORS_ALLOWED_ORIGINS=https://seu-front.vercel.app,http://localhost:4200
-```
-
-Health check:
-
-```text
-GET /actuator/health
 ```

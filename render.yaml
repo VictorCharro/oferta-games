@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: oferta-games-backend
+    runtime: docker
+    plan: free
+    rootDir: backend-java
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DATABASE_URL
+        sync: false
+      - key: ITAD_API_KEY
+        sync: false
+      - key: SYNC_SECRET_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false

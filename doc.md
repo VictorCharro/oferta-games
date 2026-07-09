@@ -14,23 +14,37 @@ Não é uma loja própria. É um agregador/comparador de preços.
 - **Frontend:** Angular, hospedado no Vercel.
 - **Banco:** PostgreSQL no Supabase. Conexão via transaction pooler (porta 6543).
 - **Auth:** Supabase Auth (email/senha e OAuth). Frontend usa `@supabase/supabase-js`; backend valida Bearer token via Supabase Auth.
-- **Deploy backend:** Oracle Cloud Always Free em VM `VM.Standard.E2.1.Micro` enquanto a Ampere A1 não libera capacidade.
+- **Deploy backend:** Render via Docker.
 
 ## Deploy
 
 | Parte | Onde roda |
 |---|---|
-| Backend | Oracle Cloud VM |
+| Backend | Render |
 | Frontend | Vercel |
 | Banco/Auth | Supabase |
 
+O backend usa `backend-java/Dockerfile`. O Render pode ser criado manualmente ou via `render.yaml`.
+
+Configuração no Render:
+
+| Campo | Valor |
+|---|---|
+| Runtime | Docker |
+| Root Directory | `backend-java` |
+| Health Check Path | `/actuator/health` |
+| Plan | Free por enquanto |
+
 Sincronização de preços: GitHub Actions chama `POST /api/sync` a cada 6h, protegido por `X-Sync-Key`.
 
-O workflow usa os secrets:
+Keep alive: GitHub Actions chama `/actuator/health` a cada 10 minutos usando `BACKEND_URL`.
+
+Secrets dos workflows:
 
 | Secret | Descrição |
 |---|---|
 | `BACKEND_API_URL` | URL pública do backend Java, sem barra final |
+| `BACKEND_URL` | URL pública do backend Java usada no keep alive |
 | `SYNC_SECRET_KEY` | Chave secreta usada no header `X-Sync-Key` |
 
 ## Variáveis de ambiente do backend
@@ -120,11 +134,14 @@ favorites
   - Adiciona jogo aos favoritos (`{ slug }`).
 - `DELETE /api/favorites/{slug}`
   - Remove jogo dos favoritos.
+- `GET /actuator/health`
+  - Health check usado por Render e keep alive.
 
 ## Estrutura de pastas
 
 ```text
 /backend-java
+  Dockerfile
   pom.xml
   src/main/java/com/ofertagames/backend/
     AplicacaoOfertaGames.java
@@ -135,8 +152,8 @@ favorites
     favoritos/          -> endpoints /api/favorites
     itad/               -> cliente e modelos da API ITAD
     jogos/              -> catálogo, detalhe, busca e refresh
-    sincronizacao/      -> endpoint /api/sync
     saude/              -> endpoint /actuator/health
+    sincronizacao/      -> endpoint /api/sync
     steam/              -> capa oficial e detecção de DLC
 
 /frontend
@@ -168,6 +185,7 @@ favorites
       auth.guard.ts
 
 /.github/workflows/
+  keepalive.yml         -> chama GET /actuator/health
   sync.yml              -> chama POST /api/sync em páginas sucessivas
 ```
 
@@ -193,7 +211,6 @@ favorites
 
 - Sem scraping de sites.
 - Sem multi-moeda funcional por enquanto.
-- Docker não é obrigatório.
 - Sem cron interno; sincronização é acionada externamente pelo GitHub Actions.
 
 ## Estado atual
@@ -205,9 +222,8 @@ favorites
 - [x] Supabase PostgreSQL mantido como banco
 - [x] Supabase Auth usado nos favoritos
 - [x] Frontend Angular implementado
-- [x] GitHub Actions configurado para chamar `/api/sync`
-- [ ] Maven ainda precisa estar instalado/configurado para build local nesta máquina
-- [ ] Deploy temporário na Oracle `VM.Standard.E2.1.Micro`
-- [ ] Troca para Oracle Ampere A1 quando houver capacidade disponível
+- [x] Dockerfile do backend Java configurado para Render
+- [x] GitHub Actions configurado para sync e keep alive
+- [ ] Deploy no Render
 - [ ] Integração com Eneba
 - [ ] Integração com Instant Gaming
