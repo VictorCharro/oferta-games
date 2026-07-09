@@ -46,10 +46,10 @@ public class ControladorJogos {
   }
 
   @GetMapping("/{slug}")
-  ResponseEntity<?> detalhar(@PathVariable String slug) {
+  ResponseEntity<DetalheJogo> detalhar(@PathVariable String slug) {
     return jogos.buscarPorSlug(slug)
-        .<ResponseEntity<?>>map(ResponseEntity::ok)
-        .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado")));
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   @PostMapping("/{slug}/refresh")

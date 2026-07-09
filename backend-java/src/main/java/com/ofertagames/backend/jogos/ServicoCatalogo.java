@@ -8,8 +8,11 @@ import com.ofertagames.backend.itad.ResultadoBuscaItad;
 import com.ofertagames.backend.itad.ResultadoPrecoItad;
 import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -82,32 +85,53 @@ public class ServicoCatalogo {
     return new ResultadoAtualizacaoJogo(true, atualizadas);
   }
 
-  public int salvarOfertaDoSync(ItemOfertaItad item, int rank) {
-    if (item == null
-        || item.id() == null || item.id().isBlank()
-        || item.title() == null || item.title().isBlank()
-        || item.deal() == null
-        || item.deal().shop() == null
-        || item.deal().shop().name() == null || item.deal().shop().name().isBlank()
-        || item.deal().price() == null
-        || item.deal().price().amount() == null
-        || item.deal().url() == null || item.deal().url().isBlank()) {
+  public int salvarOfertasDoSync(List<ItemOfertaItad> itens, int deslocamento) {
+    if (itens == null || itens.isEmpty()) {
       return 0;
     }
 
-    String slug = item.slug() == null || item.slug().isBlank() ? GeradorSlug.porTitulo(item.title()) : item.slug();
-    String capa = item.assets() == null ? null : item.assets().banner400();
-    long jogoId = jogos.salvarJogoItad(item.id(), item.title(), slug, capa, rank);
+    List<RepositorioJogos.JogoParaSalvar> jogosParaSalvar = new ArrayList<>();
+    for (int i = 0; i < itens.size(); i++) {
+      ItemOfertaItad item = itens.get(i);
+      if (item == null || item.id() == null || item.title() == null || item.deal() == null) {
+        continue;
+      }
+      String slug = item.slug() == null || item.slug().isBlank() ? GeradorSlug.porTitulo(item.title()) : item.slug();
+      String capa = item.assets() == null ? null : item.assets().banner400();
+      jogosParaSalvar.add(new RepositorioJogos.JogoParaSalvar(item.id(), item.title(), slug, capa, deslocamento + i));
+    }
 
-    jogos.salvarOferta(new OfertaParaSalvar(
-        jogoId,
-        "itad",
-        item.deal().shop().name(),
-        item.deal().price().amount(),
-        item.deal().regular() == null ? null : item.deal().regular().amount(),
-        "BRL",
-        item.deal().url()));
-    return 1;
+    if (jogosParaSalvar.isEmpty()) {
+      return 0;
+    }
+
+    Map<String, Long> mapaIds = jogos.salvarJogosItad(jogosParaSalvar).stream()
+        .collect(Collectors.toMap(RepositorioJogos.IdJogoItad::itadId, RepositorioJogos.IdJogoItad::id));
+
+    List<OfertaParaSalvar> ofertasParaSalvar = new ArrayList<>();
+    for (ItemOfertaItad item : itens) {
+      if (item == null || item.id() == null || item.deal() == null || item.deal().shop() == null || item.deal().price() == null || item.deal().url() == null) {
+        continue;
+      }
+      Long jogoId = mapaIds.get(item.id());
+      if (jogoId == null) {
+        continue;
+      }
+      ofertasParaSalvar.add(new OfertaParaSalvar(
+          jogoId,
+          "itad",
+          item.deal().shop().name(),
+          item.deal().price().amount(),
+          item.deal().regular() == null ? null : item.deal().regular().amount(),
+          "BRL",
+          item.deal().url()));
+    }
+
+    if (ofertasParaSalvar.isEmpty()) {
+      return 0;
+    }
+
+    return jogos.salvarOfertas(ofertasParaSalvar).length;
   }
 
   public int preencherMetadadosSteam(int limite) {

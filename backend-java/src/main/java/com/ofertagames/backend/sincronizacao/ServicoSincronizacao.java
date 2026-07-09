@@ -29,16 +29,11 @@ public class ServicoSincronizacao {
 
     int sincronizadas = 0;
     int ignoradas = 0;
-    for (int indice = 0; indice < itens.size(); indice++) {
-      try {
-        int salvas = catalogo.salvarOfertaDoSync(itens.get(indice), deslocamento + indice);
-        sincronizadas += salvas;
-        if (salvas == 0) {
-          ignoradas++;
-        }
-      } catch (RuntimeException ignored) {
-        ignoradas++;
-      }
+    try {
+      sincronizadas = catalogo.salvarOfertasDoSync(itens, deslocamento);
+      ignoradas = itens.size() - sincronizadas;
+    } catch (RuntimeException ignored) {
+      ignoradas = itens.size();
     }
 
     boolean temMais = Boolean.TRUE.equals(resposta == null ? null : resposta.hasMore());

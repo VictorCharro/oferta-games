@@ -106,6 +106,23 @@ public class RepositorioJogos {
     }
   }
 
+  public List<IdJogoItad> salvarJogosItad(List<JogoParaSalvar> jogos) {
+    String sql = """
+        INSERT INTO games (itad_id, title, slug, cover_url, rank)
+        SELECT itad_id, title, slug, cover_url, rank
+        FROM UNNEST(?)
+        ON CONFLICT (itad_id) DO UPDATE
+          SET title = EXCLUDED.title,
+              cover_url = COALESCE(EXCLUDED.cover_url, games.cover_url),
+              rank = COALESCE(EXCLUDED.rank, games.rank)
+        RETURNING id, itad_id::text
+        """;
+    return jdbc.sql(sql)
+        .param(1, jogos.toArray(new JogoParaSalvar[0]))
+        .query((rs, linha) -> new IdJogoItad(rs.getLong("id"), rs.getString("itad_id")))
+        .list();
+  }
+
   public List<ResumoJogo> listarPorItadIds(List<String> itadIds) {
     return jdbc.sql("""
         SELECT
@@ -145,6 +162,28 @@ public class RepositorioJogos {
         .param("moeda", oferta.moeda())
         .param("url", oferta.url())
         .update();
+  }
+
+  public int[] salvarOfertas(List<OfertaParaSalvar> ofertas) {
+    return jdbc.sql("""
+        INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, now())
+        ON CONFLICT (game_id, source, store_name) DO UPDATE
+          SET price = EXCLUDED.price,
+              regular_price = EXCLUDED.regular_price,
+              currency = EXCLUDED.currency,
+              url = EXCLUDED.url,
+              updated_at = EXCLUDED.updated_at
+        """)
+        .batch(ofertas, (ps, o) -> {
+          ps.setLong(1, o.jogoId());
+          ps.setString(2, o.fonte());
+          ps.setString(3, o.loja());
+          ps.setBigDecimal(4, o.preco());
+          ps.setBigDecimal(5, o.precoNormal());
+          ps.setString(6, o.moeda());
+          ps.setString(7, o.url());
+        });
   }
 
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {
@@ -276,4 +315,6 @@ public class RepositorioJogos {
   }
 
   private record LinhaJogo(Long id, String slug, String title, String coverUrl) {}
+  record JogoParaSalvar(String itadId, String title, String slug, String coverUrl, Integer rank) {}
+  record IdJogoItad(long id, String itadId) {}
 }
