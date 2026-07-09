@@ -23,9 +23,21 @@ jobs:
           page=0
           while true; do
             echo "Sincronizando pagina $page..."
-            http_response="$(curl -sS -X POST "$BACKEND_API_URL/api/sync?page=$page" -H "X-Sync-Key: $SYNC_SECRET_KEY" -w '\n%{http_code}')"
-            status="$(echo "$http_response" | tail -n 1)"
-            response="$(echo "$http_response" | sed '$d')"
+            attempt=1
+            while true; do
+              http_response="$(curl -sS -X POST "$BACKEND_API_URL/api/sync?page=$page" -H "X-Sync-Key: $SYNC_SECRET_KEY" -w '\n%{http_code}')"
+              status="$(echo "$http_response" | tail -n 1)"
+              response="$(echo "$http_response" | sed '$d')"
+              if [ "$status" != "502" ] && [ "$status" != "503" ] && [ "$status" != "504" ]; then
+                break
+              fi
+              if [ "$attempt" -ge 5 ]; then
+                break
+              fi
+              echo "Render indisponivel temporariamente (HTTP $status). Tentando novamente em 20s..."
+              attempt=$((attempt + 1))
+              sleep 20
+            done
             echo "$response"
             if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
               echo "Sync falhou com HTTP $status"
@@ -37,4 +49,5 @@ jobs:
               break
             fi
             page="$next_page"
+            sleep 2
           done

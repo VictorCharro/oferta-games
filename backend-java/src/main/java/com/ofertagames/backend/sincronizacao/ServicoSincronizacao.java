@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ServicoSincronizacao {
   private static final int TAMANHO_PAGINA = 50;
-  private static final int LIMITE_BACKFILL_STEAM = 50;
+  private static final int LIMITE_BACKFILL_STEAM = 0;
 
   private final ClienteItad itad;
   private final ServicoCatalogo catalogo;
