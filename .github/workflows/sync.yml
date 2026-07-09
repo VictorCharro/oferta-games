@@ -12,13 +12,18 @@ jobs:
     steps:
       - name: Run paginated backend sync
         env:
-          BACKEND_API_URL: ${{ secrets.BACKEND_API_URL }}
+          BACKEND_API_URL: ${{ secrets.BACKEND_API_URL || secrets.BACKEND_URL }}
           SYNC_SECRET_KEY: ${{ secrets.SYNC_SECRET_KEY }}
         run: |
           set -euo pipefail
+          : "${BACKEND_API_URL:?Configure o secret BACKEND_API_URL com a URL do backend}"
+          : "${SYNC_SECRET_KEY:?Configure o secret SYNC_SECRET_KEY com a mesma chave do Render}"
+
+          BACKEND_API_URL="${BACKEND_API_URL%/}"
           page=0
           while true; do
-            response="$(curl -fsS -X POST "$BACKEND_API_URL/api/sync?page=$page" -H "X-Sync-Key: $SYNC_SECRET_KEY")"
+            echo "Sincronizando pagina $page..."
+            response="$(curl --fail-with-body -sS -X POST "$BACKEND_API_URL/api/sync?page=$page" -H "X-Sync-Key: $SYNC_SECRET_KEY")"
             echo "$response"
             has_more="$(echo "$response" | jq -r '.hasMore')"
             next_page="$(echo "$response" | jq -r '.nextPage // empty')"
