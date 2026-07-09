@@ -83,7 +83,15 @@ public class ServicoCatalogo {
   }
 
   public int salvarOfertaDoSync(ItemOfertaItad item, int rank) {
-    if (item.deal() == null || item.deal().shop() == null || item.deal().price() == null || item.deal().url() == null) {
+    if (item == null
+        || item.id() == null || item.id().isBlank()
+        || item.title() == null || item.title().isBlank()
+        || item.deal() == null
+        || item.deal().shop() == null
+        || item.deal().shop().name() == null || item.deal().shop().name().isBlank()
+        || item.deal().price() == null
+        || item.deal().price().amount() == null
+        || item.deal().url() == null || item.deal().url().isBlank()) {
       return 0;
     }
 

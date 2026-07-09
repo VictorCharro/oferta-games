@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -83,22 +84,26 @@ public class RepositorioJogos {
   }
 
   public long salvarJogoItad(String itadId, String titulo, String slug, String capa, Integer rank) {
-    return jdbc.sql("""
-        INSERT INTO games (itad_id, title, slug, cover_url, rank)
-        VALUES (CAST(:itadId AS uuid), :titulo, :slug, :capa, :rank)
-        ON CONFLICT (itad_id) DO UPDATE
-          SET title = EXCLUDED.title,
-              cover_url = COALESCE(EXCLUDED.cover_url, games.cover_url),
-              rank = COALESCE(EXCLUDED.rank, games.rank)
-        RETURNING id
-        """)
-        .param("itadId", itadId)
-        .param("titulo", titulo)
-        .param("slug", slug)
-        .param("capa", capa)
-        .param("rank", rank)
-        .query(Long.class)
-        .single();
+    try {
+      return jdbc.sql("""
+          INSERT INTO games (itad_id, title, slug, cover_url, rank)
+          VALUES (CAST(:itadId AS uuid), :titulo, :slug, :capa, :rank)
+          ON CONFLICT (itad_id) DO UPDATE
+            SET title = EXCLUDED.title,
+                cover_url = COALESCE(EXCLUDED.cover_url, games.cover_url),
+                rank = COALESCE(EXCLUDED.rank, games.rank)
+          RETURNING id
+          """)
+          .param("itadId", itadId)
+          .param("titulo", titulo)
+          .param("slug", slug)
+          .param("capa", capa)
+          .param("rank", rank)
+          .query(Long.class)
+          .single();
+    } catch (DuplicateKeyException conflito) {
+      return buscarIdPorSlug(slug).orElseThrow(() -> conflito);
+    }
   }
 
   public List<ResumoJogo> listarPorItadIds(List<String> itadIds) {

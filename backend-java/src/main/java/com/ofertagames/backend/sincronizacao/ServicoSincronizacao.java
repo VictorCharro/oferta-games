@@ -28,12 +28,26 @@ public class ServicoSincronizacao {
     List<ItemOfertaItad> itens = resposta == null ? List.of() : Objects.requireNonNullElse(resposta.list(), List.of());
 
     int sincronizadas = 0;
+    int ignoradas = 0;
     for (int indice = 0; indice < itens.size(); indice++) {
-      sincronizadas += catalogo.salvarOfertaDoSync(itens.get(indice), deslocamento + indice);
+      try {
+        int salvas = catalogo.salvarOfertaDoSync(itens.get(indice), deslocamento + indice);
+        sincronizadas += salvas;
+        if (salvas == 0) {
+          ignoradas++;
+        }
+      } catch (RuntimeException ignored) {
+        ignoradas++;
+      }
     }
 
     boolean temMais = Boolean.TRUE.equals(resposta == null ? null : resposta.hasMore());
-    int steamAtualizados = catalogo.preencherMetadadosSteam(LIMITE_BACKFILL_STEAM);
-    return new ResultadoSincronizacao(true, sincronizadas, temMais, temMais ? paginaSegura + 1 : null, steamAtualizados);
+    int steamAtualizados;
+    try {
+      steamAtualizados = catalogo.preencherMetadadosSteam(LIMITE_BACKFILL_STEAM);
+    } catch (RuntimeException ignored) {
+      steamAtualizados = 0;
+    }
+    return new ResultadoSincronizacao(true, sincronizadas, ignoradas, temMais, temMais ? paginaSegura + 1 : null, steamAtualizados);
   }
 }
