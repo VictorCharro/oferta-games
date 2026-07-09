@@ -43,10 +43,11 @@ export class Home implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.gameService.getTopDeals(50, 'rank').subscribe({
+    this.gameService.getTopDeals(100, 'rank').subscribe({
       next: (deals) => {
         const paid = deals.filter(d => Number(d.discountPct) < 100 && !resolveDlc(d.title, d.isDlc));
         this.featuredDeals = this.shuffle(paid).slice(0, 5);
+        this.famousGames = this.shuffle(paid).slice(0, 20).map(d => this.fromTopDeal(d));
         this.loading = false;
         this.startAutoplay();
         this.cdr.detectChanges();
@@ -63,18 +64,9 @@ export class Home implements OnInit, OnDestroy {
 
         const active = deals.filter(d => Number(d.discountPct) < 100);
         this.topDiscountGames = active.filter(d => d.rank != null && !resolveDlc(d.title, d.isDlc)).slice(0, 20).map(d => this.fromTopDeal(d));
+        this.topDiscountDlcs = active.filter(d => resolveDlc(d.title, d.isDlc)).slice(0, 20).map(d => this.fromTopDeal(d));
         this.cdr.detectChanges();
       }
-    });
-
-    this.gameService.getGames(0, 20, { sort: 'discount', type: 'dlc' }).subscribe(games => {
-      this.topDiscountDlcs = games.map(g => this.fromGameSummary(g));
-      this.cdr.detectChanges();
-    });
-
-    this.gameService.getGames(0, 50, { sort: 'rank', type: 'game' }).subscribe(games => {
-      this.famousGames = this.shuffle(games.map(g => this.fromGameSummary(g)));
-      this.cdr.detectChanges();
     });
 
     this.favSub = this.favoritesService.list$.subscribe(list => {
