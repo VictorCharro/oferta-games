@@ -41,7 +41,6 @@ export class Catalog implements OnInit, OnDestroy {
     { value: 'all', label: 'Todas' },
     { value: 'pc', label: 'PC' },
     { value: 'xbox', label: 'Xbox' },
-    { value: 'playstation', label: 'PlayStation' },
   ];
 
   private scrollTicking = false;
