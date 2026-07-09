@@ -56,7 +56,7 @@ public class ServicoCatalogo {
     }
 
     List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(itad.buscarPrecos(jogo.itadId()), List.of());
-    ResultadoPrecoItad resultado = resultados.isEmpty() ? null : resultados.getFirst();
+    ResultadoPrecoItad resultado = resultados.isEmpty() ? null : resultados.get(0);
     if (resultado == null || resultado.deals() == null || resultado.deals().isEmpty()) {
       return new ResultadoAtualizacaoJogo(true, 0);
     }

@@ -10,7 +10,8 @@ Backend Spring Boot do Oferta Games.
 - ITAD como fonte principal de ofertas.
 - Steam usado para complementar capa e classificar DLC quando existe oferta da loja Steam.
 - Frontend Angular continua hospedado separadamente no Vercel.
-- Deploy planejado em VM Oracle Cloud Always Free, preferencialmente Ampere A1.
+- Deploy temporario em Oracle Cloud Always Free `VM.Standard.E2.1.Micro`.
+- Deploy definitivo planejado em Oracle Cloud Always Free Ampere A1 quando houver capacidade.
 
 ## Padrao de codigo
 
@@ -77,3 +78,29 @@ mvn spring-boot:run
 ```
 
 Nesta maquina o Maven ainda nao esta instalado no PATH, entao o build local precisa desse passo antes.
+
+## Deploy na Oracle VM
+
+Na `VM.Standard.E2.1.Micro`, rode sem Docker para economizar memoria:
+
+```bash
+sudo apt update
+sudo apt install -y openjdk-21-jdk maven git nginx
+```
+
+Variaveis obrigatorias no ambiente do servico:
+
+```bash
+DATABASE_URL=postgresql://...
+SUPABASE_URL=https://...
+SUPABASE_ANON_KEY=...
+ITAD_API_KEY=...
+SYNC_SECRET_KEY=...
+CORS_ALLOWED_ORIGINS=https://seu-front.vercel.app,http://localhost:4200
+```
+
+Health check:
+
+```text
+GET /actuator/health
+```

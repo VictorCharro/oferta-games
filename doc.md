@@ -14,7 +14,7 @@ Não é uma loja própria. É um agregador/comparador de preços.
 - **Frontend:** Angular, hospedado no Vercel.
 - **Banco:** PostgreSQL no Supabase. Conexão via transaction pooler (porta 6543).
 - **Auth:** Supabase Auth (email/senha e OAuth). Frontend usa `@supabase/supabase-js`; backend valida Bearer token via Supabase Auth.
-- **Deploy backend:** VM Oracle Cloud Always Free, preferencialmente `VM.Standard.A1.Flex` com Ubuntu.
+- **Deploy backend:** Oracle Cloud Always Free em VM `VM.Standard.E2.1.Micro` enquanto a Ampere A1 não libera capacidade.
 
 ## Deploy
 
@@ -136,6 +136,7 @@ favorites
     itad/               -> cliente e modelos da API ITAD
     jogos/              -> catálogo, detalhe, busca e refresh
     sincronizacao/      -> endpoint /api/sync
+    saude/              -> endpoint /actuator/health
     steam/              -> capa oficial e detecção de DLC
 
 /frontend
@@ -192,7 +193,7 @@ favorites
 
 - Sem scraping de sites.
 - Sem multi-moeda funcional por enquanto.
-- Sem Docker obrigatório.
+- Docker não é obrigatório.
 - Sem cron interno; sincronização é acionada externamente pelo GitHub Actions.
 
 ## Estado atual
@@ -206,6 +207,7 @@ favorites
 - [x] Frontend Angular implementado
 - [x] GitHub Actions configurado para chamar `/api/sync`
 - [ ] Maven ainda precisa estar instalado/configurado para build local nesta máquina
-- [ ] Deploy da VM Oracle Cloud aguardando disponibilidade de capacidade Ampere A1
+- [ ] Deploy temporário na Oracle `VM.Standard.E2.1.Micro`
+- [ ] Troca para Oracle Ampere A1 quando houver capacidade disponível
 - [ ] Integração com Eneba
 - [ ] Integração com Instant Gaming
