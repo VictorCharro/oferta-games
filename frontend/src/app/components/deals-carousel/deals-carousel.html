@@ -14,7 +14,16 @@
           <span class="price-original" *ngIf="deal.regularPrice">{{ formatPrice(deal.regularPrice) }}</span>
         </div>
         <ng-template #freeLabel><span class="price-current">Grátis</span></ng-template>
-        <span *ngIf="deal.storeName" class="deal-store">{{ deal.storeName }}</span>
+        <span *ngIf="deal.storeName" class="deal-store">
+          <img class="store-logo" [src]="storeLogo(deal.storeName)" [alt]="deal.storeName" />
+          <span>{{ deal.storeName }}</span>
+        </span>
+        <div *ngIf="deal.storeName" class="platform-list" aria-label="Plataformas">
+          <span *ngFor="let platform of platforms(deal.storeName)" class="platform-chip" [title]="platform.name">
+            <img [src]="platform.logo" [alt]="platform.name" />
+            <span>{{ platform.name }}</span>
+          </span>
+        </div>
       </div>
     </a>
   </div>

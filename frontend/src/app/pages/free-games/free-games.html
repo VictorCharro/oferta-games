@@ -16,7 +16,16 @@
           <span class="price-original">{{ formatPrice(game.regularPrice) }}</span>
           <span class="free-tag">Grátis</span>
         </div>
-        <span class="free-store">{{ game.storeName }}</span>
+        <span class="free-store">
+          <img class="store-logo" [src]="storeLogo(game.storeName)" [alt]="game.storeName" />
+          <span>{{ game.storeName }}</span>
+        </span>
+        <div class="platform-list" aria-label="Plataformas">
+          <span *ngFor="let platform of platforms(game.storeName)" class="platform-chip" [title]="platform.name">
+            <img [src]="platform.logo" [alt]="platform.name" />
+            <span>{{ platform.name }}</span>
+          </span>
+        </div>
       </div>
     </a>
   </div>

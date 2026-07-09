@@ -1,6 +1,7 @@
 import { Component, Input, ElementRef, ViewChild, AfterViewInit, OnChanges, OnDestroy, HostListener } from '@angular/core';
 import { DealCardView } from '../../pages/home/home';
 import { resolveDlc } from '../../services/filters';
+import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 
 @Component({
   selector: 'app-deals-carousel',
@@ -85,5 +86,12 @@ export class DealsCarousel implements AfterViewInit, OnChanges, OnDestroy {
     const n = Number(price);
     if (price == null || isNaN(n)) return '—';
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+  storeLogo(storeName?: string | null): string {
+    return storeBrand(storeName).logo;
+  }
+
+  platforms(storeName?: string | null): PlatformBrand[] {
+    return storePlatforms(storeName);
   }
 }

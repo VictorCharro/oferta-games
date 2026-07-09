@@ -15,7 +15,16 @@
               <span class="price-current">{{ formatPrice(f.price) }}</span>
               <span class="price-original">{{ formatPrice(f.regularPrice) }}</span>
             </div>
-            <p class="banner-store">{{ f.storeName }}</p>
+            <p class="banner-store">
+              <img class="store-logo" [src]="storeLogo(f.storeName)" [alt]="f.storeName" />
+              <span>{{ f.storeName }}</span>
+            </p>
+            <div class="platform-list" aria-label="Plataformas">
+              <span *ngFor="let platform of platforms(f.storeName)" class="platform-chip" [title]="platform.name">
+                <img [src]="platform.logo" [alt]="platform.name" />
+                <span>{{ platform.name }}</span>
+              </span>
+            </div>
           </div>
         </a>
       </div>

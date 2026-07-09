@@ -127,7 +127,7 @@ favorites
 - `POST /api/sync?page=0`
   - Sincroniza uma página de ofertas da ITAD.
   - Exige header `X-Sync-Key`.
-  - Também executa pequeno backfill de metadados Steam.
+  - Não executa backfill Steam durante o sync no Render free, para manter o processo leve.
 - `GET /api/favorites`
   - Lista jogos favoritados do usuário autenticado.
 - `POST /api/favorites`
@@ -181,6 +181,7 @@ favorites
       supabase.ts
       theme.ts
       filters.ts
+      store-brand.ts      -> resolve logos locais e plataformas inferidas pelo nome da loja
     guards/
       auth.guard.ts
 
@@ -199,6 +200,8 @@ favorites
 
 - **Cor principal:** `#29A8E0` (azul).
 - **Ícones:** PNGs em `frontend/public/`.
+- **Logos de loja/plataforma:** SVGs locais em `frontend/public/store-logos/` e `frontend/public/platform-logos/`, resolvidos no frontend por `store-brand.ts` a partir de `storeName`.
+- **Plataformas:** enquanto o backend não persiste `platforms/drm` do ITAD, o frontend infere PC, Xbox e PlayStation pelo nome da loja.
 - **DLC detection:** `games.is_dlc` é preenchido via Steam quando há oferta Steam; enquanto `is_dlc IS NULL`, o frontend usa heurística por título.
 - **Deduplicação de deals:** `DISTINCT ON (g.id)` mantém apenas a oferta mais barata por jogo.
 - **Catálogo rotativo:** top 200 por rank com desconto ativo sobem ao topo.

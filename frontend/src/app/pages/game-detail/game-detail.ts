@@ -5,6 +5,7 @@ import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'r
 import { GameService, GameDetail as GameDetailModel, GameSummary, Offer } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
 import { AuthService } from '../../services/auth';
+import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 
 @Component({
   selector: 'app-game-detail',
@@ -123,5 +124,13 @@ export class GameDetail implements OnInit, OnDestroy {
     const n = Number(price);
     if (price == null || isNaN(n)) return '—';
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  storeLogo(storeName?: string | null): string {
+    return storeBrand(storeName).logo;
+  }
+
+  platforms(storeName?: string | null): PlatformBrand[] {
+    return storePlatforms(storeName);
   }
 }

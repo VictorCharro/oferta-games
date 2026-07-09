@@ -40,13 +40,23 @@
     <div class="offers-table" *ngIf="game.offers.length; else noOffers">
       <div class="offer-header">
         <span>Loja</span>
+        <span>Plataforma</span>
         <span>Desconto</span>
         <span>Preço Regular</span>
         <span>Preço Atual</span>
         <span></span>
       </div>
       <a *ngFor="let offer of game.offers" class="offer-row" [href]="offer.url" target="_blank" rel="noopener">
-        <span class="offer-store">{{ offer.storeName }}</span>
+        <span class="offer-store">
+          <img class="store-logo" [src]="storeLogo(offer.storeName)" [alt]="offer.storeName" />
+          <span>{{ offer.storeName }}</span>
+        </span>
+        <span class="offer-platforms">
+          <span *ngFor="let platform of platforms(offer.storeName)" class="platform-chip" [title]="platform.name">
+            <img [src]="platform.logo" [alt]="platform.name" />
+            <span>{{ platform.name }}</span>
+          </span>
+        </span>
         <span class="offer-discount" *ngIf="discount(offer) > 0">-{{ discount(offer) }}%</span>
         <span class="offer-discount none" *ngIf="discount(offer) === 0">—</span>
         <span class="price-original">{{ offer.regularPrice ? formatPrice(offer.regularPrice) : '—' }}</span>

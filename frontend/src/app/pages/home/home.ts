@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { GameService, TopDeal, GameSummary } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
 import { resolveDlc } from '../../services/filters';
+import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 
 export interface DealCardView {
   slug: string;
@@ -140,6 +141,14 @@ export class Home implements OnInit, OnDestroy {
     const n = Number(price);
     if (price == null || isNaN(n)) return '—';
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  storeLogo(storeName?: string | null): string {
+    return storeBrand(storeName).logo;
+  }
+
+  platforms(storeName?: string | null): PlatformBrand[] {
+    return storePlatforms(storeName);
   }
 
   private fromTopDeal(d: TopDeal): DealCardView {

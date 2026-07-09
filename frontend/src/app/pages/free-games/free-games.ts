@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { GameService, TopDeal } from '../../services/game';
+import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 
 @Component({
   selector: 'app-free-games',
@@ -28,5 +29,12 @@ export class FreeGames implements OnInit {
     const n = Number(price);
     if (price == null || isNaN(n)) return '—';
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+  storeLogo(storeName?: string | null): string {
+    return storeBrand(storeName).logo;
+  }
+
+  platforms(storeName?: string | null): PlatformBrand[] {
+    return storePlatforms(storeName);
   }
 }

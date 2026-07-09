@@ -1,0 +1,63 @@
+export interface StoreBrand {
+  name: string;
+  logo: string;
+}
+
+export interface PlatformBrand {
+  name: string;
+  logo: string;
+}
+
+const DEFAULT_BRAND: StoreBrand = {
+  name: 'Loja',
+  logo: 'favicon-32.png',
+};
+
+const PC_PLATFORM: PlatformBrand = { name: 'PC', logo: 'platform-logos/pc.svg' };
+const XBOX_PLATFORM: PlatformBrand = { name: 'Xbox', logo: 'store-logos/xbox.svg' };
+const PLAYSTATION_PLATFORM: PlatformBrand = { name: 'PlayStation', logo: 'platform-logos/playstation.svg' };
+
+const BRANDS: Array<{ pattern: RegExp; brand: StoreBrand }> = [
+  { pattern: /steam/i, brand: { name: 'Steam', logo: 'store-logos/steam.svg' } },
+  { pattern: /microsoft/i, brand: { name: 'Microsoft Store', logo: 'store-logos/microsoft.svg' } },
+  { pattern: /xbox/i, brand: { name: 'Xbox', logo: 'store-logos/xbox.svg' } },
+  { pattern: /playstation|\bpsn\b/i, brand: { name: 'PlayStation Store', logo: 'platform-logos/playstation.svg' } },
+  { pattern: /epic/i, brand: { name: 'Epic Games Store', logo: 'store-logos/epic.svg' } },
+  { pattern: /\bgog\b/i, brand: { name: 'GOG', logo: 'store-logos/gog.svg' } },
+  { pattern: /ubisoft/i, brand: { name: 'Ubisoft Store', logo: 'store-logos/ubisoft.svg' } },
+  { pattern: /\bea\b|electronic arts/i, brand: { name: 'EA Store', logo: 'store-logos/ea.svg' } },
+  { pattern: /blizzard|battle\.?net/i, brand: { name: 'Battle.net', logo: 'store-logos/battle-net.svg' } },
+  { pattern: /humble/i, brand: { name: 'Humble Store', logo: 'store-logos/humble.svg' } },
+  { pattern: /fanatical/i, brand: { name: 'Fanatical', logo: 'store-logos/fanatical.svg' } },
+  { pattern: /nuuvem/i, brand: { name: 'Nuuvem', logo: 'store-logos/nuuvem.svg' } },
+  { pattern: /green.?man/i, brand: { name: 'Green Man Gaming', logo: 'store-logos/greenman.svg' } },
+  { pattern: /gamers.?gate/i, brand: { name: 'GamersGate', logo: 'store-logos/gamersgate.svg' } },
+  { pattern: /indie.?gala/i, brand: { name: 'IndieGala', logo: 'store-logos/indiegala.svg' } },
+  { pattern: /2game/i, brand: { name: '2Game', logo: 'store-logos/twogame.svg' } },
+];
+
+export function storeBrand(storeName?: string | null): StoreBrand {
+  if (!storeName) return DEFAULT_BRAND;
+  return BRANDS.find(({ pattern }) => pattern.test(storeName))?.brand ?? {
+    name: storeName,
+    logo: DEFAULT_BRAND.logo,
+  };
+}
+
+export function storePlatforms(storeName?: string | null): PlatformBrand[] {
+  if (!storeName) return [PC_PLATFORM];
+
+  if (/playstation|\bpsn\b/i.test(storeName)) {
+    return [PLAYSTATION_PLATFORM];
+  }
+
+  if (/xbox/i.test(storeName)) {
+    return [XBOX_PLATFORM];
+  }
+
+  if (/microsoft/i.test(storeName)) {
+    return [XBOX_PLATFORM, PC_PLATFORM];
+  }
+
+  return [PC_PLATFORM];
+}
