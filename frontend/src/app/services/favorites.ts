@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { AuthService } from './auth';
 import { supabase } from './supabase';
 import { GameSummary } from './game';
@@ -20,6 +20,7 @@ export class FavoritesService {
   list$ = this._list.asObservable();
 
   loading = false;
+  private loadingPromise: Promise<void> | null = null;
 
   constructor(private http: HttpClient, private auth: AuthService) {
     this.auth.user$.subscribe(user => {
@@ -35,26 +36,45 @@ export class FavoritesService {
     return this._slugs.value.has(slug);
   }
 
-  private async authHeaders(): Promise<{ Authorization: string }> {
+  private async authHeaders(): Promise<{ Authorization: string } | null> {
     const { data } = await supabase.auth.getSession();
-    return { Authorization: `Bearer ${data.session?.access_token}` };
+    const token = data.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : null;
   }
 
   async load() {
+    if (this.loadingPromise) return this.loadingPromise;
     this.loading = true;
-    const headers = await this.authHeaders();
-    this.http.get<FavoriteGame[]>(`${this.api}/favorites`, { headers }).subscribe({
-      next: (list) => {
-        this._list.next(list);
-        this._slugs.next(new Set(list.map(g => g.slug)));
-        this.loading = false;
-      },
-      error: () => { this.loading = false; }
+    this.loadingPromise = this.loadFavorites();
+    return this.loadingPromise.finally(() => {
+      this.loadingPromise = null;
     });
+  }
+
+  private async loadFavorites() {
+    const headers = await this.authHeaders();
+    if (!headers) {
+      this._slugs.next(new Set());
+      this._list.next([]);
+      this.loading = false;
+      return;
+    }
+
+    try {
+      const list = await firstValueFrom(this.http.get<FavoriteGame[]>(`${this.api}/favorites`, { headers }));
+      this._list.next(list);
+      this._slugs.next(new Set(list.map(g => g.slug)));
+    } catch {
+      // Mantem o estado atual; o usuario pode tentar carregar novamente ao navegar.
+    } finally {
+      this.loading = false;
+    }
   }
 
   async toggle(game: GameSummary) {
     const headers = await this.authHeaders();
+    if (!headers) return;
+
     const favorited = this.isFavorited(game.slug);
 
     if (favorited) {

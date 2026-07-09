@@ -18,14 +18,20 @@ public class RepositorioFavoritos {
           g.slug,
           g.title,
           g.cover_url,
-          MIN(o.price) AS min_price,
-          MAX(o.regular_price) AS regular_price,
-          f.created_at AS favorited_at
+          g.is_dlc,
+          oferta.price AS min_price,
+          oferta.regular_price AS regular_price,
+          f.created_at::text AS favorited_at
         FROM favorites f
         JOIN games g ON g.id = f.game_id
-        LEFT JOIN offers o ON o.game_id = g.id
+        LEFT JOIN LATERAL (
+          SELECT price, regular_price
+          FROM offers
+          WHERE game_id = g.id
+          ORDER BY price ASC
+          LIMIT 1
+        ) oferta ON true
         WHERE f.user_id = CAST(:usuarioId AS uuid)
-        GROUP BY g.id, g.slug, g.title, g.cover_url, f.created_at
         ORDER BY f.created_at DESC
         """)
         .param("usuarioId", usuarioId)
@@ -33,9 +39,10 @@ public class RepositorioFavoritos {
             rs.getString("slug"),
             rs.getString("title"),
             rs.getString("cover_url"),
+            rs.getObject("is_dlc", Boolean.class),
             rs.getBigDecimal("min_price"),
             rs.getBigDecimal("regular_price"),
-            rs.getObject("favorited_at", java.time.OffsetDateTime.class)))
+            rs.getString("favorited_at")))
         .list();
   }
 
