@@ -9,7 +9,7 @@ import org.springframework.web.client.RestClient;
 @Service
 public class ClienteItad {
   private static final String URL_BASE = "https://api.isthereanydeal.com";
-  private static final String LOJAS = "50,6,36,37,24,42,19,61,16,4,52,48,62";
+  private static final String LOJAS = "50,6,37,24,42,19,61,16,4,52,48,62";
 
   private final RestClient restClient;
   private final String chaveApi;
