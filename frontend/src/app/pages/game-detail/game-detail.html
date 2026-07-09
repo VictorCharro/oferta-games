@@ -52,7 +52,7 @@
           <span>{{ offer.storeName }}</span>
         </span>
         <span class="offer-platforms">
-          <span *ngFor="let platform of platforms(offer.storeName)" class="platform-chip" [title]="platform.name">
+          <span *ngFor="let platform of platforms(offer.storeName, offer.url)" class="platform-chip" [title]="platform.name">
             <img [src]="platform.logo" [alt]="platform.name" />
             <span>{{ platform.name }}</span>
           </span>

@@ -13,6 +13,7 @@ export interface DealCardView {
   price: number | string | null;
   regularPrice: number | string | null;
   storeName?: string | null;
+  url?: string | null;
   isDlc?: boolean | null;
 }
 
@@ -147,8 +148,8 @@ export class Home implements OnInit, OnDestroy {
     return storeBrand(storeName).logo;
   }
 
-  platforms(storeName?: string | null): PlatformBrand[] {
-    return storePlatforms(storeName);
+  platforms(storeName?: string | null, url?: string | null): PlatformBrand[] {
+    return storePlatforms(storeName, url);
   }
 
   private fromTopDeal(d: TopDeal): DealCardView {
@@ -160,6 +161,7 @@ export class Home implements OnInit, OnDestroy {
       price: d.price,
       regularPrice: d.regularPrice,
       storeName: d.storeName,
+      url: d.url,
       isDlc: d.isDlc,
     };
   }
@@ -176,6 +178,7 @@ export class Home implements OnInit, OnDestroy {
       price: g.minPrice,
       regularPrice: g.regularPrice ?? null,
       storeName: null,
+      url: null,
       isDlc: g.isDlc,
     };
   }

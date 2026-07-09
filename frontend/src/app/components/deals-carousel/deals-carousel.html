@@ -19,7 +19,7 @@
           <span>{{ deal.storeName }}</span>
         </span>
         <div *ngIf="deal.storeName" class="platform-list" aria-label="Plataformas">
-          <span *ngFor="let platform of platforms(deal.storeName)" class="platform-chip" [title]="platform.name">
+          <span *ngFor="let platform of platforms(deal.storeName, deal.url)" class="platform-chip" [title]="platform.name">
             <img [src]="platform.logo" [alt]="platform.name" />
             <span>{{ platform.name }}</span>
           </span>

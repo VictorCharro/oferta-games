@@ -130,7 +130,7 @@ export class GameDetail implements OnInit, OnDestroy {
     return storeBrand(storeName).logo;
   }
 
-  platforms(storeName?: string | null): PlatformBrand[] {
-    return storePlatforms(storeName);
+  platforms(storeName?: string | null, url?: string | null): PlatformBrand[] {
+    return storePlatforms(storeName, url);
   }
 }

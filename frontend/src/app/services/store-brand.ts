@@ -44,18 +44,19 @@ export function storeBrand(storeName?: string | null): StoreBrand {
   };
 }
 
-export function storePlatforms(storeName?: string | null): PlatformBrand[] {
-  if (!storeName) return [PC_PLATFORM];
+export function storePlatforms(storeName?: string | null, url?: string | null): PlatformBrand[] {
+  const source = `${storeName ?? ''} ${url ?? ''}`;
+  if (!source.trim()) return [PC_PLATFORM];
 
-  if (/playstation|\bpsn\b/i.test(storeName)) {
+  if (/playstation|\bpsn\b|store\.playstation\.com/i.test(source)) {
     return [PLAYSTATION_PLATFORM];
   }
 
-  if (/xbox/i.test(storeName)) {
+  if (/xbox|xbox\.com/i.test(source)) {
     return [XBOX_PLATFORM];
   }
 
-  if (/microsoft/i.test(storeName)) {
+  if (/microsoft/i.test(source)) {
     return [XBOX_PLATFORM, PC_PLATFORM];
   }
 
