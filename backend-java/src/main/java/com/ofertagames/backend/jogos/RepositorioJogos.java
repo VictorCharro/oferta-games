@@ -2,6 +2,7 @@ package com.ofertagames.backend.jogos;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;
@@ -86,29 +87,6 @@ public class RepositorioJogos {
         .optional();
   }
 
-  public long salvarJogoItad(String itadId, String titulo, String slug, String capa, Integer rank) {
-    try {
-      return jdbc.sql("""
-          INSERT INTO games (itad_id, title, slug, cover_url, rank)
-          VALUES (CAST(:itadId AS uuid), :titulo, :slug, :capa, :rank)
-          ON CONFLICT (itad_id) DO UPDATE
-            SET title = EXCLUDED.title,
-                cover_url = COALESCE(EXCLUDED.cover_url, games.cover_url),
-                rank = COALESCE(EXCLUDED.rank, games.rank)
-          RETURNING id
-          """)
-          .param("itadId", itadId)
-          .param("titulo", titulo)
-          .param("slug", slug)
-          .param("capa", capa)
-          .param("rank", rank)
-          .query(Long.class)
-          .single();
-    } catch (DuplicateKeyException conflito) {
-      return buscarIdPorSlug(slug).orElseThrow(() -> conflito);
-    }
-  }
-
   public List<IdJogoItad> salvarJogosItad(List<JogoParaSalvar> jogos) {
     String sql = """
         INSERT INTO games (itad_id, title, slug, cover_url, rank)
@@ -167,7 +145,7 @@ public class RepositorioJogos {
         .update();
   }
 
-  public int[] salvarOfertas(List<OfertaParaSalvar> ofertas) {
+  public int salvarOfertas(List<OfertaParaSalvar> ofertas) {
     String sql = """
         INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, now())
@@ -178,7 +156,7 @@ public class RepositorioJogos {
               url = EXCLUDED.url,
               updated_at = EXCLUDED.updated_at
         """;
-    return jdbcTemplate.batchUpdate(sql, ofertas, 100, (ps, o) -> {
+    int[][] updateCounts = jdbcTemplate.batchUpdate(sql, ofertas, 100, (ps, o) -> {
       ps.setLong(1, o.jogoId());
       ps.setString(2, o.fonte());
       ps.setString(3, o.loja());
@@ -187,6 +165,7 @@ public class RepositorioJogos {
       ps.setString(6, o.moeda());
       ps.setString(7, o.url());
     });
+    return Arrays.stream(updateCounts).flatMapToInt(Arrays::stream).sum();
   }
 
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {

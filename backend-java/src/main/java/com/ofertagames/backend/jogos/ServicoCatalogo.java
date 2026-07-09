@@ -135,7 +135,7 @@ public class ServicoCatalogo {
       return 0;
     }
 
-    return jogos.salvarOfertas(ofertasParaSalvar).length;
+    return jogos.salvarOfertas(ofertasParaSalvar);
   }
 
   public int preencherMetadadosSteam(int limite) {
