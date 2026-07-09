@@ -1,5 +1,6 @@
 package com.ofertagames.backend.descontos;
 
+import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -36,12 +37,12 @@ public class RepositorioDescontos {
             AND o.regular_price > 0
             AND o.price < o.regular_price
             AND o.price < o.regular_price * 0.99
-            AND lower(o.store_name) NOT LIKE '%%green%%man%%gaming%%'
+            %s
           ORDER BY g.id, o.price ASC
         ) sub
         ORDER BY %s
         LIMIT :tamanho
-        """.formatted(ordenarPor);
+        """.formatted(LojasBloqueadas.filtroSql("o"), ordenarPor);
 
     return jdbc.sql(sql)
         .param("tamanho", tamanho)

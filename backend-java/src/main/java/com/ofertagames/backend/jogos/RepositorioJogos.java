@@ -1,5 +1,6 @@
 package com.ofertagames.backend.jogos;
 
+import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -252,12 +253,12 @@ public class RepositorioJogos {
 
   private List<OfertaJogo> listarOfertas(long jogoId) {
     return jdbc.sql("""
-        SELECT store_name, price, regular_price, currency, url
-        FROM offers
-        WHERE game_id = :jogoId
-          AND lower(store_name) NOT LIKE '%green%man%gaming%'
+        SELECT o.store_name, o.price, o.regular_price, o.currency, o.url
+        FROM offers o
+        WHERE o.game_id = :jogoId
+          %s
         ORDER BY price ASC
-        """)
+        """.formatted(filtroLojaBloqueada("o")))
         .param("jogoId", jogoId)
         .query((rs, linha) -> new OfertaJogo(
             rs.getString("store_name"),
@@ -287,11 +288,11 @@ public class RepositorioJogos {
   }
 
   private static String filtroLojaBloqueada(String alias) {
-    return "AND lower(" + alias + ".store_name) NOT LIKE '%green%man%gaming%'";
+    return LojasBloqueadas.filtroSql(alias);
   }
 
   private static boolean lojaBloqueada(String loja) {
-    return loja != null && loja.toLowerCase().replace(" ", "").contains("greenmangaming");
+    return LojasBloqueadas.contem(loja);
   }
 
   private static String filtroOfertaPlataforma(String plataforma) {
