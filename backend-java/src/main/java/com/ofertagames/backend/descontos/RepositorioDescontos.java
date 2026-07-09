@@ -36,6 +36,7 @@ public class RepositorioDescontos {
             AND o.regular_price > 0
             AND o.price < o.regular_price
             AND o.price < o.regular_price * 0.99
+            AND lower(o.store_name) NOT LIKE '%green%man%gaming%'
           ORDER BY g.id, o.price ASC
         ) sub
         ORDER BY %s

@@ -31,6 +31,7 @@ public class RepositorioJogos {
     String filtroBusca = busca == null || busca.isBlank() ? "" : "AND g.title ILIKE :busca";
     String filtroPlataforma = filtroPlataforma(plataforma);
     String filtroOfertaPlataforma = filtroOfertaPlataforma(plataforma);
+    String filtroLojaBloqueada = filtroLojaBloqueada("o");
     String filtroPreco = filtroPreco(precoMinimo, precoMaximo);
 
     String sql = """
@@ -44,7 +45,7 @@ public class RepositorioJogos {
           (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
           (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
         FROM games g
-        LEFT JOIN offers o ON o.game_id = g.id %s
+        LEFT JOIN offers o ON o.game_id = g.id %s %s
         WHERE 1=1
         %s
         %s
@@ -53,7 +54,7 @@ public class RepositorioJogos {
         %s
         ORDER BY %s
         LIMIT :tamanho OFFSET :deslocamento
-        """.formatted(filtroOfertaPlataforma, filtroTipo, filtroBusca, filtroPlataforma, filtroPreco, ordenarPor(ordenacao));
+        """.formatted(filtroOfertaPlataforma, filtroLojaBloqueada, filtroTipo, filtroBusca, filtroPlataforma, filtroPreco, ordenarPor(ordenacao));
 
     var comando = jdbc.sql(sql).param("tamanho", tamanho).param("deslocamento", deslocamento);
     if (busca != null && !busca.isBlank()) {
@@ -136,17 +137,20 @@ public class RepositorioJogos {
           (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
           (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
         FROM games g
-        LEFT JOIN offers o ON o.game_id = g.id
+        LEFT JOIN offers o ON o.game_id = g.id %s
         WHERE g.itad_id::text IN (:itadIds)
         GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
         ORDER BY g.title
-        """)
+        """.formatted(filtroLojaBloqueada("o")))
         .param("itadIds", itadIds)
         .query(RepositorioJogos::mapearResumo)
         .list();
   }
 
   public void salvarOferta(OfertaParaSalvar oferta) {
+    if (lojaBloqueada(oferta.loja())) {
+      return;
+    }
     jdbc.sql("""
         INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
         VALUES (:jogoId, :fonte, :loja, :preco, :precoNormal, :moeda, :url, now())
@@ -168,6 +172,13 @@ public class RepositorioJogos {
   }
 
   public int salvarOfertas(List<OfertaParaSalvar> ofertas) {
+    List<OfertaParaSalvar> ofertasPermitidas = ofertas.stream()
+        .filter(oferta -> !lojaBloqueada(oferta.loja()))
+        .toList();
+    if (ofertasPermitidas.isEmpty()) {
+      return 0;
+    }
+
     String sql = """
         INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, now())
@@ -178,7 +189,7 @@ public class RepositorioJogos {
               url = EXCLUDED.url,
               updated_at = EXCLUDED.updated_at
         """;
-    int[][] updateCounts = jdbcTemplate.batchUpdate(sql, ofertas, 100, (ps, o) -> {
+    int[][] updateCounts = jdbcTemplate.batchUpdate(sql, ofertasPermitidas, 100, (ps, o) -> {
       ps.setLong(1, o.jogoId());
       ps.setString(2, o.fonte());
       ps.setString(3, o.loja());
@@ -244,6 +255,7 @@ public class RepositorioJogos {
         SELECT store_name, price, regular_price, currency, url
         FROM offers
         WHERE game_id = :jogoId
+          AND lower(store_name) NOT LIKE '%green%man%gaming%'
         ORDER BY price ASC
         """)
         .param("jogoId", jogoId)
@@ -271,7 +283,15 @@ public class RepositorioJogos {
   private static String filtroPlataforma(String plataforma) {
     String condicao = condicaoPlataforma("op", plataforma);
     if (condicao.isBlank()) return "";
-    return "AND EXISTS (SELECT 1 FROM offers op WHERE op.game_id = g.id AND " + condicao + ")";
+    return "AND EXISTS (SELECT 1 FROM offers op WHERE op.game_id = g.id " + filtroLojaBloqueada("op") + " AND " + condicao + ")";
+  }
+
+  private static String filtroLojaBloqueada(String alias) {
+    return "AND lower(" + alias + ".store_name) NOT LIKE '%green%man%gaming%'";
+  }
+
+  private static boolean lojaBloqueada(String loja) {
+    return loja != null && loja.toLowerCase().replace(" ", "").contains("greenmangaming");
   }
 
   private static String filtroOfertaPlataforma(String plataforma) {
