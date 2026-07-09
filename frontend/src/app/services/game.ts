@@ -8,6 +8,8 @@ export interface GameSummary {
   coverUrl: string | null;
   minPrice: number | string | null;
   regularPrice?: number | string | null;
+  storeName?: string | null;
+  url?: string | null;
   isDlc?: boolean | null;
 }
 
@@ -46,12 +48,13 @@ export class GameService {
 
   constructor(private http: HttpClient) {}
 
-  getGames(page = 0, size = 20, filters: { sort?: string; minPrice?: number | null; maxPrice?: number | null; type?: string; q?: string } = {}): Observable<GameSummary[]> {
+  getGames(page = 0, size = 20, filters: { sort?: string; minPrice?: number | null; maxPrice?: number | null; type?: string; platform?: string; q?: string } = {}): Observable<GameSummary[]> {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (filters.sort) params.set('sort', filters.sort);
     if (filters.minPrice != null) params.set('minPrice', String(filters.minPrice));
     if (filters.maxPrice != null) params.set('maxPrice', String(filters.maxPrice));
     if (filters.type && filters.type !== 'all') params.set('type', filters.type);
+    if (filters.platform && filters.platform !== 'all') params.set('platform', filters.platform);
     if (filters.q && filters.q.trim()) params.set('q', filters.q.trim());
     return this.http.get<GameSummary[]>(`${this.api}/games?${params}`);
   }

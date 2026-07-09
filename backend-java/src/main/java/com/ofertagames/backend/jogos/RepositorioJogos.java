@@ -21,7 +21,7 @@ public class RepositorioJogos {
     this.jdbcTemplate = jdbcTemplate;
   }
 
-  public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, Double precoMinimo, Double precoMaximo, String busca) {
+  public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, String busca) {
     int deslocamento = pagina * tamanho;
     String filtroTipo = switch (tipo) {
       case "dlc" -> "AND (g.is_dlc = true OR (g.is_dlc IS NULL AND " + tituloPareceDlcSql() + "))";
@@ -29,6 +29,8 @@ public class RepositorioJogos {
       default -> "";
     };
     String filtroBusca = busca == null || busca.isBlank() ? "" : "AND g.title ILIKE :busca";
+    String filtroPlataforma = filtroPlataforma(plataforma);
+    String filtroOfertaPlataforma = filtroOfertaPlataforma(plataforma);
     String filtroPreco = filtroPreco(precoMinimo, precoMaximo);
 
     String sql = """
@@ -38,17 +40,20 @@ public class RepositorioJogos {
           g.cover_url AS cover_url,
           g.is_dlc AS is_dlc,
           MIN(o.price) AS min_price,
-          MAX(o.regular_price) AS regular_price
+          MAX(o.regular_price) AS regular_price,
+          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
         FROM games g
-        LEFT JOIN offers o ON o.game_id = g.id
+        LEFT JOIN offers o ON o.game_id = g.id %s
         WHERE 1=1
+        %s
         %s
         %s
         GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
         %s
         ORDER BY %s
         LIMIT :tamanho OFFSET :deslocamento
-        """.formatted(filtroTipo, filtroBusca, filtroPreco, ordenarPor(ordenacao));
+        """.formatted(filtroOfertaPlataforma, filtroTipo, filtroBusca, filtroPlataforma, filtroPreco, ordenarPor(ordenacao));
 
     var comando = jdbc.sql(sql).param("tamanho", tamanho).param("deslocamento", deslocamento);
     if (busca != null && !busca.isBlank()) {
@@ -127,7 +132,9 @@ public class RepositorioJogos {
           g.cover_url AS cover_url,
           g.is_dlc AS is_dlc,
           MIN(o.price) AS min_price,
-          MAX(o.regular_price) AS regular_price
+          MAX(o.regular_price) AS regular_price,
+          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
         FROM games g
         LEFT JOIN offers o ON o.game_id = g.id
         WHERE g.itad_id::text IN (:itadIds)
@@ -256,7 +263,31 @@ public class RepositorioJogos {
         rs.getString("cover_url"),
         rs.getObject("is_dlc", Boolean.class),
         rs.getBigDecimal("min_price"),
-        rs.getBigDecimal("regular_price"));
+        rs.getBigDecimal("regular_price"),
+        rs.getString("store_name"),
+        rs.getString("url"));
+  }
+
+  private static String filtroPlataforma(String plataforma) {
+    String condicao = condicaoPlataforma("op", plataforma);
+    if (condicao.isBlank()) return "";
+    return "AND EXISTS (SELECT 1 FROM offers op WHERE op.game_id = g.id AND " + condicao + ")";
+  }
+
+  private static String filtroOfertaPlataforma(String plataforma) {
+    String condicao = condicaoPlataforma("o", plataforma);
+    return condicao.isBlank() ? "" : "AND " + condicao;
+  }
+
+  private static String condicaoPlataforma(String alias, String plataforma) {
+    String origem = "lower(coalesce(" + alias + ".store_name, '') || ' ' || coalesce(" + alias + ".url, ''))";
+    String condicao = switch (plataforma) {
+      case "xbox" -> origem + " ~ 'xbox|microsoft'";
+      case "playstation" -> origem + " ~ 'playstation|\\mpsn\\M|store\\.playstation\\.com'";
+      case "pc" -> "(" + origem + " !~ 'xbox|playstation|\\mpsn\\M|store\\.playstation\\.com')";
+      default -> "";
+    };
+    return condicao;
   }
 
   private static String filtroPreco(Double precoMinimo, Double precoMaximo) {

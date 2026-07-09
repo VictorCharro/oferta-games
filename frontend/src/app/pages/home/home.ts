@@ -169,8 +169,8 @@ export class Home implements OnInit, OnDestroy {
       discountPct: pct,
       price: g.minPrice,
       regularPrice: g.regularPrice ?? null,
-      storeName: null,
-      url: null,
+      storeName: g.storeName ?? null,
+      url: g.url ?? null,
       isDlc: g.isDlc,
     };
   }

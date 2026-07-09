@@ -8,5 +8,7 @@ public record ResumoJogo(
     String coverUrl,
     Boolean isDlc,
     BigDecimal minPrice,
-    BigDecimal regularPrice
+    BigDecimal regularPrice,
+    String storeName,
+    String url
 ) {}

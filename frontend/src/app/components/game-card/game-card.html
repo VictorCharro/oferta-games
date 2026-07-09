@@ -19,12 +19,12 @@
       <span class="price-current">{{ formatPrice(game.minPrice) }}</span>
       <span *ngIf="discount > 0" class="price-original">{{ formatPrice(game.regularPrice ?? null) }}</span>
     </div>
-    <div *ngIf="storeName" class="card-store">
-      <img class="store-logo" [src]="storeLogo(storeName)" [alt]="storeName" />
-      <span>{{ storeName }}</span>
+    <div *ngIf="displayStoreName as loja" class="card-store">
+      <img class="store-logo" [src]="storeLogo(loja)" [alt]="loja" />
+      <span>{{ loja }}</span>
     </div>
-    <div *ngIf="storeName" class="platform-list" aria-label="Plataformas">
-      <span *ngFor="let platform of platforms(storeName)" class="platform-chip" [title]="platform.name">
+    <div *ngIf="displayStoreName as loja" class="platform-list" aria-label="Plataformas">
+      <span *ngFor="let platform of platforms(loja)" class="platform-chip" [title]="platform.name">
         <img [src]="platform.logo" [alt]="platform.name" />
         <span>{{ platform.name }}</span>
       </span>

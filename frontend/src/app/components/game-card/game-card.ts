@@ -17,6 +17,7 @@ export class GameCard implements OnInit, OnDestroy {
   @Input() game!: GameSummary;
   @Input() discountPct?: number;
   @Input() storeName?: string;
+  @Input() storeUrl?: string | null;
 
   private sub!: Subscription;
 
@@ -51,6 +52,14 @@ export class GameCard implements OnInit, OnDestroy {
     return resolveDlc(this.game?.title ?? '', this.game?.isDlc);
   }
 
+  get displayStoreName(): string | null {
+    return this.storeName ?? this.game?.storeName ?? null;
+  }
+
+  get displayStoreUrl(): string | null {
+    return this.storeUrl ?? this.game?.url ?? null;
+  }
+
   formatPrice(price: number | string | null): string {
     const n = Number(price);
     if (price == null || isNaN(n)) return '—';
@@ -62,7 +71,7 @@ export class GameCard implements OnInit, OnDestroy {
   }
 
   platforms(storeName?: string | null): PlatformBrand[] {
-    return storePlatforms(storeName);
+    return storePlatforms(storeName, this.displayStoreUrl);
   }
 
   toggleFavorite(event: Event) {

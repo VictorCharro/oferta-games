@@ -21,6 +21,7 @@ export class Catalog implements OnInit, OnDestroy {
   viewMode: 'compact' | 'large' = 'compact';
   sort = 'rank';
   type = 'all';
+  platform = 'all';
   query = '';
   minPrice: number | null = null;
   maxPrice: number | null = null;
@@ -34,6 +35,13 @@ export class Catalog implements OnInit, OnDestroy {
     { value: 'discount', label: 'Maior desconto' },
     { value: 'price_asc', label: 'Menor preço' },
     { value: 'price_desc', label: 'Maior preço' },
+  ];
+
+  readonly platformOptions = [
+    { value: 'all', label: 'Todas' },
+    { value: 'pc', label: 'PC' },
+    { value: 'xbox', label: 'Xbox' },
+    { value: 'playstation', label: 'PlayStation' },
   ];
 
   private scrollTicking = false;
@@ -92,6 +100,7 @@ export class Catalog implements OnInit, OnDestroy {
     this.gameService.getGames(this.page, this.pageSize, {
       sort: this.sort,
       type: this.type,
+      platform: this.platform,
       minPrice: this.minPrice,
       maxPrice: this.maxPrice,
       q: this.query,
@@ -116,6 +125,7 @@ export class Catalog implements OnInit, OnDestroy {
   clearFilters() {
     this.sort = 'rank';
     this.type = 'all';
+    this.platform = 'all';
     this.query = '';
     this.minPrice = null;
     this.maxPrice = null;
