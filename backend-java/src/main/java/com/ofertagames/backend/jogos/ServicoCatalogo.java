@@ -43,11 +43,15 @@ public class ServicoCatalogo {
       return List.of();
     }
 
-    for (ResultadoBuscaItad jogo : encontrados) {
-      String slug = jogo.slug() == null || jogo.slug().isBlank() ? GeradorSlug.porTitulo(jogo.title()) : jogo.slug();
-      String capa = jogo.assets() == null ? null : jogo.assets().banner400();
-      jogos.salvarJogoItad(jogo.id(), jogo.title(), slug, capa, null);
-    }
+    List<RepositorioJogos.JogoParaSalvar> jogosParaSalvar = encontrados.stream()
+        .map(jogo -> {
+          String slug = jogo.slug() == null || jogo.slug().isBlank() ? GeradorSlug.porTitulo(jogo.title()) : jogo.slug();
+          String capa = jogo.assets() == null ? null : jogo.assets().banner400();
+          return new RepositorioJogos.JogoParaSalvar(jogo.id(), jogo.title(), slug, capa, null);
+        })
+        .toList();
+
+    jogos.salvarJogosItad(jogosParaSalvar);
 
     return jogos.listarPorItadIds(encontrados.stream().map(ResultadoBuscaItad::id).toList());
   }

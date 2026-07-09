@@ -5,15 +5,18 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class RepositorioJogos {
   private final JdbcClient jdbc;
+  private final JdbcTemplate jdbcTemplate;
 
-  RepositorioJogos(JdbcClient jdbc) {
+  RepositorioJogos(JdbcClient jdbc, JdbcTemplate jdbcTemplate) {
     this.jdbc = jdbc;
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, Double precoMinimo, Double precoMaximo, String busca) {
@@ -165,7 +168,7 @@ public class RepositorioJogos {
   }
 
   public int[] salvarOfertas(List<OfertaParaSalvar> ofertas) {
-    return jdbc.sql("""
+    String sql = """
         INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, now())
         ON CONFLICT (game_id, source, store_name) DO UPDATE
@@ -174,16 +177,16 @@ public class RepositorioJogos {
               currency = EXCLUDED.currency,
               url = EXCLUDED.url,
               updated_at = EXCLUDED.updated_at
-        """)
-        .batch(ofertas, (ps, o) -> {
-          ps.setLong(1, o.jogoId());
-          ps.setString(2, o.fonte());
-          ps.setString(3, o.loja());
-          ps.setBigDecimal(4, o.preco());
-          ps.setBigDecimal(5, o.precoNormal());
-          ps.setString(6, o.moeda());
-          ps.setString(7, o.url());
-        });
+        """;
+    return jdbcTemplate.batchUpdate(sql, ofertas, 100, (ps, o) -> {
+      ps.setLong(1, o.jogoId());
+      ps.setString(2, o.fonte());
+      ps.setString(3, o.loja());
+      ps.setBigDecimal(4, o.preco());
+      ps.setBigDecimal(5, o.precoNormal());
+      ps.setString(6, o.moeda());
+      ps.setString(7, o.url());
+    });
   }
 
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {
