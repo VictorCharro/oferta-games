@@ -1,5 +1,7 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { of, Subscription } from 'rxjs';
+import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 import { GameService, GameDetail as GameDetailModel, Offer } from '../../services/game';
 
 @Component({
@@ -8,20 +10,37 @@ import { GameService, GameDetail as GameDetailModel, Offer } from '../../service
   templateUrl: './game-detail.html',
   styleUrl: './game-detail.scss',
 })
-export class GameDetail implements OnInit {
+export class GameDetail implements OnInit, OnDestroy {
   game: GameDetailModel | null = null;
   loading = true;
   refreshing = false;
   refreshMsg = '';
+  private routeSub?: Subscription;
 
   constructor(private route: ActivatedRoute, private gameService: GameService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
-    const slug = this.route.snapshot.paramMap.get('slug')!;
-    this.gameService.getGame(slug).subscribe({
-      next: (data) => { this.game = data; this.loading = false; this.cdr.detectChanges(); },
-      error: () => { this.loading = false; this.cdr.detectChanges(); }
+    this.routeSub = this.route.paramMap.pipe(
+      map(params => params.get('slug')),
+      filter((slug): slug is string => !!slug),
+      distinctUntilChanged(),
+      tap(() => {
+        this.game = null;
+        this.loading = true;
+        this.refreshing = false;
+        this.refreshMsg = '';
+        this.cdr.detectChanges();
+      }),
+      switchMap(slug => this.gameService.getGame(slug).pipe(catchError(() => of(null))))
+    ).subscribe(data => {
+      this.game = data;
+      this.loading = false;
+      this.cdr.detectChanges();
     });
+  }
+
+  ngOnDestroy() {
+    this.routeSub?.unsubscribe();
   }
 
   refresh() {
