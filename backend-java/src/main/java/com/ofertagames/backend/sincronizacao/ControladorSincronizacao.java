@@ -31,6 +31,14 @@ public class ControladorSincronizacao {
     if (chaveSecreta == null || chaveSecreta.isBlank() || !chaveSecreta.equals(chaveInformada)) {
       return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
     }
-    return ResponseEntity.ok(sincronizacao.sincronizarPagina(page));
+    try {
+      return ResponseEntity.ok(sincronizacao.sincronizarPagina(page));
+    } catch (RuntimeException erro) {
+      return ResponseEntity.status(500).body(Map.of(
+          "error", "Sync failed",
+          "page", page,
+          "type", erro.getClass().getSimpleName(),
+          "message", erro.getMessage() == null ? "" : erro.getMessage()));
+    }
   }
 }

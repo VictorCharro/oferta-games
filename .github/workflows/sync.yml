@@ -23,8 +23,14 @@ jobs:
           page=0
           while true; do
             echo "Sincronizando pagina $page..."
-            response="$(curl --fail-with-body -sS -X POST "$BACKEND_API_URL/api/sync?page=$page" -H "X-Sync-Key: $SYNC_SECRET_KEY")"
+            http_response="$(curl -sS -X POST "$BACKEND_API_URL/api/sync?page=$page" -H "X-Sync-Key: $SYNC_SECRET_KEY" -w '\n%{http_code}')"
+            status="$(echo "$http_response" | tail -n 1)"
+            response="$(echo "$http_response" | sed '$d')"
             echo "$response"
+            if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+              echo "Sync falhou com HTTP $status"
+              exit 1
+            fi
             has_more="$(echo "$response" | jq -r '.hasMore')"
             next_page="$(echo "$response" | jq -r '.nextPage // empty')"
             if [ "$has_more" != "true" ] || [ -z "$next_page" ]; then
