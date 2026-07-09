@@ -54,6 +54,36 @@
   &:hover { border-color: var(--color-purple) !important; color: var(--color-purple) !important; }
 }
 
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.detail-favorite-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(0,0,0,0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+
+  &:hover {
+    border-color: var(--color-purple);
+    background: rgba(41,168,224,0.12);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    border-color: var(--color-purple);
+    background: rgba(41,168,224,0.16);
+  }
+}
+
 .refresh-msg {
   font-size: 13px;
   color: var(--color-green);

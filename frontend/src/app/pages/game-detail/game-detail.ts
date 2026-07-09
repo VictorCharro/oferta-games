@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { of, Subscription } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
-import { GameService, GameDetail as GameDetailModel, Offer } from '../../services/game';
+import { GameService, GameDetail as GameDetailModel, GameSummary, Offer } from '../../services/game';
+import { FavoritesService } from '../../services/favorites';
+import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-game-detail',
@@ -16,10 +18,19 @@ export class GameDetail implements OnInit, OnDestroy {
   refreshing = false;
   refreshMsg = '';
   private routeSub?: Subscription;
+  private favoriteSub?: Subscription;
 
-  constructor(private route: ActivatedRoute, private gameService: GameService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private gameService: GameService,
+    private favoritesService: FavoritesService,
+    private auth: AuthService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
+    this.favoriteSub = this.favoritesService.slugs$.subscribe(() => this.cdr.detectChanges());
     this.routeSub = this.route.paramMap.pipe(
       map(params => params.get('slug')),
       filter((slug): slug is string => !!slug),
@@ -41,6 +52,37 @@ export class GameDetail implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
+    this.favoriteSub?.unsubscribe();
+  }
+
+  get favorited(): boolean {
+    return this.game ? this.favoritesService.isFavorited(this.game.slug) : false;
+  }
+
+  toggleFavorite(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!this.game) return;
+    if (!this.auth.isLoggedIn) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.favoritesService.toggle(this.gameSummary(this.game));
+  }
+
+  private gameSummary(game: GameDetailModel): GameSummary {
+    const bestOffer = game.offers.reduce<Offer | null>(
+      (best, offer) => !best || offer.price < best.price ? offer : best,
+      null
+    );
+
+    return {
+      slug: game.slug,
+      title: game.title,
+      coverUrl: game.coverUrl,
+      minPrice: bestOffer?.price ?? null,
+      regularPrice: bestOffer?.regularPrice ?? null,
+    };
   }
 
   refresh() {
