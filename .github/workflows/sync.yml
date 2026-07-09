@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
+    inputs:
+      start_page:
+        description: 'Pagina inicial do sync'
+        required: false
+        default: '0'
 
 jobs:
   sync:
@@ -14,13 +19,14 @@ jobs:
         env:
           BACKEND_API_URL: ${{ secrets.BACKEND_API_URL || secrets.BACKEND_URL }}
           SYNC_SECRET_KEY: ${{ secrets.SYNC_SECRET_KEY }}
+          START_PAGE: ${{ github.event.inputs.start_page || '0' }}
         run: |
           set -euo pipefail
           : "${BACKEND_API_URL:?Configure o secret BACKEND_API_URL com a URL do backend}"
           : "${SYNC_SECRET_KEY:?Configure o secret SYNC_SECRET_KEY com a mesma chave do Render}"
 
           BACKEND_API_URL="${BACKEND_API_URL%/}"
-          page=0
+          page="$START_PAGE"
           while true; do
             echo "Sincronizando pagina $page..."
             attempt=1
@@ -28,15 +34,15 @@ jobs:
               http_response="$(curl -sS -X POST "$BACKEND_API_URL/api/sync?page=$page" -H "X-Sync-Key: $SYNC_SECRET_KEY" -w '\n%{http_code}')"
               status="$(echo "$http_response" | tail -n 1)"
               response="$(echo "$http_response" | sed '$d')"
-              if [ "$status" != "502" ] && [ "$status" != "503" ] && [ "$status" != "504" ]; then
+              if [ "$status" != "429" ] && [ "$status" != "500" ] && [ "$status" != "502" ] && [ "$status" != "503" ] && [ "$status" != "504" ]; then
                 break
               fi
               if [ "$attempt" -ge 5 ]; then
                 break
               fi
-              echo "Render indisponivel temporariamente (HTTP $status). Tentando novamente em 20s..."
+              echo "Servico temporariamente indisponivel (HTTP $status). Tentando novamente em 30s..."
               attempt=$((attempt + 1))
-              sleep 20
+              sleep 30
             done
             echo "$response"
             if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
