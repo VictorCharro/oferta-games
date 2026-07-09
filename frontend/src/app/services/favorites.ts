@@ -11,7 +11,7 @@ export interface FavoriteGame extends GameSummary {
 
 @Injectable({ providedIn: 'root' })
 export class FavoritesService {
-  private api = 'https://oferta-games.vercel.app/api';
+  private api = 'https://oferta-games.onrender.com/api';
 
   private _slugs = new BehaviorSubject<Set<string>>(new Set());
   slugs$ = this._slugs.asObservable();

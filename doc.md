@@ -175,9 +175,9 @@ favorites
       game-card/
       deals-carousel/
     services/
-      game.ts
+      game.ts            -> chamadas para `https://oferta-games.onrender.com/api`
       auth.ts
-      favorites.ts
+      favorites.ts       -> favoritos via backend Render
       supabase.ts
       theme.ts
       filters.ts

@@ -42,7 +42,7 @@ export interface TopDeal {
 
 @Injectable({ providedIn: 'root' })
 export class GameService {
-  private api = 'https://oferta-games.vercel.app/api';
+  private api = 'https://oferta-games.onrender.com/api';
 
   constructor(private http: HttpClient) {}
 
