@@ -63,7 +63,7 @@ Secrets dos workflows:
 
 | Fonte | Status | Como integra |
 |---|---|---|
-| **IsThereAnyDeal (ITAD)** | Fonte principal, em uso | API oficial. Lojas configuradas: Nuuvem (50), Fanatical (6), GreenManGaming (36), Humble Store (37), GamersGate (24), IndieGala (42), 2game (19), Steam (61), Epic (16), Blizzard (4), EA Store (52), Microsoft Store (48), Ubisoft Store (62). |
+| **IsThereAnyDeal (ITAD)** | Fonte principal, em uso | API oficial. Lojas configuradas incluem Nuuvem, Fanatical, GamersGate, IndieGala, 2game, Steam, Epic, Blizzard, EA Store, Microsoft Store e Ubisoft Store. Algumas lojas podem estar bloqueadas por regra de produto quando seus links não abrem corretamente. |
 | **Steam** | Complementar | Usada para derivar capa oficial e classificar DLC quando há oferta Steam. |
 | **Eneba** | Planejada | Feed de afiliados XML/CSV após aprovação no cadastro. |
 | **Instant Gaming** | Sem integração automática | Aguardando aprovação no programa de afiliados deles. |
@@ -109,9 +109,11 @@ favorites
 
 ## Endpoints da API
 
-- `GET /api/games?page=0&size=20&sort=rank&type=all&minPrice=&maxPrice=&q=`
+- `GET /api/games?page=0&size=20&sort=rank&type=all&platform=all&minPrice=&maxPrice=&q=`
   - `sort`: `rank`, `discount`, `price_asc`, `price_desc`
   - `type`: `all`, `game`, `dlc`
+  - `platform`: `all`, `pc`, `xbox`. PlayStation fica oculto no frontend enquanto não houver ofertas dessa plataforma.
+  - Retorna também `storeName` e `url` da oferta usada como menor preço quando disponível, para exibir loja e plataforma nos cards.
   - Ordenação padrão: top 200 por rank com desconto ativo sobem ao topo.
 - `GET /api/games/search?q=nome`
   - Busca primeiro no banco.
@@ -146,7 +148,7 @@ favorites
   src/main/java/com/ofertagames/backend/
     AplicacaoOfertaGames.java
     autenticacao/       -> valida Bearer token via Supabase Auth
-    comum/              -> utilitários compartilhados
+    comum/              -> utilitários compartilhados, incluindo lojas bloqueadas
     configuracao/       -> CORS e conexão PostgreSQL
     descontos/          -> endpoint /api/deals/top
     favoritos/          -> endpoints /api/favorites
@@ -201,7 +203,9 @@ favorites
 - **Cor principal:** `#29A8E0` (azul).
 - **Ícones:** PNGs em `frontend/public/`.
 - **Logos de loja/plataforma:** SVGs locais em `frontend/public/store-logos/` e `frontend/public/platform-logos/`, resolvidos no frontend por `store-brand.ts` a partir de `storeName`.
-- **Plataformas:** enquanto o backend não persiste `platforms/drm` do ITAD, o frontend infere PC, Xbox e PlayStation pelo nome da loja.
+- **Plataformas:** enquanto o backend não persiste `platforms/drm` do ITAD, o frontend infere PC e Xbox pelo nome/link da loja. PlayStation fica suportado internamente, mas sem botão no catálogo enquanto não houver ofertas.
+- **Filtro de plataforma no catálogo:** o backend recebe `platform` em `/api/games` e calcula preço/loja considerando ofertas da plataforma filtrada.
+- **Lojas bloqueadas:** lojas com links quebrados são filtradas por `LojasBloqueadas.java` e também ignoradas no salvamento do sync. Lista atual: GreenManGaming, AllYouPay/AllYouPlay, PlanetPlay, PlayerLand, JoyBuggy, WinGameStore, MacGameStore, Humble Store/Humble Bundle.
 - **DLC detection:** `games.is_dlc` é preenchido via Steam quando há oferta Steam; enquanto `is_dlc IS NULL`, o frontend usa heurística por título.
 - **Deduplicação de deals:** `DISTINCT ON (g.id)` mantém apenas a oferta mais barata por jogo.
 - **Catálogo rotativo:** top 200 por rank com desconto ativo sobem ao topo.
