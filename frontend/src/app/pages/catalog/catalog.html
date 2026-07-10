@@ -5,11 +5,20 @@
     <aside class="filters-panel">
       <div class="filter-group">
         <h3>Ordenar por</h3>
-        <div class="sort-options">
-          <label *ngFor="let opt of sortOptions" class="radio-option" [class.active]="sort === opt.value">
-            <input type="radio" name="sort" [value]="opt.value" [(ngModel)]="sort" (change)="applyFilters()" />
-            {{ opt.label }}
-          </label>
+        <div class="custom-select" [class.open]="sortDropdownOpen">
+          <button type="button" class="custom-select-trigger" (click)="toggleSortDropdown()"
+            [attr.aria-expanded]="sortDropdownOpen" aria-haspopup="listbox">
+            <span>{{ selectedSortLabel }}</span>
+            <span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <div class="custom-select-menu" *ngIf="sortDropdownOpen" role="listbox" aria-label="Ordenar catálogo">
+            <button *ngFor="let opt of sortOptions" type="button" role="option"
+              [class.selected]="sort === opt.value" [attr.aria-selected]="sort === opt.value"
+              (click)="selectSort(opt.value)">
+              <span>{{ opt.label }}</span>
+              <span class="option-check" *ngIf="sort === opt.value" aria-hidden="true">✓</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -36,6 +45,15 @@
             {{ opt.label }}
           </label>
         </div>
+      </div>
+
+      <div class="filter-group">
+        <h3>Desconto mínimo</h3>
+        <div class="price-input-wrap">
+          <input type="number" [(ngModel)]="minDiscountInput" placeholder="0" min="0" max="100" />
+          <span>%</span>
+        </div>
+        <button class="btn-apply filter-action" (click)="applyFilters()">Aplicar</button>
       </div>
 
       <div class="filter-group">

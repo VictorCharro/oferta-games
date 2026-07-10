@@ -1,7 +1,7 @@
 <div class="page-content">
   <div class="page-header">
-    <h1>Favoritos</h1>
-    <p>Jogos que você marcou para acompanhar</p>
+    <h1>Jogos Monitorados</h1>
+    <p>Jogos que você marcou para acompanhar preços</p>
   </div>
 
   <div class="games-grid" *ngIf="!loading && games.length">
@@ -14,7 +14,7 @@
 
   <div class="empty-state" *ngIf="!loading && !games.length">
     <img src="favorito.png" class="empty-icon" alt="" />
-    <h3>Nenhum favorito ainda</h3>
+    <h3>Nenhum jogo monitorado ainda</h3>
     <p>Clique no coração dos jogos no <a routerLink="/catalogo">catálogo</a> para acompanhá-los aqui.</p>
   </div>
 </div>

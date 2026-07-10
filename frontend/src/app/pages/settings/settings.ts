@@ -1,6 +1,13 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { AuthService } from '../../services/auth';
 import { supabase } from '../../services/supabase';
+import {
+  PreferencesService,
+  PrivacyPreferences,
+  UserPreferences,
+} from '../../services/preferences';
+
+type SettingsTab = 'conta' | 'conexoes' | 'preferencias' | 'privacidade';
 
 @Component({
   selector: 'app-settings',
@@ -8,26 +15,93 @@ import { supabase } from '../../services/supabase';
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
-export class Settings {
+export class Settings implements OnInit {
+  activeTab: SettingsTab = 'conta';
+  name = '';
+  bio = '';
   currentPassword = '';
   newPassword = '';
   confirmPassword = '';
+  preferences!: UserPreferences;
+  privacy!: PrivacyPreferences;
   saving = false;
   success = '';
   error = '';
 
-  constructor(public auth: AuthService, private cdr: ChangeDetectorRef) {}
+  readonly tabs: Array<{ id: SettingsTab; label: string }> = [
+    { id: 'conta', label: 'Conta' },
+    { id: 'conexoes', label: 'Conexões' },
+    { id: 'preferencias', label: 'Preferências' },
+    { id: 'privacidade', label: 'Privacidade' },
+  ];
+
+  constructor(
+    public auth: AuthService,
+    private preferencesService: PreferencesService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit() {
+    const metadata = this.auth.user?.user_metadata ?? {};
+    this.name = metadata['name'] || this.auth.displayName;
+    this.bio = metadata['bio'] || '';
+    this.preferences = { ...this.preferencesService.preferences };
+    this.privacy = { ...this.preferencesService.privacy };
+  }
+
+  selectTab(tab: SettingsTab) {
+    this.activeTab = tab;
+    this.clearMessages();
+  }
+
+  async saveAccount() {
+    this.clearMessages();
+    const name = this.name.trim();
+    if (!name) { this.error = 'Informe seu nome.'; return; }
+    this.saving = true;
+    const metadata = this.auth.user?.user_metadata ?? {};
+    const { error } = await supabase.auth.updateUser({
+      data: { ...metadata, name, bio: this.bio.trim() },
+    });
+    this.saving = false;
+    this.success = error ? '' : 'Informações salvas com sucesso.';
+    this.error = error ? 'Não foi possível salvar as informações.' : '';
+    this.cdr.detectChanges();
+  }
+
+  savePreferences() {
+    this.preferencesService.savePreferences(this.preferences);
+    this.success = 'Preferências salvas. Elas já serão aplicadas na home e no catálogo.';
+    this.error = '';
+  }
+
+  savePrivacy() {
+    this.preferencesService.savePrivacy(this.privacy);
+    this.success = 'Preferências de privacidade salvas.';
+    this.error = '';
+  }
 
   async changePassword() {
-    this.success = ''; this.error = '';
-    if (!this.currentPassword || !this.newPassword || !this.confirmPassword) { this.error = 'Preencha todos os campos.'; return; }
-    if (this.newPassword !== this.confirmPassword) { this.error = 'As senhas não coincidem.'; return; }
-    if (this.newPassword.length < 6) { this.error = 'A senha deve ter pelo menos 6 caracteres.'; return; }
+    this.clearMessages();
+    if (!this.currentPassword || !this.newPassword || !this.confirmPassword) {
+      this.error = 'Preencha todos os campos.';
+      return;
+    }
+    if (this.newPassword !== this.confirmPassword) {
+      this.error = 'As senhas não coincidem.';
+      return;
+    }
+    if (this.newPassword.length < 6) {
+      this.error = 'A senha deve ter pelo menos 6 caracteres.';
+      return;
+    }
 
     this.saving = true;
-
     const email = this.auth.user?.email;
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: email!, password: this.currentPassword });
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: email!,
+      password: this.currentPassword,
+    });
     if (authError) {
       this.saving = false;
       this.error = 'Senha atual incorreta.';
@@ -37,13 +111,21 @@ export class Settings {
 
     const { error } = await supabase.auth.updateUser({ password: this.newPassword });
     this.saving = false;
-    if (error) { this.error = 'Erro ao alterar senha. Tente novamente.'; }
-    else {
-      this.success = 'Senha alterada com sucesso!';
-      this.currentPassword = ''; this.newPassword = ''; this.confirmPassword = '';
+    if (error) {
+      this.error = 'Erro ao alterar senha. Tente novamente.';
+    } else {
+      this.success = 'Senha alterada com sucesso.';
+      this.currentPassword = '';
+      this.newPassword = '';
+      this.confirmPassword = '';
     }
     this.cdr.detectChanges();
   }
 
   logout() { this.auth.logout(); }
+
+  private clearMessages() {
+    this.success = '';
+    this.error = '';
+  }
 }

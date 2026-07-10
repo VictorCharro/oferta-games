@@ -30,11 +30,13 @@ public class ControladorJogos {
       @RequestParam(defaultValue = "all") String platform,
       @RequestParam(required = false) Double minPrice,
       @RequestParam(required = false) Double maxPrice,
+      @RequestParam(required = false) Double minDiscount,
       @RequestParam(required = false) String q
   ) {
     int paginaSegura = Math.max(0, page);
     int tamanhoSeguro = Math.min(100, Math.max(1, size));
-    return jogos.listar(paginaSegura, tamanhoSeguro, sort, type, platform, minPrice, maxPrice, q);
+    Double descontoSeguro = minDiscount == null ? null : Math.min(100, Math.max(0, minDiscount));
+    return jogos.listar(paginaSegura, tamanhoSeguro, sort, type, platform, minPrice, maxPrice, descontoSeguro, q);
   }
 
   @GetMapping("/search")

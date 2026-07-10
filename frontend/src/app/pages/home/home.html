@@ -37,13 +37,21 @@
     </div>
   </div>
 
-  <!-- Favoritos -->
+  <!-- Jogos Monitorados -->
   <section class="section" *ngIf="favoritesDeals.length">
     <div class="section-header">
-      <h2>Favoritos</h2>
-      <a routerLink="/favoritos">Ver todos</a>
+      <h2>Jogos Monitorados</h2>
+      <a routerLink="/monitorados">Ver todos</a>
     </div>
     <app-deals-carousel [deals]="favoritesDeals"></app-deals-carousel>
+  </section>
+
+  <section class="section" *ngIf="preferredPlatformDeals.length">
+    <div class="section-header">
+      <h2>Jogos da sua plataforma favorita</h2>
+      <a routerLink="/catalogo" [queryParams]="{ platform: preferredPlatformLabel.toLowerCase() }">Ver todos</a>
+    </div>
+    <app-deals-carousel [deals]="preferredPlatformDeals"></app-deals-carousel>
   </section>
 
   <!-- Descontaços -->

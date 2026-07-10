@@ -35,7 +35,7 @@ Configuração no Render:
 | Health Check Path | `/actuator/health` |
 | Plan | Free por enquanto |
 
-Sincronização de preços: GitHub Actions chama `POST /api/sync` a cada 6h, protegido por `X-Sync-Key`.
+Sincronização de preços: GitHub Actions chama `POST /api/sync` a cada 3h, protegido por `X-Sync-Key`. Cada execução começa na página 0 e percorre todas as páginas retornadas pela ITAD, em lotes de 50 ofertas.
 
 Keep alive: GitHub Actions chama `/actuator/health` a cada 10 minutos usando `BACKEND_URL`.
 
@@ -106,14 +106,15 @@ favorites
 - Menor preço é calculado via query (`MIN(price)`), não armazenado.
 - `rank` vem do feed ITAD; menor = mais popular.
 - Somente BRL por enquanto.
-- A tabela `favorites` representa hoje jogos monitorados/salvos pelo usuário para acompanhar preço. Favoritos pessoais do perfil serão separados em outra estrutura futura.
+- A tabela `favorites` representa hoje jogos monitorados/salvos pelo usuário para acompanhar preço. No produto, isso aparece como **Jogos Monitorados**. Favoritos pessoais do perfil serão separados em outra estrutura futura.
 
 ## Endpoints da API
 
-- `GET /api/games?page=0&size=20&sort=rank&type=all&platform=all&minPrice=&maxPrice=&q=`
+- `GET /api/games?page=0&size=20&sort=rank&type=all&platform=all&minPrice=&maxPrice=&minDiscount=&q=`
   - `sort`: `rank`, `discount`, `price_asc`, `price_desc`
   - `type`: `all`, `game`, `dlc`
   - `platform`: `all`, `pc`, `xbox`. PlayStation fica oculto no frontend enquanto não houver ofertas dessa plataforma.
+  - `minDiscount`: desconto percentual mínimo calculado a partir do menor preço e do preço regular.
   - Retorna também `storeName` e `url` da oferta usada como menor preço quando disponível, para exibir loja e plataforma nos cards.
   - Ordenação padrão: top 200 por rank com desconto ativo sobem ao topo.
 - `GET /api/games/search?q=nome`
@@ -131,6 +132,7 @@ favorites
   - Sincroniza uma página de ofertas da ITAD.
   - Exige header `X-Sync-Key`.
   - Não executa backfill Steam durante o sync no Render free, para manter o processo leve.
+  - Para cada página de 50 jogos, usa `/deals/v2` para paginar e `/games/prices/v3` para obter todas as ofertas atuais do lote. As ofertas ITAD de cada jogo são substituídas pelo conjunto retornado, removendo preços antigos de lojas que não apareçam mais.
 - `GET /api/favorites`
   - Lista jogos monitorados/salvos pelo usuário autenticado para acompanhar preço.
 - `POST /api/favorites`
@@ -213,8 +215,11 @@ favorites
 - **Login:** página de login sem sidebar/topbar.
 - **Home:** banner com autoplay e seções em carrossel.
 - **Perfil:** dashboard gamer com avatar, bio editável, estatísticas futuras de gameplay, resumo de biblioteca, atividade recente e lista temporária baseada nos jogos monitorados. A troca de foto usa preview local no navegador enquanto não houver storage definitivo para imagens.
-- **Favoritos/monitorados:** a rota atual `Favoritos` e os endpoints `/api/favorites` representam jogos que o usuário quer acompanhar por preço. Este conceito deve ser separado dos favoritos pessoais exibidos no perfil.
-- **Configurações:** área reservada para preferências da conta e futuras conexões de plataformas; conexões não ficam dentro do perfil.
+- **Jogos Monitorados:** a rota `/monitorados` e os endpoints `/api/favorites` representam jogos que o usuário quer acompanhar por preço. A rota antiga `/favoritos` redireciona para `/monitorados` por compatibilidade.
+- **Jogos favoritos:** no perfil, este nome é reservado para favoritos pessoais do usuário. Ainda não usa persistência própria; será implementado com estrutura separada dos jogos monitorados.
+- **Configurações:** divididas em Conta, Conexões, Preferências e Privacidade. Conta concentra identidade, senha e sessão; Conexões concentra Steam/Xbox; Preferências afetam o conteúdo da home e os filtros iniciais do catálogo; Privacidade controla a exposição futura dos dados sincronizados no perfil.
+- **Preferências do usuário:** persistidas localmente no navegador enquanto não houver contrato próprio no backend. A home continua com conteúdo geral misturado e, quando existe uma plataforma preferida, mostra a seção exclusiva **Jogos da sua plataforma favorita** logo abaixo de Jogos Monitorados (ou abaixo do banner quando não houver monitorados). Ocultação de DLCs, desconto mínimo e preço máximo também são aplicados à seção. No catálogo, plataforma, DLCs, desconto mínimo e preço máximo inicializam os filtros sem impedir ajustes manuais.
+- **Privacidade do perfil:** persistida localmente por enquanto. As opções já estão preparadas para horas jogadas, conquistas, biblioteca e jogos favoritos, mas só terão efeito público quando existir perfil compartilhável e persistência no backend.
 - **Topbar:** menu do usuário exibe Perfil, Configurações e Sair, sem nível de usuário.
 - **Capa ausente:** fallback visual em `no-cover.svg`; backend tenta preencher capa oficial da Steam quando possível.
 - **Catálogo:** scroll infinito via `window:scroll` com throttle por `requestAnimationFrame`.
@@ -222,10 +227,11 @@ favorites
 ## Implementações futuras planejadas
 
 - **Favoritos pessoais do perfil:** criar uma estrutura separada de `favorites`, como `profile_favorites`, para representar jogos preferidos do usuário no perfil. Esses favoritos são de identidade/gosto pessoal, não de monitoramento de preço.
-- **Monitoramento de preço:** manter os favoritos atuais como lista de jogos monitorados. No produto, avaliar se a navegação deve continuar chamando isso de `Favoritos` ou se deve evoluir para `Monitorados`, `Lista de desejos` ou nome parecido.
+- **Monitoramento de preço:** manter os favoritos atuais como lista de jogos monitorados. No produto, usar o nome **Jogos Monitorados** para esse conceito.
 - **Perfil:** trocar a seção temporária de últimos favoritos por favoritos pessoais do perfil quando a nova estrutura existir. Permitir escolher, remover e futuramente ordenar esses jogos.
 - **Conexões de plataformas:** implementar em Configurações, começando por Steam/Xbox quando houver decisão técnica. O perfil apenas consome os dados sincronizados.
-- **Gameplay real:** substituir placeholders de horas jogadas, horas por plataforma, conquistas e biblioteca por dados sincronizados das conexões.
+- **Persistência de configurações:** migrar preferências e privacidade do `localStorage` para uma tabela vinculada ao usuário no Supabase quando houver perfil público e uso em múltiplos dispositivos.
+- **Gameplay real:** substituir placeholders de horas jogadas, conquistas e biblioteca por dados sincronizados das conexões. Estados que dependem de conexão devem usar o padrão `--` + `Conecte uma plataforma`; cards de horas por plataforma só devem aparecer para plataformas realmente conectadas pelo usuário.
 - **Foto de perfil:** substituir preview local por upload persistente em storage definitivo, provavelmente Supabase Storage, e salvar a URL no perfil do usuário.
 - **Atividade recente:** evoluir de eventos locais/derivados para eventos reais, como jogo favoritado no perfil, jogo monitorado, conquista sincronizada ou plataforma conectada.
 

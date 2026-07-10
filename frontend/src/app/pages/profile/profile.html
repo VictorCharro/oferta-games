@@ -45,21 +45,22 @@
         </div>
         <div class="platform-hours">
           <span>Horas por plataforma</span>
-          <div class="platform-pill">
-            <img src="store-logos/steam.svg" alt="Steam" />
-            <span>Steam</span>
+          <ng-container *ngIf="platformHours.length; else noPlatformHours">
+            <div class="platform-pill" *ngFor="let platform of platformHours">
+              <img [src]="platform.logo" [alt]="platform.name" />
+              <span>{{ platform.name }}</span>
+              <strong>{{ platform.hours }}</strong>
+            </div>
+          </ng-container>
+          <ng-template #noPlatformHours>
             <strong>--</strong>
-          </div>
-          <div class="platform-pill">
-            <img src="store-logos/xbox.svg" alt="Xbox" />
-            <span>Xbox</span>
-            <strong>--</strong>
-          </div>
+            <small>Conecte uma plataforma</small>
+          </ng-template>
         </div>
         <div class="gameplay-stat trophy">
           <span>Total de conquistas</span>
           <strong>--</strong>
-          <small>Em breve</small>
+          <small>Conecte uma plataforma</small>
         </div>
       </div>
     </div>
@@ -67,7 +68,7 @@
 
   <section class="profile-tabs" aria-label="Seções do perfil">
     <button type="button" [class.active]="activeTab === 'resumo'" (click)="activeTab = 'resumo'">Resumo</button>
-    <button type="button" [class.active]="activeTab === 'favoritos'" (click)="activeTab = 'favoritos'">Favoritos</button>
+    <button type="button" [class.active]="activeTab === 'jogosFavoritos'" (click)="activeTab = 'jogosFavoritos'">Jogos favoritos</button>
     <button type="button" [class.active]="activeTab === 'biblioteca'" (click)="activeTab = 'biblioteca'">Biblioteca</button>
     <button type="button" [class.active]="activeTab === 'preferencias'" (click)="activeTab = 'preferencias'">Preferências</button>
   </section>
@@ -77,8 +78,8 @@
       <div class="stat-icon heart"><img src="favorito.png" alt="" /></div>
       <div>
         <span>Jogos favoritos</span>
-        <strong>{{ favoriteCount }}</strong>
-        <small>Salvos no Oferta Games</small>
+        <strong>--</strong>
+        <small>Em breve no perfil</small>
       </div>
     </article>
     <article class="stat-card">
@@ -86,7 +87,7 @@
       <div>
         <span>Horas jogadas</span>
         <strong>--</strong>
-        <small>Após conectar Steam/Xbox</small>
+        <small>Conecte uma plataforma</small>
       </div>
     </article>
     <article class="stat-card">
@@ -94,25 +95,24 @@
       <div>
         <span>Conquistas</span>
         <strong>--</strong>
-        <small>Após sincronizar plataformas</small>
+        <small>Conecte uma plataforma</small>
       </div>
     </article>
   </section>
 
-  <section class="profile-grid" *ngIf="activeTab === 'resumo' || activeTab === 'favoritos'">
+  <section class="profile-grid" *ngIf="activeTab === 'resumo' || activeTab === 'jogosFavoritos'">
     <article class="panel favorites-panel">
       <div class="panel-header">
-        <h2>Últimos favoritos</h2>
-        <a routerLink="/favoritos">Ver todos</a>
+        <h2>Jogos favoritos</h2>
       </div>
 
-      <div class="favorite-list" *ngIf="latestFavorites.length; else emptyFavorites">
-        <a *ngFor="let game of latestFavorites" class="favorite-row" [routerLink]="['/jogo', game.slug]">
+      <div class="favorite-list" *ngIf="false; else emptyFavorites">
+        <a *ngFor="let game of latestMonitoredGames" class="favorite-row" [routerLink]="['/jogo', game.slug]">
           <img class="favorite-cover" [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" />
           <div class="favorite-info">
             <h3>{{ game.title }}</h3>
             <div class="favorite-tags">
-              <span>Favorito</span>
+              <span>Favorito do perfil</span>
               <span *ngIf="game.isDlc">DLC</span>
             </div>
             <div class="progress-line">
@@ -130,9 +130,8 @@
       <ng-template #emptyFavorites>
         <div class="empty-panel">
           <img src="favorito.png" alt="" />
-          <h3>Nenhum favorito ainda</h3>
-          <p>Salve jogos no catálogo para montar seu perfil.</p>
-          <a routerLink="/catalogo">Explorar catálogo</a>
+          <h3>Nenhum jogo favorito ainda</h3>
+          <p>Em breve você poderá escolher jogos favoritos pessoais para exibir no perfil.</p>
         </div>
       </ng-template>
     </article>
@@ -147,17 +146,9 @@
             <span>Jogos sincronizados</span>
           </div>
           <div class="platform-split">
-            <div class="split-row">
-              <span><img src="store-logos/steam.svg" alt="" /> Steam</span>
-              <div class="split-track"><i style="width: 0%"></i></div>
-              <b>--</b>
-            </div>
-            <div class="split-row">
-              <span><img src="store-logos/xbox.svg" alt="" /> Xbox</span>
-              <div class="split-track"><i style="width: 0%"></i></div>
-              <b>--</b>
-            </div>
-            <div class="sync-note">Última sincronização: pendente</div>
+            <span>Plataformas conectadas</span>
+            <strong>--</strong>
+            <small>Conecte uma plataforma</small>
           </div>
         </div>
       </article>

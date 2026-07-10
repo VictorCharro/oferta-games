@@ -23,7 +23,8 @@ const routes: Routes = [
   { path: 'login', component: Login },
   { path: 'perfil', canActivate: [authGuard], component: Profile },
   { path: 'configuracoes', canActivate: [authGuard], component: Settings },
-  { path: 'favoritos', canActivate: [authGuard], component: Favorites },
+  { path: 'monitorados', canActivate: [authGuard], component: Favorites },
+  { path: 'favoritos', redirectTo: 'monitorados', pathMatch: 'full' },
   { path: '**', redirectTo: '' },
 ];
 

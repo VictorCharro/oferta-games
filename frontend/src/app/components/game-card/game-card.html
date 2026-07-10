@@ -3,7 +3,13 @@
     <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" loading="lazy" />
     <span *ngIf="discount > 0" class="badge-discount">-{{ discount }}%</span>
     <span *ngIf="isDlcGame" class="badge-dlc">DLC</span>
-    <button class="btn-favorite" (click)="toggleFavorite($event)" [class.active]="favorited">
+    <button
+      class="btn-favorite"
+      (click)="toggleFavorite($event)"
+      [class.active]="favorited"
+      [title]="favorited ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
+      [attr.aria-label]="favorited ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
+    >
       <span class="favorite-bg"></span>
       <svg class="heart-icon" viewBox="0 0 24 24" width="16" height="16"
         [attr.fill]="favorited ? '#29A8E0' : 'none'"

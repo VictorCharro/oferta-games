@@ -11,6 +11,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class RepositorioJogos {
@@ -22,7 +23,7 @@ public class RepositorioJogos {
     this.jdbcTemplate = jdbcTemplate;
   }
 
-  public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, String busca) {
+  public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, Double descontoMinimo, String busca) {
     int deslocamento = pagina * tamanho;
     String filtroTipo = switch (tipo) {
       case "dlc" -> "AND (g.is_dlc = true OR (g.is_dlc IS NULL AND " + tituloPareceDlcSql() + "))";
@@ -33,7 +34,7 @@ public class RepositorioJogos {
     String filtroPlataforma = filtroPlataforma(plataforma);
     String filtroOfertaPlataforma = filtroOfertaPlataforma(plataforma);
     String filtroLojaBloqueada = filtroLojaBloqueada("o");
-    String filtroPreco = filtroPreco(precoMinimo, precoMaximo);
+    String filtroPreco = filtroPreco(precoMinimo, precoMaximo, descontoMinimo);
 
     String sql = """
         SELECT
@@ -66,6 +67,9 @@ public class RepositorioJogos {
     }
     if (precoMaximo != null) {
       comando = comando.param("precoMaximo", precoMaximo);
+    }
+    if (descontoMinimo != null) {
+      comando = comando.param("descontoMinimo", descontoMinimo);
     }
 
     return comando.query(RepositorioJogos::mapearResumo).list();
@@ -205,6 +209,14 @@ public class RepositorioJogos {
         .sum();
   }
 
+  @Transactional
+  public int substituirOfertasItad(long jogoId, List<OfertaParaSalvar> ofertas) {
+    jdbc.sql("DELETE FROM offers WHERE game_id = :jogoId AND source = 'itad'")
+        .param("jogoId", jogoId)
+        .update();
+    return salvarOfertas(ofertas);
+  }
+
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {
     return jdbc.sql("""
         SELECT id, title, itad_id::text AS itad_id, cover_url, is_dlc
@@ -311,17 +323,14 @@ public class RepositorioJogos {
     return condicao;
   }
 
-  private static String filtroPreco(Double precoMinimo, Double precoMaximo) {
-    if (precoMinimo != null && precoMaximo != null) {
-      return "HAVING MIN(o.price) >= :precoMinimo AND MIN(o.price) <= :precoMaximo";
+  private static String filtroPreco(Double precoMinimo, Double precoMaximo, Double descontoMinimo) {
+    List<String> condicoes = new java.util.ArrayList<>();
+    if (precoMinimo != null) condicoes.add("MIN(o.price) >= :precoMinimo");
+    if (precoMaximo != null) condicoes.add("MIN(o.price) <= :precoMaximo");
+    if (descontoMinimo != null) {
+      condicoes.add("ROUND((1 - MIN(o.price) / NULLIF(MAX(o.regular_price), 0)) * 100) >= :descontoMinimo");
     }
-    if (precoMinimo != null) {
-      return "HAVING MIN(o.price) >= :precoMinimo";
-    }
-    if (precoMaximo != null) {
-      return "HAVING MIN(o.price) <= :precoMaximo";
-    }
-    return "";
+    return condicoes.isEmpty() ? "" : "HAVING " + String.join(" AND ", condicoes);
   }
 
   private static String ordenarPor(String ordenacao) {

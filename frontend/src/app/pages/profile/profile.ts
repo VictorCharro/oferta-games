@@ -21,8 +21,9 @@ export class Profile implements OnInit, OnDestroy {
   savingBio = false;
   success = '';
   error = '';
-  activeTab: 'resumo' | 'favoritos' | 'biblioteca' | 'preferencias' = 'resumo';
+  activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' | 'preferencias' = 'resumo';
   favorites: FavoriteGame[] = [];
+  platformHours: Array<{ name: string; logo: string; hours: string }> = [];
   private favoritesSub?: Subscription;
 
   constructor(
@@ -57,19 +58,19 @@ export class Profile implements OnInit, OnDestroy {
     return this.bio || 'Adicionar uma bio';
   }
 
-  get latestFavorites(): FavoriteGame[] {
+  get latestMonitoredGames(): FavoriteGame[] {
     return this.favorites.slice(0, 3);
   }
 
-  get favoriteCount(): number {
+  get monitoredCount(): number {
     return this.favorites.length;
   }
 
   get activityItems(): Array<{ icon: string; title: string; time: string; tone: string }> {
-    const items = this.latestFavorites.map((game, index) => ({
+    const items = this.latestMonitoredGames.map((game, index) => ({
       icon: 'favorito.png',
-      title: `Adicionou ${game.title} aos favoritos`,
-      time: index === 0 ? 'recentemente' : 'nos favoritos',
+      title: `Adicionou ${game.title} aos jogos monitorados`,
+      time: index === 0 ? 'recentemente' : 'monitorado',
       tone: 'favorite',
     }));
 
@@ -78,7 +79,7 @@ export class Profile implements OnInit, OnDestroy {
     return [
       {
         icon: 'favorito.png',
-        title: 'Seus favoritos aparecerão aqui',
+        title: 'Seus jogos monitorados aparecerão aqui',
         time: 'comece pelo catálogo',
         tone: 'muted',
       },

@@ -4,6 +4,7 @@ import { GameService, TopDeal, GameSummary } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
 import { resolveDlc } from '../../services/filters';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
+import { PreferencesService, UserPreferences } from '../../services/preferences';
 
 export interface DealCardView {
   slug: string;
@@ -27,11 +28,13 @@ export class Home implements OnInit, OnDestroy {
   featuredDeals: TopDeal[] = [];
   famousGames: DealCardView[] = [];
   favoritesDeals: DealCardView[] = [];
+  preferredPlatformDeals: DealCardView[] = [];
   freeWeek: DealCardView[] = [];
   topDiscountGames: DealCardView[] = [];
   topDiscountDlcs: DealCardView[] = [];
   featuredIndex = 0;
   loading = true;
+  preferredPlatformLabel = '';
   private favSub!: Subscription;
   private autoplayTimer?: ReturnType<typeof setInterval>;
   private readonly autoplayIntervalMs = 6000;
@@ -39,13 +42,15 @@ export class Home implements OnInit, OnDestroy {
   constructor(
     private gameService: GameService,
     private favoritesService: FavoritesService,
+    private preferencesService: PreferencesService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
+    this.loadPreferredPlatformDeals();
     this.gameService.getTopDeals(100, 'rank').subscribe({
       next: (deals) => {
-        const paid = deals.filter(d => Number(d.discountPct) < 100 && !resolveDlc(d.title, d.isDlc));
+        const paid = deals.filter(d => Number(d.discountPct) < 100 && !resolveDlc(d.title, d.isDlc) && this.matchesPreferences(d));
         this.featuredDeals = this.shuffle(paid).slice(0, 5);
         this.famousGames = this.shuffle(paid).slice(0, 20).map(d => this.fromTopDeal(d));
         this.loading = false;
@@ -58,11 +63,11 @@ export class Home implements OnInit, OnDestroy {
     this.gameService.getTopDeals(200, 'discount').subscribe({
       next: (deals) => {
         this.freeWeek = deals
-          .filter(d => Number(d.discountPct) === 100 && !resolveDlc(d.title, d.isDlc))
+          .filter(d => Number(d.discountPct) === 100 && !resolveDlc(d.title, d.isDlc) && this.matchesPreferences(d, true))
           .slice(0, 15)
           .map(d => this.fromTopDeal(d));
 
-        const active = deals.filter(d => Number(d.discountPct) < 100);
+        const active = deals.filter(d => Number(d.discountPct) < 100 && this.matchesPreferences(d));
         this.topDiscountGames = active.filter(d => d.rank != null && !resolveDlc(d.title, d.isDlc)).slice(0, 20).map(d => this.fromTopDeal(d));
         this.topDiscountDlcs = active.filter(d => resolveDlc(d.title, d.isDlc)).slice(0, 20).map(d => this.fromTopDeal(d));
         this.cdr.detectChanges();
@@ -142,6 +147,34 @@ export class Home implements OnInit, OnDestroy {
 
   platforms(storeName?: string | null, url?: string | null): PlatformBrand[] {
     return storePlatforms(storeName, url);
+  }
+
+  private matchesPreferences(deal: TopDeal, free = false): boolean {
+    const preferences: UserPreferences = this.preferencesService.preferences;
+    const dlcMatches = !preferences.hideDlcs || !resolveDlc(deal.title, deal.isDlc);
+    const discountMatches = free || Number(deal.discountPct) >= preferences.minimumDiscount;
+    const price = Number(deal.price);
+    const priceMatches = preferences.maximumPrice == null || (!Number.isNaN(price) && price <= preferences.maximumPrice);
+    return dlcMatches && discountMatches && priceMatches;
+  }
+
+  private loadPreferredPlatformDeals() {
+    const preferences = this.preferencesService.preferences;
+    if (preferences.preferredPlatform === 'all') return;
+
+    this.preferredPlatformLabel = preferences.preferredPlatform === 'xbox' ? 'Xbox' : 'PC';
+    this.gameService.getGames(0, 20, {
+      sort: 'discount',
+      platform: preferences.preferredPlatform,
+      type: preferences.hideDlcs ? 'game' : 'all',
+      minDiscount: preferences.minimumDiscount,
+      maxPrice: preferences.maximumPrice,
+    }).subscribe({
+      next: games => {
+        this.preferredPlatformDeals = games.map(game => this.fromGameSummary(game));
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   private fromTopDeal(d: TopDeal): DealCardView {

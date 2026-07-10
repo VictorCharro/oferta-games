@@ -33,7 +33,7 @@ public class ServicoCatalogo {
       throw new BuscaCurtaException();
     }
 
-    List<ResumoJogo> locais = jogos.listar(0, 20, "rank", "all", "all", null, null, termo);
+    List<ResumoJogo> locais = jogos.listar(0, 20, "rank", "all", "all", null, null, null, termo);
     if (!locais.isEmpty()) {
       return locais;
     }
@@ -68,22 +68,7 @@ public class ServicoCatalogo {
       return new ResultadoAtualizacaoJogo(true, 0);
     }
 
-    int atualizadas = 0;
-    for (OfertaPrecoItad oferta : resultado.deals()) {
-      if (oferta.shop() == null || oferta.price() == null || oferta.url() == null) {
-        continue;
-      }
-
-      jogos.salvarOferta(new OfertaParaSalvar(
-          jogo.id(),
-          "itad",
-          oferta.shop().name(),
-          oferta.price().amount(),
-          oferta.regular() == null ? null : oferta.regular().amount(),
-          "BRL",
-          oferta.url()));
-      atualizadas++;
-    }
+    int atualizadas = jogos.substituirOfertasItad(jogo.id(), criarOfertasItad(jogo.id(), resultado.deals()));
 
     atualizarMetadadosSteamSeNecessario(jogo, resultado.deals());
     return new ResultadoAtualizacaoJogo(true, atualizadas);
@@ -112,37 +97,26 @@ public class ServicoCatalogo {
     Map<String, Long> mapaIds = jogos.salvarJogosItad(jogosParaSalvar).stream()
         .collect(Collectors.toMap(RepositorioJogos.IdJogoItad::itadId, RepositorioJogos.IdJogoItad::id));
 
-    List<OfertaParaSalvar> ofertasParaSalvar = new ArrayList<>();
-    for (ItemOfertaItad item : itens) {
-      if (item == null
-          || item.id() == null
-          || item.deal() == null
-          || item.deal().shop() == null
-          || item.deal().shop().name() == null || item.deal().shop().name().isBlank()
-          || item.deal().price() == null
-          || item.deal().price().amount() == null
-          || item.deal().url() == null || item.deal().url().isBlank()) {
+    List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(
+        itad.buscarPrecos(new ArrayList<>(mapaIds.keySet())), List.of());
+    if (resultados.isEmpty()) {
+      throw new IllegalStateException("A ITAD nao retornou precos para o lote do sync");
+    }
+
+    int atualizadas = 0;
+    for (ResultadoPrecoItad resultado : resultados) {
+      if (resultado == null || resultado.id() == null) {
         continue;
       }
-      Long jogoId = mapaIds.get(item.id());
+      Long jogoId = mapaIds.get(resultado.id());
       if (jogoId == null) {
         continue;
       }
-      ofertasParaSalvar.add(new OfertaParaSalvar(
-          jogoId,
-          "itad",
-          item.deal().shop().name(),
-          item.deal().price().amount(),
-          item.deal().regular() == null ? null : item.deal().regular().amount(),
-          "BRL",
-          item.deal().url()));
+
+      atualizadas += jogos.substituirOfertasItad(jogoId, criarOfertasItad(jogoId, resultado.deals()));
     }
 
-    if (ofertasParaSalvar.isEmpty()) {
-      return 0;
-    }
-
-    return jogos.salvarOfertas(ofertasParaSalvar);
+    return atualizadas;
   }
 
   public int preencherMetadadosSteam(int limite) {
@@ -189,6 +163,23 @@ public class ServicoCatalogo {
     if (ehDlc != null || capa != null) {
       jogos.atualizarMetadadosSteam(jogo.id(), ehDlc, capa);
     }
+  }
+
+  private List<OfertaParaSalvar> criarOfertasItad(long jogoId, List<OfertaPrecoItad> ofertas) {
+    return Objects.requireNonNullElse(ofertas, List.of()).stream()
+        .filter(oferta -> oferta.shop() != null
+            && oferta.shop().name() != null && !oferta.shop().name().isBlank()
+            && oferta.price() != null && oferta.price().amount() != null
+            && oferta.url() != null && !oferta.url().isBlank())
+        .map(oferta -> new OfertaParaSalvar(
+            jogoId,
+            "itad",
+            oferta.shop().name(),
+            oferta.price().amount(),
+            oferta.regular() == null ? null : oferta.regular().amount(),
+            "BRL",
+            oferta.url()))
+        .toList();
   }
 
   public static class BuscaCurtaException extends RuntimeException {}

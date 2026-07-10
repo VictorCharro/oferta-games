@@ -4,6 +4,7 @@ import { Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, skip } from 'rxjs/operators';
 import { GameService, GameSummary } from '../../services/game';
 import { SearchService } from '../../services/search';
+import { PreferencesService } from '../../services/preferences';
 
 @Component({
   selector: 'app-catalog',
@@ -25,10 +26,14 @@ export class Catalog implements OnInit, OnDestroy {
   query = '';
   minPrice: number | null = null;
   maxPrice: number | null = null;
+  minDiscount: number | null = null;
   minPriceInput = '';
   maxPriceInput = '';
+  minDiscountInput = '';
+  sortDropdownOpen = false;
 
   private querySub!: Subscription;
+  private requestVersion = 0;
 
   readonly sortOptions = [
     { value: 'rank', label: 'Mais relevantes' },
@@ -43,21 +48,35 @@ export class Catalog implements OnInit, OnDestroy {
     { value: 'xbox', label: 'Xbox' },
   ];
 
+  get selectedSortLabel(): string {
+    return this.sortOptions.find(option => option.value === this.sort)?.label ?? 'Mais relevantes';
+  }
+
   private scrollTicking = false;
 
   constructor(
     private gameService: GameService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private searchService: SearchService
+    private searchService: SearchService,
+    private preferencesService: PreferencesService
   ) {}
 
   ngOnInit() {
     const params = this.route.snapshot.queryParamMap;
     const type = params.get('type');
     const sort = params.get('sort');
+    const platform = params.get('platform');
+    const preferences = this.preferencesService.preferences;
+    this.platform = preferences.preferredPlatform;
+    this.type = preferences.hideDlcs ? 'game' : 'all';
+    this.maxPrice = preferences.maximumPrice;
+    this.maxPriceInput = preferences.maximumPrice?.toString() ?? '';
+    this.minDiscount = preferences.minimumDiscount || null;
+    this.minDiscountInput = preferences.minimumDiscount ? preferences.minimumDiscount.toString() : '';
     if (type && ['all', 'game', 'dlc'].includes(type)) this.type = type;
     if (sort && this.sortOptions.some(o => o.value === sort)) this.sort = sort;
+    if (platform && this.platformOptions.some(o => o.value === platform)) this.platform = platform;
 
     this.searchService.setQuery('');
     this.querySub = this.searchService.query$
@@ -84,6 +103,28 @@ export class Catalog implements OnInit, OnDestroy {
     });
   }
 
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (!(event.target as HTMLElement).closest('.custom-select')) {
+      this.sortDropdownOpen = false;
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  closeSortDropdown() {
+    this.sortDropdownOpen = false;
+  }
+
+  toggleSortDropdown() {
+    this.sortDropdownOpen = !this.sortDropdownOpen;
+  }
+
+  selectSort(value: string) {
+    this.sort = value;
+    this.sortDropdownOpen = false;
+    this.applyFilters();
+  }
+
   private checkLoadMore() {
     if (!this.hasMore || this.loading) return;
     const scrolledToBottom =
@@ -96,28 +137,36 @@ export class Catalog implements OnInit, OnDestroy {
   load(reset = false) {
     if (reset) { this.page = 0; this.games = []; }
     this.loading = true;
+    const requestVersion = ++this.requestVersion;
     this.gameService.getGames(this.page, this.pageSize, {
       sort: this.sort,
       type: this.type,
       platform: this.platform,
       minPrice: this.minPrice,
       maxPrice: this.maxPrice,
+      minDiscount: this.minDiscount,
       q: this.query,
     }).subscribe({
       next: (data) => {
+        if (requestVersion !== this.requestVersion) return;
         this.games = [...this.games, ...data];
         this.hasMore = data.length === this.pageSize;
         this.loading = false;
         this.cdr.detectChanges();
         setTimeout(() => this.checkLoadMore());
       },
-      error: () => { this.loading = false; this.cdr.detectChanges(); }
+      error: () => {
+        if (requestVersion !== this.requestVersion) return;
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
   applyFilters() {
     this.minPrice = this.minPriceInput !== '' ? Number(this.minPriceInput) : null;
     this.maxPrice = this.maxPriceInput !== '' ? Number(this.maxPriceInput) : null;
+    this.minDiscount = this.minDiscountInput !== '' ? Number(this.minDiscountInput) : null;
     this.load(true);
   }
 
@@ -130,6 +179,8 @@ export class Catalog implements OnInit, OnDestroy {
     this.maxPrice = null;
     this.minPriceInput = '';
     this.maxPriceInput = '';
+    this.minDiscount = null;
+    this.minDiscountInput = '';
     this.searchService.setQuery('');
     this.load(true);
   }
