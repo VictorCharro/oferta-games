@@ -20,6 +20,7 @@ export class Topbar implements OnInit, OnDestroy {
   showSuggestions = false;
   private isCatalogPage = false;
   private sub!: Subscription;
+  private avatarSub!: Subscription;
   private routeSub!: Subscription;
   private searchSub!: Subscription;
   private searchInput$ = new Subject<string>();
@@ -35,6 +36,7 @@ export class Topbar implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.sub = this.auth.user$.subscribe(() => this.cdr.detectChanges());
+    this.avatarSub = this.auth.avatar$.subscribe(() => this.cdr.detectChanges());
 
     this.isCatalogPage = this.router.url.startsWith('/catalogo');
     this.routeSub = this.router.events
@@ -67,6 +69,7 @@ export class Topbar implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.sub.unsubscribe();
+    this.avatarSub?.unsubscribe();
     this.routeSub?.unsubscribe();
     this.searchSub?.unsubscribe();
   }

@@ -21,7 +21,7 @@ export class Profile implements OnInit, OnDestroy {
   savingBio = false;
   success = '';
   error = '';
-  activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' | 'preferencias' = 'resumo';
+  activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' = 'resumo';
   favorites: FavoriteGame[] = [];
   platformHours: Array<{ name: string; logo: string; hours: string }> = [];
   private favoritesSub?: Subscription;
@@ -35,7 +35,7 @@ export class Profile implements OnInit, OnDestroy {
     this.email = auth.user?.email ?? '';
     this.bio = auth.user?.user_metadata?.['bio'] || '';
     this.bioDraft = this.bio;
-    this.avatarUrl = this.loadLocalAvatar();
+    this.avatarUrl = auth.avatarUrl;
   }
 
   ngOnInit() {
@@ -43,6 +43,10 @@ export class Profile implements OnInit, OnDestroy {
       this.favorites = list;
       this.cdr.detectChanges();
     });
+    this.favoritesSub.add(this.auth.avatar$.subscribe(avatarUrl => {
+      this.avatarUrl = avatarUrl;
+      this.cdr.detectChanges();
+    }));
     this.favoritesService.load();
   }
 
@@ -142,25 +146,13 @@ export class Profile implements OnInit, OnDestroy {
     const reader = new FileReader();
     reader.onload = () => {
       this.avatarUrl = String(reader.result || '');
-      this.saveLocalAvatar(this.avatarUrl);
-      this.success = 'Foto atualizada neste navegador.';
+      this.auth.updateAvatar(this.avatarUrl);
+      this.success = '';
       this.error = '';
       input.value = '';
       this.cdr.detectChanges();
     };
     reader.readAsDataURL(file);
-  }
-
-  private loadLocalAvatar(): string {
-    const userId = this.auth.user?.id;
-    if (!userId) return '';
-    return localStorage.getItem(`oferta-games-avatar-${userId}`) || '';
-  }
-
-  private saveLocalAvatar(value: string) {
-    const userId = this.auth.user?.id;
-    if (!userId) return;
-    localStorage.setItem(`oferta-games-avatar-${userId}`, value);
   }
 
   formatPrice(price: number | string | null | undefined): string {

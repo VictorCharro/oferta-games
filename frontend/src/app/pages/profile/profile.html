@@ -70,10 +70,9 @@
     <button type="button" [class.active]="activeTab === 'resumo'" (click)="activeTab = 'resumo'">Resumo</button>
     <button type="button" [class.active]="activeTab === 'jogosFavoritos'" (click)="activeTab = 'jogosFavoritos'">Jogos favoritos</button>
     <button type="button" [class.active]="activeTab === 'biblioteca'" (click)="activeTab = 'biblioteca'">Biblioteca</button>
-    <button type="button" [class.active]="activeTab === 'preferencias'" (click)="activeTab = 'preferencias'">Preferências</button>
   </section>
 
-  <section class="profile-stats">
+  <section class="profile-stats" *ngIf="activeTab === 'resumo'">
     <article class="stat-card">
       <div class="stat-icon heart"><img src="favorito.png" alt="" /></div>
       <div>
@@ -100,7 +99,7 @@
     </article>
   </section>
 
-  <section class="profile-grid" *ngIf="activeTab === 'resumo' || activeTab === 'jogosFavoritos'">
+  <section class="profile-grid" *ngIf="activeTab === 'resumo'">
     <article class="panel favorites-panel">
       <div class="panel-header">
         <h2>Jogos favoritos</h2>
@@ -168,14 +167,21 @@
     </aside>
   </section>
 
+  <section class="panel favorites-only" *ngIf="activeTab === 'jogosFavoritos'">
+    <div class="panel-header">
+      <h2>Jogos favoritos</h2>
+    </div>
+    <div class="empty-panel">
+      <img src="favorito.png" alt="" />
+      <h3>Nenhum jogo favorito ainda</h3>
+      <p>Em breve você poderá escolher jogos favoritos pessoais para exibir no perfil.</p>
+    </div>
+  </section>
+
   <section class="panel tab-placeholder" *ngIf="activeTab === 'biblioteca'">
     <h2>Biblioteca</h2>
     <p>Quando a sincronização de plataformas for implementada em Configurações, seus jogos aparecerão aqui.</p>
     <a routerLink="/configuracoes">Ir para configurações</a>
   </section>
 
-  <section class="panel tab-placeholder" *ngIf="activeTab === 'preferencias'">
-    <h2>Preferências</h2>
-    <p>Em breve você poderá definir plataformas favoritas, lojas preferidas e alertas de desconto.</p>
-  </section>
 </div>

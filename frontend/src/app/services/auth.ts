@@ -7,21 +7,26 @@ import type { User, Session } from '@supabase/supabase-js';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private _user = new BehaviorSubject<User | null>(null);
+  private _avatar = new BehaviorSubject<string>('');
   user$ = this._user.asObservable();
+  avatar$ = this._avatar.asObservable();
 
   constructor(private router: Router) {
     // Carrega sessão existente
     supabase.auth.getSession().then(({ data }) => {
       this._user.next(data.session?.user ?? null);
+      this.loadAvatar(data.session?.user ?? null);
     });
 
     // Escuta mudanças de sessão
     supabase.auth.onAuthStateChange((_event, session) => {
       this._user.next(session?.user ?? null);
+      this.loadAvatar(session?.user ?? null);
     });
   }
 
   get user(): User | null { return this._user.value; }
+  get avatarUrl(): string { return this._avatar.value; }
   get isLoggedIn(): boolean { return this._user.value !== null; }
 
   get displayName(): string {
@@ -61,5 +66,16 @@ export class AuthService {
   async logout() {
     await supabase.auth.signOut();
     this.router.navigate(['/']);
+  }
+
+  updateAvatar(value: string) {
+    const userId = this.user?.id;
+    if (!userId) return;
+    localStorage.setItem(`oferta-games-avatar-${userId}`, value);
+    this._avatar.next(value);
+  }
+
+  private loadAvatar(user: User | null) {
+    this._avatar.next(user ? localStorage.getItem(`oferta-games-avatar-${user.id}`) || '' : '');
   }
 }

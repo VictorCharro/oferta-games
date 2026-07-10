@@ -214,7 +214,7 @@ favorites
 - **Catálogo rotativo:** top 200 por rank com desconto ativo sobem ao topo.
 - **Login:** página de login sem sidebar/topbar.
 - **Home:** banner com autoplay e seções em carrossel.
-- **Perfil:** dashboard gamer com avatar, bio editável, estatísticas futuras de gameplay, resumo de biblioteca, atividade recente e lista temporária baseada nos jogos monitorados. A troca de foto usa preview local no navegador enquanto não houver storage definitivo para imagens.
+- **Perfil:** dashboard gamer com avatar, bio editável, estatísticas futuras de gameplay, resumo de biblioteca e atividade recente. A aba **Jogos favoritos** é isolada e mostra apenas os favoritos pessoais futuros; preferências ficam somente em Configurações. A troca de foto usa preview local no navegador enquanto não houver storage definitivo, mas atualiza imediatamente perfil e topbar na sessão atual.
 - **Jogos Monitorados:** a rota `/monitorados` e os endpoints `/api/favorites` representam jogos que o usuário quer acompanhar por preço. A rota antiga `/favoritos` redireciona para `/monitorados` por compatibilidade.
 - **Jogos favoritos:** no perfil, este nome é reservado para favoritos pessoais do usuário. Ainda não usa persistência própria; será implementado com estrutura separada dos jogos monitorados.
 - **Configurações:** divididas em Conta, Conexões, Preferências e Privacidade. Conta concentra identidade, senha e sessão; Conexões concentra Steam/Xbox; Preferências afetam o conteúdo da home e os filtros iniciais do catálogo; Privacidade controla a exposição futura dos dados sincronizados no perfil.

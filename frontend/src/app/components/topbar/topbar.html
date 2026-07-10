@@ -33,7 +33,10 @@
     <!-- Logado: avatar com dropdown -->
     <div class="user-menu" *ngIf="auth.isLoggedIn">
       <div class="avatar" (click)="toggleDropdown()">
-        <div class="avatar-circle">{{ auth.displayName.charAt(0).toUpperCase() }}</div>
+        <div class="avatar-circle">
+          <img *ngIf="auth.avatarUrl; else avatarInitial" [src]="auth.avatarUrl" alt="Foto de perfil" />
+          <ng-template #avatarInitial>{{ auth.displayName.charAt(0).toUpperCase() }}</ng-template>
+        </div>
         <div class="avatar-info">
           <span class="avatar-name">{{ auth.displayName }}</span>
         </div>

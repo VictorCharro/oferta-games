@@ -622,6 +622,12 @@
   }
 }
 
+.favorites-only {
+  min-height: 360px;
+
+  .empty-panel { min-height: 290px; }
+}
+
 @media (max-width: 1180px) {
   .profile-hero,
   .profile-grid {
