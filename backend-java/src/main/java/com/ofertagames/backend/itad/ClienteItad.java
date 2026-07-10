@@ -45,17 +45,10 @@ public class ClienteItad {
   }
 
   public List<ResultadoPrecoItad> buscarPrecos(String itadId) {
-    return buscarPrecos(List.of(itadId));
-  }
-
-  public List<ResultadoPrecoItad> buscarPrecos(List<String> idsItad) {
-    if (idsItad == null || idsItad.isEmpty()) {
-      return List.of();
-    }
     return restClient.post()
         .uri("/games/prices/v3?country=BR")
         .header("ITAD-API-Key", chaveApi)
-        .body(idsItad)
+        .body(List.of(itadId))
         .retrieve()
         .body(new ParameterizedTypeReference<List<ResultadoPrecoItad>>() {});
   }

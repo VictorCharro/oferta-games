@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -69,7 +68,22 @@ public class ServicoCatalogo {
       return new ResultadoAtualizacaoJogo(true, 0);
     }
 
-    int atualizadas = jogos.substituirOfertasItad(jogo.id(), criarOfertasItad(jogo.id(), resultado.deals()));
+    int atualizadas = 0;
+    for (OfertaPrecoItad oferta : resultado.deals()) {
+      if (oferta.shop() == null || oferta.price() == null || oferta.url() == null) {
+        continue;
+      }
+
+      jogos.salvarOferta(new OfertaParaSalvar(
+          jogo.id(),
+          "itad",
+          oferta.shop().name(),
+          oferta.price().amount(),
+          oferta.regular() == null ? null : oferta.regular().amount(),
+          "BRL",
+          oferta.url()));
+      atualizadas++;
+    }
 
     atualizarMetadadosSteamSeNecessario(jogo, resultado.deals());
     return new ResultadoAtualizacaoJogo(true, atualizadas);
@@ -83,7 +97,7 @@ public class ServicoCatalogo {
     List<RepositorioJogos.JogoParaSalvar> jogosParaSalvar = new ArrayList<>();
     for (int i = 0; i < itens.size(); i++) {
       ItemOfertaItad item = itens.get(i);
-      if (item == null || !idItadValido(item.id()) || item.title() == null || item.deal() == null) {
+      if (item == null || item.id() == null || item.title() == null || item.deal() == null) {
         continue;
       }
       String slug = item.slug() == null || item.slug().isBlank() ? GeradorSlug.porTitulo(item.title()) : item.slug();
@@ -98,26 +112,37 @@ public class ServicoCatalogo {
     Map<String, Long> mapaIds = jogos.salvarJogosItad(jogosParaSalvar).stream()
         .collect(Collectors.toMap(RepositorioJogos.IdJogoItad::itadId, RepositorioJogos.IdJogoItad::id));
 
-    List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(
-        itad.buscarPrecos(new ArrayList<>(mapaIds.keySet())), List.of());
-    if (resultados.isEmpty()) {
-      throw new IllegalStateException("A ITAD nao retornou precos para o lote do sync");
-    }
-
-    int atualizadas = 0;
-    for (ResultadoPrecoItad resultado : resultados) {
-      if (resultado == null || resultado.id() == null) {
+    List<OfertaParaSalvar> ofertasParaSalvar = new ArrayList<>();
+    for (ItemOfertaItad item : itens) {
+      if (item == null
+          || item.id() == null
+          || item.deal() == null
+          || item.deal().shop() == null
+          || item.deal().shop().name() == null || item.deal().shop().name().isBlank()
+          || item.deal().price() == null
+          || item.deal().price().amount() == null
+          || item.deal().url() == null || item.deal().url().isBlank()) {
         continue;
       }
-      Long jogoId = mapaIds.get(resultado.id());
+      Long jogoId = mapaIds.get(item.id());
       if (jogoId == null) {
         continue;
       }
-
-      atualizadas += jogos.substituirOfertasItad(jogoId, criarOfertasItad(jogoId, resultado.deals()));
+      ofertasParaSalvar.add(new OfertaParaSalvar(
+          jogoId,
+          "itad",
+          item.deal().shop().name(),
+          item.deal().price().amount(),
+          item.deal().regular() == null ? null : item.deal().regular().amount(),
+          "BRL",
+          item.deal().url()));
     }
 
-    return atualizadas;
+    if (ofertasParaSalvar.isEmpty()) {
+      return 0;
+    }
+
+    return jogos.salvarOfertas(ofertasParaSalvar);
   }
 
   public int preencherMetadadosSteam(int limite) {
@@ -163,35 +188,6 @@ public class ServicoCatalogo {
 
     if (ehDlc != null || capa != null) {
       jogos.atualizarMetadadosSteam(jogo.id(), ehDlc, capa);
-    }
-  }
-
-  private List<OfertaParaSalvar> criarOfertasItad(long jogoId, List<OfertaPrecoItad> ofertas) {
-    return Objects.requireNonNullElse(ofertas, List.of()).stream()
-        .filter(oferta -> oferta.shop() != null
-            && oferta.shop().name() != null && !oferta.shop().name().isBlank()
-            && oferta.price() != null && oferta.price().amount() != null
-            && oferta.url() != null && !oferta.url().isBlank())
-        .map(oferta -> new OfertaParaSalvar(
-            jogoId,
-            "itad",
-            oferta.shop().name(),
-            oferta.price().amount(),
-            oferta.regular() == null ? null : oferta.regular().amount(),
-            "BRL",
-            oferta.url()))
-        .toList();
-  }
-
-  private boolean idItadValido(String idItad) {
-    if (idItad == null || idItad.isBlank()) {
-      return false;
-    }
-    try {
-      UUID.fromString(idItad);
-      return true;
-    } catch (IllegalArgumentException erro) {
-      return false;
     }
   }
 

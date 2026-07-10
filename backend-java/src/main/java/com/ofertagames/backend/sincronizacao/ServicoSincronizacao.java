@@ -28,7 +28,7 @@ public class ServicoSincronizacao {
     List<ItemOfertaItad> itens = resposta == null ? List.of() : Objects.requireNonNullElse(resposta.list(), List.of());
 
     int sincronizadas = catalogo.salvarOfertasDoSync(itens, deslocamento);
-    int ignoradas = Math.max(0, itens.size() - sincronizadas);
+    int ignoradas = itens.size() - sincronizadas;
 
     boolean temMais = Boolean.TRUE.equals(resposta == null ? null : resposta.hasMore());
     int steamAtualizados;
