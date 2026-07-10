@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -82,7 +83,7 @@ public class ServicoCatalogo {
     List<RepositorioJogos.JogoParaSalvar> jogosParaSalvar = new ArrayList<>();
     for (int i = 0; i < itens.size(); i++) {
       ItemOfertaItad item = itens.get(i);
-      if (item == null || item.id() == null || item.title() == null || item.deal() == null) {
+      if (item == null || !idItadValido(item.id()) || item.title() == null || item.deal() == null) {
         continue;
       }
       String slug = item.slug() == null || item.slug().isBlank() ? GeradorSlug.porTitulo(item.title()) : item.slug();
@@ -180,6 +181,18 @@ public class ServicoCatalogo {
             "BRL",
             oferta.url()))
         .toList();
+  }
+
+  private boolean idItadValido(String idItad) {
+    if (idItad == null || idItad.isBlank()) {
+      return false;
+    }
+    try {
+      UUID.fromString(idItad);
+      return true;
+    } catch (IllegalArgumentException erro) {
+      return false;
+    }
   }
 
   public static class BuscaCurtaException extends RuntimeException {}
