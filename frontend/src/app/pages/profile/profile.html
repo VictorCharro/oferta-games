@@ -1,28 +1,190 @@
 <div class="page-content">
-  <div class="settings-page">
-    <div class="settings-header">
-      <div class="avatar-big">{{ auth.displayName.charAt(0).toUpperCase() }}</div>
-      <div>
+  <section class="profile-hero">
+    <div class="profile-main">
+      <div class="avatar-editor">
+        <div class="profile-avatar">
+          <img *ngIf="avatarUrl; else avatarInitial" [src]="avatarUrl" alt="Foto de perfil" />
+          <ng-template #avatarInitial>{{ initial }}</ng-template>
+        </div>
+        <label class="avatar-action" for="profile-avatar-input">Trocar foto</label>
+        <input id="profile-avatar-input" type="file" accept="image/*" (change)="onAvatarSelected($event)" />
+      </div>
+      <div class="profile-identity">
         <h1>{{ auth.displayName }}</h1>
         <p>{{ auth.user?.email }}</p>
+        <div class="bio-editor" *ngIf="editingBio; else bioPreview">
+          <textarea
+            [(ngModel)]="bioDraft"
+            maxlength="180"
+            rows="3"
+            placeholder="Conte um pouco sobre você como jogador"
+          ></textarea>
+          <div class="bio-actions">
+            <span>{{ bioDraft.length }}/180</span>
+            <button class="ghost-btn" type="button" (click)="cancelBio()" [disabled]="savingBio">Cancelar</button>
+            <button class="save-btn" type="button" (click)="saveBio()" [disabled]="savingBio">
+              {{ savingBio ? 'Salvando...' : 'Salvar bio' }}
+            </button>
+          </div>
+        </div>
+        <ng-template #bioPreview>
+          <button class="bio-btn" type="button" (click)="editBio()">{{ bioLabel }}</button>
+        </ng-template>
+        <p class="msg-success" *ngIf="success">{{ success }}</p>
+        <p class="msg-error" *ngIf="error">{{ error }}</p>
       </div>
     </div>
 
-    <div class="settings-card">
-      <h2>Informações pessoais</h2>
-      <div class="field">
-        <label>Nome</label>
-        <input type="text" [(ngModel)]="name" placeholder="Seu nome" />
+    <div class="gameplay-panel">
+      <h2>Estatísticas de gameplay</h2>
+      <div class="gameplay-grid">
+        <div class="gameplay-stat">
+          <span>Total de horas jogadas</span>
+          <strong>--</strong>
+          <small>Conecte uma plataforma</small>
+        </div>
+        <div class="platform-hours">
+          <span>Horas por plataforma</span>
+          <div class="platform-pill">
+            <img src="store-logos/steam.svg" alt="Steam" />
+            <span>Steam</span>
+            <strong>--</strong>
+          </div>
+          <div class="platform-pill">
+            <img src="store-logos/xbox.svg" alt="Xbox" />
+            <span>Xbox</span>
+            <strong>--</strong>
+          </div>
+        </div>
+        <div class="gameplay-stat trophy">
+          <span>Total de conquistas</span>
+          <strong>--</strong>
+          <small>Em breve</small>
+        </div>
       </div>
-      <div class="field">
-        <label>E-mail</label>
-        <input type="email" [value]="email" disabled />
-      </div>
-      <p class="msg-success" *ngIf="success">{{ success }}</p>
-      <p class="msg-error" *ngIf="error">{{ error }}</p>
-      <button class="btn-primary" (click)="save()" [disabled]="saving">
-        {{ saving ? 'Salvando...' : 'Salvar alterações' }}
-      </button>
     </div>
-  </div>
+  </section>
+
+  <section class="profile-tabs" aria-label="Seções do perfil">
+    <button type="button" [class.active]="activeTab === 'resumo'" (click)="activeTab = 'resumo'">Resumo</button>
+    <button type="button" [class.active]="activeTab === 'favoritos'" (click)="activeTab = 'favoritos'">Favoritos</button>
+    <button type="button" [class.active]="activeTab === 'biblioteca'" (click)="activeTab = 'biblioteca'">Biblioteca</button>
+    <button type="button" [class.active]="activeTab === 'preferencias'" (click)="activeTab = 'preferencias'">Preferências</button>
+  </section>
+
+  <section class="profile-stats">
+    <article class="stat-card">
+      <div class="stat-icon heart"><img src="favorito.png" alt="" /></div>
+      <div>
+        <span>Jogos favoritos</span>
+        <strong>{{ favoriteCount }}</strong>
+        <small>Salvos no Oferta Games</small>
+      </div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-icon time">H</div>
+      <div>
+        <span>Horas jogadas</span>
+        <strong>--</strong>
+        <small>Após conectar Steam/Xbox</small>
+      </div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-icon trophy">C</div>
+      <div>
+        <span>Conquistas</span>
+        <strong>--</strong>
+        <small>Após sincronizar plataformas</small>
+      </div>
+    </article>
+  </section>
+
+  <section class="profile-grid" *ngIf="activeTab === 'resumo' || activeTab === 'favoritos'">
+    <article class="panel favorites-panel">
+      <div class="panel-header">
+        <h2>Últimos favoritos</h2>
+        <a routerLink="/favoritos">Ver todos</a>
+      </div>
+
+      <div class="favorite-list" *ngIf="latestFavorites.length; else emptyFavorites">
+        <a *ngFor="let game of latestFavorites" class="favorite-row" [routerLink]="['/jogo', game.slug]">
+          <img class="favorite-cover" [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" />
+          <div class="favorite-info">
+            <h3>{{ game.title }}</h3>
+            <div class="favorite-tags">
+              <span>Favorito</span>
+              <span *ngIf="game.isDlc">DLC</span>
+            </div>
+            <div class="progress-line">
+              <span>Menor preço</span>
+              <div class="progress-track"><span></span></div>
+            </div>
+          </div>
+          <div class="favorite-price">
+            <span>Oferta atual</span>
+            <strong>{{ formatPrice(game.minPrice) }}</strong>
+          </div>
+        </a>
+      </div>
+
+      <ng-template #emptyFavorites>
+        <div class="empty-panel">
+          <img src="favorito.png" alt="" />
+          <h3>Nenhum favorito ainda</h3>
+          <p>Salve jogos no catálogo para montar seu perfil.</p>
+          <a routerLink="/catalogo">Explorar catálogo</a>
+        </div>
+      </ng-template>
+    </article>
+
+    <aside class="side-stack">
+      <article class="panel library-panel">
+        <h2>Resumo da biblioteca</h2>
+        <div class="library-content">
+          <div class="library-total">
+            <div class="library-icon"><img src="catalogo.png" alt="" /></div>
+            <strong>--</strong>
+            <span>Jogos sincronizados</span>
+          </div>
+          <div class="platform-split">
+            <div class="split-row">
+              <span><img src="store-logos/steam.svg" alt="" /> Steam</span>
+              <div class="split-track"><i style="width: 0%"></i></div>
+              <b>--</b>
+            </div>
+            <div class="split-row">
+              <span><img src="store-logos/xbox.svg" alt="" /> Xbox</span>
+              <div class="split-track"><i style="width: 0%"></i></div>
+              <b>--</b>
+            </div>
+            <div class="sync-note">Última sincronização: pendente</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel activity-panel">
+        <div class="panel-header">
+          <h2>Atividade recente</h2>
+        </div>
+        <div class="activity-list">
+          <div *ngFor="let item of activityItems" class="activity-item" [class.muted]="item.tone === 'muted'">
+            <img [src]="item.icon" alt="" />
+            <span>{{ item.title }}</span>
+            <small>{{ item.time }}</small>
+          </div>
+        </div>
+      </article>
+    </aside>
+  </section>
+
+  <section class="panel tab-placeholder" *ngIf="activeTab === 'biblioteca'">
+    <h2>Biblioteca</h2>
+    <p>Quando a sincronização de plataformas for implementada em Configurações, seus jogos aparecerão aqui.</p>
+    <a routerLink="/configuracoes">Ir para configurações</a>
+  </section>
+
+  <section class="panel tab-placeholder" *ngIf="activeTab === 'preferencias'">
+    <h2>Preferências</h2>
+    <p>Em breve você poderá definir plataformas favoritas, lojas preferidas e alertas de desconto.</p>
+  </section>
 </div>

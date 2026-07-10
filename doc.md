@@ -106,6 +106,7 @@ favorites
 - Menor preço é calculado via query (`MIN(price)`), não armazenado.
 - `rank` vem do feed ITAD; menor = mais popular.
 - Somente BRL por enquanto.
+- A tabela `favorites` representa hoje jogos monitorados/salvos pelo usuário para acompanhar preço. Favoritos pessoais do perfil serão separados em outra estrutura futura.
 
 ## Endpoints da API
 
@@ -131,11 +132,11 @@ favorites
   - Exige header `X-Sync-Key`.
   - Não executa backfill Steam durante o sync no Render free, para manter o processo leve.
 - `GET /api/favorites`
-  - Lista jogos favoritados do usuário autenticado.
+  - Lista jogos monitorados/salvos pelo usuário autenticado para acompanhar preço.
 - `POST /api/favorites`
-  - Adiciona jogo aos favoritos (`{ slug }`).
+  - Adiciona jogo aos monitorados (`{ slug }`).
 - `DELETE /api/favorites/{slug}`
-  - Remove jogo dos favoritos.
+  - Remove jogo dos monitorados.
 - `GET /actuator/health`
   - Health check usado por Render e keep alive.
 
@@ -211,8 +212,22 @@ favorites
 - **Catálogo rotativo:** top 200 por rank com desconto ativo sobem ao topo.
 - **Login:** página de login sem sidebar/topbar.
 - **Home:** banner com autoplay e seções em carrossel.
+- **Perfil:** dashboard gamer com avatar, bio editável, estatísticas futuras de gameplay, resumo de biblioteca, atividade recente e lista temporária baseada nos jogos monitorados. A troca de foto usa preview local no navegador enquanto não houver storage definitivo para imagens.
+- **Favoritos/monitorados:** a rota atual `Favoritos` e os endpoints `/api/favorites` representam jogos que o usuário quer acompanhar por preço. Este conceito deve ser separado dos favoritos pessoais exibidos no perfil.
+- **Configurações:** área reservada para preferências da conta e futuras conexões de plataformas; conexões não ficam dentro do perfil.
+- **Topbar:** menu do usuário exibe Perfil, Configurações e Sair, sem nível de usuário.
 - **Capa ausente:** fallback visual em `no-cover.svg`; backend tenta preencher capa oficial da Steam quando possível.
 - **Catálogo:** scroll infinito via `window:scroll` com throttle por `requestAnimationFrame`.
+
+## Implementações futuras planejadas
+
+- **Favoritos pessoais do perfil:** criar uma estrutura separada de `favorites`, como `profile_favorites`, para representar jogos preferidos do usuário no perfil. Esses favoritos são de identidade/gosto pessoal, não de monitoramento de preço.
+- **Monitoramento de preço:** manter os favoritos atuais como lista de jogos monitorados. No produto, avaliar se a navegação deve continuar chamando isso de `Favoritos` ou se deve evoluir para `Monitorados`, `Lista de desejos` ou nome parecido.
+- **Perfil:** trocar a seção temporária de últimos favoritos por favoritos pessoais do perfil quando a nova estrutura existir. Permitir escolher, remover e futuramente ordenar esses jogos.
+- **Conexões de plataformas:** implementar em Configurações, começando por Steam/Xbox quando houver decisão técnica. O perfil apenas consome os dados sincronizados.
+- **Gameplay real:** substituir placeholders de horas jogadas, horas por plataforma, conquistas e biblioteca por dados sincronizados das conexões.
+- **Foto de perfil:** substituir preview local por upload persistente em storage definitivo, provavelmente Supabase Storage, e salvar a URL no perfil do usuário.
+- **Atividade recente:** evoluir de eventos locais/derivados para eventos reais, como jogo favoritado no perfil, jogo monitorado, conquista sincronizada ou plataforma conectada.
 
 ## O que NÃO fazer
 
@@ -229,8 +244,13 @@ favorites
 - [x] Supabase PostgreSQL mantido como banco
 - [x] Supabase Auth usado nos favoritos
 - [x] Frontend Angular implementado
+- [x] Perfil visual implementado com bio editável, avatar local e placeholders de gameplay
 - [x] Dockerfile do backend Java configurado para Render
 - [x] GitHub Actions configurado para sync e keep alive
 - [ ] Deploy no Render
+- [ ] Separar favoritos pessoais do perfil dos jogos monitorados por preço
+- [ ] Persistir foto de perfil em storage definitivo
+- [ ] Conexões de plataformas em Configurações
+- [ ] Sincronizar horas jogadas, conquistas e biblioteca
 - [ ] Integração com Eneba
 - [ ] Integração com Instant Gaming
