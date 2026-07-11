@@ -35,17 +35,22 @@ Configuração no Render:
 | Health Check Path | `/actuator/health` |
 | Plan | Free por enquanto |
 
-Sincronização de preços: GitHub Actions chama `POST /api/sync` a cada 3h, protegido por `X-Sync-Key`. Cada execução começa na página 0 e percorre todas as páginas retornadas pela ITAD, em lotes de 50 ofertas.
+Coleta de preços: o próprio backend Spring executa jobs agendados no Render. Não há mais sync por GitHub Actions.
 
-Keep alive: GitHub Actions chama `/actuator/health` a cada 10 minutos usando `BACKEND_URL`.
+- A cada 10 minutos, atualiza 5.000 jogos: 200 relevantes (top 2.000 por `rank`) e 4.800 da fila geral.
+- A seleção usa `games.last_price_sync_at`, do mais antigo para o mais recente. Depois de atualizado, cada jogo vai naturalmente ao fim da fila.
+- A ITAD recebe no máximo 200 IDs por chamada; cada rodada faz até 25 chamadas sequenciais.
+- Se uma chamada falhar, o lote é tentado três vezes; se continuar falhando, os demais lotes seguem e o lote com falha permanece prioritário na próxima rodada.
+- A coleta de metadados Steam é um job separado a cada 15 minutos, com até 25 jogos pendentes por rodada.
+- Uma trava compartilhada no PostgreSQL impede sobreposição entre os jobs, inclusive se houver mais de uma instância durante um deploy.
 
-Secrets dos workflows:
+Keep alive: GitHub Actions continua chamando `/actuator/health` a cada 10 minutos usando `BACKEND_URL`.
+
+Secrets do workflow restante:
 
 | Secret | Descrição |
 |---|---|
-| `BACKEND_API_URL` | URL pública do backend Java, sem barra final |
 | `BACKEND_URL` | URL pública do backend Java usada no keep alive |
-| `SYNC_SECRET_KEY` | Chave secreta usada no header `X-Sync-Key` |
 
 ## Variáveis de ambiente do backend
 
@@ -54,6 +59,9 @@ Secrets dos workflows:
 | `DATABASE_URL` | URL do pooler do Supabase, formato `postgresql://...` |
 | `ITAD_API_KEY` | Chave da API do IsThereAnyDeal |
 | `SYNC_SECRET_KEY` | Chave secreta para o endpoint `/api/sync` |
+| `APP_SYNC_SCHEDULER_ENABLED` | Ativa a coleta interna no Render. Usar `true` depois de executar a migração SQL. |
+| `APP_SYNC_SCHEDULER_PRICE_DELAY_MS` | Intervalo da coleta de preços. Padrão `600000` (10 minutos). |
+| `APP_SYNC_SCHEDULER_STEAM_DELAY_MS` | Intervalo da coleta de metadados Steam. Padrão `900000` (15 minutos). |
 | `SUPABASE_URL` | URL do projeto Supabase |
 | `SUPABASE_ANON_KEY` | Chave anônima do Supabase usada para validar tokens |
 | `CORS_ALLOWED_ORIGINS` | Origens permitidas separadas por vírgula |
@@ -81,6 +89,8 @@ games
   cover_url     text NULL
   rank          integer NULL
   is_dlc        boolean NULL
+  last_price_sync_at timestamptz NULL
+  last_steam_sync_at timestamptz NULL
   created_at    timestamptz DEFAULT now()
 
 offers
@@ -101,6 +111,10 @@ favorites
   game_id       bigint FK -> games.id
   created_at    timestamptz DEFAULT now()
   UNIQUE (user_id, game_id)
+
+sync_locks
+  name          text PK
+  locked_until  timestamptz NOT NULL
 ```
 
 - Menor preço é calculado via query (`MIN(price)`), não armazenado.
@@ -129,14 +143,9 @@ favorites
   - Retorna melhores descontos deduplicados por jogo.
   - `sort=rank` prioriza jogos mais famosos com desconto.
 - `POST /api/sync?page=0`
-  - Sincroniza uma página de ofertas da ITAD e revalida preços de jogos existentes.
+  - Endpoint legado para diagnóstico ou sincronização manual pontual de uma página da ITAD.
   - Exige header `X-Sync-Key`.
-  - O processo de revalidação de preços ocorre em duas filas para garantir cobertura e relevância:
-    - **Fila Prioritária (Top Rank):** A cada execução, força a atualização de um lote de jogos pertencentes ao grupo dos 1000 mais populares (`rank` mais baixo). A seleção prioriza os jogos desse grupo que não são atualizados há mais tempo, criando uma atualização rotativa para o conteúdo mais relevante.
-    - **Fila Geral (Antigos):** Em paralelo, força a atualização de um lote maior de jogos que não são atualizados há mais tempo em todo o catálogo, garantindo que nenhum jogo fique com o preço desatualizado indefinidamente.
-  - Complementa metadados (capa, DLC) via Steam em um ritmo mais lento para priorizar a atualização de preços.
-  - Usa `/deals/v2` para paginar jogos e `/games/prices/v3` para obter todas as ofertas atuais de cada lote de 50 jogos. As ofertas ITAD de cada jogo são substituídas pelo conjunto retornado, removendo preços antigos de lojas que não apareçam mais.
-  - O sync completo depende da configuração JDBC `prepareThreshold=0`, pois o pooler do Supabase na porta 6543 não suporta prepared statements.
+  - O job interno é o responsável pela atualização recorrente do catálogo.
 - `GET /api/favorites`
   - Lista jogos monitorados/salvos pelo usuário autenticado para acompanhar preço.
 - `POST /api/favorites`
@@ -162,7 +171,7 @@ favorites
     itad/               -> cliente e modelos da API ITAD
     jogos/              -> catálogo, detalhe, busca e refresh
     saude/              -> endpoint /actuator/health
-    sincronizacao/      -> endpoint /api/sync
+    sincronizacao/      -> endpoint legado, agendador e trava de coleta
     steam/              -> capa oficial e detecção de DLC
 
 /frontend
@@ -196,7 +205,6 @@ favorites
 
 /.github/workflows/
   keepalive.yml         -> chama GET /actuator/health
-  sync.yml              -> chama POST /api/sync em páginas sucessivas
 ```
 
 ## Padrão de código do backend
@@ -216,6 +224,9 @@ favorites
 - **DLC detection:** `games.is_dlc` é preenchido via Steam quando há oferta Steam; enquanto `is_dlc IS NULL`, o frontend usa heurística por título.
 - **Deduplicação de deals:** `DISTINCT ON (g.id)` mantém apenas a oferta mais barata por jogo.
 - **Catálogo rotativo:** top 200 por rank com desconto ativo sobem ao topo.
+- **Coleta de preços:** roda internamente no Spring, em fila baseada em `last_price_sync_at`. Cada rodada atualiza 200 jogos relevantes e 4.800 jogos gerais em lotes de 200 IDs da ITAD. As ofertas ITAD retornadas substituem o conjunto anterior do mesmo jogo, removendo lojas e preços que não existam mais.
+- **Coleta Steam:** roda em job separado e preenche capa/DLC dos jogos pendentes. Ela usa `last_steam_sync_at` para evitar repetir o mesmo jogo antes dos demais.
+- **Concorrência da coleta:** jobs de preço e Steam não podem rodar juntos; `sync_locks` é uma trava compartilhada no banco que também protege durante deploys com duas instâncias temporárias.
 - **Login:** página de login sem sidebar/topbar.
 - **Home:** banner com autoplay e seções em carrossel.
 - **Perfil:** dashboard gamer com avatar, bio editável, estatísticas futuras de gameplay, resumo de biblioteca e atividade recente. A aba **Jogos favoritos** é isolada e mostra apenas os favoritos pessoais futuros; preferências ficam somente em Configurações. A troca de foto usa preview local no navegador enquanto não houver storage definitivo, mas atualiza imediatamente perfil e topbar na sessão atual.
@@ -238,12 +249,13 @@ favorites
 - **Gameplay real:** substituir placeholders de horas jogadas, conquistas e biblioteca por dados sincronizados das conexões. Estados que dependem de conexão devem usar o padrão `--` + `Conecte uma plataforma`; cards de horas por plataforma só devem aparecer para plataformas realmente conectadas pelo usuário.
 - **Foto de perfil:** substituir preview local por upload persistente em storage definitivo, provavelmente Supabase Storage, e salvar a URL no perfil do usuário.
 - **Atividade recente:** evoluir de eventos locais/derivados para eventos reais, como jogo favoritado no perfil, jogo monitorado, conquista sincronizada ou plataforma conectada.
+- **Importação de catálogo:** avaliar uma coleta de descoberta separada para incluir jogos novos da ITAD sem misturar essa responsabilidade com a fila de atualização de preços.
 
 ## O que NÃO fazer
 
 - Sem scraping de sites.
 - Sem multi-moeda funcional por enquanto.
-- Sem cron interno; sincronização é acionada externamente pelo GitHub Actions.
+- Não disparar mais a sincronização recorrente pelo GitHub Actions.
 
 ## Estado atual
 
@@ -256,8 +268,10 @@ favorites
 - [x] Frontend Angular implementado
 - [x] Perfil visual implementado com bio editável, avatar local e placeholders de gameplay
 - [x] Dockerfile do backend Java configurado para Render
-- [x] GitHub Actions configurado para sync e keep alive
-- [ ] Deploy no Render
+- [x] Coleta interna de preços e metadados Steam agendada no Spring, com fila e trava no PostgreSQL
+- [x] GitHub Actions configurado apenas para keep alive
+- [ ] Executar `backend-java/sql/20260711_coleta_agendada.sql` no Supabase e ativar `APP_SYNC_SCHEDULER_ENABLED=true` no Render
+- [x] Backend publicado no Render
 - [ ] Separar favoritos pessoais do perfil dos jogos monitorados por preço
 - [ ] Persistir foto de perfil em storage definitivo
 - [ ] Conexões de plataformas em Configurações

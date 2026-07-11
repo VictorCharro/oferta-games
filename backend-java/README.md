@@ -32,6 +32,7 @@ SUPABASE_URL=https://...
 SUPABASE_ANON_KEY=...
 ITAD_API_KEY=...
 SYNC_SECRET_KEY=...
+APP_SYNC_SCHEDULER_ENABLED=true
 CORS_ALLOWED_ORIGINS=https://seu-front.vercel.app,http://localhost:4200
 PORT=8080
 ```
@@ -51,28 +52,32 @@ PORT=8080
 - `DELETE /api/favorites/{slug}`
 - `GET /actuator/health`
 
-## Sync
+## Coleta agendada
 
-O endpoint `POST /api/sync` exige o header:
+O backend executa a coleta internamente quando `APP_SYNC_SCHEDULER_ENABLED=true`.
+
+- A cada 10 minutos, atualiza 5.000 jogos: 200 do top 2.000 por `rank` e 4.800 do restante.
+- Os jogos sao escolhidos por `games.last_price_sync_at`, sempre do mais antigo para o mais recente. Apos atualizados, voltam naturalmente ao fim da fila.
+- Os precos sao coletados em lotes sequenciais de ate 200 IDs por chamada da ITAD. Uma falha em um lote nao impede os demais.
+- A cada 15 minutos, uma rotina separada complementa metadados Steam de ate 25 jogos pendentes de capa ou classificacao de DLC.
+- As duas rotinas compartilham uma trava no banco, portanto nunca executam em paralelo, inclusive durante um novo deploy.
+
+Antes de ativar, execute no SQL Editor do Supabase o arquivo `backend-java/sql/20260711_coleta_agendada.sql`.
+
+Variaveis opcionais para ajustar o intervalo:
+
+```bash
+APP_SYNC_SCHEDULER_PRICE_DELAY_MS=600000
+APP_SYNC_SCHEDULER_STEAM_DELAY_MS=900000
+```
+
+O endpoint `POST /api/sync?page=0` continua disponivel para diagnostico/manual e exige:
 
 ```http
 X-Sync-Key: valor-de-SYNC_SECRET_KEY
 ```
 
-Ele sincroniza uma pagina da ITAD, salva jogos/ofertas e executa um pequeno backfill de metadados Steam para preencher `is_dlc` e capa quando possivel.
-
-O workflow `.github/workflows/sync.yml` chama esse endpoint em paginas sucessivas usando os secrets:
-
-```bash
-BACKEND_API_URL=https://seu-backend.onrender.com
-SYNC_SECRET_KEY=sua-chave-sync
-```
-
-O workflow `.github/workflows/keepalive.yml` chama o health check usando:
-
-```bash
-BACKEND_URL=https://seu-backend.onrender.com
-```
+O workflow `.github/workflows/keepalive.yml` continua chamando o health check usando `BACKEND_URL`. O antigo workflow de sync foi removido.
 
 ## Rodando localmente
 
@@ -102,5 +107,6 @@ SUPABASE_URL=https://...
 SUPABASE_ANON_KEY=...
 ITAD_API_KEY=...
 SYNC_SECRET_KEY=...
+APP_SYNC_SCHEDULER_ENABLED=true
 CORS_ALLOWED_ORIGINS=https://seu-front.vercel.app,http://localhost:4200
 ```

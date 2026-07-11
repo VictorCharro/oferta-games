@@ -14,10 +14,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class ServicoSincronizacao {
   private static final int TAMANHO_PAGINA = 50;
-  private static final int LIMITE_BACKFILL_STEAM = 10;
-  private static final int LIMITE_REVALIDACAO_ANTIGOS = 550;
-  private static final int LIMITE_REVALIDACAO_TOP_RANK = 20;
-  private static final int TAMANHO_GRUPO_TOP_RANK = 1000;
+  private static final int LIMITE_RELEVANTES = 200;
+  private static final int LIMITE_GERAIS = 4_800;
+  private static final int TAMANHO_LOTE_PRECOS = 200;
+  private static final int LIMITE_METADADOS_STEAM = 25;
   private static final Logger logger = LoggerFactory.getLogger(ServicoSincronizacao.class);
 
   private final ClienteItad itad;
@@ -30,6 +30,7 @@ public class ServicoSincronizacao {
     this.jogos = jogos;
   }
 
+  /** Mantido para diagnostico e sincronizacao manual pontual; nao e usado pelo agendador. */
   public ResultadoSincronizacao sincronizarPagina(int pagina) {
     int paginaSegura = Math.max(0, pagina);
     int deslocamento = paginaSegura * TAMANHO_PAGINA;
@@ -38,49 +39,67 @@ public class ServicoSincronizacao {
 
     int sincronizadas = catalogo.salvarOfertasDoSync(itens, deslocamento);
     int ignoradas = Math.max(0, itens.size() - sincronizadas);
-
     boolean temMais = Boolean.TRUE.equals(resposta == null ? null : resposta.hasMore());
-    int steamAtualizados;
-    try {
-      steamAtualizados = catalogo.preencherMetadadosSteam(LIMITE_BACKFILL_STEAM);
-    } catch (RuntimeException e) {
-      logger.warn("Erro ao preencher metadados Steam", e);
-      steamAtualizados = 0;
-    }
 
-    revalidarPrecosTopRank();
-    revalidarPrecosAntigos();
-
-    return new ResultadoSincronizacao(true, sincronizadas, ignoradas, temMais, temMais ? paginaSegura + 1 : null, steamAtualizados);
+    return new ResultadoSincronizacao(true, sincronizadas, ignoradas, temMais, temMais ? paginaSegura + 1 : null, 0);
   }
 
-  private void revalidarPrecosTopRank() {
-    try {
-      List<String> slugs = jogos.listarSlugsTopRank(TAMANHO_GRUPO_TOP_RANK, LIMITE_REVALIDACAO_TOP_RANK);
-      for (String slug : slugs) {
-        try {
-          catalogo.atualizarPrecos(slug);
-        } catch (Exception e) {
-          logger.warn("Erro ao revalidar preço do slug top rank '{}'", slug, e);
-        }
-      }
-    } catch (Exception e) {
-      logger.error("Erro ao buscar slugs top rank para revalidação", e);
+  public void sincronizarRodadaPrecos() {
+    List<RepositorioJogos.JogoParaSincronizar> selecionados = jogos.listarParaSincronizar(
+        LIMITE_RELEVANTES, LIMITE_GERAIS);
+    if (selecionados.isEmpty()) {
+      logger.info("Coleta agendada de precos sem jogos elegiveis");
+      return;
     }
+
+    int jogosAtualizados = 0;
+    int ofertasAtualizadas = 0;
+    for (int inicio = 0; inicio < selecionados.size(); inicio += TAMANHO_LOTE_PRECOS) {
+      int fim = Math.min(inicio + TAMANHO_LOTE_PRECOS, selecionados.size());
+      try {
+        var resultado = atualizarLoteComTentativas(selecionados.subList(inicio, fim));
+        jogosAtualizados += resultado.jogosAtualizados();
+        ofertasAtualizadas += resultado.ofertasAtualizadas();
+      } catch (RuntimeException erro) {
+        logger.error("Falha definitiva ao atualizar o lote de precos {}-{}", inicio, fim - 1, erro);
+      }
+    }
+
+    logger.info(
+        "Coleta agendada de precos concluida: {} jogos e {} ofertas atualizados",
+        jogosAtualizados,
+        ofertasAtualizadas);
   }
 
-  private void revalidarPrecosAntigos() {
-    try {
-      List<String> slugs = jogos.listarSlugsAntigos(LIMITE_REVALIDACAO_ANTIGOS);
-      for (String slug : slugs) {
-        try {
-          catalogo.atualizarPrecos(slug);
-        } catch (Exception e) {
-          logger.warn("Erro ao revalidar preço do slug antigo '{}'", slug, e);
+  public void sincronizarRodadaSteam() {
+    int atualizados = catalogo.preencherMetadadosSteam(LIMITE_METADADOS_STEAM);
+    logger.info("Coleta agendada de metadados Steam concluida: {} jogos atualizados", atualizados);
+  }
+
+  private ServicoCatalogo.ResultadoAtualizacaoLote atualizarLoteComTentativas(
+      List<RepositorioJogos.JogoParaSincronizar> lote) {
+    RuntimeException ultimoErro = null;
+    for (int tentativa = 1; tentativa <= 3; tentativa++) {
+      try {
+        return catalogo.atualizarPrecosEmLote(lote);
+      } catch (RuntimeException erro) {
+        ultimoErro = erro;
+        if (tentativa == 3) {
+          break;
         }
+        logger.warn("Falha no lote de precos; nova tentativa em 10 segundos ({}/3)", tentativa, erro);
+        aguardarProximaTentativa();
       }
-    } catch (Exception e) {
-      logger.error("Erro ao buscar slugs antigos para revalidação", e);
+    }
+    throw new IllegalStateException("Falha ao atualizar lote de precos", ultimoErro);
+  }
+
+  private void aguardarProximaTentativa() {
+    try {
+      Thread.sleep(10_000);
+    } catch (InterruptedException erro) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Coleta de precos interrompida", erro);
     }
   }
 }

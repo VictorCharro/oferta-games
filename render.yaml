@@ -14,6 +14,12 @@ services:
         sync: false
       - key: SYNC_SECRET_KEY
         sync: false
+      - key: APP_SYNC_SCHEDULER_ENABLED
+        value: true
+      - key: APP_SYNC_SCHEDULER_PRICE_DELAY_MS
+        value: 600000
+      - key: APP_SYNC_SCHEDULER_STEAM_DELAY_MS
+        value: 900000
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY

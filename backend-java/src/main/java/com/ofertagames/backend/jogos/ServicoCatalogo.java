@@ -9,6 +9,7 @@ import com.ofertagames.backend.itad.ResultadoPrecoItad;
 import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -87,6 +88,70 @@ public class ServicoCatalogo {
 
     atualizarMetadadosSteamSeNecessario(jogo, resultado.deals());
     return new ResultadoAtualizacaoJogo(true, atualizadas);
+  }
+
+  public ResultadoAtualizacaoLote atualizarPrecosEmLote(List<RepositorioJogos.JogoParaSincronizar> jogosParaAtualizar) {
+    if (jogosParaAtualizar == null || jogosParaAtualizar.isEmpty()) {
+      return new ResultadoAtualizacaoLote(0, 0);
+    }
+
+    Map<String, Long> jogosPorIdItad = new LinkedHashMap<>();
+    for (RepositorioJogos.JogoParaSincronizar jogo : jogosParaAtualizar) {
+      if (jogo.itadId() != null && !jogo.itadId().isBlank()) {
+        jogosPorIdItad.put(jogo.itadId(), jogo.id());
+      }
+    }
+    if (jogosPorIdItad.isEmpty()) {
+      return new ResultadoAtualizacaoLote(0, 0);
+    }
+
+    List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(
+        itad.buscarPrecos(new ArrayList<>(jogosPorIdItad.keySet())), List.of());
+    if (resultados.isEmpty()) {
+      throw new IllegalStateException("A ITAD nao retornou precos para o lote da coleta agendada");
+    }
+
+    Map<Long, List<OfertaParaSalvar>> ofertasPorJogo = new LinkedHashMap<>();
+    for (ResultadoPrecoItad resultado : resultados) {
+      if (resultado == null || resultado.id() == null) {
+        continue;
+      }
+      Long jogoId = jogosPorIdItad.get(resultado.id());
+      if (jogoId == null) {
+        continue;
+      }
+
+      List<OfertaParaSalvar> ofertasAtuais = new ArrayList<>();
+      List<OfertaPrecoItad> ofertasItad = resultado.deals();
+      if (ofertasItad != null) {
+        for (OfertaPrecoItad oferta : ofertasItad) {
+          if (oferta == null
+              || oferta.shop() == null
+              || oferta.shop().name() == null || oferta.shop().name().isBlank()
+              || oferta.price() == null || oferta.price().amount() == null
+              || oferta.url() == null || oferta.url().isBlank()) {
+            continue;
+          }
+          ofertasAtuais.add(new OfertaParaSalvar(
+              jogoId,
+              "itad",
+              oferta.shop().name(),
+              oferta.price().amount(),
+              oferta.regular() == null ? null : oferta.regular().amount(),
+              "BRL",
+              oferta.url()));
+        }
+      }
+      ofertasPorJogo.put(jogoId, ofertasAtuais);
+    }
+
+    if (ofertasPorJogo.isEmpty()) {
+      throw new IllegalStateException("A ITAD nao retornou jogos reconhecidos para o lote da coleta agendada");
+    }
+
+    int ofertasAtualizadas = jogos.substituirOfertasItadEmLote(ofertasPorJogo);
+    jogos.marcarPrecosSincronizados(new ArrayList<>(ofertasPorJogo.keySet()));
+    return new ResultadoAtualizacaoLote(ofertasPorJogo.size(), ofertasAtualizadas);
   }
 
   public int salvarOfertasDoSync(List<ItemOfertaItad> itens, int deslocamento) {
@@ -204,4 +269,5 @@ public class ServicoCatalogo {
   public static class BuscaCurtaException extends RuntimeException {}
   public static class JogoNaoEncontradoException extends RuntimeException {}
   public static class JogoSemItadException extends RuntimeException {}
+  public record ResultadoAtualizacaoLote(int jogosAtualizados, int ofertasAtualizadas) {}
 }

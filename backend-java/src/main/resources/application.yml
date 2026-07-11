@@ -10,6 +10,12 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   sync:
     secret-key: ${SYNC_SECRET_KEY:}
+    scheduler:
+      enabled: ${APP_SYNC_SCHEDULER_ENABLED:false}
+      price-delay-ms: ${APP_SYNC_SCHEDULER_PRICE_DELAY_MS:600000}
+      price-initial-delay-ms: ${APP_SYNC_SCHEDULER_PRICE_INITIAL_DELAY_MS:60000}
+      steam-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_DELAY_MS:900000}
+      steam-initial-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_INITIAL_DELAY_MS:300000}
   itad:
     api-key: ${ITAD_API_KEY:}
   supabase:

@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -217,6 +218,55 @@ public class RepositorioJogos {
     return salvarOfertas(ofertas);
   }
 
+  @Transactional
+  public int substituirOfertasItadEmLote(Map<Long, List<OfertaParaSalvar>> ofertasPorJogo) {
+    if (ofertasPorJogo.isEmpty()) {
+      return 0;
+    }
+    List<Long> jogosIds = List.copyOf(ofertasPorJogo.keySet());
+    jdbc.sql("DELETE FROM offers WHERE source = 'itad' AND game_id IN (:jogosIds)")
+        .param("jogosIds", jogosIds)
+        .update();
+    List<OfertaParaSalvar> ofertas = ofertasPorJogo.values().stream()
+        .flatMap(List::stream)
+        .toList();
+    return salvarOfertas(ofertas);
+  }
+
+  public List<JogoParaSincronizar> listarParaSincronizar(int limiteRelevantes, int limiteGerais) {
+    return jdbc.sql("""
+        WITH relevantes AS (
+          SELECT id, itad_id::text AS itad_id
+          FROM games
+          WHERE itad_id IS NOT NULL AND rank IS NOT NULL AND rank <= 2000
+          ORDER BY last_price_sync_at ASC NULLS FIRST, rank ASC, id ASC
+          LIMIT :limiteRelevantes
+        ), gerais AS (
+          SELECT id, itad_id::text AS itad_id
+          FROM games
+          WHERE itad_id IS NOT NULL AND (rank IS NULL OR rank > 2000)
+          ORDER BY last_price_sync_at ASC NULLS FIRST, rank ASC NULLS LAST, id ASC
+          LIMIT :limiteGerais
+        )
+        SELECT id, itad_id FROM relevantes
+        UNION ALL
+        SELECT id, itad_id FROM gerais
+        """)
+        .param("limiteRelevantes", limiteRelevantes)
+        .param("limiteGerais", limiteGerais)
+        .query((rs, linha) -> new JogoParaSincronizar(rs.getLong("id"), rs.getString("itad_id")))
+        .list();
+  }
+
+  public void marcarPrecosSincronizados(List<Long> jogosIds) {
+    if (jogosIds.isEmpty()) {
+      return;
+    }
+    jdbc.sql("UPDATE games SET last_price_sync_at = now() WHERE id IN (:jogosIds)")
+        .param("jogosIds", jogosIds)
+        .update();
+  }
+
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {
     return jdbc.sql("""
         SELECT id, title, itad_id::text AS itad_id, cover_url, is_dlc
@@ -237,7 +287,8 @@ public class RepositorioJogos {
     jdbc.sql("""
         UPDATE games
         SET is_dlc = COALESCE(:ehDlc, is_dlc),
-            cover_url = COALESCE(cover_url, :capaSteam)
+            cover_url = COALESCE(cover_url, :capaSteam),
+            last_steam_sync_at = now()
         WHERE id = :jogoId
         """)
         .param("ehDlc", ehDlc)
@@ -251,8 +302,8 @@ public class RepositorioJogos {
         SELECT g.id, g.title, o.url
         FROM games g
         JOIN offers o ON o.game_id = g.id AND o.store_name = 'Steam'
-        WHERE g.is_dlc IS NULL
-        ORDER BY g.id
+        WHERE g.is_dlc IS NULL OR g.cover_url IS NULL
+        ORDER BY g.last_steam_sync_at ASC NULLS FIRST, g.id ASC
         LIMIT :limite
         """)
         .param("limite", limite)
@@ -260,43 +311,6 @@ public class RepositorioJogos {
             rs.getLong("id"),
             rs.getString("title"),
             rs.getString("url")))
-        .list();
-  }
-
-  public List<String> listarSlugsAntigos(int limite) {
-    return jdbc.sql("""
-        SELECT g.slug
-        FROM offers o
-        JOIN games g ON g.id = o.game_id
-        WHERE g.itad_id IS NOT NULL
-        GROUP BY g.id
-        ORDER BY MAX(o.updated_at) ASC
-        LIMIT :limite
-        """)
-        .param("limite", limite)
-        .query(String.class)
-        .list();
-  }
-
-  public List<String> listarSlugsTopRank(int tamanhoGrupo, int limite) {
-    return jdbc.sql("""
-        WITH top_games AS (
-          SELECT id, slug
-          FROM games
-          WHERE rank IS NOT NULL AND itad_id IS NOT NULL
-          ORDER BY rank ASC, id ASC
-          LIMIT :tamanhoGrupo
-        )
-        SELECT tg.slug
-        FROM offers o
-        JOIN top_games tg ON tg.id = o.game_id
-        GROUP BY tg.id, tg.slug
-        ORDER BY MAX(o.updated_at) ASC
-        LIMIT :limite
-        """)
-        .param("tamanhoGrupo", tamanhoGrupo)
-        .param("limite", limite)
-        .query(String.class)
         .list();
   }
 
@@ -415,4 +429,5 @@ public class RepositorioJogos {
   private record LinhaJogo(Long id, String slug, String title, String coverUrl) {}
   record JogoParaSalvar(String itadId, String title, String slug, String coverUrl, Integer rank) {}
   record IdJogoItad(long id, String itadId) {}
+  public record JogoParaSincronizar(long id, String itadId) {}
 }
