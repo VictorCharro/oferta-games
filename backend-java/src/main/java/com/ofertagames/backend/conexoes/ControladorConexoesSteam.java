@@ -43,9 +43,9 @@ public class ControladorConexoesSteam {
     return steam.concluir(state, parametros)
         .map(usuario -> {
           executor.execute(() -> steam.sincronizarBiblioteca(usuario));
-          return ResponseEntity.status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, steam.urlRetornoSucesso()).build();
+          return ResponseEntity.<Void>status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, steam.urlRetornoSucesso()).build();
         })
-        .orElseGet(() -> ResponseEntity.status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, steam.urlRetornoErro()).build());
+        .orElseGet(() -> ResponseEntity.<Void>status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, steam.urlRetornoErro()).build());
   }
 
   @GetMapping
