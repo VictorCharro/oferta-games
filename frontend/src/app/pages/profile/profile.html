@@ -178,10 +178,12 @@
     </div>
   </section>
 
-  <section class="panel tab-placeholder" *ngIf="activeTab === 'biblioteca'">
-    <h2>Biblioteca</h2>
-    <p>Quando a sincronização de plataformas for implementada em Configurações, seus jogos aparecerão aqui.</p>
-    <a routerLink="/configuracoes">Ir para configurações</a>
+  <section class="panel library-list-panel" *ngIf="activeTab === 'biblioteca'">
+    <div class="panel-header"><h2>Biblioteca Steam</h2><span>{{ libraryGames.length }} jogos exibidos</span></div>
+    <div class="library-games" *ngIf="libraryGames.length; else emptyLibrary">
+      <article class="library-game" *ngFor="let game of libraryGames"><img [src]="steamIcon(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ formatHours(game.minutosJogadas) }} jogadas</span></div></article>
+    </div>
+    <ng-template #emptyLibrary><div class="empty-panel"><h3>Biblioteca vazia</h3><p>Use Sincronizar em Configurações para carregar seus jogos da Steam.</p><a routerLink="/configuracoes">Ir para configurações</a></div></ng-template>
   </section>
 
 </div>

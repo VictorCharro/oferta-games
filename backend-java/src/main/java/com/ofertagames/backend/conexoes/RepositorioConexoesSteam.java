@@ -121,6 +121,21 @@ class RepositorioConexoesSteam {
         .list();
   }
 
+  List<JogoBibliotecaSteam> listarBiblioteca(String usuarioId, int limite) {
+    return jdbc.sql("""
+        SELECT app_id, title, playtime_minutes, icon_hash
+        FROM steam_library_games
+        WHERE user_id = CAST(:usuarioId AS uuid)
+        ORDER BY playtime_minutes DESC, title ASC
+        LIMIT :limite
+        """)
+        .param("usuarioId", usuarioId)
+        .param("limite", limite)
+        .query((rs, linha) -> new JogoBibliotecaSteam(rs.getInt("app_id"), rs.getString("title"),
+            rs.getInt("playtime_minutes"), rs.getString("icon_hash")))
+        .list();
+  }
+
   void salvarConquistas(String usuarioId, int appId, int desbloqueadas, int total) {
     jdbc.sql("""
         INSERT INTO steam_game_achievements (user_id, app_id, unlocked_count, total_count, last_synced_at)

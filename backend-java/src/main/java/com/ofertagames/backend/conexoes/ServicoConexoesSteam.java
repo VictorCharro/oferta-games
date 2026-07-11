@@ -90,6 +90,27 @@ class ServicoConexoesSteam {
     return atualizados;
   }
 
+  int sincronizarConquistasDoUsuario(String usuarioId, int limite) {
+    if (!steam.configurada()) return 0;
+    RepositorioConexoesSteam.ConexaoSteam conexao = conexoes.buscarConexao(usuarioId)
+        .orElseThrow(ConexaoSteamNaoEncontradaException::new);
+    int atualizados = 0;
+    for (RepositorioConexoesSteam.JogoBibliotecaSteam jogo : conexoes.listarParaConquistas(usuarioId, limite)) {
+      ClienteSteamWeb.ConquistasSteam conquistas = steam.buscarConquistas(conexao.steamId(), jogo.appId());
+      if (conquistas == null) continue;
+      conexoes.salvarConquistas(usuarioId, jogo.appId(), conquistas.desbloqueadas(), conquistas.total());
+      atualizados++;
+    }
+    conexoes.marcarConquistasSincronizadas(usuarioId);
+    return atualizados;
+  }
+
+  java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId) {
+    return conexoes.listarBiblioteca(usuarioId, 100).stream()
+        .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash()))
+        .toList();
+  }
+
   StatusConexaoSteam status(String usuarioId) {
     Optional<RepositorioConexoesSteam.ConexaoSteam> conexao = conexoes.buscarConexao(usuarioId);
     if (conexao.isEmpty()) return StatusConexaoSteam.desconectada();
@@ -185,6 +206,8 @@ class ServicoConexoesSteam {
       return new StatusConexaoSteam(false, null, null, null, null, null, 0, 0, 0, 0);
     }
   }
+
+  record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash) {}
 
   static class ConexaoSteamNaoEncontradaException extends RuntimeException {}
   static class UrlBackendNaoConfiguradaException extends RuntimeException {}

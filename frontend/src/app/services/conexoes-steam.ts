@@ -16,11 +16,14 @@ export interface StatusSteam {
   conquistasTotal: number;
 }
 
+export interface JogoBibliotecaSteam { appId: number; titulo: string; minutosJogadas: number; iconeHash: string | null; }
+
 @Injectable({ providedIn: 'root' })
 export class ConexoesSteamService {
   private readonly api = 'https://oferta-games.onrender.com/api/conexoes/steam';
   constructor(private http: HttpClient) {}
   async status(): Promise<StatusSteam> { return firstValueFrom(this.http.get<StatusSteam>(this.api, { headers: await this.headers() })); }
+  async biblioteca(): Promise<JogoBibliotecaSteam[]> { return firstValueFrom(this.http.get<JogoBibliotecaSteam[]>(`${this.api}/biblioteca`, { headers: await this.headers() })); }
   async conectar() { const resposta = await firstValueFrom(this.http.post<{ url: string }>(`${this.api}/iniciar`, {}, { headers: await this.headers() })); window.location.assign(resposta.url); }
   async sincronizar() { await firstValueFrom(this.http.post(`${this.api}/sincronizar`, {}, { headers: await this.headers() })); }
   async desconectar() { await firstValueFrom(this.http.delete(this.api, { headers: await this.headers() })); }

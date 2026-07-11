@@ -57,10 +57,19 @@ public class ControladorConexoesSteam {
     return steam.status(usuario(autorizacao));
   }
 
+  @GetMapping("/biblioteca")
+  java.util.List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca(
+      @RequestHeader(value = "Authorization", required = false) String autorizacao) {
+    return steam.biblioteca(usuario(autorizacao));
+  }
+
   @PostMapping("/sincronizar")
   ResponseEntity<Void> sincronizar(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
     String usuario = usuario(autorizacao);
-    executor.execute(() -> steam.sincronizarBiblioteca(usuario));
+    executor.execute(() -> {
+      steam.sincronizarBiblioteca(usuario);
+      steam.sincronizarConquistasDoUsuario(usuario, 50);
+    });
     return ResponseEntity.accepted().build();
   }
 

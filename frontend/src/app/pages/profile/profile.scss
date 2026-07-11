@@ -628,6 +628,10 @@
   .empty-panel { min-height: 290px; }
 }
 
+.library-list-panel { min-height: 360px; .panel-header > span { color: var(--text-muted); font-size: 12px; } }
+.library-games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.library-game { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); img { width: 42px; height: 42px; border-radius: 6px; object-fit: cover; } h3 { margin: 0 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; } span { color: var(--text-muted); font-size: 12px; } }
+
 @media (max-width: 1180px) {
   .profile-hero,
   .profile-grid {
@@ -658,6 +662,8 @@
   .favorite-row {
     grid-template-columns: 1fr;
   }
+
+  .library-games { grid-template-columns: 1fr; }
 
   .favorite-cover {
     width: 100%;

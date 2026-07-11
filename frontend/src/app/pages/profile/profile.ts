@@ -3,7 +3,7 @@ import { AuthService } from '../../services/auth';
 import { supabase } from '../../services/supabase';
 import { FavoriteGame, FavoritesService } from '../../services/favorites';
 import { Subscription } from 'rxjs';
-import { ConexoesSteamService, StatusSteam } from '../../services/conexoes-steam';
+import { ConexoesSteamService, JogoBibliotecaSteam, StatusSteam } from '../../services/conexoes-steam';
 
 @Component({
   selector: 'app-profile',
@@ -26,6 +26,7 @@ export class Profile implements OnInit, OnDestroy {
   favorites: FavoriteGame[] = [];
   platformHours: Array<{ name: string; logo: string; hours: string }> = [];
   steamStatus: StatusSteam | null = null;
+  libraryGames: JogoBibliotecaSteam[] = [];
   private favoritesSub?: Subscription;
 
   constructor(
@@ -57,12 +58,17 @@ export class Profile implements OnInit, OnDestroy {
   async loadSteam() {
     try {
       this.steamStatus = await this.steamService.status();
-      if (this.steamStatus.conectada) this.platformHours = [{ name: 'Steam', logo: 'store-logos/steam.svg', hours: this.formatHours(this.steamStatus.totalMinutos) }];
+      if (this.steamStatus.conectada) {
+        this.platformHours = [{ name: 'Steam', logo: 'store-logos/steam.svg', hours: this.formatHours(this.steamStatus.totalMinutos) }];
+        this.libraryGames = await this.steamService.biblioteca();
+      }
     } catch { this.steamStatus = null; }
     this.cdr.detectChanges();
   }
 
   formatHours(minutes: number): string { return `${Math.floor(minutes / 60)}h ${minutes % 60}m`; }
+
+  steamIcon(game: JogoBibliotecaSteam): string { return game.iconeHash ? `https://media.steampowered.com/steamcommunity/public/images/apps/${game.appId}/${game.iconeHash}.jpg` : 'store-logos/steam.svg'; }
 
   ngOnDestroy() {
     this.favoritesSub?.unsubscribe();

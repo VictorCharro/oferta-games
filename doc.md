@@ -260,6 +260,7 @@ sync_locks
 
 - A conexao e feita pelo Steam OpenID; o usuario confirma a propria conta na Steam e o sistema nao solicita Steam ID ou URL manualmente.
 - A Steam Web API sincroniza perfil, biblioteca, horas jogadas e conquistas. A biblioteca e carregada apos conectar ou por acao manual; conquistas sao atualizadas gradualmente.
+- A aba Biblioteca mostra os 100 jogos Steam com maior tempo jogado. A acao manual de sincronizacao tambem prioriza conquistas dos 50 jogos mais relevantes da conta.
 - Lista de desejos nao e coletada.
 - Antes do deploy, executar `backend-java/sql/20260711_conexoes_steam.sql` no Supabase e configurar no Render: `STEAM_WEB_API_KEY`, `PUBLIC_BACKEND_URL=https://oferta-games.onrender.com` e a URL publica correta em `FRONTEND_URL`.
 
