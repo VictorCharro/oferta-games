@@ -12,7 +12,7 @@ Não é uma loja própria. É um agregador/comparador de preços.
 
 - **Backend:** Java 21 + Spring Boot 3 em `backend-java`.
 - **Frontend:** Angular, hospedado no Vercel.
-- **Banco:** PostgreSQL no Supabase. Conexão via transaction pooler (porta 6543).
+- **Banco:** PostgreSQL no Supabase. Conexão via transaction pooler (porta 6543), com prepared statements desativados no JDBC (`prepareThreshold=0`) por incompatibilidade do modo transaction do Supavisor.
 - **Auth:** Supabase Auth (email/senha e OAuth). Frontend usa `@supabase/supabase-js`; backend valida Bearer token via Supabase Auth.
 - **Deploy backend:** Render via Docker.
 
@@ -133,7 +133,7 @@ favorites
   - Exige header `X-Sync-Key`.
   - Não executa backfill Steam durante o sync no Render free, para manter o processo leve.
   - Usa `/deals/v2` para paginar jogos e `/games/prices/v3` para obter todas as ofertas atuais de cada lote de 50 jogos. As ofertas ITAD de cada jogo são substituídas pelo conjunto retornado, removendo preços antigos de lojas que não apareçam mais.
-  - O banco precisa permitir `DELETE` em `offers`, pois a substituição remove as ofertas ITAD antigas antes de gravar o conjunto atual.
+  - O sync completo depende da configuração JDBC `prepareThreshold=0`, pois o pooler do Supabase na porta 6543 não suporta prepared statements.
 - `GET /api/favorites`
   - Lista jogos monitorados/salvos pelo usuário autenticado para acompanhar preço.
 - `POST /api/favorites`

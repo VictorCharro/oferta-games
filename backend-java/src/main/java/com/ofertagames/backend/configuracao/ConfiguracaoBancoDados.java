@@ -29,6 +29,8 @@ public class ConfiguracaoBancoDados {
     config.setPassword(credenciais[1]);
     config.setMaximumPoolSize(5);
     config.setMinimumIdle(0);
+    // O pooler Supavisor em modo transaction (porta 6543) não suporta prepared statements.
+    config.addDataSourceProperty("prepareThreshold", "0");
     config.setPoolName("oferta-games-pool");
     return new HikariDataSource(config);
   }
