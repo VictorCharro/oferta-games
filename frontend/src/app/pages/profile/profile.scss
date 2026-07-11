@@ -13,6 +13,15 @@
     var(--bg-card);
 }
 
+:host-context([data-theme="light"]) .profile-hero {
+  border-color: rgba(41, 168, 224, 0.38);
+  background: linear-gradient(118deg, #dff5ff 0%, #eefaff 44%, #d7effc 100%);
+}
+
+:host-context([data-theme="light"]) .gameplay-panel {
+  border-left-color: rgba(41, 168, 224, 0.42);
+}
+
 .profile-main {
   display: flex;
   align-items: center;
