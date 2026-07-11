@@ -256,6 +256,13 @@ sync_locks
 
 ## O que NÃO fazer
 
+## Conexao Steam
+
+- A conexao e feita pelo Steam OpenID; o usuario confirma a propria conta na Steam e o sistema nao solicita Steam ID ou URL manualmente.
+- A Steam Web API sincroniza perfil, biblioteca, horas jogadas e conquistas. A biblioteca e carregada apos conectar ou por acao manual; conquistas sao atualizadas gradualmente.
+- Lista de desejos nao e coletada.
+- Antes do deploy, executar `backend-java/sql/20260711_conexoes_steam.sql` no Supabase e configurar no Render: `STEAM_WEB_API_KEY`, `PUBLIC_BACKEND_URL=https://oferta-games.onrender.com` e a URL publica correta em `FRONTEND_URL`.
+
 - Sem scraping de sites.
 - Sem multi-moeda funcional por enquanto.
 - Não disparar mais a sincronização recorrente pelo GitHub Actions.

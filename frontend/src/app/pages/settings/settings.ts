@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { supabase } from '../../services/supabase';
 import {
@@ -6,6 +7,7 @@ import {
   PrivacyPreferences,
   UserPreferences,
 } from '../../services/preferences';
+import { ConexoesSteamService, StatusSteam } from '../../services/conexoes-steam';
 
 type SettingsTab = 'conta' | 'conexoes' | 'preferencias' | 'privacidade';
 
@@ -27,6 +29,8 @@ export class Settings implements OnInit {
   saving = false;
   success = '';
   error = '';
+  steamStatus: StatusSteam | null = null;
+  steamLoading = false;
 
   readonly tabs: Array<{ id: SettingsTab; label: string }> = [
     { id: 'conta', label: 'Conta' },
@@ -38,6 +42,8 @@ export class Settings implements OnInit {
   constructor(
     public auth: AuthService,
     private preferencesService: PreferencesService,
+    private steamService: ConexoesSteamService,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -47,12 +53,19 @@ export class Settings implements OnInit {
     this.bio = metadata['bio'] || '';
     this.preferences = { ...this.preferencesService.preferences };
     this.privacy = { ...this.preferencesService.privacy };
+    if (this.route.snapshot.queryParamMap.has('steam')) this.activeTab = 'conexoes';
+    this.loadSteam();
   }
 
   selectTab(tab: SettingsTab) {
     this.activeTab = tab;
     this.clearMessages();
   }
+
+  async loadSteam() { try { this.steamStatus = await this.steamService.status(); } catch { this.steamStatus = null; } this.cdr.detectChanges(); }
+  async connectSteam() { this.steamLoading = true; try { await this.steamService.conectar(); } catch { this.error = 'Nao foi possivel iniciar a conexao com a Steam.'; this.steamLoading = false; this.cdr.detectChanges(); } }
+  async syncSteam() { this.steamLoading = true; try { await this.steamService.sincronizar(); this.success = 'Sincronizacao da biblioteca iniciada.'; } catch { this.error = 'Nao foi possivel iniciar a sincronizacao da Steam.'; } this.steamLoading = false; this.cdr.detectChanges(); }
+  async disconnectSteam() { this.steamLoading = true; try { await this.steamService.desconectar(); this.steamStatus = null; } catch { this.error = 'Nao foi possivel desconectar a Steam.'; } this.steamLoading = false; this.cdr.detectChanges(); }
 
   async saveAccount() {
     this.clearMessages();

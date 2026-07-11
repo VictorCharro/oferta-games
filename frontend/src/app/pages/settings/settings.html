@@ -64,8 +64,9 @@
       <div class="connections-grid">
         <article class="connection-card">
           <img src="store-logos/steam.svg" alt="Steam" />
-          <div><h3>Steam</h3><p>Biblioteca, horas jogadas e conquistas</p><span>Não conectado</span></div>
-          <button type="button" disabled>Em breve</button>
+          <div><h3>Steam</h3><p>Biblioteca, horas jogadas e conquistas</p><span>{{ steamStatus?.conectada ? 'Conectada' : 'Não conectado' }}</span></div>
+          <div class="connection-actions" *ngIf="steamStatus?.conectada; else conectarSteam"><button type="button" (click)="syncSteam()" [disabled]="steamLoading">Sincronizar</button><button type="button" class="disconnect" (click)="disconnectSteam()" [disabled]="steamLoading">Desconectar</button></div>
+          <ng-template #conectarSteam><button type="button" (click)="connectSteam()" [disabled]="steamLoading">Conectar</button></ng-template>
         </article>
         <article class="connection-card">
           <img src="store-logos/xbox.svg" alt="Xbox" />

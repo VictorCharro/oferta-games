@@ -12,6 +12,12 @@ services:
         sync: false
       - key: ITAD_API_KEY
         sync: false
+      - key: STEAM_WEB_API_KEY
+        sync: false
+- key: FRONTEND_URL
+  sync: false
+- key: PUBLIC_BACKEND_URL
+  sync: false
       - key: SYNC_SECRET_KEY
         sync: false
       - key: APP_SYNC_SCHEDULER_ENABLED

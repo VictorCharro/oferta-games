@@ -1,0 +1,127 @@
+package com.ofertagames.backend.conexoes;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+@Service
+class ClienteSteamWeb {
+  private final RestClient restClient;
+  private final String chaveApi;
+
+  ClienteSteamWeb(RestClient.Builder restClientBuilder, @Value("${app.steam.api-key}") String chaveApi) {
+    this.restClient = restClientBuilder.baseUrl("https://api.steampowered.com").build();
+    this.chaveApi = chaveApi;
+  }
+
+  boolean configurada() {
+    return chaveApi != null && !chaveApi.isBlank();
+  }
+
+  PerfilSteam buscarPerfil(String steamId) {
+    validarChave();
+    Map<String, Object> resposta = restClient.get()
+        .uri(uri -> uri.path("/ISteamUser/GetPlayerSummaries/v0002/")
+            .queryParam("key", chaveApi)
+            .queryParam("steamids", steamId)
+            .build())
+        .retrieve()
+        .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+    Map<?, ?> response = resposta == null ? null : comoMapa(resposta.get("response"));
+    List<?> jogadores = response == null ? List.of() : comoLista(response.get("players"));
+    Map<?, ?> jogador = jogadores.isEmpty() ? null : comoMapa(jogadores.get(0));
+    return new PerfilSteam(
+        jogador == null ? null : comoTexto(jogador.get("personaname")),
+        jogador == null ? null : comoTexto(jogador.get("avatarfull")));
+  }
+
+  List<RepositorioConexoesSteam.JogoBibliotecaSteam> buscarBiblioteca(String steamId) {
+    validarChave();
+    Map<String, Object> resposta = restClient.get()
+        .uri(uri -> uri.path("/IPlayerService/GetOwnedGames/v0001/")
+            .queryParam("key", chaveApi)
+            .queryParam("steamid", steamId)
+            .queryParam("include_appinfo", true)
+            .queryParam("include_played_free_games", true)
+            .build())
+        .retrieve()
+        .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+    Map<?, ?> response = resposta == null ? null : comoMapa(resposta.get("response"));
+    if (response == null || !response.containsKey("games")) {
+      throw new BibliotecaSteamPrivadaException();
+    }
+
+    List<RepositorioConexoesSteam.JogoBibliotecaSteam> jogos = new ArrayList<>();
+    for (Object item : comoLista(response.get("games"))) {
+      Map<?, ?> jogo = comoMapa(item);
+      if (jogo == null) continue;
+      Integer appId = comoInteiro(jogo.get("appid"));
+      String titulo = comoTexto(jogo.get("name"));
+      if (appId == null || titulo == null || titulo.isBlank()) continue;
+      jogos.add(new RepositorioConexoesSteam.JogoBibliotecaSteam(
+          appId,
+          titulo,
+          comoInteiro(jogo.get("playtime_forever"), 0),
+          comoTexto(jogo.get("img_icon_url"))));
+    }
+    return jogos;
+  }
+
+  ConquistasSteam buscarConquistas(String steamId, int appId) {
+    validarChave();
+    try {
+      Map<String, Object> resposta = restClient.get()
+          .uri(uri -> uri.path("/ISteamUserStats/GetPlayerAchievements/v0001/")
+              .queryParam("key", chaveApi)
+              .queryParam("steamid", steamId)
+              .queryParam("appid", appId)
+              .queryParam("l", "brazilian")
+              .build())
+          .retrieve()
+          .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+      Map<?, ?> playerstats = resposta == null ? null : comoMapa(resposta.get("playerstats"));
+      List<?> conquistas = playerstats == null ? List.of() : comoLista(playerstats.get("achievements"));
+      int desbloqueadas = 0;
+      for (Object item : conquistas) {
+        Map<?, ?> conquista = comoMapa(item);
+        if (conquista != null && Integer.valueOf(1).equals(comoInteiro(conquista.get("achieved")))) desbloqueadas++;
+      }
+      return new ConquistasSteam(desbloqueadas, conquistas.size());
+    } catch (RuntimeException erro) {
+      return null;
+    }
+  }
+
+  private void validarChave() {
+    if (chaveApi == null || chaveApi.isBlank()) throw new ChaveSteamNaoConfiguradaException();
+  }
+
+  private static Map<?, ?> comoMapa(Object valor) {
+    return valor instanceof Map<?, ?> mapa ? mapa : null;
+  }
+
+  private static List<?> comoLista(Object valor) {
+    return valor instanceof List<?> lista ? lista : List.of();
+  }
+
+  private static String comoTexto(Object valor) {
+    return valor instanceof String texto ? texto : null;
+  }
+
+  private static Integer comoInteiro(Object valor) {
+    return comoInteiro(valor, null);
+  }
+
+  private static Integer comoInteiro(Object valor, Integer padrao) {
+    return valor instanceof Number numero ? numero.intValue() : padrao;
+  }
+
+  record PerfilSteam(String nome, String avatarUrl) {}
+  record ConquistasSteam(int desbloqueadas, int total) {}
+  static class ChaveSteamNaoConfiguradaException extends RuntimeException {}
+  static class BibliotecaSteamPrivadaException extends RuntimeException {}
+}

@@ -3,6 +3,7 @@ import { AuthService } from '../../services/auth';
 import { supabase } from '../../services/supabase';
 import { FavoriteGame, FavoritesService } from '../../services/favorites';
 import { Subscription } from 'rxjs';
+import { ConexoesSteamService, StatusSteam } from '../../services/conexoes-steam';
 
 @Component({
   selector: 'app-profile',
@@ -24,11 +25,13 @@ export class Profile implements OnInit, OnDestroy {
   activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' = 'resumo';
   favorites: FavoriteGame[] = [];
   platformHours: Array<{ name: string; logo: string; hours: string }> = [];
+  steamStatus: StatusSteam | null = null;
   private favoritesSub?: Subscription;
 
   constructor(
     public auth: AuthService,
     private favoritesService: FavoritesService,
+    private steamService: ConexoesSteamService,
     private cdr: ChangeDetectorRef
   ) {
     this.name = auth.displayName;
@@ -48,7 +51,18 @@ export class Profile implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     }));
     this.favoritesService.load();
+    this.loadSteam();
   }
+
+  async loadSteam() {
+    try {
+      this.steamStatus = await this.steamService.status();
+      if (this.steamStatus.conectada) this.platformHours = [{ name: 'Steam', logo: 'store-logos/steam.svg', hours: this.formatHours(this.steamStatus.totalMinutos) }];
+    } catch { this.steamStatus = null; }
+    this.cdr.detectChanges();
+  }
+
+  formatHours(minutes: number): string { return `${Math.floor(minutes / 60)}h ${minutes % 60}m`; }
 
   ngOnDestroy() {
     this.favoritesSub?.unsubscribe();

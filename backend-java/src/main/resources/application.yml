@@ -16,8 +16,14 @@ app:
       price-initial-delay-ms: ${APP_SYNC_SCHEDULER_PRICE_INITIAL_DELAY_MS:60000}
       steam-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_DELAY_MS:900000}
       steam-initial-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_INITIAL_DELAY_MS:300000}
+      steam-achievements-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_ACHIEVEMENTS_DELAY_MS:1800000}
+      steam-achievements-initial-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_ACHIEVEMENTS_INITIAL_DELAY_MS:600000}
   itad:
     api-key: ${ITAD_API_KEY:}
+  steam:
+    api-key: ${STEAM_WEB_API_KEY:}
+    frontend-url: ${FRONTEND_URL:http://localhost:4200}
+  public-backend-url: ${PUBLIC_BACKEND_URL:}
   supabase:
     url: ${SUPABASE_URL:}
     anon-key: ${SUPABASE_ANON_KEY:}
