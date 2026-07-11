@@ -293,6 +293,24 @@ public class RepositorioJogos {
         .update();
   }
 
+  public ResumoFilaColeta resumirFilaColeta() {
+    return jdbc.sql("""
+        SELECT
+          COUNT(*) FILTER (WHERE last_price_sync_at IS NULL) AS nunca_sincronizados,
+          MIN(last_price_sync_at)::text AS sincronizacao_mais_antiga,
+          COUNT(*) FILTER (WHERE is_dlc IS NULL OR cover_url IS NULL) AS pendentes_steam
+        FROM games
+        WHERE itad_id IS NOT NULL
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("games"), JogosBloqueados.filtroSql("games")))
+        .query((rs, linha) -> new ResumoFilaColeta(
+            rs.getLong("nunca_sincronizados"),
+            rs.getString("sincronizacao_mais_antiga"),
+            rs.getLong("pendentes_steam")))
+        .single();
+  }
+
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {
     return jdbc.sql("""
         SELECT id, title, itad_id::text AS itad_id, cover_url, is_dlc
@@ -445,4 +463,5 @@ public class RepositorioJogos {
   record JogoParaSalvar(String itadId, String title, String slug, String coverUrl, Integer rank) {}
   record IdJogoItad(long id, String itadId) {}
   public record JogoParaSincronizar(long id, String itadId) {}
+  public record ResumoFilaColeta(long nuncaSincronizados, String sincronizacaoMaisAntiga, long pendentesSteam) {}
 }

@@ -148,6 +148,12 @@ sync_locks
   - Remove jogo dos monitorados.
 - `GET /actuator/health`
   - Health check usado pelo Render e pelo bot de monitoramento.
+- `GET /api/admin/coleta`
+  - Retorna status em memória das coletas de preços/Steam e resumo da fila.
+  - Exige token Supabase do UID administrador configurado no backend.
+- `POST /api/admin/coleta/precos` e `POST /api/admin/coleta/steam`
+  - Disparam uma coleta manual em segundo plano.
+  - Exigem o mesmo UID administrador; os jobs continuam protegidos pela trava compartilhada.
 
 ## Estrutura de pastas
 
@@ -234,6 +240,7 @@ sync_locks
 - **Capa ausente:** fallback visual em `no-cover.svg`; backend tenta preencher capa oficial da Steam quando possível.
 - **Catálogo:** scroll infinito via `window:scroll` com throttle por `requestAnimationFrame`.
 - **Navegação:** toda mudança de rota inicia no topo da página; o scroll infinito permanece restrito ao comportamento da própria tela de catálogo.
+- **Administração de coleta:** a rota `/admin/coleta` mostra status de preços, Steam e fila, além de permitir disparo manual em segundo plano. O frontend limita a rota ao UID administrador e o backend exige o mesmo UID no token Supabase para todos os endpoints `/api/admin/*`; UID permitido: `0a6eb06b-756e-4434-899b-33420bed8609`.
 
 ## Implementações futuras planejadas
 

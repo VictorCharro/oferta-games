@@ -10,7 +10,9 @@ import { Login } from './pages/login/login';
 import { Profile } from './pages/profile/profile';
 import { Settings } from './pages/settings/settings';
 import { Favorites } from './pages/favorites/favorites';
+import { AdminColeta } from './pages/admin-coleta/admin-coleta';
 import { authGuard } from './guards/auth.guard';
+import { adminGuard } from './guards/admin.guard';
 
 const routes: Routes = [
   { path: '', component: Home },
@@ -24,6 +26,7 @@ const routes: Routes = [
   { path: 'perfil', canActivate: [authGuard], component: Profile },
   { path: 'configuracoes', canActivate: [authGuard], component: Settings },
   { path: 'monitorados', canActivate: [authGuard], component: Favorites },
+  { path: 'admin/coleta', canActivate: [adminGuard], component: AdminColeta },
   { path: 'favoritos', redirectTo: 'monitorados', pathMatch: 'full' },
   { path: '**', redirectTo: '' },
 ];

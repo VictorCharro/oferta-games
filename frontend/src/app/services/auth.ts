@@ -8,12 +8,13 @@ import type { User, Session } from '@supabase/supabase-js';
 export class AuthService {
   private _user = new BehaviorSubject<User | null>(null);
   private _avatar = new BehaviorSubject<string>('');
+  private readonly sessaoInicial: Promise<void>;
   user$ = this._user.asObservable();
   avatar$ = this._avatar.asObservable();
 
   constructor(private router: Router) {
     // Carrega sessão existente
-    supabase.auth.getSession().then(({ data }) => {
+    this.sessaoInicial = supabase.auth.getSession().then(({ data }) => {
       this._user.next(data.session?.user ?? null);
       this.loadAvatar(data.session?.user ?? null);
     });
@@ -28,6 +29,10 @@ export class AuthService {
   get user(): User | null { return this._user.value; }
   get avatarUrl(): string { return this._avatar.value; }
   get isLoggedIn(): boolean { return this._user.value !== null; }
+
+  async aguardarSessaoInicial() {
+    await this.sessaoInicial;
+  }
 
   get displayName(): string {
     const u = this._user.value;

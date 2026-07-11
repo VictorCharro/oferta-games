@@ -1,0 +1,14 @@
+.admin-page { max-width: 1180px; margin: 0 auto; }
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 24px; h1 { font-size: 28px; margin: 4px 0 6px; } p { color: var(--text-secondary); font-size: 14px; } }
+.eyebrow, .label { color: var(--color-purple) !important; font-size: 11px !important; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
+.refresh { min-width: 40px; }
+.status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.status-card, .queue-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; }
+.status-card { padding: 22px; }
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; strong { display: block; margin-top: 5px; font-size: 18px; &.running { color: var(--color-purple); } } }
+dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 24px; div { border-top: 1px solid var(--border-color); padding-top: 12px; } dt { color: var(--text-secondary); font-size: 12px; margin-bottom: 5px; } dd { margin: 0; font-size: 14px; font-weight: 600; } }
+.error-detail { margin-top: 16px; color: var(--color-red); font-size: 12px; }
+.queue-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px; margin-top: 18px; h2 { font-size: 20px; margin-top: 4px; } }
+.queue-metrics { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 24px; > div { display: flex; flex-direction: column; gap: 6px; } span { color: var(--text-secondary); font-size: 12px; } strong { font-size: 16px; } }
+.message { margin-bottom: 18px; padding: 11px 14px; border-radius: 6px; font-size: 13px; &.success { color: var(--color-green); background: rgba(74, 222, 128, .08); border: 1px solid rgba(74, 222, 128, .2); } &.error { color: var(--color-red); background: rgba(239, 68, 68, .08); border: 1px solid rgba(239, 68, 68, .2); } }
+@media (max-width: 760px) { .page-header, .queue-card { align-items: flex-start; flex-direction: column; } .status-grid { grid-template-columns: 1fr; } .queue-metrics { width: 100%; grid-template-columns: 1fr; gap: 14px; } }

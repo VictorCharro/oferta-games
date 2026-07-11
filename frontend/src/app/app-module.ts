@@ -20,6 +20,7 @@ import { Login } from './pages/login/login';
 import { Profile } from './pages/profile/profile';
 import { Settings } from './pages/settings/settings';
 import { Favorites } from './pages/favorites/favorites';
+import { AdminColeta } from './pages/admin-coleta/admin-coleta';
 
 @NgModule({
   declarations: [
@@ -38,6 +39,7 @@ import { Favorites } from './pages/favorites/favorites';
     Profile,
     Settings,
     Favorites,
+    AdminColeta,
   ],
   imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule, FormsModule],
   providers: [provideBrowserGlobalErrorListeners()],

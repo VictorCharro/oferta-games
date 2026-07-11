@@ -44,12 +44,12 @@ public class ServicoSincronizacao {
     return new ResultadoSincronizacao(true, sincronizadas, ignoradas, temMais, temMais ? paginaSegura + 1 : null, 0);
   }
 
-  public void sincronizarRodadaPrecos() {
+  public ResultadoRodadaColeta sincronizarRodadaPrecos() {
     List<RepositorioJogos.JogoParaSincronizar> selecionados = jogos.listarParaSincronizar(
         LIMITE_RELEVANTES, LIMITE_GERAIS);
     if (selecionados.isEmpty()) {
       logger.info("Coleta agendada de precos sem jogos elegiveis");
-      return;
+      return new ResultadoRodadaColeta(0, 0);
     }
 
     int jogosAtualizados = 0;
@@ -69,11 +69,13 @@ public class ServicoSincronizacao {
         "Coleta agendada de precos concluida: {} jogos e {} ofertas atualizados",
         jogosAtualizados,
         ofertasAtualizadas);
+    return new ResultadoRodadaColeta(jogosAtualizados, ofertasAtualizadas);
   }
 
-  public void sincronizarRodadaSteam() {
+  public ResultadoRodadaColeta sincronizarRodadaSteam() {
     int atualizados = catalogo.preencherMetadadosSteam(LIMITE_METADADOS_STEAM);
     logger.info("Coleta agendada de metadados Steam concluida: {} jogos atualizados", atualizados);
+    return new ResultadoRodadaColeta(atualizados, 0);
   }
 
   private ServicoCatalogo.ResultadoAtualizacaoLote atualizarLoteComTentativas(

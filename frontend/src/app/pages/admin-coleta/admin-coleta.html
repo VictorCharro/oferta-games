@@ -1,0 +1,49 @@
+<div class="page-content">
+  <main class="admin-page">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Administracao</p>
+        <h1>Coleta do catalogo</h1>
+        <p>Acompanhamento interno das atualizacoes de precos e metadados.</p>
+      </div>
+      <button class="btn-outline refresh" type="button" (click)="carregar()" [disabled]="loading">Atualizar</button>
+    </header>
+
+    <p class="message success" *ngIf="aviso">{{ aviso }}</p>
+    <p class="message error" *ngIf="error">{{ error }}</p>
+
+    <section class="status-grid" *ngIf="status as dados">
+      <article class="status-card" *ngFor="let coleta of [dados.precos, dados.steam]">
+        <div class="card-top">
+          <div>
+            <p class="label">{{ coleta.tipo === 'precos' ? 'Precos ITAD' : 'Metadados Steam' }}</p>
+            <strong [class.running]="coleta.emExecucao">{{ textoStatus(coleta) }}</strong>
+          </div>
+          <button class="btn-primary" type="button" (click)="disparar(coleta.tipo === 'precos' ? 'precos' : 'steam')"
+            [disabled]="coleta.emExecucao || disparando !== null">
+            {{ disparando === coleta.tipo ? 'Solicitando...' : 'Rodar agora' }}
+          </button>
+        </div>
+        <dl>
+          <div><dt>Ultima conclusao</dt><dd>{{ formatarData(coleta.ultimaConclusao) }}</dd></div>
+          <div><dt>Duracao</dt><dd>{{ formatarDuracao(coleta.emExecucao ? coleta.duracaoAtualMs : coleta.ultimaDuracaoMs) }}</dd></div>
+          <div><dt>Jogos atualizados</dt><dd>{{ coleta.jogosAtualizados | number }}</dd></div>
+          <div><dt>Ofertas atualizadas</dt><dd>{{ coleta.ofertasAtualizadas | number }}</dd></div>
+        </dl>
+        <p class="error-detail" *ngIf="coleta.ultimoErro">{{ coleta.ultimoErro }}</p>
+      </article>
+    </section>
+
+    <section class="queue-card" *ngIf="status as dados">
+      <div>
+        <p class="label">Fila do catalogo</p>
+        <h2>Atualizacao pendente</h2>
+      </div>
+      <div class="queue-metrics">
+        <div><span>Nunca sincronizados</span><strong>{{ dados.fila.nuncaSincronizados | number }}</strong></div>
+        <div><span>Preco mais antigo</span><strong>{{ formatarData(dados.fila.sincronizacaoMaisAntiga) }}</strong></div>
+        <div><span>Pendentes Steam</span><strong>{{ dados.fila.pendentesSteam | number }}</strong></div>
+      </div>
+    </section>
+  </main>
+</div>
