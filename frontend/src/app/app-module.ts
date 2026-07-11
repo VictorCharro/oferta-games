@@ -21,6 +21,7 @@ import { Profile } from './pages/profile/profile';
 import { Settings } from './pages/settings/settings';
 import { Favorites } from './pages/favorites/favorites';
 import { AdminColeta } from './pages/admin-coleta/admin-coleta';
+import { PublicProfile } from './pages/public-profile/public-profile';
 
 @NgModule({
   declarations: [
@@ -40,6 +41,7 @@ import { AdminColeta } from './pages/admin-coleta/admin-coleta';
     Settings,
     Favorites,
     AdminColeta,
+    PublicProfile,
   ],
   imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule, FormsModule],
   providers: [provideBrowserGlobalErrorListeners()],

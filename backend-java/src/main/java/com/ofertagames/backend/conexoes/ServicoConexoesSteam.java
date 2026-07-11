@@ -14,7 +14,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 @Service
-class ServicoConexoesSteam {
+public class ServicoConexoesSteam {
   private static final String URL_OPENID = "https://steamcommunity.com/openid/login";
   private static final String IDENTIFICADOR_SELECT = "http://specs.openid.net/auth/2.0/identifier_select";
   private static final Pattern STEAM_ID = Pattern.compile("^https?://steamcommunity\\.com/openid/id/(\\d+)/?$");
@@ -105,13 +105,13 @@ class ServicoConexoesSteam {
     return atualizados;
   }
 
-  java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId) {
+  public java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId) {
     return conexoes.listarBiblioteca(usuarioId, 100).stream()
         .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash()))
         .toList();
   }
 
-  StatusConexaoSteam status(String usuarioId) {
+  public StatusConexaoSteam status(String usuarioId) {
     Optional<RepositorioConexoesSteam.ConexaoSteam> conexao = conexoes.buscarConexao(usuarioId);
     if (conexao.isEmpty()) return StatusConexaoSteam.desconectada();
     RepositorioConexoesSteam.ResumoSteam resumo = conexoes.resumir(usuarioId);
@@ -190,7 +190,7 @@ class ServicoConexoesSteam {
     }
   }
 
-  record StatusConexaoSteam(
+  public record StatusConexaoSteam(
       boolean conectada,
       String nome,
       String avatarUrl,
@@ -207,7 +207,7 @@ class ServicoConexoesSteam {
     }
   }
 
-  record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash) {}
+  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash) {}
 
   static class ConexaoSteamNaoEncontradaException extends RuntimeException {}
   static class UrlBackendNaoConfiguradaException extends RuntimeException {}

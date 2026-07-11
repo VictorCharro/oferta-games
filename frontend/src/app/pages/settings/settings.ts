@@ -8,6 +8,7 @@ import {
   UserPreferences,
 } from '../../services/preferences';
 import { ConexoesSteamService, StatusSteam } from '../../services/conexoes-steam';
+import { PerfisService } from '../../services/perfis';
 
 type SettingsTab = 'conta' | 'conexoes' | 'preferencias' | 'privacidade';
 
@@ -31,6 +32,7 @@ export class Settings implements OnInit {
   error = '';
   steamStatus: StatusSteam | null = null;
   steamLoading = false;
+  profileHandle = '';
 
   readonly tabs: Array<{ id: SettingsTab; label: string }> = [
     { id: 'conta', label: 'Conta' },
@@ -43,6 +45,7 @@ export class Settings implements OnInit {
     public auth: AuthService,
     private preferencesService: PreferencesService,
     private steamService: ConexoesSteamService,
+    private perfisService: PerfisService,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {}
@@ -55,6 +58,7 @@ export class Settings implements OnInit {
     this.privacy = { ...this.preferencesService.privacy };
     if (this.route.snapshot.queryParamMap.has('steam')) this.activeTab = 'conexoes';
     this.loadSteam();
+    this.loadPublicProfile();
   }
 
   selectTab(tab: SettingsTab) {
@@ -67,6 +71,11 @@ export class Settings implements OnInit {
   async syncSteam() { this.steamLoading = true; try { await this.steamService.sincronizar(); this.success = 'Sincronizacao da biblioteca iniciada.'; } catch { this.error = 'Nao foi possivel iniciar a sincronizacao da Steam.'; } this.steamLoading = false; this.cdr.detectChanges(); }
   async disconnectSteam() { this.steamLoading = true; try { await this.steamService.desconectar(); this.steamStatus = null; } catch { this.error = 'Nao foi possivel desconectar a Steam.'; } this.steamLoading = false; this.cdr.detectChanges(); }
 
+  async loadPublicProfile() { try { const perfil = await this.perfisService.proprio(); if (perfil) { this.profileHandle = perfil.handle || ''; this.privacy = { publicProfile: perfil.publico, showGameHours: perfil.mostrarHoras, showAchievements: perfil.mostrarConquistas, showLibrary: perfil.mostrarBiblioteca, showFavoriteGames: perfil.mostrarFavoritos }; } } catch {} this.cdr.detectChanges(); }
+  async salvarPrivacidade() { try { await this.salvarPerfilPublico(); this.success = 'Preferencias de privacidade salvas.'; this.error = ''; } catch { this.error = 'Defina uma URL valida e disponivel para publicar o perfil.'; } this.cdr.detectChanges(); }
+  perfilPublicoUrl(): string { return this.profileHandle ? `${window.location.origin}/u/${this.profileHandle}` : ''; }
+  private async salvarPerfilPublico() { await this.perfisService.salvar({ handle: this.profileHandle, nomeExibicao: this.name.trim(), bio: this.bio.trim(), publico: this.privacy.publicProfile, mostrarHoras: this.privacy.showGameHours, mostrarConquistas: this.privacy.showAchievements, mostrarBiblioteca: this.privacy.showLibrary, mostrarFavoritos: this.privacy.showFavoriteGames }); }
+
   async saveAccount() {
     this.clearMessages();
     const name = this.name.trim();
@@ -76,6 +85,7 @@ export class Settings implements OnInit {
     const { error } = await supabase.auth.updateUser({
       data: { ...metadata, name, bio: this.bio.trim() },
     });
+    if (!error) await this.salvarPerfilPublico();
     this.saving = false;
     this.success = error ? '' : 'Informações salvas com sucesso.';
     this.error = error ? 'Não foi possível salvar as informações.' : '';
@@ -90,8 +100,7 @@ export class Settings implements OnInit {
 
   savePrivacy() {
     this.preferencesService.savePrivacy(this.privacy);
-    this.success = 'Preferências de privacidade salvas.';
-    this.error = '';
+    this.salvarPrivacidade();
   }
 
   async changePassword() {

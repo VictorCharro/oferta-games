@@ -30,6 +30,8 @@ select { cursor: pointer; }
 .privacy-list .switch-row:last-child { border-bottom: 0; }
 .impact-note { display: flex; flex-direction: column; gap: 5px; background: rgba(41, 168, 224, .07); border-left: 3px solid var(--color-purple); padding: 13px 15px; strong { font-size: 13px; } span { color: var(--text-secondary); font-size: 12px; } }
 .privacy-hint { color: var(--text-muted); font-size: 12px; }
+.profile-url { display: flex; align-items: center; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; > span { padding-left: 12px; color: var(--text-muted); font-size: 14px; } input { border: 0; } }
+.public-profile-link { color: var(--color-purple); font-weight: 700; font-size: 13px; }
 
 @media (max-width: 850px) { .password-grid, .preferences-grid { grid-template-columns: 1fr 1fr; } .connections-grid { grid-template-columns: 1fr; } }
 @media (max-width: 620px) { .page-content { padding: 20px 14px; } .settings-tabs { grid-template-columns: repeat(2, 1fr); } .form-grid, .password-grid, .preferences-grid { grid-template-columns: 1fr; } .connection-card { grid-template-columns: 42px 1fr; button { grid-column: 1 / -1; width: 100%; } } .session-card { align-items: flex-start; flex-direction: column; } }

@@ -1,0 +1,6 @@
+<div class="page-content public-profile" *ngIf="profile; else unavailable">
+  <section class="public-hero"><div class="avatar"><img *ngIf="profile.avatarUrl" [src]="profile.avatarUrl" alt="" /><span *ngIf="!profile.avatarUrl">{{ profile.nomeExibicao.charAt(0) }}</span></div><div><h1>{{ profile.nomeExibicao }}</h1><span class="handle">@{{ profile.handle }}</span><p *ngIf="profile.bio">{{ profile.bio }}</p></div></section>
+  <section class="public-stats" *ngIf="profile.totalMinutos != null || profile.conquistasTotal != null"><article *ngIf="profile.totalMinutos != null"><span>Horas jogadas</span><strong>{{ hours(profile.totalMinutos) }}</strong><small>Steam</small></article><article *ngIf="profile.conquistasTotal != null"><span>Conquistas</span><strong>{{ profile.conquistasDesbloqueadas }}/{{ profile.conquistasTotal }}</strong><small>Steam</small></article></section>
+  <section class="public-library" *ngIf="profile.biblioteca.length"><h2>Biblioteca</h2><div class="games"><article *ngFor="let game of profile.biblioteca"><img [src]="icon(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span></div></article></div></section>
+</div>
+<ng-template #unavailable><div class="page-content unavailable"><h1>Perfil indisponível</h1><p>Este perfil não existe ou não está público.</p></div></ng-template>

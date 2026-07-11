@@ -264,6 +264,13 @@ sync_locks
 - Lista de desejos nao e coletada.
 - Antes do deploy, executar `backend-java/sql/20260711_conexoes_steam.sql` no Supabase e configurar no Render: `STEAM_WEB_API_KEY`, `PUBLIC_BACKEND_URL=https://oferta-games.onrender.com` e a URL publica correta em `FRONTEND_URL`.
 
+## Perfis publicos
+
+- Cada usuario escolhe um identificador unico e compartilhavel no formato `/u/identificador`.
+- O perfil e privado por padrao. E-mail, UUID, jogos monitorados e dados de conexao nunca sao expostos.
+- O usuario escolhe se libera horas jogadas, conquistas e biblioteca. O backend filtra os dados antes de responder a rota publica.
+- A persistencia fica em `profiles`; executar `backend-java/sql/20260711_perfis_publicos.sql` no Supabase antes do deploy.
+
 - Sem scraping de sites.
 - Sem multi-moeda funcional por enquanto.
 - Não disparar mais a sincronização recorrente pelo GitHub Actions.

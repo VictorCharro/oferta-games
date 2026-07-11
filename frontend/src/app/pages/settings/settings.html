@@ -28,6 +28,7 @@
             <span>E-mail</span>
             <input type="email" [value]="auth.user?.email || ''" disabled />
           </label>
+          <label class="field full-width"><span>URL do perfil</span><div class="profile-url"><span>/u/</span><input type="text" [(ngModel)]="profileHandle" maxlength="30" placeholder="seu-nome" /></div><small>Use letras minúsculas, números e hífen. Esta será sua URL compartilhável.</small></label>
           <label class="field full-width">
             <span>Bio</span>
             <textarea [(ngModel)]="bio" maxlength="180" rows="3" placeholder="Conte um pouco sobre você"></textarea>
@@ -102,6 +103,7 @@
           <label class="switch-row"><span><strong>Mostrar jogos favoritos</strong><small>Exibe os favoritos pessoais escolhidos para o perfil.</small></span><input type="checkbox" [(ngModel)]="privacy.showFavoriteGames" [disabled]="!privacy.publicProfile" /></label>
         </div>
         <p class="privacy-hint" *ngIf="!privacy.publicProfile">Com o perfil privado, somente você verá essas informações.</p>
+        <a class="public-profile-link" *ngIf="privacy.publicProfile && profileHandle" [href]="perfilPublicoUrl()" target="_blank" rel="noopener">Ver perfil público</a>
         <button class="btn-primary action-button" (click)="savePrivacy()">Salvar privacidade</button>
       </div>
     </section>

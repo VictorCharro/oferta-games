@@ -1,0 +1,43 @@
+package com.ofertagames.backend.perfis;
+
+import com.ofertagames.backend.conexoes.ServicoConexoesSteam;
+import java.util.List;
+import java.util.Locale;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+@Service
+class ServicoPerfis {
+  private final RepositorioPerfis perfis;
+  private final ServicoConexoesSteam steam;
+
+  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam) { this.perfis = perfis; this.steam = steam; }
+
+  RepositorioPerfis.Perfil proprio(String usuarioId) { return perfis.buscarPorUsuario(usuarioId).orElse(null); }
+
+  void salvar(String usuarioId, EntradaPerfil entrada) {
+    String handle = normalizarHandle(entrada.handle());
+    if (entrada.publico() && handle == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Defina a URL do perfil antes de torna-lo publico");
+    try { perfis.salvar(usuarioId, new RepositorioPerfis.DadosPerfil(handle, limitar(entrada.nomeExibicao(), 60), limitar(entrada.bio(), 180), null, entrada.publico(), entrada.mostrarHoras(), entrada.mostrarConquistas(), entrada.mostrarBiblioteca(), entrada.mostrarFavoritos())); }
+    catch (RuntimeException erro) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta URL de perfil ja esta em uso"); }
+  }
+
+  PerfilPublico publico(String handle) {
+    RepositorioPerfis.Perfil perfil = perfis.buscarPublicoPorHandle(normalizarHandleObrigatorio(handle)).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    ServicoConexoesSteam.StatusConexaoSteam status = steam.status(perfil.usuarioId());
+    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = perfil.mostrarBiblioteca() ? steam.biblioteca(perfil.usuarioId()) : List.of();
+    return new PerfilPublico(perfil.handle(), perfil.nomeExibicao(), perfil.bio(), perfil.avatarUrl(),
+        perfil.mostrarHoras() ? status.totalMinutos() : null,
+        perfil.mostrarConquistas() ? status.conquistasDesbloqueadas() : null,
+        perfil.mostrarConquistas() ? status.conquistasTotal() : null,
+        jogos);
+  }
+
+  private static String normalizarHandle(String valor) { if (valor == null || valor.isBlank()) return null; return normalizarHandleObrigatorio(valor); }
+  private static String normalizarHandleObrigatorio(String valor) { String handle = valor.trim().toLowerCase(Locale.ROOT); if (!handle.matches("^[a-z0-9][a-z0-9-]{2,29}$")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use de 3 a 30 caracteres: letras minusculas, numeros e hifen"); return handle; }
+  private static String limitar(String valor, int maximo) { String resultado = valor == null ? "" : valor.trim(); return resultado.length() > maximo ? resultado.substring(0, maximo) : resultado; }
+
+  record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos) {}
+  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca) {}
+}

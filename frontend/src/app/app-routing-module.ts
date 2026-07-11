@@ -11,6 +11,7 @@ import { Profile } from './pages/profile/profile';
 import { Settings } from './pages/settings/settings';
 import { Favorites } from './pages/favorites/favorites';
 import { AdminColeta } from './pages/admin-coleta/admin-coleta';
+import { PublicProfile } from './pages/public-profile/public-profile';
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin.guard';
 
@@ -24,6 +25,7 @@ const routes: Routes = [
   { path: 'gratuitos', component: FreeGames },
   { path: 'login', component: Login },
   { path: 'perfil', canActivate: [authGuard], component: Profile },
+  { path: 'u/:handle', component: PublicProfile },
   { path: 'configuracoes', canActivate: [authGuard], component: Settings },
   { path: 'monitorados', canActivate: [authGuard], component: Favorites },
   { path: 'admin/coleta', canActivate: [adminGuard], component: AdminColeta },
