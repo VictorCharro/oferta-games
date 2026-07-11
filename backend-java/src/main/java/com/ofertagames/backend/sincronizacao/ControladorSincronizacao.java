@@ -43,7 +43,16 @@ public class ControladorSincronizacao {
           "error", "Sync failed",
           "page", page,
           "type", erro.getClass().getSimpleName(),
-          "message", erro.getMessage() == null ? "" : erro.getMessage()));
+          "message", erro.getMessage() == null ? "" : erro.getMessage(),
+          "rootCause", mensagemCausaRaiz(erro)));
     }
+  }
+
+  private String mensagemCausaRaiz(Throwable erro) {
+    Throwable causa = erro;
+    while (causa.getCause() != null && causa.getCause() != causa) {
+      causa = causa.getCause();
+    }
+    return causa.getMessage() == null ? "" : causa.getMessage();
   }
 }

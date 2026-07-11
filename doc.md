@@ -133,6 +133,7 @@ favorites
   - Exige header `X-Sync-Key`.
   - Não executa backfill Steam durante o sync no Render free, para manter o processo leve.
   - Usa `/deals/v2` para paginar jogos e `/games/prices/v3` para obter todas as ofertas atuais de cada lote de 50 jogos. As ofertas ITAD de cada jogo são substituídas pelo conjunto retornado, removendo preços antigos de lojas que não apareçam mais.
+  - O banco precisa permitir `DELETE` em `offers`, pois a substituição remove as ofertas ITAD antigas antes de gravar o conjunto atual.
 - `GET /api/favorites`
   - Lista jogos monitorados/salvos pelo usuário autenticado para acompanhar preço.
 - `POST /api/favorites`
