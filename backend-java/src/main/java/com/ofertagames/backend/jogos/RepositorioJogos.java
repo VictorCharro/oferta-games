@@ -137,7 +137,7 @@ public class RepositorioJogos {
   public List<IdJogoItad> salvarJogosItad(List<JogoParaSalvar> jogos) {
     return jogos.stream()
         .filter(jogo -> !ConteudosNaoJogos.contem(jogo.title()))
-        .filter(jogo -> !JogosBloqueados.contemIdItad(jogo.itadId()))
+        .filter(jogo -> !JogosBloqueados.contemSlug(jogo.slug()))
         .map(jogo -> new IdJogoItad(
             salvarJogoItad(jogo.itadId(), jogo.title(), jogo.slug(), jogo.coverUrl(), jogo.rank()),
             jogo.itadId()))
