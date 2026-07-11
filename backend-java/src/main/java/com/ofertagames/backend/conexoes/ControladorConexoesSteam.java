@@ -1,8 +1,8 @@
 package com.ofertagames.backend.conexoes;
 
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
-import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
@@ -40,12 +40,16 @@ public class ControladorConexoesSteam {
 
   @GetMapping("/retorno")
   ResponseEntity<Void> retorno(@RequestParam UUID state, @RequestParam MultiValueMap<String, String> parametros) {
-    return steam.concluir(state, parametros)
-        .map(usuario -> {
-          executor.execute(() -> steam.sincronizarBiblioteca(usuario));
-          return ResponseEntity.<Void>status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, steam.urlRetornoSucesso()).build();
-        })
-        .orElseGet(() -> ResponseEntity.<Void>status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, steam.urlRetornoErro()).build());
+    Optional<String> usuario = steam.concluir(state, parametros);
+    if (usuario.isPresent()) {
+      executor.execute(() -> steam.sincronizarBiblioteca(usuario.get()));
+      return ResponseEntity.status(HttpStatus.FOUND)
+          .header(HttpHeaders.LOCATION, steam.urlRetornoSucesso())
+          .build();
+    }
+    return ResponseEntity.status(HttpStatus.FOUND)
+        .header(HttpHeaders.LOCATION, steam.urlRetornoErro())
+        .build();
   }
 
   @GetMapping
