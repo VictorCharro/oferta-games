@@ -112,37 +112,47 @@ public class ServicoCatalogo {
     Map<String, Long> mapaIds = jogos.salvarJogosItad(jogosParaSalvar).stream()
         .collect(Collectors.toMap(RepositorioJogos.IdJogoItad::itadId, RepositorioJogos.IdJogoItad::id));
 
-    List<OfertaParaSalvar> ofertasParaSalvar = new ArrayList<>();
-    for (ItemOfertaItad item : itens) {
-      if (item == null
-          || item.id() == null
-          || item.deal() == null
-          || item.deal().shop() == null
-          || item.deal().shop().name() == null || item.deal().shop().name().isBlank()
-          || item.deal().price() == null
-          || item.deal().price().amount() == null
-          || item.deal().url() == null || item.deal().url().isBlank()) {
+    List<String> idsItad = new ArrayList<>(mapaIds.keySet());
+    List<ResultadoPrecoItad> resultados = itad.buscarPrecos(idsItad);
+    if (resultados == null || resultados.isEmpty()) {
+      throw new IllegalStateException("A ITAD nao retornou precos para o lote do sync");
+    }
+
+    int atualizadas = 0;
+    for (ResultadoPrecoItad resultado : resultados) {
+      if (resultado == null || resultado.id() == null) {
         continue;
       }
-      Long jogoId = mapaIds.get(item.id());
+      Long jogoId = mapaIds.get(resultado.id());
       if (jogoId == null) {
         continue;
       }
-      ofertasParaSalvar.add(new OfertaParaSalvar(
-          jogoId,
-          "itad",
-          item.deal().shop().name(),
-          item.deal().price().amount(),
-          item.deal().regular() == null ? null : item.deal().regular().amount(),
-          "BRL",
-          item.deal().url()));
+
+      List<OfertaParaSalvar> ofertasAtuais = new ArrayList<>();
+      List<OfertaPrecoItad> ofertasItad = resultado.deals();
+      if (ofertasItad != null) {
+        for (OfertaPrecoItad oferta : ofertasItad) {
+          if (oferta == null
+              || oferta.shop() == null
+              || oferta.shop().name() == null || oferta.shop().name().isBlank()
+              || oferta.price() == null || oferta.price().amount() == null
+              || oferta.url() == null || oferta.url().isBlank()) {
+            continue;
+          }
+          ofertasAtuais.add(new OfertaParaSalvar(
+              jogoId,
+              "itad",
+              oferta.shop().name(),
+              oferta.price().amount(),
+              oferta.regular() == null ? null : oferta.regular().amount(),
+              "BRL",
+              oferta.url()));
+        }
+      }
+      atualizadas += jogos.substituirOfertasItad(jogoId, ofertasAtuais);
     }
 
-    if (ofertasParaSalvar.isEmpty()) {
-      return 0;
-    }
-
-    return jogos.salvarOfertas(ofertasParaSalvar);
+    return atualizadas;
   }
 
   public int preencherMetadadosSteam(int limite) {

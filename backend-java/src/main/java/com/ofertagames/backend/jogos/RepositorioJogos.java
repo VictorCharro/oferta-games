@@ -11,6 +11,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class RepositorioJogos {
@@ -206,6 +207,14 @@ public class RepositorioJogos {
         .flatMapToInt(Arrays::stream)
         .map(contagem -> contagem == Statement.SUCCESS_NO_INFO ? 1 : Math.max(contagem, 0))
         .sum();
+  }
+
+  @Transactional
+  public int substituirOfertasItad(long jogoId, List<OfertaParaSalvar> ofertas) {
+    jdbc.sql("DELETE FROM offers WHERE game_id = :jogoId AND source = 'itad'")
+        .param("jogoId", jogoId)
+        .update();
+    return salvarOfertas(ofertas);
   }
 
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {
