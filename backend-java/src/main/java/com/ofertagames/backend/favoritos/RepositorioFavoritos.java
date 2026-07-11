@@ -1,5 +1,6 @@
 package com.ofertagames.backend.favoritos;
 
+import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -32,8 +33,9 @@ public class RepositorioFavoritos {
           LIMIT 1
         ) oferta ON true
         WHERE f.user_id = CAST(:usuarioId AS uuid)
+          %s
         ORDER BY f.created_at DESC
-        """)
+        """.formatted(ConteudosNaoJogos.filtroSql("g")))
         .param("usuarioId", usuarioId)
         .query((rs, linha) -> new FavoritoJogo(
             rs.getString("slug"),

@@ -213,6 +213,7 @@ sync_locks
 - **Plataformas:** enquanto o backend não persiste `platforms/drm` do ITAD, o frontend infere PC e Xbox pelo nome/link da loja. PlayStation fica suportado internamente, mas sem botão no catálogo enquanto não houver ofertas.
 - **Filtro de plataforma no catálogo:** o backend recebe `platform` em `/api/games` e calcula preço/loja considerando ofertas da plataforma filtrada.
 - **Lojas bloqueadas:** lojas com links quebrados são filtradas por `LojasBloqueadas.java` e também ignoradas no salvamento do sync. Lista atual: GreenManGaming, AllYouPay/AllYouPlay, PlanetPlay, PlayerLand, JoyBuggy, WinGameStore, MacGameStore, Humble Store/Humble Bundle.
+- **Conteúdo que não é jogo:** cursos e bundles educacionais da ITAD são filtrados por `ConteudosNaoJogos.java` no catálogo, descontos, busca, detalhe, favoritos e filas de coleta. A regra cobre termos como certification, e-learning, programming bundle, cybersecurity e masterclass.
 - **DLC detection:** `games.is_dlc` é preenchido via Steam quando há oferta Steam; enquanto `is_dlc IS NULL`, o frontend usa heurística por título.
 - **Deduplicação de deals:** `DISTINCT ON (g.id)` mantém apenas a oferta mais barata por jogo.
 - **Catálogo rotativo:** top 200 por rank com desconto ativo sobem ao topo.
