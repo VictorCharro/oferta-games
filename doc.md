@@ -266,7 +266,8 @@ sync_locks
 
 ## Perfis publicos
 
-- Cada usuario escolhe um identificador unico e compartilhavel no formato `/u/identificador`.
+- Cada usuario escolhe um identificador unico e compartilhavel na raiz, no formato `/identificador`. Rotas do produto sao reservadas e nao podem ser usadas como identificador.
+- A area privada `/perfil` mostra a URL publica do proprio usuario e oferece o comando para copia-la quando o perfil estiver publico.
 - O perfil e privado por padrao. E-mail, UUID, jogos monitorados e dados de conexao nunca sao expostos.
 - O usuario escolhe se libera horas jogadas, conquistas e biblioteca. O backend filtra os dados antes de responder a rota publica.
 - A persistencia fica em `profiles`; executar `backend-java/sql/20260711_perfis_publicos.sql` no Supabase antes do deploy.

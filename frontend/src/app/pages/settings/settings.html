@@ -28,7 +28,7 @@
             <span>E-mail</span>
             <input type="email" [value]="auth.user?.email || ''" disabled />
           </label>
-          <label class="field full-width"><span>URL do perfil</span><div class="profile-url"><span>/u/</span><input type="text" [(ngModel)]="profileHandle" maxlength="30" placeholder="seu-nome" /></div><small>Use letras minúsculas, números e hífen. Esta será sua URL compartilhável.</small></label>
+          <label class="field full-width"><span>URL do perfil</span><div class="profile-url"><span>/</span><input type="text" [(ngModel)]="profileHandle" maxlength="30" placeholder="seu-nome" /></div><small>Use letras minúsculas, números e hífen. Esta será sua URL compartilhável.</small></label>
           <label class="field full-width">
             <span>Bio</span>
             <textarea [(ngModel)]="bio" maxlength="180" rows="3" placeholder="Conte um pouco sobre você"></textarea>

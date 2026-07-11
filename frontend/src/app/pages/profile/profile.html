@@ -12,6 +12,10 @@
       <div class="profile-identity">
         <h1>{{ auth.displayName }}</h1>
         <p>{{ auth.user?.email }}</p>
+        <div class="public-profile-url" *ngIf="publicProfileUrl">
+          <a [href]="publicProfileUrl" target="_blank" rel="noopener">{{ publicProfileUrl }}</a>
+          <button type="button" (click)="copyPublicProfileUrl()">Copiar link</button>
+        </div>
         <div class="bio-editor" *ngIf="editingBio; else bioPreview">
           <textarea
             [(ngModel)]="bioDraft"

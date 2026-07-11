@@ -106,6 +106,8 @@
   }
 }
 
+.public-profile-url { display: flex; align-items: center; gap: 10px; margin: -4px 0 12px; min-width: 0; a { color: var(--color-purple); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } button { flex: 0 0 auto; padding: 5px 9px; border: 1px solid var(--border-color); border-radius: 6px; background: transparent; color: var(--text-secondary); font-size: 11px; font-weight: 700; &:hover { border-color: var(--color-purple); color: var(--color-purple); } } }
+
 .bio-btn {
   border: 0;
   padding: 0;

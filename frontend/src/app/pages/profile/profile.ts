@@ -4,6 +4,7 @@ import { supabase } from '../../services/supabase';
 import { FavoriteGame, FavoritesService } from '../../services/favorites';
 import { Subscription } from 'rxjs';
 import { ConexoesSteamService, JogoBibliotecaSteam, StatusSteam } from '../../services/conexoes-steam';
+import { PerfisService } from '../../services/perfis';
 
 @Component({
   selector: 'app-profile',
@@ -27,12 +28,14 @@ export class Profile implements OnInit, OnDestroy {
   platformHours: Array<{ name: string; logo: string; hours: string }> = [];
   steamStatus: StatusSteam | null = null;
   libraryGames: JogoBibliotecaSteam[] = [];
+  publicProfileUrl = '';
   private favoritesSub?: Subscription;
 
   constructor(
     public auth: AuthService,
     private favoritesService: FavoritesService,
     private steamService: ConexoesSteamService,
+    private perfisService: PerfisService,
     private cdr: ChangeDetectorRef
   ) {
     this.name = auth.displayName;
@@ -53,6 +56,7 @@ export class Profile implements OnInit, OnDestroy {
     }));
     this.favoritesService.load();
     this.loadSteam();
+    this.loadPublicProfile();
   }
 
   async loadSteam() {
@@ -63,6 +67,25 @@ export class Profile implements OnInit, OnDestroy {
         this.libraryGames = await this.steamService.biblioteca();
       }
     } catch { this.steamStatus = null; }
+    this.cdr.detectChanges();
+  }
+
+  async loadPublicProfile() {
+    try {
+      const profile = await this.perfisService.proprio();
+      this.publicProfileUrl = profile?.publico && profile.handle ? `${window.location.origin}/${profile.handle}` : '';
+    } catch { this.publicProfileUrl = ''; }
+    this.cdr.detectChanges();
+  }
+
+  async copyPublicProfileUrl() {
+    if (!this.publicProfileUrl) return;
+    try {
+      await navigator.clipboard.writeText(this.publicProfileUrl);
+      this.success = 'Link do perfil copiado.';
+    } catch {
+      this.error = 'Não foi possível copiar o link.';
+    }
     this.cdr.detectChanges();
   }
 

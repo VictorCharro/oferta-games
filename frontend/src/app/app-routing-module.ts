@@ -25,11 +25,11 @@ const routes: Routes = [
   { path: 'gratuitos', component: FreeGames },
   { path: 'login', component: Login },
   { path: 'perfil', canActivate: [authGuard], component: Profile },
-  { path: 'u/:handle', component: PublicProfile },
   { path: 'configuracoes', canActivate: [authGuard], component: Settings },
   { path: 'monitorados', canActivate: [authGuard], component: Favorites },
   { path: 'admin/coleta', canActivate: [adminGuard], component: AdminColeta },
   { path: 'favoritos', redirectTo: 'monitorados', pathMatch: 'full' },
+  { path: ':handle', component: PublicProfile },
   { path: '**', redirectTo: '' },
 ];
 

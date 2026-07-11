@@ -73,7 +73,7 @@ export class Settings implements OnInit {
 
   async loadPublicProfile() { try { const perfil = await this.perfisService.proprio(); if (perfil) { this.profileHandle = perfil.handle || ''; this.privacy = { publicProfile: perfil.publico, showGameHours: perfil.mostrarHoras, showAchievements: perfil.mostrarConquistas, showLibrary: perfil.mostrarBiblioteca, showFavoriteGames: perfil.mostrarFavoritos }; } } catch {} this.cdr.detectChanges(); }
   async salvarPrivacidade() { try { await this.salvarPerfilPublico(); this.success = 'Preferencias de privacidade salvas.'; this.error = ''; } catch { this.error = 'Defina uma URL valida e disponivel para publicar o perfil.'; } this.cdr.detectChanges(); }
-  perfilPublicoUrl(): string { return this.profileHandle ? `${window.location.origin}/u/${this.profileHandle}` : ''; }
+  perfilPublicoUrl(): string { return this.profileHandle ? `${window.location.origin}/${this.profileHandle}` : ''; }
   private async salvarPerfilPublico() { await this.perfisService.salvar({ handle: this.profileHandle, nomeExibicao: this.name.trim(), bio: this.bio.trim(), publico: this.privacy.publicProfile, mostrarHoras: this.privacy.showGameHours, mostrarConquistas: this.privacy.showAchievements, mostrarBiblioteca: this.privacy.showLibrary, mostrarFavoritos: this.privacy.showFavoriteGames }); }
 
   async saveAccount() {
