@@ -92,7 +92,7 @@ export class Profile implements OnInit, OnDestroy {
 
   get activityItems(): Array<{ icon: string; title: string; time: string; tone: string }> {
     const items = this.latestMonitoredGames.map((game, index) => ({
-      icon: 'favorito.png',
+      icon: 'jogos-monitorados.png',
       title: `Adicionou ${game.title} aos jogos monitorados`,
       time: index === 0 ? 'recentemente' : 'monitorado',
       tone: 'favorite',
@@ -102,7 +102,7 @@ export class Profile implements OnInit, OnDestroy {
 
     return [
       {
-        icon: 'favorito.png',
+        icon: 'jogos-monitorados.png',
         title: 'Seus jogos monitorados aparecerão aqui',
         time: 'comece pelo catálogo',
         tone: 'muted',

@@ -271,6 +271,14 @@ sync_locks
 - O usuario escolhe se libera horas jogadas, conquistas e biblioteca. O backend filtra os dados antes de responder a rota publica.
 - A persistencia fica em `profiles`; executar `backend-java/sql/20260711_perfis_publicos.sql` no Supabase antes do deploy.
 
+## Icones de perfil e biblioteca
+
+- `horas-jogadas.png`: estatisticas de horas jogadas.
+- `conquistas.png`: estatisticas de conquistas.
+- `biblioteca.png`: resumo e abas da biblioteca sincronizada.
+- `jogos-favoritos.png`: favoritos pessoais do perfil.
+- `jogos-monitorados.png`: monitoramento de precos e rota `/monitorados`.
+
 - Sem scraping de sites.
 - Sem multi-moeda funcional por enquanto.
 - Não disparar mais a sincronização recorrente pelo GitHub Actions.

@@ -74,7 +74,7 @@
 
   <section class="profile-stats" *ngIf="activeTab === 'resumo'">
     <article class="stat-card">
-      <div class="stat-icon heart"><img src="favorito.png" alt="" /></div>
+      <div class="stat-icon heart"><img src="jogos-favoritos.png" alt="" /></div>
       <div>
         <span>Jogos favoritos</span>
         <strong>--</strong>
@@ -82,7 +82,7 @@
       </div>
     </article>
     <article class="stat-card">
-      <div class="stat-icon time">H</div>
+      <div class="stat-icon time"><img src="horas-jogadas.png" alt="" /></div>
       <div>
         <span>Horas jogadas</span>
         <strong>{{ steamStatus?.conectada ? formatHours(steamStatus!.totalMinutos) : '--' }}</strong>
@@ -90,7 +90,7 @@
       </div>
     </article>
     <article class="stat-card">
-      <div class="stat-icon trophy">C</div>
+      <div class="stat-icon trophy"><img src="conquistas.png" alt="" /></div>
       <div>
         <span>Conquistas</span>
         <strong>{{ steamStatus?.conectada ? (steamStatus!.conquistasDesbloqueadas + '/' + steamStatus!.conquistasTotal) : '--' }}</strong>
@@ -128,7 +128,7 @@
 
       <ng-template #emptyFavorites>
         <div class="empty-panel">
-          <img src="favorito.png" alt="" />
+          <img src="jogos-favoritos.png" alt="" />
           <h3>Nenhum jogo favorito ainda</h3>
           <p>Em breve você poderá escolher jogos favoritos pessoais para exibir no perfil.</p>
         </div>
@@ -140,7 +140,7 @@
         <h2>Resumo da biblioteca</h2>
         <div class="library-content">
           <div class="library-total">
-            <div class="library-icon"><img src="catalogo.png" alt="" /></div>
+            <div class="library-icon"><img src="biblioteca.png" alt="" /></div>
             <strong>{{ steamStatus?.conectada ? steamStatus!.totalJogos : '--' }}</strong>
             <span>Jogos sincronizados</span>
           </div>
@@ -172,7 +172,7 @@
       <h2>Jogos favoritos</h2>
     </div>
     <div class="empty-panel">
-      <img src="favorito.png" alt="" />
+      <img src="jogos-favoritos.png" alt="" />
       <h3>Nenhum jogo favorito ainda</h3>
       <p>Em breve você poderá escolher jogos favoritos pessoais para exibir no perfil.</p>
     </div>
