@@ -2,6 +2,7 @@ package com.ofertagames.backend.jogos;
 
 import com.ofertagames.backend.comum.ClassificadorDlc;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
+import com.ofertagames.backend.comum.JogosBloqueados;
 import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -38,6 +39,7 @@ public class RepositorioJogos {
     String filtroOfertaPlataforma = filtroOfertaPlataforma(plataforma);
     String filtroLojaBloqueada = filtroLojaBloqueada("o");
     String filtroConteudoNaoJogo = ConteudosNaoJogos.filtroSql("g");
+    String filtroJogoBloqueado = JogosBloqueados.filtroSql("g");
     String filtroPreco = filtroPreco(precoMinimo, precoMaximo, descontoMinimo);
 
     String sql = """
@@ -57,11 +59,12 @@ public class RepositorioJogos {
         %s
         %s
         %s
+        %s
         GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
         %s
         ORDER BY %s
         LIMIT :tamanho OFFSET :deslocamento
-        """.formatted(filtroOfertaPlataforma, filtroLojaBloqueada, filtroTipo, filtroBusca, filtroPlataforma, filtroConteudoNaoJogo, filtroPreco, ordenarPor(ordenacao));
+        """.formatted(filtroOfertaPlataforma, filtroLojaBloqueada, filtroTipo, filtroBusca, filtroPlataforma, filtroConteudoNaoJogo, filtroJogoBloqueado, filtroPreco, ordenarPor(ordenacao));
 
     var comando = jdbc.sql(sql).param("tamanho", tamanho).param("deslocamento", deslocamento);
     if (busca != null && !busca.isBlank()) {
@@ -86,7 +89,8 @@ public class RepositorioJogos {
         FROM games
         WHERE slug = :slug
           %s
-        """.formatted(ConteudosNaoJogos.filtroSql("games")))
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("games"), JogosBloqueados.filtroSql("games")))
         .param("slug", slug)
         .query((rs, linha) -> new LinhaJogo(
             rs.getLong("id"),
@@ -99,7 +103,9 @@ public class RepositorioJogos {
   }
 
   public Optional<Long> buscarIdPorSlug(String slug) {
-    return jdbc.sql("SELECT id FROM games WHERE slug = :slug " + ConteudosNaoJogos.filtroSql("games"))
+    return jdbc.sql("SELECT id FROM games WHERE slug = :slug "
+        + ConteudosNaoJogos.filtroSql("games")
+        + JogosBloqueados.filtroSql("games"))
         .param("slug", slug)
         .query(Long.class)
         .optional();
@@ -131,6 +137,7 @@ public class RepositorioJogos {
   public List<IdJogoItad> salvarJogosItad(List<JogoParaSalvar> jogos) {
     return jogos.stream()
         .filter(jogo -> !ConteudosNaoJogos.contem(jogo.title()))
+        .filter(jogo -> !JogosBloqueados.contemIdItad(jogo.itadId()))
         .map(jogo -> new IdJogoItad(
             salvarJogoItad(jogo.itadId(), jogo.title(), jogo.slug(), jogo.coverUrl(), jogo.rank()),
             jogo.itadId()))
@@ -152,9 +159,13 @@ public class RepositorioJogos {
         LEFT JOIN offers o ON o.game_id = g.id %s
         WHERE g.itad_id::text IN (:itadIds)
           %s
+          %s
         GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
         ORDER BY g.title
-        """.formatted(filtroLojaBloqueada("o"), ConteudosNaoJogos.filtroSql("g")))
+        """.formatted(
+            filtroLojaBloqueada("o"),
+            ConteudosNaoJogos.filtroSql("g"),
+            JogosBloqueados.filtroSql("g")))
         .param("itadIds", itadIds)
         .query(RepositorioJogos::mapearResumo)
         .list();
@@ -247,6 +258,7 @@ public class RepositorioJogos {
           FROM games
           WHERE itad_id IS NOT NULL AND rank IS NOT NULL AND rank <= 2000
             %s
+            %s
           ORDER BY last_price_sync_at ASC NULLS FIRST, rank ASC, id ASC
           LIMIT :limiteRelevantes
         ), gerais AS (
@@ -254,13 +266,18 @@ public class RepositorioJogos {
           FROM games
           WHERE itad_id IS NOT NULL AND (rank IS NULL OR rank > 2000)
             %s
+            %s
           ORDER BY last_price_sync_at ASC NULLS FIRST, rank ASC NULLS LAST, id ASC
           LIMIT :limiteGerais
         )
         SELECT id, itad_id FROM relevantes
         UNION ALL
         SELECT id, itad_id FROM gerais
-        """.formatted(ConteudosNaoJogos.filtroSql("games"), ConteudosNaoJogos.filtroSql("games")))
+        """.formatted(
+            ConteudosNaoJogos.filtroSql("games"),
+            JogosBloqueados.filtroSql("games"),
+            ConteudosNaoJogos.filtroSql("games"),
+            JogosBloqueados.filtroSql("games")))
         .param("limiteRelevantes", limiteRelevantes)
         .param("limiteGerais", limiteGerais)
         .query((rs, linha) -> new JogoParaSincronizar(rs.getLong("id"), rs.getString("itad_id")))
@@ -282,7 +299,8 @@ public class RepositorioJogos {
         FROM games
         WHERE slug = :slug
           %s
-        """.formatted(ConteudosNaoJogos.filtroSql("games")))
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("games"), JogosBloqueados.filtroSql("games")))
         .param("slug", slug)
         .query((rs, linha) -> new JogoParaAtualizar(
             rs.getLong("id"),
@@ -314,9 +332,10 @@ public class RepositorioJogos {
         JOIN offers o ON o.game_id = g.id AND o.store_name = 'Steam'
         WHERE (g.is_dlc IS NULL OR g.cover_url IS NULL)
           %s
+          %s
         ORDER BY g.last_steam_sync_at ASC NULLS FIRST, g.id ASC
         LIMIT :limite
-        """.formatted(ConteudosNaoJogos.filtroSql("g")))
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
         .param("limite", limite)
         .query((rs, linha) -> new JogoSteamPendente(
             rs.getLong("id"),

@@ -213,6 +213,7 @@ sync_locks
 - **Plataformas:** enquanto o backend não persiste `platforms/drm` do ITAD, o frontend infere PC e Xbox pelo nome/link da loja. PlayStation fica suportado internamente, mas sem botão no catálogo enquanto não houver ofertas.
 - **Filtro de plataforma no catálogo:** o backend recebe `platform` em `/api/games` e calcula preço/loja considerando ofertas da plataforma filtrada.
 - **Lojas bloqueadas:** lojas com links quebrados são filtradas por `LojasBloqueadas.java` e também ignoradas no salvamento do sync. Lista atual: GreenManGaming, AllYouPay/AllYouPlay, PlanetPlay, PlayerLand, JoyBuggy, WinGameStore, MacGameStore, Humble Store/Humble Bundle.
+- **Jogos bloqueados:** itens específicos com oferta/link quebrado são ocultados por ID ITAD em `JogosBloqueados.java`. A lista atual inclui `019e8518-404a-709b-ae47-a4ef949552ea`.
 - **Conteúdo que não é jogo:** cursos, bundles educacionais e musicais da ITAD são filtrados por `ConteudosNaoJogos.java` no catálogo, descontos, busca, detalhe, favoritos e filas de coleta. A regra cobre termos como certification, e-learning, Kali Linux, programming bundle, cybersecurity, phonk e masterclass.
 - **DLCs nos descontos:** a home separa jogos base e DLCs a partir de `games.is_dlc` e heurísticas de título. `ClassificadorDlc.java` atende os filtros do catálogo e a mesma lista de pacotes de Lords of the Fallen está no frontend, mantendo Monk Decipher e similares na seção de DLCs.
 - **DLC detection:** `games.is_dlc` é preenchido via Steam quando há oferta Steam; enquanto `is_dlc IS NULL`, o frontend usa heurística por título.
@@ -232,6 +233,7 @@ sync_locks
 - **Topbar:** menu do usuário exibe Perfil, Configurações e Sair, sem nível de usuário.
 - **Capa ausente:** fallback visual em `no-cover.svg`; backend tenta preencher capa oficial da Steam quando possível.
 - **Catálogo:** scroll infinito via `window:scroll` com throttle por `requestAnimationFrame`.
+- **Navegação:** toda mudança de rota inicia no topo da página; o scroll infinito permanece restrito ao comportamento da própria tela de catálogo.
 
 ## Implementações futuras planejadas
 

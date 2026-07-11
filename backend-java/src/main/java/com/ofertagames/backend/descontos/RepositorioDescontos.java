@@ -1,6 +1,7 @@
 package com.ofertagames.backend.descontos;
 
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
+import com.ofertagames.backend.comum.JogosBloqueados;
 import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -40,6 +41,7 @@ public class RepositorioDescontos {
             AND o.price < o.regular_price * 0.99
             %s
             %s
+            %s
           ORDER BY g.id, o.price ASC
         ) sub
         ORDER BY %s
@@ -47,6 +49,7 @@ public class RepositorioDescontos {
         """.formatted(
             LojasBloqueadas.filtroSql("o"),
             ConteudosNaoJogos.filtroSql("g"),
+            JogosBloqueados.filtroSql("g"),
             ordenarPor);
 
     return jdbc.sql(sql)

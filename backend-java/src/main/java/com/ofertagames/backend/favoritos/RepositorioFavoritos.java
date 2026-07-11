@@ -1,6 +1,7 @@
 package com.ofertagames.backend.favoritos;
 
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
+import com.ofertagames.backend.comum.JogosBloqueados;
 import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -34,8 +35,9 @@ public class RepositorioFavoritos {
         ) oferta ON true
         WHERE f.user_id = CAST(:usuarioId AS uuid)
           %s
+          %s
         ORDER BY f.created_at DESC
-        """.formatted(ConteudosNaoJogos.filtroSql("g")))
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
         .param("usuarioId", usuarioId)
         .query((rs, linha) -> new FavoritoJogo(
             rs.getString("slug"),
