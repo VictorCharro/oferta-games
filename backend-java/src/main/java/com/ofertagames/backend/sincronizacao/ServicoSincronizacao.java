@@ -17,6 +17,7 @@ public class ServicoSincronizacao {
   private static final int LIMITE_BACKFILL_STEAM = 10;
   private static final int LIMITE_REVALIDACAO_ANTIGOS = 550;
   private static final int LIMITE_REVALIDACAO_TOP_RANK = 20;
+  private static final int TAMANHO_GRUPO_TOP_RANK = 1000;
   private static final Logger logger = LoggerFactory.getLogger(ServicoSincronizacao.class);
 
   private final ClienteItad itad;
@@ -55,7 +56,7 @@ public class ServicoSincronizacao {
 
   private void revalidarPrecosTopRank() {
     try {
-      List<String> slugs = jogos.listarSlugsTopRank(LIMITE_REVALIDACAO_TOP_RANK);
+      List<String> slugs = jogos.listarSlugsTopRank(TAMANHO_GRUPO_TOP_RANK, LIMITE_REVALIDACAO_TOP_RANK);
       for (String slug : slugs) {
         try {
           catalogo.atualizarPrecos(slug);

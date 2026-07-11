@@ -2,11 +2,11 @@ name: Sync ITAD Prices
 
 on:
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
     inputs:
       start_page:
-        description: 'Pagina inicial do sync'
+        description: 'Pagina inicial do sync (geralmente 0)'
         required: false
         default: '0'
 
@@ -15,45 +15,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Run paginated backend sync
+      - name: Run single page backend sync
         env:
           BACKEND_API_URL: ${{ secrets.BACKEND_API_URL || secrets.BACKEND_URL }}
           SYNC_SECRET_KEY: ${{ secrets.SYNC_SECRET_KEY }}
-          START_PAGE: ${{ github.event.inputs.start_page || '0' }}
+          PAGE_TO_SYNC: ${{ github.event.inputs.start_page || '0' }}
         run: |
           set -euo pipefail
           : "${BACKEND_API_URL:?Configure o secret BACKEND_API_URL com a URL do backend}"
           : "${SYNC_SECRET_KEY:?Configure o secret SYNC_SECRET_KEY com a mesma chave do Render}"
 
           BACKEND_API_URL="${BACKEND_API_URL%/}"
-          page="$START_PAGE"
+          
+          echo "Sincronizando pagina $PAGE_TO_SYNC e revalidando jogos existentes..."
+          attempt=1
           while true; do
-            echo "Sincronizando pagina $page..."
-            attempt=1
-            while true; do
-              http_response="$(curl -sS -X POST "$BACKEND_API_URL/api/sync?page=$page" -H "X-Sync-Key: $SYNC_SECRET_KEY" -w '\n%{http_code}')"
-              status="$(echo "$http_response" | tail -n 1)"
-              response="$(echo "$http_response" | sed '$d')"
-              if [ "$status" != "429" ] && [ "$status" != "500" ] && [ "$status" != "502" ] && [ "$status" != "503" ] && [ "$status" != "504" ]; then
-                break
-              fi
-              if [ "$attempt" -ge 5 ]; then
-                break
-              fi
-              echo "Servico temporariamente indisponivel (HTTP $status). Tentando novamente em 30s..."
-              attempt=$((attempt + 1))
-              sleep 30
-            done
-            echo "$response"
-            if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
-              echo "Sync falhou com HTTP $status"
-              exit 1
-            fi
-            has_more="$(echo "$response" | jq -r '.hasMore')"
-            next_page="$(echo "$response" | jq -r '.nextPage // empty')"
-            if [ "$has_more" != "true" ] || [ -z "$next_page" ]; then
+            http_response="$(curl -sS -X POST "$BACKEND_API_URL/api/sync?page=$PAGE_TO_SYNC" -H "X-Sync-Key: $SYNC_SECRET_KEY" -w '\n%{http_code}')"
+            status="$(echo "$http_response" | tail -n 1)"
+            response="$(echo "$http_response" | sed '$d')"
+            if [ "$status" != "429" ] && [ "$status" != "500" ] && [ "$status" != "502" ] && [ "$status" != "503" ] && [ "$status" != "504" ]; then
               break
             fi
-            page="$next_page"
-            sleep 2
+            if [ "$attempt" -ge 5 ]; then
+              break
+            fi
+            echo "Servico temporariamente indisponivel (HTTP $status). Tentando novamente em 30s..."
+            attempt=$((attempt + 1))
+            sleep 30
           done
+
+          echo "$response"
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Sync falhou com HTTP $status"
+            exit 1
+          fi
+          
+          echo "Sync da pagina $PAGE_TO_SYNC concluido."

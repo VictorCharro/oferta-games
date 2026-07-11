@@ -129,9 +129,12 @@ favorites
   - Retorna melhores descontos deduplicados por jogo.
   - `sort=rank` prioriza jogos mais famosos com desconto.
 - `POST /api/sync?page=0`
-  - Sincroniza uma página de ofertas da ITAD.
+  - Sincroniza uma página de ofertas da ITAD e revalida preços de jogos existentes.
   - Exige header `X-Sync-Key`.
-  - Não executa backfill Steam durante o sync no Render free, para manter o processo leve.
+  - O processo de revalidação de preços ocorre em duas filas para garantir cobertura e relevância:
+    - **Fila Prioritária (Top Rank):** A cada execução, força a atualização de um lote de jogos pertencentes ao grupo dos 1000 mais populares (`rank` mais baixo). A seleção prioriza os jogos desse grupo que não são atualizados há mais tempo, criando uma atualização rotativa para o conteúdo mais relevante.
+    - **Fila Geral (Antigos):** Em paralelo, força a atualização de um lote maior de jogos que não são atualizados há mais tempo em todo o catálogo, garantindo que nenhum jogo fique com o preço desatualizado indefinidamente.
+  - Complementa metadados (capa, DLC) via Steam em um ritmo mais lento para priorizar a atualização de preços.
   - Usa `/deals/v2` para paginar jogos e `/games/prices/v3` para obter todas as ofertas atuais de cada lote de 50 jogos. As ofertas ITAD de cada jogo são substituídas pelo conjunto retornado, removendo preços antigos de lojas que não apareçam mais.
   - O sync completo depende da configuração JDBC `prepareThreshold=0`, pois o pooler do Supabase na porta 6543 não suporta prepared statements.
 - `GET /api/favorites`

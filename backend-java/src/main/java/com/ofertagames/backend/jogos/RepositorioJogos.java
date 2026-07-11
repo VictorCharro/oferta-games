@@ -278,14 +278,23 @@ public class RepositorioJogos {
         .list();
   }
 
-  public List<String> listarSlugsTopRank(int limite) {
+  public List<String> listarSlugsTopRank(int tamanhoGrupo, int limite) {
     return jdbc.sql("""
-        SELECT slug
-        FROM games
-        WHERE rank IS NOT NULL AND itad_id IS NOT NULL
-        ORDER BY rank ASC, id ASC
+        WITH top_games AS (
+          SELECT id, slug
+          FROM games
+          WHERE rank IS NOT NULL AND itad_id IS NOT NULL
+          ORDER BY rank ASC, id ASC
+          LIMIT :tamanhoGrupo
+        )
+        SELECT tg.slug
+        FROM offers o
+        JOIN top_games tg ON tg.id = o.game_id
+        GROUP BY tg.id, tg.slug
+        ORDER BY MAX(o.updated_at) ASC
         LIMIT :limite
         """)
+        .param("tamanhoGrupo", tamanhoGrupo)
         .param("limite", limite)
         .query(String.class)
         .list();
