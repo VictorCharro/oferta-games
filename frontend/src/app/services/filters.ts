@@ -9,6 +9,12 @@ const NON_GAME_PATTERNS = [
   /\bSkin Pack\b/i,
   /\bCosmetic\b/i,
   /\bBooster Pack\b/i,
+  /\bMonk Decipher\b/i,
+  /\bDemonic Weapon Pack\b/i,
+  /\bFoundation Boost\b/i,
+  /\bArcane Boost\b/i,
+  /\bLion Heart Pack\b/i,
+  /\bAncient Labyrinth\b/i,
   / - .*(Pack|Bundle|Boost|Content|Expansion|Add-?on|Extra|Bonus|Upgrade|Digital Content)/i,
   // Guias e livros
   /\bDetonado\b/i,

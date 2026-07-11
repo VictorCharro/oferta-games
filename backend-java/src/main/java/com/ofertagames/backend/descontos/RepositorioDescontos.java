@@ -1,6 +1,5 @@
 package com.ofertagames.backend.descontos;
 
-import com.ofertagames.backend.comum.ClassificadorDlc;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.util.List;
@@ -41,7 +40,6 @@ public class RepositorioDescontos {
             AND o.price < o.regular_price * 0.99
             %s
             %s
-            %s
           ORDER BY g.id, o.price ASC
         ) sub
         ORDER BY %s
@@ -49,7 +47,6 @@ public class RepositorioDescontos {
         """.formatted(
             LojasBloqueadas.filtroSql("o"),
             ConteudosNaoJogos.filtroSql("g"),
-            ClassificadorDlc.filtroApenasJogosSql("g"),
             ordenarPor);
 
     return jdbc.sql(sql)
