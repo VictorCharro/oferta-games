@@ -1,5 +1,6 @@
 package com.ofertagames.backend.jogos;
 
+import com.ofertagames.backend.comum.ClassificadorDlc;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.sql.ResultSet;
@@ -28,8 +29,8 @@ public class RepositorioJogos {
   public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, Double descontoMinimo, String busca) {
     int deslocamento = pagina * tamanho;
     String filtroTipo = switch (tipo) {
-      case "dlc" -> "AND (g.is_dlc = true OR (g.is_dlc IS NULL AND " + tituloPareceDlcSql() + "))";
-      case "game" -> "AND (g.is_dlc = false OR (g.is_dlc IS NULL AND NOT " + tituloPareceDlcSql() + "))";
+      case "dlc" -> "AND " + ClassificadorDlc.condicaoDlcSql("g");
+      case "game" -> ClassificadorDlc.filtroApenasJogosSql("g");
       default -> "";
     };
     String filtroBusca = busca == null || busca.isBlank() ? "" : "AND g.title ILIKE :busca";
@@ -419,21 +420,6 @@ public class RepositorioJogos {
           g.id ASC
           """;
     };
-  }
-
-  private static String tituloPareceDlcSql() {
-    return """
-        (g.title ILIKE '%DLC%'
-          OR g.title ILIKE '%Season Pass%'
-          OR g.title ILIKE '%Soundtrack%'
-          OR g.title ILIKE '% OST%'
-          OR g.title ILIKE '%Art Book%'
-          OR g.title ILIKE '%Skin Set%'
-          OR g.title ILIKE '%Skin Pack%'
-          OR g.title ILIKE '%Booster Pack%'
-          OR g.title ILIKE '%Expansion%'
-          OR g.title ILIKE '%Add-on%')
-        """;
   }
 
   private record LinhaJogo(Long id, String slug, String title, String coverUrl) {}

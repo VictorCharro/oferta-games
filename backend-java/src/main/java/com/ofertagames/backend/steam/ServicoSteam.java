@@ -1,5 +1,6 @@
 package com.ofertagames.backend.steam;
 
+import com.ofertagames.backend.comum.ClassificadorDlc;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -13,18 +14,6 @@ import org.springframework.web.client.RestClient;
 @Service
 public class ServicoSteam {
   private static final Pattern APP_ID = Pattern.compile("store\\.steampowered\\.com/app/(\\d+)");
-  private static final Pattern[] PADROES_TITULO_DLC = {
-      Pattern.compile("\\bDLC\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\bSeason Pass\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\bSoundtrack\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\bOST\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\bArt Book\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\bSkin Set\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\bSkin Pack\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\bBooster Pack\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\bExpansion\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\bAdd-on\\b", Pattern.CASE_INSENSITIVE)
-  };
 
   private final RestClient restClient;
   private final HttpClient clienteHttp;
@@ -37,12 +26,7 @@ public class ServicoSteam {
   }
 
   public boolean tituloPareceDlc(String titulo) {
-    for (Pattern padrao : PADROES_TITULO_DLC) {
-      if (padrao.matcher(titulo).find()) {
-        return true;
-      }
-    }
-    return false;
+    return ClassificadorDlc.pareceDlc(titulo);
   }
 
   public Optional<String> resolverAppIdSteam(String urlOferta) {
