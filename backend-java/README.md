@@ -77,7 +77,7 @@ O endpoint `POST /api/sync?page=0` continua disponivel para diagnostico/manual e
 X-Sync-Key: valor-de-SYNC_SECRET_KEY
 ```
 
-O workflow `.github/workflows/keepalive.yml` continua chamando o health check usando `BACKEND_URL`. O antigo workflow de sync foi removido.
+Os workflows de sync e keep alive do GitHub Actions foram removidos. O bot que ja mantem o Render ativo assume essa responsabilidade.
 
 ## Rodando localmente
 

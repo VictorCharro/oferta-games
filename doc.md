@@ -44,13 +44,7 @@ Coleta de preços: o próprio backend Spring executa jobs agendados no Render. N
 - A coleta de metadados Steam é um job separado a cada 15 minutos, com até 25 jogos pendentes por rodada.
 - Uma trava compartilhada no PostgreSQL impede sobreposição entre os jobs, inclusive se houver mais de uma instância durante um deploy.
 
-Keep alive: GitHub Actions continua chamando `/actuator/health` a cada 10 minutos usando `BACKEND_URL`.
-
-Secrets do workflow restante:
-
-| Secret | Descrição |
-|---|---|
-| `BACKEND_URL` | URL pública do backend Java usada no keep alive |
+O bot que ja mantem o Render ativo tambem substitui o antigo keep alive do GitHub Actions.
 
 ## Variáveis de ambiente do backend
 
@@ -153,7 +147,7 @@ sync_locks
 - `DELETE /api/favorites/{slug}`
   - Remove jogo dos monitorados.
 - `GET /actuator/health`
-  - Health check usado por Render e keep alive.
+  - Health check usado pelo Render e pelo bot de monitoramento.
 
 ## Estrutura de pastas
 
@@ -203,8 +197,6 @@ sync_locks
     guards/
       auth.guard.ts
 
-/.github/workflows/
-  keepalive.yml         -> chama GET /actuator/health
 ```
 
 ## Padrão de código do backend
@@ -269,7 +261,7 @@ sync_locks
 - [x] Perfil visual implementado com bio editável, avatar local e placeholders de gameplay
 - [x] Dockerfile do backend Java configurado para Render
 - [x] Coleta interna de preços e metadados Steam agendada no Spring, com fila e trava no PostgreSQL
-- [x] GitHub Actions configurado apenas para keep alive
+- [x] Workflows de sync e keep alive do GitHub Actions removidos
 - [ ] Executar `backend-java/sql/20260711_coleta_agendada.sql` no Supabase e ativar `APP_SYNC_SCHEDULER_ENABLED=true` no Render
 - [x] Backend publicado no Render
 - [ ] Separar favoritos pessoais do perfil dos jogos monitorados por preço
