@@ -22,6 +22,14 @@
   border-left-color: rgba(41, 168, 224, 0.42);
 }
 
+:host-context([data-theme="light"]) .platform-pill {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(41, 168, 224, 0.34);
+
+  span { color: var(--text-primary); }
+  strong { color: #087fb8; }
+}
+
 .profile-main {
   display: flex;
   align-items: center;
