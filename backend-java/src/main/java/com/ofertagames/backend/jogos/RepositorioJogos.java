@@ -263,6 +263,34 @@ public class RepositorioJogos {
         .list();
   }
 
+  public List<String> listarSlugsAntigos(int limite) {
+    return jdbc.sql("""
+        SELECT g.slug
+        FROM offers o
+        JOIN games g ON g.id = o.game_id
+        WHERE g.itad_id IS NOT NULL
+        GROUP BY g.id
+        ORDER BY MAX(o.updated_at) ASC
+        LIMIT :limite
+        """)
+        .param("limite", limite)
+        .query(String.class)
+        .list();
+  }
+
+  public List<String> listarSlugsTopRank(int limite) {
+    return jdbc.sql("""
+        SELECT slug
+        FROM games
+        WHERE rank IS NOT NULL AND itad_id IS NOT NULL
+        ORDER BY rank ASC, id ASC
+        LIMIT :limite
+        """)
+        .param("limite", limite)
+        .query(String.class)
+        .list();
+  }
+
   private List<OfertaJogo> listarOfertas(long jogoId) {
     return jdbc.sql("""
         SELECT o.store_name, o.price, o.regular_price, o.currency, o.url
