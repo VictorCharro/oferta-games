@@ -30,7 +30,7 @@ class ServicoPerfis {
     String handle = normalizarHandle(entrada.handle());
     if (entrada.publico() && handle == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Defina a URL do perfil antes de torna-lo publico");
     String avatarUrl = perfis.buscarPorUsuario(usuarioId).map(RepositorioPerfis.Perfil::avatarUrl).orElse(null);
-    try { perfis.salvar(usuarioId, new RepositorioPerfis.DadosPerfil(handle, limitar(entrada.nomeExibicao(), 60), limitar(entrada.bio(), 180), avatarUrl, entrada.publico(), entrada.mostrarHoras(), entrada.mostrarConquistas(), entrada.mostrarBiblioteca(), entrada.mostrarFavoritos())); }
+    try { perfis.salvar(usuarioId, new RepositorioPerfis.DadosPerfil(handle, limitar(entrada.nomeExibicao(), 60), limitar(entrada.bio(), 180), avatarUrl, entrada.publico(), entrada.mostrarHoras(), entrada.mostrarConquistas(), entrada.mostrarBiblioteca(), entrada.mostrarFavoritos(), entrada.mostrarAtividades())); }
     catch (RuntimeException erro) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta URL de perfil ja esta em uso"); }
   }
 
@@ -48,21 +48,23 @@ class ServicoPerfis {
     boolean dono = perfil.usuarioId().equals(visitanteId);
     List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = dono || perfil.mostrarBiblioteca() ? steam.biblioteca(perfil.usuarioId()) : List.of();
     List<FavoritoPerfilJogo> favoritos = dono || perfil.mostrarFavoritos() ? favoritosPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
-    List<AtividadePerfil> atividadeRecente = dono ? atividades.listarPorUsuario(perfil.usuarioId(), 8) : List.of();
+    boolean mostrarAtividades = dono || perfil.mostrarAtividades();
+    List<AtividadePerfil> atividadeRecente = mostrarAtividades ? atividades.listarPorUsuario(perfil.usuarioId(), 8) : List.of();
     return new PerfilPublico(perfil.handle(), perfil.nomeExibicao(), perfil.bio(), perfil.avatarUrl(),
         perfil.mostrarHoras() ? status.totalMinutos() : null,
         perfil.mostrarConquistas() ? status.conquistasDesbloqueadas() : null,
         perfil.mostrarConquistas() ? status.conquistasTotal() : null,
         jogos,
         favoritos,
-        atividadeRecente);
+        atividadeRecente,
+        perfil.mostrarAtividades());
   }
 
   private static String normalizarHandle(String valor) { if (valor == null || valor.isBlank()) return null; return normalizarHandleObrigatorio(valor); }
   private static String normalizarHandleObrigatorio(String valor) { String handle = valor.trim().toLowerCase(Locale.ROOT); if (!handle.matches("^[a-z0-9][a-z0-9-]{2,29}$")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use de 3 a 30 caracteres: letras minusculas, numeros e hifen"); if (IDENTIFICADORES_RESERVADOS.contains(handle)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta URL e reservada pelo sistema"); return handle; }
   private static String limitar(String valor, int maximo) { String resultado = valor == null ? "" : valor.trim(); return resultado.length() > maximo ? resultado.substring(0, maximo) : resultado; }
 
-  record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos) {}
+  record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades) {}
   record EntradaAvatar(String avatarUrl) {}
-  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades) {}
+  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades, boolean mostrarAtividades) {}
 }

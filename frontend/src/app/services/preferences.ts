@@ -16,6 +16,7 @@ export interface PrivacyPreferences {
   showAchievements: boolean;
   showLibrary: boolean;
   showFavoriteGames: boolean;
+  showRecentActivity: boolean;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -31,6 +32,7 @@ const DEFAULT_PRIVACY: PrivacyPreferences = {
   showAchievements: true,
   showLibrary: true,
   showFavoriteGames: true,
+  showRecentActivity: true,
 };
 
 @Injectable({ providedIn: 'root' })

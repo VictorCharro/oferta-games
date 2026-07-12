@@ -146,6 +146,7 @@ export class PublicProfile implements OnInit {
           mostrarConquistas: own.mostrarConquistas,
           mostrarBiblioteca: own.mostrarBiblioteca,
           mostrarFavoritos: own.mostrarFavoritos,
+          mostrarAtividades: own.mostrarAtividades,
         });
 
         this.profile.bio = bio;

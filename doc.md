@@ -288,8 +288,8 @@ sync_locks
 ## Atividade recente do perfil
 
 - Atividades sao registradas em `profile_activities` para adicao/remocao de jogos monitorados, adicao/remocao de favoritos pessoais, conexao Steam e sincronizacoes manuais da Steam.
-- A atividade e privada por enquanto: apenas o proprio dono autenticado recebe os eventos. Visitantes veem somente o estado de atividade privada.
-- Executar `backend-java/sql/20260712_atividades_perfil.sql` no Supabase antes do deploy do backend.
+- A atividade e publica por padrao: visitantes veem os eventos quando o perfil esta publico. Em Privacidade, o dono pode desativar **Mostrar atividade recente**; nesse caso os eventos nao sao enviados pela API para visitantes.
+- Executar `backend-java/sql/20260712_atividades_perfil.sql` e `backend-java/sql/20260712_visibilidade_atividade_perfil.sql` no Supabase antes do deploy do backend.
 
 ## Icones de perfil e biblioteca
 
@@ -319,7 +319,7 @@ sync_locks
 - [ ] Executar `backend-java/sql/20260711_coleta_agendada.sql` no Supabase e ativar `APP_SYNC_SCHEDULER_ENABLED=true` no Render
 - [x] Backend publicado no Render
 - [x] Separar favoritos pessoais do perfil dos jogos monitorados por preço
-- [x] Atividade recente real e privada para o dono do perfil
+- [x] Atividade recente real, publica por padrao e configuravel na privacidade do perfil
 - [x] Persistir foto de perfil no Supabase Storage
 - [ ] Conexões de plataformas em Configurações
 - [ ] Sincronizar horas jogadas, conquistas e biblioteca

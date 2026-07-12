@@ -89,11 +89,11 @@
 
       <article class="panel activity-panel">
         <div class="panel-heading"><h2>Atividade recente</h2></div>
-        <ng-container *ngIf="isOwner; else privateActivity">
+        <ng-container *ngIf="isOwner || profile.mostrarAtividades; else privateActivity">
           <div *ngIf="profile.atividades.length; else noActivity" class="activity-list"><div *ngFor="let activity of profile.atividades" class="activity-item"><img [src]="activityIcon(activity.tipo)" alt="" /><span>{{ activityTitle(activity.tipo, activity.tituloJogo) }}</span><small>{{ relativeTime(activity.criadaEm) }}</small></div></div>
           <ng-template #noActivity><div class="activity-item muted"><img src="jogos-monitorados.png" alt="" /><span>Suas atividades aparecerao aqui</span><small>comece pelo catalogo</small></div></ng-template>
         </ng-container>
-        <ng-template #privateActivity><div class="activity-item muted"><img src="jogos-favoritos.png" alt="" /><span>Atividade privada</span><small>somente o dono ve</small></div></ng-template>
+        <ng-template #privateActivity><div class="activity-item muted"><img src="jogos-favoritos.png" alt="" /><span>Atividade nao esta visivel</span><small>ocultada pelo dono do perfil</small></div></ng-template>
       </article>
     </aside>
   </section>
