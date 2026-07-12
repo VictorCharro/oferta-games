@@ -14,7 +14,7 @@ export class PublicProfile implements OnInit {
   profile: PerfilPublico | null = null;
   missing = false;
   loading = true;
-  activeTab: 'resumo' | 'biblioteca' = 'resumo';
+  activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' = 'resumo';
   isOwner = false;
   ownerAvatar = '';
   editingBio = false;

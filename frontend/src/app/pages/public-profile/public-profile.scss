@@ -58,13 +58,39 @@
 .tabs button.active { color: var(--color-purple); }
 .tabs button.active::after { position: absolute; right: 0; bottom: 0; left: 0; height: 2px; background: var(--color-purple); content: ''; }
 
-.summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.summary-card, .library-panel { border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--bg-card); }
-.summary-card { display: flex; align-items: center; gap: 16px; padding: 22px; }
-.summary-card img { width: 34px; height: 34px; object-fit: contain; }
-.summary-card span, .summary-card small { display: block; color: var(--text-muted); }
-.summary-card strong { display: block; margin: 4px 0; font-size: 28px; }
-.library-panel { padding: 20px; }
+.profile-stats, .profile-grid { margin-bottom: 14px; }
+.profile-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.stat-card, .panel { border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--bg-card); }
+.stat-card { display: flex; align-items: center; gap: 16px; padding: 22px; }
+.stat-card span, .stat-card small { display: block; color: var(--text-muted); }
+.stat-card strong { display: block; margin: 4px 0; font-size: 28px; }
+.stat-icon { display: grid; flex: 0 0 auto; width: 52px; height: 52px; place-items: center; border-radius: 50%; background: rgba(41, 168, 224, .14); }
+.stat-icon img { width: 34px; height: 34px; object-fit: contain; }
+.stat-icon.trophy { background: rgba(245, 158, 11, .15); }
+.profile-grid { display: grid; grid-template-columns: minmax(520px, 1.15fr) minmax(380px, .85fr); gap: 14px; }
+.panel { padding: 20px; }
+.side-stack { display: flex; flex-direction: column; gap: 14px; }
+.library-summary h2 { margin: 0 0 18px; }
+.library-content { display: grid; grid-template-columns: 145px 1fr; gap: 22px; align-items: center; }
+.library-total { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-right: 20px; border-right: 1px solid var(--border-color); }
+.library-total strong { font-size: 32px; }
+.library-total span { color: var(--text-muted); font-size: 12px; text-align: center; }
+.library-icon { display: grid; width: 54px; height: 54px; place-items: center; border-radius: 50%; background: rgba(41, 168, 224, .14); }
+.library-icon img { width: 28px; height: 28px; object-fit: contain; }
+.platform-split { display: flex; flex-direction: column; gap: 7px; }
+.platform-split > span, .platform-split small { color: var(--text-muted); font-size: 12px; }
+.platform-split strong { font-size: 28px; line-height: 1; }
+.empty-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; color: var(--text-secondary); text-align: center; }
+.empty-panel img { width: 38px; height: 38px; margin-bottom: 10px; object-fit: contain; }
+.empty-panel h3 { margin: 0 0 8px; color: var(--text-primary); }
+.empty-panel p { margin: 0; }
+.favorites-only { min-height: 360px; }
+.favorites-only .empty-panel { min-height: 290px; }
+.activity-item { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 12px; padding: 12px 0; color: var(--text-secondary); font-size: 13px; }
+.activity-item img { width: 20px; height: 20px; object-fit: contain; }
+.activity-item small { color: var(--text-muted); white-space: nowrap; }
+.activity-item.muted { opacity: .72; }
+.library-list-panel { min-height: 360px; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .panel-heading h2 { margin: 0; }
 .panel-heading span { color: var(--text-muted); font-size: 12px; }
@@ -88,5 +114,7 @@
 
 @media (max-width: 650px) {
   .public-main { align-items: flex-start; flex-direction: column; }
-  .gameplay-grid, .summary-grid, .games { grid-template-columns: 1fr; }
+  .gameplay-grid, .profile-stats, .profile-grid, .library-content, .games { grid-template-columns: 1fr; }
+  .profile-grid { display: grid; }
+  .library-total { padding: 0 0 16px; border-right: 0; border-bottom: 1px solid var(--border-color); }
 }
