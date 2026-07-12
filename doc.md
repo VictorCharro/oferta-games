@@ -291,6 +291,9 @@ sync_locks
 - A atividade e publica por padrao: visitantes veem os eventos quando o perfil esta publico. Em Privacidade, o dono pode desativar **Mostrar atividade recente**; nesse caso os eventos nao sao enviados pela API para visitantes.
 - Executar `backend-java/sql/20260712_atividades_perfil.sql` e `backend-java/sql/20260712_visibilidade_atividade_perfil.sql` no Supabase antes do deploy do backend.
 - Qualquer visitante pode usar **Atualizar dados** no perfil publico para solicitar uma sincronizacao completa da Steam (biblioteca, horas e conquistas). A operacao roda em segundo plano e cada perfil aceita uma solicitacao a cada 10 minutos, protegendo a Steam e o backend contra abuso. Executar tambem `backend-java/sql/20260712_atualizacao_publica_perfil.sql`.
+- A primeira sincronizacao Steam registra apenas os resumos de biblioteca e conquistas. A partir da linha de base, novos jogos da biblioteca e novas conquistas viram eventos individuais. Executar `backend-java/sql/20260712_atividades_steam_detalhadas.sql` antes do deploy.
+- A aba Biblioteca permite buscar os jogos sincronizados e ordenar por tempo jogado, nome ou percentual de conquistas.
+- **Xbox:** permanece como futura integracao. A documentacao oficial concentra as APIs de conquistas e dados de jogador no GDK/XSAPI para titulos registrados, sem um fluxo publico equivalente ao Steam OpenID + Web API para importar bibliotecas de qualquer conta. Nao usar APIs nao oficiais ou scraping para isso.
 
 ## Icones de perfil e biblioteca
 
@@ -321,6 +324,7 @@ sync_locks
 - [x] Backend publicado no Render
 - [x] Separar favoritos pessoais do perfil dos jogos monitorados por preço
 - [x] Atividade recente real, publica por padrao e configuravel na privacidade do perfil
+- [x] Atividade Steam detalhada e Biblioteca pesquisavel com progresso de conquistas
 - [x] Persistir foto de perfil no Supabase Storage
 - [ ] Conexões de plataformas em Configurações
 - [ ] Sincronizar horas jogadas, conquistas e biblioteca

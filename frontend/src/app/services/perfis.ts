@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { supabase } from './supabase';
 
 export interface PerfilProprio { handle: string | null; nomeExibicao: string; bio: string | null; publico: boolean; mostrarHoras: boolean; mostrarConquistas: boolean; mostrarBiblioteca: boolean; mostrarFavoritos: boolean; mostrarAtividades: boolean; }
-export interface PerfilPublico { handle: string; nomeExibicao: string; bio: string | null; avatarUrl: string | null; totalMinutos: number | null; conquistasDesbloqueadas: number | null; conquistasTotal: number | null; biblioteca: Array<{ appId: number; titulo: string; minutosJogadas: number; iconeHash: string | null }>; favoritos: Array<{ slug: string; titulo: string; capaUrl: string | null; ehDlc: boolean | null; precoMinimo: number | null; precoRegular: number | null; favoritadoEm: string }>; atividades: Array<{ tipo: string; tituloJogo: string | null; criadaEm: string }>; mostrarAtividades: boolean; }
+export interface PerfilPublico { handle: string; nomeExibicao: string; bio: string | null; avatarUrl: string | null; totalMinutos: number | null; conquistasDesbloqueadas: number | null; conquistasTotal: number | null; biblioteca: Array<{ appId: number; titulo: string; minutosJogadas: number; iconeHash: string | null; conquistasDesbloqueadas: number; conquistasTotal: number }>; favoritos: Array<{ slug: string; titulo: string; capaUrl: string | null; ehDlc: boolean | null; precoMinimo: number | null; precoRegular: number | null; favoritadoEm: string }>; atividades: Array<{ tipo: string; tituloJogo: string | null; detalhe: string | null; criadaEm: string }>; mostrarAtividades: boolean; }
 
 @Injectable({ providedIn: 'root' })
 export class PerfisService {

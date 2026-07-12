@@ -90,7 +90,7 @@
       <article class="panel activity-panel">
         <div class="panel-heading"><h2>Atividade recente</h2></div>
         <ng-container *ngIf="isOwner || profile.mostrarAtividades; else privateActivity">
-          <div *ngIf="profile.atividades.length; else noActivity" class="activity-list"><div *ngFor="let activity of profile.atividades" class="activity-item"><img [src]="activityIcon(activity.tipo)" alt="" /><span>{{ activityTitle(activity.tipo, activity.tituloJogo) }}</span><small>{{ relativeTime(activity.criadaEm) }}</small></div></div>
+          <div *ngIf="profile.atividades.length; else noActivity" class="activity-list"><div *ngFor="let activity of profile.atividades" class="activity-item"><img [src]="activityIcon(activity.tipo)" alt="" /><span>{{ activityTitle(activity.tipo, activity.tituloJogo, activity.detalhe) }}</span><small>{{ relativeTime(activity.criadaEm) }}</small></div></div>
           <ng-template #noActivity><div class="activity-item muted"><img src="jogos-monitorados.png" alt="" /><span>Suas atividades aparecerao aqui</span><small>comece pelo catalogo</small></div></ng-template>
         </ng-container>
         <ng-template #privateActivity><div class="activity-item muted"><img src="jogos-favoritos.png" alt="" /><span>Atividade nao esta visivel</span><small>ocultada pelo dono do perfil</small></div></ng-template>
@@ -107,8 +107,12 @@
   </section>
 
   <section class="panel library-list-panel" *ngIf="activeTab === 'biblioteca'">
-    <div class="panel-heading"><h2>Biblioteca Steam</h2><span>{{ profile.biblioteca.length }} jogos exibidos</span></div>
-    <div class="games" *ngIf="profile.biblioteca.length; else emptyLibrary"><article *ngFor="let game of profile.biblioteca"><img [src]="icon(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span></div></article></div>
+    <div class="panel-heading"><h2>Biblioteca Steam</h2><span>{{ libraryGames.length }} de {{ profile.biblioteca.length }} jogos</span></div>
+    <div class="library-controls" *ngIf="profile.biblioteca.length">
+      <input type="search" [(ngModel)]="librarySearch" placeholder="Buscar na biblioteca" aria-label="Buscar na biblioteca" />
+      <select [(ngModel)]="libraryOrder" aria-label="Ordenar biblioteca"><option value="tempo">Mais jogados</option><option value="conquistas">Mais conquistas</option><option value="nome">Nome</option></select>
+    </div>
+    <div class="games" *ngIf="libraryGames.length; else emptyLibrary"><article *ngFor="let game of libraryGames"><img [src]="icon(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="game.conquistasTotal">{{ game.conquistasDesbloqueadas }}/{{ game.conquistasTotal }} conquistas</small></div></article></div>
     <ng-template #emptyLibrary><div class="empty-panel"><img src="biblioteca.png" alt="" /><h3>Biblioteca vazia</h3><p>Nenhum jogo sincronizado para exibir.</p></div></ng-template>
   </section>
 </div>

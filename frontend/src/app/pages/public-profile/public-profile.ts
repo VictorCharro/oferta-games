@@ -23,6 +23,8 @@ export class PublicProfile implements OnInit {
   savingBio = false;
   refreshing = false;
   message = '';
+  librarySearch = '';
+  libraryOrder: 'tempo' | 'nome' | 'conquistas' = 'tempo';
 
   constructor(
     private route: ActivatedRoute,
@@ -85,11 +87,11 @@ export class PublicProfile implements OnInit {
     if (type.startsWith('MONITORAMENTO')) return 'jogos-monitorados.png';
     if (type.startsWith('FAVORITO_PESSOAL')) return 'jogos-favoritos.png';
     if (type.startsWith('BIBLIOTECA')) return 'biblioteca.png';
-    if (type.startsWith('CONQUISTAS')) return 'conquistas.png';
+    if (type.startsWith('CONQUISTA')) return 'conquistas.png';
     return 'store-logos/steam.svg';
   }
 
-  activityTitle(type: string, gameTitle: string | null): string {
+  activityTitle(type: string, gameTitle: string | null, detail: string | null): string {
     const game = gameTitle || 'um jogo';
     switch (type) {
       case 'FAVORITO_PESSOAL_ADICIONADO': return `Adicionou ${game} aos jogos favoritos`;
@@ -97,10 +99,23 @@ export class PublicProfile implements OnInit {
       case 'MONITORAMENTO_ADICIONADO': return `Adicionou ${game} aos jogos monitorados`;
       case 'MONITORAMENTO_REMOVIDO': return `Removeu ${game} dos jogos monitorados`;
       case 'STEAM_CONECTADA': return 'Conectou a conta Steam';
-      case 'BIBLIOTECA_STEAM_SINCRONIZADA': return 'Sincronizou a biblioteca Steam';
-      case 'CONQUISTAS_STEAM_SINCRONIZADAS': return 'Sincronizou as conquistas Steam';
+      case 'BIBLIOTECA_STEAM_SINCRONIZADA': return `Sincronizou a biblioteca Steam${detail ? ` (${detail})` : ''}`;
+      case 'JOGO_ADICIONADO_BIBLIOTECA_STEAM': return `Adicionou ${detail || game} a biblioteca Steam`;
+      case 'CONQUISTAS_STEAM_SINCRONIZADAS': return `Sincronizou as conquistas Steam${detail ? ` (${detail})` : ''}`;
+      case 'CONQUISTA_STEAM_DESBLOQUEADA': return `Desbloqueou ${detail || `uma conquista em ${game}`}`;
       default: return 'Atualizou o perfil';
     }
+  }
+
+  get libraryGames(): PerfilPublico['biblioteca'] {
+    if (!this.profile) return [];
+    const query = this.librarySearch.trim().toLocaleLowerCase('pt-BR');
+    const games = this.profile.biblioteca.filter(game => !query || game.titulo.toLocaleLowerCase('pt-BR').includes(query));
+    return [...games].sort((a, b) => {
+      if (this.libraryOrder === 'nome') return a.titulo.localeCompare(b.titulo, 'pt-BR');
+      if (this.libraryOrder === 'conquistas') return (b.conquistasDesbloqueadas / Math.max(1, b.conquistasTotal)) - (a.conquistasDesbloqueadas / Math.max(1, a.conquistasTotal));
+      return b.minutosJogadas - a.minutosJogadas;
+    });
   }
 
   relativeTime(value: string): string {
