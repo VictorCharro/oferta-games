@@ -26,7 +26,9 @@ public class ControladorPerfis {
   void salvar(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody ServicoPerfis.EntradaPerfil entrada) { perfis.salvar(usuario(autorizacao), entrada); }
 
   @GetMapping("/{handle}")
-  ServicoPerfis.PerfilPublico publico(@PathVariable String handle) { return perfis.publico(handle); }
+  ServicoPerfis.PerfilPublico publico(@PathVariable String handle, @RequestHeader(value = "Authorization", required = false) String autorizacao) {
+    return perfis.publico(handle, autenticacao.buscarUsuarioPeloCabecalho(autorizacao).orElse(null));
+  }
 
   private String usuario(String autorizacao) { return autenticacao.buscarUsuarioPeloCabecalho(autorizacao).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED)); }
 }

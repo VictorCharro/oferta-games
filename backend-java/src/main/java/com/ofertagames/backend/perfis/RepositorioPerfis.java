@@ -20,6 +20,11 @@ class RepositorioPerfis {
         .param("handle", handle).query((rs, linha) -> mapear(rs)).optional();
   }
 
+  Optional<Perfil> buscarPorHandle(String handle) {
+    return jdbc.sql("SELECT user_id::text, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games FROM profiles WHERE handle = :handle")
+        .param("handle", handle).query((rs, linha) -> mapear(rs)).optional();
+  }
+
   void salvar(String usuarioId, DadosPerfil dados) {
     jdbc.sql("""
         INSERT INTO profiles (user_id, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games, updated_at)

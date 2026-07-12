@@ -27,8 +27,9 @@ class ServicoPerfis {
     catch (RuntimeException erro) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta URL de perfil ja esta em uso"); }
   }
 
-  PerfilPublico publico(String handle) {
-    RepositorioPerfis.Perfil perfil = perfis.buscarPublicoPorHandle(normalizarHandleObrigatorio(handle)).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+  PerfilPublico publico(String handle, String visitanteId) {
+    RepositorioPerfis.Perfil perfil = perfis.buscarPorHandle(normalizarHandleObrigatorio(handle)).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    if (!perfil.publico() && !perfil.usuarioId().equals(visitanteId)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     ServicoConexoesSteam.StatusConexaoSteam status = steam.status(perfil.usuarioId());
     List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = perfil.mostrarBiblioteca() ? steam.biblioteca(perfil.usuarioId()) : List.of();
     return new PerfilPublico(perfil.handle(), perfil.nomeExibicao(), perfil.bio(), perfil.avatarUrl(),

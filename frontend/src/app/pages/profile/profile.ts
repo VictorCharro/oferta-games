@@ -1,4 +1,5 @@
 import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { supabase } from '../../services/supabase';
 import { FavoriteGame, FavoritesService } from '../../services/favorites';
@@ -36,6 +37,7 @@ export class Profile implements OnInit, OnDestroy {
     private favoritesService: FavoritesService,
     private steamService: ConexoesSteamService,
     private perfisService: PerfisService,
+    private router: Router,
     private cdr: ChangeDetectorRef
   ) {
     this.name = auth.displayName;
@@ -45,7 +47,7 @@ export class Profile implements OnInit, OnDestroy {
     this.avatarUrl = auth.avatarUrl;
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.favoritesSub = this.favoritesService.list$.subscribe(list => {
       this.favorites = list;
       this.cdr.detectChanges();
@@ -55,8 +57,23 @@ export class Profile implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     }));
     this.favoritesService.load();
+    if (await this.redirecionarParaPerfilCanonico()) return;
     this.loadSteam();
     this.loadPublicProfile();
+  }
+
+  private async redirecionarParaPerfilCanonico(): Promise<boolean> {
+    try {
+      let profile = await this.perfisService.proprio();
+      if (!profile?.handle) {
+        const base = this.auth.displayName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'jogador';
+        const handle = `${base}-${this.auth.user?.id.slice(0, 4) || 'user'}`;
+        await this.perfisService.salvar({ handle, nomeExibicao: this.auth.displayName, bio: this.bio, publico: false, mostrarHoras: true, mostrarConquistas: true, mostrarBiblioteca: true, mostrarFavoritos: true });
+        profile = await this.perfisService.proprio();
+      }
+      if (profile?.handle) { await this.router.navigateByUrl(`/${profile.handle}`, { replaceUrl: true }); return true; }
+    } catch { /* Mantem /perfil como fallback caso a configuracao ainda nao exista. */ }
+    return false;
   }
 
   async loadSteam() {
