@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { PerfilPublico, PerfisService } from '../../services/perfis';
+import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { supabase } from '../../services/supabase';
 
 @Component({
@@ -25,6 +26,7 @@ export class PublicProfile implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private perfis: PerfisService,
+    private profileFavorites: ProfileFavoritesService,
     public auth: AuthService,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -32,6 +34,7 @@ export class PublicProfile implements OnInit {
   async ngOnInit() {
     try {
       this.profile = await this.perfis.publico(this.route.snapshot.paramMap.get('handle') || '');
+      this.profile.favoritos ??= [];
       this.bioDraft = this.profile.bio || '';
 
       try {
@@ -58,6 +61,22 @@ export class PublicProfile implements OnInit {
     return game.iconeHash
       ? `https://media.steampowered.com/steamcommunity/public/images/apps/${game.appId}/${game.iconeHash}.jpg`
       : 'store-logos/steam.svg';
+  }
+
+  formatPrice(price: number | null): string {
+    return price == null ? 'Preco indisponivel' : price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  async removePersonalFavorite(slug: string) {
+    if (!this.profile || !this.isOwner) return;
+    try {
+      await this.profileFavorites.remove(slug);
+      this.profile.favoritos = this.profile.favoritos.filter(game => game.slug !== slug);
+      this.message = 'Jogo removido dos favoritos.';
+    } catch {
+      this.message = 'Nao foi possivel remover o jogo dos favoritos.';
+    }
+    this.cdr.detectChanges();
   }
 
   editBio() {

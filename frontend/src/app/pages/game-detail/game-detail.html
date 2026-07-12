@@ -14,19 +14,24 @@
               {{ refreshing ? 'Atualizando...' : 'Atualizar preços' }}
             </button>
             <button
-              class="detail-favorite-btn"
+              class="detail-monitor-btn"
               type="button"
-              (click)="toggleFavorite($event)"
-              [class.active]="favorited"
-              [title]="favorited ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
-              [attr.aria-label]="favorited ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
+              (click)="toggleMonitoring($event)"
+              [class.active]="monitoring"
+              [title]="monitoring ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
+              [attr.aria-label]="monitoring ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
             >
-              <svg class="heart-icon" viewBox="0 0 24 24" width="18" height="18"
-                [attr.fill]="favorited ? '#29A8E0' : 'none'"
-                [attr.stroke]="favorited ? '#29A8E0' : '#fff'"
-                stroke-width="2">
-                <path d="M12 21s-6.716-4.35-9.428-8.485C.257 9.028 1.11 5.5 4.108 4.06 6.64 2.84 9.5 3.66 12 6.5c2.5-2.84 5.36-3.66 7.892-2.44 2.998 1.44 3.85 4.968 1.536 8.455C18.716 16.65 12 21 12 21z"/>
-              </svg>
+              <img src="jogos-monitorados.png" alt="" />
+            </button>
+            <button
+              class="detail-profile-favorite-btn"
+              type="button"
+              (click)="togglePersonalFavorite($event)"
+              [class.active]="personalFavorite"
+              [title]="personalFavorite ? 'Remover dos jogos favoritos' : 'Adicionar aos jogos favoritos'"
+              [attr.aria-label]="personalFavorite ? 'Remover dos jogos favoritos' : 'Adicionar aos jogos favoritos'"
+            >
+              <img src="jogos-favoritos.png" alt="" />
             </button>
           </div>
           <span class="refresh-msg" *ngIf="refreshMsg">{{ refreshMsg }}</span>

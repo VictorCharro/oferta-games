@@ -64,15 +64,18 @@
   </section>
 
   <section class="profile-stats" *ngIf="activeTab === 'resumo'">
-    <article class="stat-card"><div class="stat-icon"><img src="jogos-favoritos.png" alt="" /></div><div><span>Jogos favoritos</span><strong>--</strong><small>Em breve no perfil</small></div></article>
+    <article class="stat-card"><div class="stat-icon"><img src="jogos-favoritos.png" alt="" /></div><div><span>Jogos favoritos</span><strong>{{ profile.favoritos.length || '--' }}</strong><small>{{ profile.favoritos.length ? 'Favoritos pessoais' : 'Nenhum favorito ainda' }}</small></div></article>
     <article class="stat-card"><div class="stat-icon"><img src="horas-jogadas.png" alt="" /></div><div><span>Horas jogadas</span><strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong><small>{{ profile.totalMinutos != null ? 'Steam conectada' : 'Conecte uma plataforma' }}</small></div></article>
     <article class="stat-card"><div class="stat-icon trophy"><img src="conquistas.png" alt="" /></div><div><span>Conquistas</span><strong>{{ profile.conquistasTotal != null ? (profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal) : '--' }}</strong><small>{{ profile.conquistasTotal != null ? 'Conquistas sincronizadas' : 'Conecte uma plataforma' }}</small></div></article>
   </section>
 
   <section class="profile-grid" *ngIf="activeTab === 'resumo'">
     <article class="panel favorites-panel">
-      <div class="panel-heading"><h2>Jogos favoritos</h2></div>
-      <div class="empty-panel"><img src="jogos-favoritos.png" alt="" /><h3>Nenhum jogo favorito ainda</h3><p>Em breve voce podera escolher jogos favoritos pessoais para exibir no perfil.</p></div>
+      <div class="panel-heading"><h2>Jogos favoritos</h2><button *ngIf="isOwner" type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">Gerenciar</button></div>
+      <div *ngIf="profile.favoritos.length; else noFavoriteSummary" class="profile-favorite-list compact">
+        <article *ngFor="let game of profile.favoritos.slice(0, 3)" class="profile-favorite-item"><a [routerLink]="['/jogo', game.slug]"><img [src]="game.capaUrl || 'no-cover.svg'" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</span></div></a><button *ngIf="isOwner" type="button" class="remove-favorite" (click)="removePersonalFavorite(game.slug)" title="Remover dos jogos favoritos">Remover</button></article>
+      </div>
+      <ng-template #noFavoriteSummary><div class="empty-panel"><img src="jogos-favoritos.png" alt="" /><h3>Nenhum jogo favorito ainda</h3><p *ngIf="isOwner">Adicione favoritos na pagina de cada jogo.</p><p *ngIf="!isOwner">Este perfil ainda nao possui jogos favoritos.</p></div></ng-template>
     </article>
 
     <aside class="side-stack">
@@ -92,8 +95,11 @@
   </section>
 
   <section class="panel favorites-only" *ngIf="activeTab === 'jogosFavoritos'">
-    <div class="panel-heading"><h2>Jogos favoritos</h2></div>
-    <div class="empty-panel"><img src="jogos-favoritos.png" alt="" /><h3>Nenhum jogo favorito ainda</h3><p>Em breve voce podera escolher jogos favoritos pessoais para exibir no perfil.</p></div>
+    <div class="panel-heading"><h2>Jogos favoritos</h2><a *ngIf="isOwner" routerLink="/catalogo" class="panel-link">Explorar catalogo</a></div>
+    <div *ngIf="profile.favoritos.length; else noFavorites" class="profile-favorite-list">
+      <article *ngFor="let game of profile.favoritos" class="profile-favorite-item"><a [routerLink]="['/jogo', game.slug]"><img [src]="game.capaUrl || 'no-cover.svg'" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></div></a><button *ngIf="isOwner" type="button" class="remove-favorite" (click)="removePersonalFavorite(game.slug)">Remover</button></article>
+    </div>
+    <ng-template #noFavorites><div class="empty-panel"><img src="jogos-favoritos.png" alt="" /><h3>Nenhum jogo favorito ainda</h3><p *ngIf="isOwner">Abra um jogo para adiciona-lo aos favoritos pessoais.</p><p *ngIf="!isOwner">Este perfil ainda nao possui jogos favoritos.</p></div></ng-template>
   </section>
 
   <section class="panel library-list-panel" *ngIf="activeTab === 'biblioteca'">

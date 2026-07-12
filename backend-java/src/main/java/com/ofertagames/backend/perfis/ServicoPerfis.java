@@ -1,6 +1,8 @@
 package com.ofertagames.backend.perfis;
 
 import com.ofertagames.backend.conexoes.ServicoConexoesSteam;
+import com.ofertagames.backend.favoritosperfil.FavoritoPerfilJogo;
+import com.ofertagames.backend.favoritosperfil.RepositorioFavoritosPerfil;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -15,8 +17,9 @@ class ServicoPerfis {
       "jogo", "login", "mais-vendidos", "monitorados", "perfil", "promocoes", "u");
   private final RepositorioPerfis perfis;
   private final ServicoConexoesSteam steam;
+  private final RepositorioFavoritosPerfil favoritosPerfil;
 
-  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam) { this.perfis = perfis; this.steam = steam; }
+  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam, RepositorioFavoritosPerfil favoritosPerfil) { this.perfis = perfis; this.steam = steam; this.favoritosPerfil = favoritosPerfil; }
 
   RepositorioPerfis.Perfil proprio(String usuarioId) { return perfis.buscarPorUsuario(usuarioId).orElse(null); }
 
@@ -39,12 +42,15 @@ class ServicoPerfis {
     RepositorioPerfis.Perfil perfil = perfis.buscarPorHandle(normalizarHandleObrigatorio(handle)).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     if (!perfil.publico() && !perfil.usuarioId().equals(visitanteId)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     ServicoConexoesSteam.StatusConexaoSteam status = steam.status(perfil.usuarioId());
-    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = perfil.mostrarBiblioteca() ? steam.biblioteca(perfil.usuarioId()) : List.of();
+    boolean dono = perfil.usuarioId().equals(visitanteId);
+    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = dono || perfil.mostrarBiblioteca() ? steam.biblioteca(perfil.usuarioId()) : List.of();
+    List<FavoritoPerfilJogo> favoritos = dono || perfil.mostrarFavoritos() ? favoritosPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
     return new PerfilPublico(perfil.handle(), perfil.nomeExibicao(), perfil.bio(), perfil.avatarUrl(),
         perfil.mostrarHoras() ? status.totalMinutos() : null,
         perfil.mostrarConquistas() ? status.conquistasDesbloqueadas() : null,
         perfil.mostrarConquistas() ? status.conquistasTotal() : null,
-        jogos);
+        jogos,
+        favoritos);
   }
 
   private static String normalizarHandle(String valor) { if (valor == null || valor.isBlank()) return null; return normalizarHandleObrigatorio(valor); }
@@ -53,5 +59,5 @@ class ServicoPerfis {
 
   record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos) {}
   record EntradaAvatar(String avatarUrl) {}
-  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca) {}
+  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos) {}
 }

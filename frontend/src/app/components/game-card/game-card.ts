@@ -36,7 +36,7 @@ export class GameCard implements OnInit, OnDestroy {
     this.sub.unsubscribe();
   }
 
-  get favorited(): boolean {
+  get monitoring(): boolean {
     return this.favoritesService.isFavorited(this.game?.slug);
   }
 
@@ -74,7 +74,7 @@ export class GameCard implements OnInit, OnDestroy {
     return storePlatforms(storeName, this.displayStoreUrl);
   }
 
-  toggleFavorite(event: Event) {
+  toggleMonitoring(event: Event) {
     event.preventDefault();
     event.stopPropagation();
     if (!this.auth.isLoggedIn) {

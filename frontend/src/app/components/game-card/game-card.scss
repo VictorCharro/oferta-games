@@ -51,7 +51,7 @@
     z-index: 1;
   }
 
-  .btn-favorite {
+  .btn-monitor {
     position: absolute;
     top: 8px;
     right: 8px;
@@ -63,7 +63,7 @@
     justify-content: center;
     background: transparent;
 
-    .favorite-bg {
+    .monitor-bg {
       position: absolute;
       inset: 0;
       border-radius: 50%;
@@ -72,19 +72,25 @@
       transition: opacity 0.2s;
     }
 
-    .heart-icon {
+    .monitor-icon {
       position: relative;
       z-index: 1;
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
       opacity: 0;
       transition: opacity 0.2s;
     }
 
     .game-card:hover & {
-      .favorite-bg { opacity: 1; }
-      .heart-icon { opacity: 1; }
+      .monitor-bg { opacity: 1; }
+      .monitor-icon { opacity: 1; }
     }
 
-    &.active .heart-icon { opacity: 1; }
+    &.active {
+      .monitor-bg { opacity: 1; }
+      .monitor-icon { opacity: 1; }
+    }
   }
 }
 

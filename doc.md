@@ -232,6 +232,7 @@ sync_locks
 - **Home:** banner com autoplay e seções em carrossel.
 - **Perfil:** dashboard gamer com avatar, bio editável, estatísticas de gameplay, resumo de biblioteca e atividade recente. A aba **Jogos favoritos** é isolada e mostra apenas os favoritos pessoais futuros; preferências ficam somente em Configurações. A foto é enviada ao Supabase Storage, persiste entre sessões e é exibida no perfil público.
 - **Jogos Monitorados:** a rota `/monitorados` e os endpoints `/api/favorites` representam jogos que o usuário quer acompanhar por preço. A rota antiga `/favoritos` redireciona para `/monitorados` por compatibilidade.
+- **Ações de monitoramento:** cards do catálogo e a página de detalhe usam `jogos-monitorados.png`, nunca o ícone de favoritos pessoais, para incluir ou remover um jogo da lista de preços monitorados.
 - **Jogos favoritos:** no perfil, este nome é reservado para favoritos pessoais do usuário. Ainda não usa persistência própria; será implementado com estrutura separada dos jogos monitorados.
 - **Configurações:** divididas em Conta, Conexões, Preferências e Privacidade. Conta concentra identidade, senha e sessão; Conexões concentra Steam/Xbox; Preferências afetam o conteúdo da home e os filtros iniciais do catálogo; Privacidade controla a exposição futura dos dados sincronizados no perfil.
 - **Preferências do usuário:** persistidas localmente no navegador enquanto não houver contrato próprio no backend. A home continua com conteúdo geral misturado e, quando existe uma plataforma preferida, mostra a seção exclusiva **Jogos da sua plataforma favorita** logo abaixo de Jogos Monitorados (ou abaixo do banner quando não houver monitorados). Ocultação de DLCs, desconto mínimo e preço máximo também são aplicados à seção. No catálogo, plataforma, DLCs, desconto mínimo e preço máximo inicializam os filtros sem impedir ajustes manuais.
@@ -244,9 +245,9 @@ sync_locks
 
 ## Implementações futuras planejadas
 
-- **Favoritos pessoais do perfil:** criar uma estrutura separada de `favorites`, como `profile_favorites`, para representar jogos preferidos do usuário no perfil. Esses favoritos são de identidade/gosto pessoal, não de monitoramento de preço.
+- **Favoritos pessoais do perfil:** evoluir a lista já persistida com ordenação manual, limite de exibição pública e, futuramente, coleções.
 - **Monitoramento de preço:** manter os favoritos atuais como lista de jogos monitorados. No produto, usar o nome **Jogos Monitorados** para esse conceito.
-- **Perfil:** trocar a seção temporária de últimos favoritos por favoritos pessoais do perfil quando a nova estrutura existir. Permitir escolher, remover e futuramente ordenar esses jogos.
+- **Perfil:** evoluir favoritos pessoais com ordenação manual e coleções quando houver necessidade de mais organização.
 - **Conexões de plataformas:** implementar em Configurações, começando por Steam/Xbox quando houver decisão técnica. O perfil apenas consome os dados sincronizados.
 - **Persistência de configurações:** migrar preferências e privacidade do `localStorage` para uma tabela vinculada ao usuário no Supabase quando houver perfil público e uso em múltiplos dispositivos.
 - **Gameplay real:** substituir placeholders de horas jogadas, conquistas e biblioteca por dados sincronizados das conexões. Estados que dependem de conexão devem usar o padrão `--` + `Conecte uma plataforma`; cards de horas por plataforma só devem aparecer para plataformas realmente conectadas pelo usuário.
@@ -268,7 +269,7 @@ sync_locks
 - Cada usuario escolhe um identificador unico e compartilhavel na raiz, no formato `/identificador`. Rotas do produto sao reservadas e nao podem ser usadas como identificador.
 - Na propria URL canonica, o dono autenticado ve e pode copiar o link publico do proprio usuario.
 - O perfil publico replica a linguagem visual do perfil privado e mostra somente os blocos autorizados pela privacidade. Quando o proprio dono autenticado abre sua URL canonica, recebe tambem os controles de trocar foto e editar bio; visitantes nunca recebem essas acoes.
-- A URL canonica preserva as tres abas do perfil: Resumo, Jogos favoritos e Biblioteca. O resumo contem os cards de favoritos, horas e conquistas, alem dos paineis de favoritos pessoais, biblioteca e atividade recente; favoritos pessoais e atividade permanecem como placeholders ate terem persistencia propria.
+- A URL canonica preserva as tres abas do perfil: Resumo, Jogos favoritos e Biblioteca. O resumo contem os cards de favoritos, horas e conquistas, alem dos paineis de favoritos pessoais, biblioteca e atividade recente; a atividade permanece como placeholder ate possuir eventos persistidos.
 - A topbar resolve o identificador antes de navegar, evitando renderizar `/perfil` como tela intermediaria. A pagina publica aguarda a resposta da API antes de exibir indisponibilidade.
 - A rota `/perfil` e apenas uma ponte autenticada: cria um identificador temporario seguro quando necessario e redireciona para a URL canonica `/<identificador>`. Perfis privados continuam visiveis somente pelo proprio dono autenticado.
 - O perfil e privado por padrao. E-mail, UUID, jogos monitorados e dados de conexao nunca sao expostos.
@@ -276,6 +277,13 @@ sync_locks
 - A persistencia fica em `profiles`; executar `backend-java/sql/20260711_perfis_publicos.sql` no Supabase antes do deploy.
 - Avatares publicos usam o bucket `avatars` do Supabase Storage. Executar tambem `backend-java/sql/20260712_avatars_perfil.sql`; o upload aceita JPEG, PNG e WebP de ate 2 MB e cada usuario so pode gravar em sua propria pasta.
 - A API de perfis usa `PUT /api/perfis/me` e `PUT /api/perfis/me/avatar`; a politica CORS global permite `PUT` para a origem configurada em `CORS_ALLOWED_ORIGINS`.
+
+## Favoritos pessoais do perfil
+
+- Favoritos pessoais usam a tabela `profile_favorites`, separada de `favorites`, que continua sendo exclusivamente de Jogos Monitorados.
+- O usuario adiciona ou remove favoritos pessoais pela pagina de detalhe do jogo. A aba **Jogos favoritos** do proprio perfil lista, remove e direciona para o catalogo; visitantes apenas visualizam a lista quando a privacidade permitir.
+- A API autenticada usa `GET`, `POST` e `DELETE /api/profile-favorites`; a URL publica do perfil inclui os favoritos somente quando `show_favorite_games` estiver ativo.
+- Executar `backend-java/sql/20260712_favoritos_pessoais.sql` no Supabase antes do deploy do backend.
 
 ## Icones de perfil e biblioteca
 
@@ -304,7 +312,7 @@ sync_locks
 - [x] Workflows de sync e keep alive do GitHub Actions removidos
 - [ ] Executar `backend-java/sql/20260711_coleta_agendada.sql` no Supabase e ativar `APP_SYNC_SCHEDULER_ENABLED=true` no Render
 - [x] Backend publicado no Render
-- [ ] Separar favoritos pessoais do perfil dos jogos monitorados por preço
+- [x] Separar favoritos pessoais do perfil dos jogos monitorados por preço
 - [x] Persistir foto de perfil no Supabase Storage
 - [ ] Conexões de plataformas em Configurações
 - [ ] Sincronizar horas jogadas, conquistas e biblioteca

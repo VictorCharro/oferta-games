@@ -4,6 +4,7 @@ import { of, Subscription } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 import { GameService, GameDetail as GameDetailModel, GameSummary, Offer } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
+import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { AuthService } from '../../services/auth';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 
@@ -20,18 +21,22 @@ export class GameDetail implements OnInit, OnDestroy {
   refreshMsg = '';
   private routeSub?: Subscription;
   private favoriteSub?: Subscription;
+  private profileFavoriteSub?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private gameService: GameService,
     private favoritesService: FavoritesService,
+    private profileFavoritesService: ProfileFavoritesService,
     private auth: AuthService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
     this.favoriteSub = this.favoritesService.slugs$.subscribe(() => this.cdr.detectChanges());
+    this.profileFavoriteSub = this.profileFavoritesService.slugs$.subscribe(() => this.cdr.detectChanges());
+    this.profileFavoritesService.load().catch(() => {});
     this.routeSub = this.route.paramMap.pipe(
       map(params => params.get('slug')),
       filter((slug): slug is string => !!slug),
@@ -54,13 +59,14 @@ export class GameDetail implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
     this.favoriteSub?.unsubscribe();
+    this.profileFavoriteSub?.unsubscribe();
   }
 
-  get favorited(): boolean {
+  get monitoring(): boolean {
     return this.game ? this.favoritesService.isFavorited(this.game.slug) : false;
   }
 
-  toggleFavorite(event: Event) {
+  toggleMonitoring(event: Event) {
     event.preventDefault();
     event.stopPropagation();
     if (!this.game) return;
@@ -69,6 +75,19 @@ export class GameDetail implements OnInit, OnDestroy {
       return;
     }
     this.favoritesService.toggle(this.gameSummary(this.game));
+  }
+
+  get personalFavorite(): boolean {
+    return this.game ? this.profileFavoritesService.isFavorite(this.game.slug) : false;
+  }
+
+  async togglePersonalFavorite(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!this.game) return;
+    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
+    await this.profileFavoritesService.toggle(this.gameSummary(this.game));
+    this.cdr.detectChanges();
   }
 
   private gameSummary(game: GameDetailModel): GameSummary {
