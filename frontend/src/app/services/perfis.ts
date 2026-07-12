@@ -14,6 +14,7 @@ export class PerfisService {
   async salvar(perfil: Omit<PerfilProprio, 'bio'> & { bio: string }): Promise<void> { await firstValueFrom(this.http.put(`${this.api}/me`, perfil, { headers: await this.headers() })); }
   async atualizarAvatar(avatarUrl: string): Promise<void> { await firstValueFrom(this.http.put(`${this.api}/me/avatar`, { avatarUrl }, { headers: await this.headers() })); }
   async publico(handle: string): Promise<PerfilPublico> { return firstValueFrom(this.http.get<PerfilPublico>(`${this.api}/${encodeURIComponent(handle)}`, { headers: await this.optionalHeaders() })); }
+  async atualizarPublico(handle: string): Promise<{ status: 'agendada' | 'aguarde' | 'sem_conexao' }> { return firstValueFrom(this.http.post<{ status: 'agendada' | 'aguarde' | 'sem_conexao' }>(`${this.api}/${encodeURIComponent(handle)}/atualizar`, {}, { headers: await this.optionalHeaders() })); }
   private async headers(): Promise<{ Authorization: string }> { const { data } = await supabase.auth.getSession(); if (!data.session?.access_token) throw new Error('Sessao nao encontrada'); return { Authorization: `Bearer ${data.session.access_token}` }; }
   private async optionalHeaders(): Promise<{ Authorization?: string }> { const { data } = await supabase.auth.getSession(); return data.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : {}; }
 }

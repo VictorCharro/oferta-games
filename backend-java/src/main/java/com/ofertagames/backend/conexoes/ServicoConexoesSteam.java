@@ -112,6 +112,15 @@ public class ServicoConexoesSteam {
     return atualizados;
   }
 
+  public void sincronizarPerfilCompleto(String usuarioId) {
+    sincronizarBiblioteca(usuarioId);
+    sincronizarConquistasDoUsuario(usuarioId, 50);
+  }
+
+  public boolean reservarAtualizacaoPublica(String usuarioId) {
+    return conexoes.reservarAtualizacaoPublica(usuarioId);
+  }
+
   public java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId) {
     return conexoes.listarBiblioteca(usuarioId, 100).stream()
         .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash()))

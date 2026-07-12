@@ -21,6 +21,7 @@ export class PublicProfile implements OnInit {
   editingBio = false;
   bioDraft = '';
   savingBio = false;
+  refreshing = false;
   message = '';
 
   constructor(
@@ -113,6 +114,22 @@ export class PublicProfile implements OnInit {
     return `${days} d`;
   }
 
+  async refreshProfile() {
+    if (!this.profile || this.refreshing) return;
+    this.refreshing = true;
+    this.message = '';
+    try {
+      const result = await this.perfis.atualizarPublico(this.profile.handle);
+      if (result.status === 'agendada') this.message = 'Atualizacao iniciada. Os dados serao atualizados em alguns instantes.';
+      if (result.status === 'aguarde') this.message = 'Este perfil foi atualizado recentemente. Tente novamente em alguns minutos.';
+      if (result.status === 'sem_conexao') this.message = 'Este perfil nao possui uma conta Steam conectada.';
+    } catch {
+      this.message = 'Nao foi possivel iniciar a atualizacao do perfil.';
+    }
+    this.refreshing = false;
+    this.cdr.detectChanges();
+  }
+
   editBio() {
     this.bioDraft = this.profile?.bio || '';
     this.editingBio = true;
@@ -193,17 +210,4 @@ export class PublicProfile implements OnInit {
     this.cdr.detectChanges();
   }
 
-  get publicUrl(): string {
-    return this.profile ? `${window.location.origin}/${this.profile.handle}` : '';
-  }
-
-  async copyPublicUrl() {
-    try {
-      await navigator.clipboard.writeText(this.publicUrl);
-      this.message = 'Link do perfil copiado.';
-    } catch {
-      this.message = 'Nao foi possivel copiar o link.';
-    }
-    this.cdr.detectChanges();
-  }
 }

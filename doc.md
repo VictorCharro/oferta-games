@@ -267,7 +267,7 @@ sync_locks
 ## Perfis publicos
 
 - Cada usuario escolhe um identificador unico e compartilhavel na raiz, no formato `/identificador`. Rotas do produto sao reservadas e nao podem ser usadas como identificador.
-- Na propria URL canonica, o dono autenticado ve e pode copiar o link publico do proprio usuario.
+- A URL canonica do perfil e o proprio endereco compartilhavel do usuario, sem exibir um link duplicado dentro do perfil.
 - O perfil publico replica a linguagem visual do perfil privado e mostra somente os blocos autorizados pela privacidade. Quando o proprio dono autenticado abre sua URL canonica, recebe tambem os controles de trocar foto e editar bio; visitantes nunca recebem essas acoes.
 - A URL canonica preserva as tres abas do perfil: Resumo, Jogos favoritos e Biblioteca. O resumo contem os cards de favoritos, horas e conquistas, alem dos paineis de favoritos pessoais, biblioteca e atividade recente; a atividade permanece como placeholder ate possuir eventos persistidos.
 - A topbar resolve o identificador antes de navegar, evitando renderizar `/perfil` como tela intermediaria. A pagina publica aguarda a resposta da API antes de exibir indisponibilidade.
@@ -290,6 +290,7 @@ sync_locks
 - Atividades sao registradas em `profile_activities` para adicao/remocao de jogos monitorados, adicao/remocao de favoritos pessoais, conexao Steam e sincronizacoes manuais da Steam.
 - A atividade e publica por padrao: visitantes veem os eventos quando o perfil esta publico. Em Privacidade, o dono pode desativar **Mostrar atividade recente**; nesse caso os eventos nao sao enviados pela API para visitantes.
 - Executar `backend-java/sql/20260712_atividades_perfil.sql` e `backend-java/sql/20260712_visibilidade_atividade_perfil.sql` no Supabase antes do deploy do backend.
+- Qualquer visitante pode usar **Atualizar dados** no perfil publico para solicitar uma sincronizacao completa da Steam (biblioteca, horas e conquistas). A operacao roda em segundo plano e cada perfil aceita uma solicitacao a cada 10 minutos, protegendo a Steam e o backend contra abuso. Executar tambem `backend-java/sql/20260712_atualizacao_publica_perfil.sql`.
 
 ## Icones de perfil e biblioteca
 

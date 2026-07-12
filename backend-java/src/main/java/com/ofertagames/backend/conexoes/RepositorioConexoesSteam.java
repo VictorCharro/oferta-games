@@ -75,6 +75,21 @@ class RepositorioConexoesSteam {
         .optional();
   }
 
+  boolean reservarAtualizacaoPublica(String usuarioId) {
+    return jdbc.sql("""
+        UPDATE steam_connections
+        SET last_public_profile_refresh_at = now()
+        WHERE user_id = CAST(:usuarioId AS uuid)
+          AND (last_public_profile_refresh_at IS NULL
+            OR last_public_profile_refresh_at < now() - (10 * interval '1 minute'))
+        RETURNING true
+        """)
+        .param("usuarioId", usuarioId)
+        .query(Boolean.class)
+        .optional()
+        .orElse(false);
+  }
+
   List<ConexaoUsuarioSteam> listarConexoes() {
     return jdbc.sql("SELECT user_id::text, steam_id FROM steam_connections ORDER BY connected_at ASC")
         .query((rs, linha) -> new ConexaoUsuarioSteam(rs.getString("user_id"), rs.getString("steam_id")))

@@ -60,11 +60,22 @@ class ServicoPerfis {
         perfil.mostrarAtividades());
   }
 
+  ResultadoAtualizacao solicitarAtualizacao(String handle, String visitanteId) {
+    RepositorioPerfis.Perfil perfil = perfis.buscarPorHandle(normalizarHandleObrigatorio(handle))
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    boolean dono = perfil.usuarioId().equals(visitanteId);
+    if (!perfil.publico() && !dono) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    if (!steam.status(perfil.usuarioId()).conectada()) return new ResultadoAtualizacao("sem_conexao", null);
+    if (!steam.reservarAtualizacaoPublica(perfil.usuarioId())) return new ResultadoAtualizacao("aguarde", null);
+    return new ResultadoAtualizacao("agendada", perfil.usuarioId());
+  }
+
   private static String normalizarHandle(String valor) { if (valor == null || valor.isBlank()) return null; return normalizarHandleObrigatorio(valor); }
   private static String normalizarHandleObrigatorio(String valor) { String handle = valor.trim().toLowerCase(Locale.ROOT); if (!handle.matches("^[a-z0-9][a-z0-9-]{2,29}$")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use de 3 a 30 caracteres: letras minusculas, numeros e hifen"); if (IDENTIFICADORES_RESERVADOS.contains(handle)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta URL e reservada pelo sistema"); return handle; }
   private static String limitar(String valor, int maximo) { String resultado = valor == null ? "" : valor.trim(); return resultado.length() > maximo ? resultado.substring(0, maximo) : resultado; }
 
   record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades) {}
   record EntradaAvatar(String avatarUrl) {}
+  record ResultadoAtualizacao(String status, String usuarioId) {}
   record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades, boolean mostrarAtividades) {}
 }
