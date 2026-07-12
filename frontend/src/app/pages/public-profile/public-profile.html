@@ -1,10 +1,71 @@
 <div class="page-content public-profile" *ngIf="profile; else pageState">
   <section class="public-hero">
-    <div class="public-main"><div class="avatar"><img *ngIf="profile.avatarUrl" [src]="profile.avatarUrl" alt="" /><span *ngIf="!profile.avatarUrl">{{ profile.nomeExibicao.charAt(0) }}</span></div><div class="identity"><h1>{{ profile.nomeExibicao }}</h1><span>@{{ profile.handle }}</span><p *ngIf="profile.bio; else noBio">{{ profile.bio }}</p><ng-template #noBio><p>Perfil público do Oferta Games</p></ng-template></div></div>
-    <div class="gameplay" *ngIf="profile.totalMinutos != null || profile.conquistasTotal != null"><h2>Estatísticas de gameplay</h2><div class="gameplay-grid"><div *ngIf="profile.totalMinutos != null"><span>Total de horas jogadas</span><strong>{{ hours(profile.totalMinutos) }}</strong><small>Steam</small></div><div *ngIf="profile.totalMinutos != null"><span>Horas por plataforma</span><div class="platform-pill"><img src="store-logos/steam.svg" alt="Steam" /><b>Steam</b><strong>{{ hours(profile.totalMinutos) }}</strong></div></div><div *ngIf="profile.conquistasTotal != null"><span>Total de conquistas</span><strong>{{ profile.conquistasDesbloqueadas }}/{{ profile.conquistasTotal }}</strong><small>Steam</small></div></div></div>
+    <div class="public-main">
+      <div class="avatar-editor">
+        <div class="avatar">
+          <img *ngIf="ownerAvatar || profile.avatarUrl" [src]="ownerAvatar || profile.avatarUrl" alt="Foto de perfil" />
+          <span *ngIf="!ownerAvatar && !profile.avatarUrl">{{ profile.nomeExibicao.charAt(0) }}</span>
+        </div>
+        <label *ngIf="isOwner" class="avatar-action" for="public-avatar-input">Trocar foto</label>
+        <input *ngIf="isOwner" id="public-avatar-input" type="file" accept="image/*" (change)="onAvatarSelected($event)" />
+      </div>
+
+      <div class="identity">
+        <h1>{{ profile.nomeExibicao }}</h1>
+        <span>@{{ profile.handle }}</span>
+        <div *ngIf="isOwner" class="profile-url">
+          <span>{{ publicUrl }}</span>
+          <button type="button" (click)="copyPublicUrl()">Copiar link</button>
+        </div>
+
+        <div *ngIf="isOwner && editingBio" class="bio-editor">
+          <textarea [(ngModel)]="bioDraft" maxlength="180" rows="3" placeholder="Conte um pouco sobre voce como jogador"></textarea>
+          <div class="bio-actions">
+            <span>{{ bioDraft.length }}/180</span>
+            <button class="ghost-btn" type="button" (click)="cancelBio()" [disabled]="savingBio">Cancelar</button>
+            <button class="save-btn" type="button" (click)="saveBio()" [disabled]="savingBio">{{ savingBio ? 'Salvando...' : 'Salvar bio' }}</button>
+          </div>
+        </div>
+
+        <button *ngIf="isOwner && !editingBio" class="bio-btn" type="button" (click)="editBio()">{{ profile.bio || 'Adicionar uma bio' }}</button>
+
+        <ng-container *ngIf="!isOwner">
+          <p *ngIf="profile.bio; else noBio">{{ profile.bio }}</p>
+          <ng-template #noBio><p>Perfil publico do Oferta Games</p></ng-template>
+        </ng-container>
+
+        <p *ngIf="message" class="profile-message">{{ message }}</p>
+      </div>
+    </div>
+
+    <div class="gameplay" *ngIf="profile.totalMinutos != null || profile.conquistasTotal != null">
+      <h2>Estatisticas de gameplay</h2>
+      <div class="gameplay-grid">
+        <div *ngIf="profile.totalMinutos != null"><span>Total de horas jogadas</span><strong>{{ hours(profile.totalMinutos) }}</strong><small>Steam</small></div>
+        <div *ngIf="profile.totalMinutos != null"><span>Horas por plataforma</span><div class="platform-pill"><img src="store-logos/steam.svg" alt="Steam" /><b>Steam</b><strong>{{ hours(profile.totalMinutos) }}</strong></div></div>
+        <div *ngIf="profile.conquistasTotal != null"><span>Total de conquistas</span><strong>{{ profile.conquistasDesbloqueadas }}/{{ profile.conquistasTotal }}</strong><small>Steam</small></div>
+      </div>
+    </div>
   </section>
-  <section class="tabs"><button [class.active]="activeTab === 'resumo'" (click)="activeTab = 'resumo'">Resumo</button><button *ngIf="profile.biblioteca.length" [class.active]="activeTab === 'biblioteca'" (click)="activeTab = 'biblioteca'">Biblioteca</button></section>
-  <section class="summary-grid" *ngIf="activeTab === 'resumo'"><article class="summary-card" *ngIf="profile.totalMinutos != null"><img src="horas-jogadas.png" alt="" /><div><span>Horas jogadas</span><strong>{{ hours(profile.totalMinutos) }}</strong><small>Steam conectada</small></div></article><article class="summary-card" *ngIf="profile.conquistasTotal != null"><img src="conquistas.png" alt="" /><div><span>Conquistas</span><strong>{{ profile.conquistasDesbloqueadas }}/{{ profile.conquistasTotal }}</strong><small>Conquistas sincronizadas</small></div></article><article class="summary-card" *ngIf="profile.biblioteca.length"><img src="biblioteca.png" alt="" /><div><span>Biblioteca</span><strong>{{ profile.biblioteca.length }}</strong><small>Jogos compartilhados</small></div></article></section>
-  <section class="library-panel" *ngIf="activeTab === 'biblioteca' && profile.biblioteca.length"><div class="panel-heading"><h2>Biblioteca Steam</h2><span>{{ profile.biblioteca.length }} jogos exibidos</span></div><div class="games"><article *ngFor="let game of profile.biblioteca"><img [src]="icon(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span></div></article></div></section>
+
+  <section class="tabs">
+    <button [class.active]="activeTab === 'resumo'" (click)="activeTab = 'resumo'">Resumo</button>
+    <button *ngIf="profile.biblioteca.length" [class.active]="activeTab === 'biblioteca'" (click)="activeTab = 'biblioteca'">Biblioteca</button>
+  </section>
+
+  <section class="summary-grid" *ngIf="activeTab === 'resumo'">
+    <article class="summary-card" *ngIf="profile.totalMinutos != null"><img src="horas-jogadas.png" alt="" /><div><span>Horas jogadas</span><strong>{{ hours(profile.totalMinutos) }}</strong><small>Steam conectada</small></div></article>
+    <article class="summary-card" *ngIf="profile.conquistasTotal != null"><img src="conquistas.png" alt="" /><div><span>Conquistas</span><strong>{{ profile.conquistasDesbloqueadas }}/{{ profile.conquistasTotal }}</strong><small>Conquistas sincronizadas</small></div></article>
+    <article class="summary-card" *ngIf="profile.biblioteca.length"><img src="biblioteca.png" alt="" /><div><span>Biblioteca</span><strong>{{ profile.biblioteca.length }}</strong><small>Jogos compartilhados</small></div></article>
+  </section>
+
+  <section class="library-panel" *ngIf="activeTab === 'biblioteca' && profile.biblioteca.length">
+    <div class="panel-heading"><h2>Biblioteca Steam</h2><span>{{ profile.biblioteca.length }} jogos exibidos</span></div>
+    <div class="games"><article *ngFor="let game of profile.biblioteca"><img [src]="icon(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span></div></article></div>
+  </section>
 </div>
-<ng-template #pageState><div class="page-content unavailable" *ngIf="loading"><span class="loading-line"></span><span class="loading-line short"></span></div><div class="page-content unavailable" *ngIf="!loading && missing"><h1>Perfil indisponível</h1><p>Este perfil não existe ou não está público.</p></div></ng-template>
+
+<ng-template #pageState>
+  <div class="page-content unavailable" *ngIf="loading"><span class="loading-line"></span><span class="loading-line short"></span></div>
+  <div class="page-content unavailable" *ngIf="!loading && missing"><h1>Perfil indisponivel</h1><p>Este perfil nao existe ou nao esta publico.</p></div>
+</ng-template>

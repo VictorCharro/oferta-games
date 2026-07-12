@@ -267,8 +267,8 @@ sync_locks
 ## Perfis publicos
 
 - Cada usuario escolhe um identificador unico e compartilhavel na raiz, no formato `/identificador`. Rotas do produto sao reservadas e nao podem ser usadas como identificador.
-- A area privada `/perfil` mostra a URL publica do proprio usuario e oferece o comando para copia-la quando o perfil estiver publico.
-- O perfil publico replica a linguagem visual do perfil privado, sem acoes de edicao e somente com os blocos autorizados pela privacidade.
+- Na propria URL canonica, o dono autenticado ve e pode copiar o link publico do proprio usuario.
+- O perfil publico replica a linguagem visual do perfil privado e mostra somente os blocos autorizados pela privacidade. Quando o proprio dono autenticado abre sua URL canonica, recebe tambem os controles de trocar foto e editar bio; visitantes nunca recebem essas acoes.
 - A topbar resolve o identificador antes de navegar, evitando renderizar `/perfil` como tela intermediaria. A pagina publica aguarda a resposta da API antes de exibir indisponibilidade.
 - A rota `/perfil` e apenas uma ponte autenticada: cria um identificador temporario seguro quando necessario e redireciona para a URL canonica `/<identificador>`. Perfis privados continuam visiveis somente pelo proprio dono autenticado.
 - O perfil e privado por padrao. E-mail, UUID, jogos monitorados e dados de conexao nunca sao expostos.
