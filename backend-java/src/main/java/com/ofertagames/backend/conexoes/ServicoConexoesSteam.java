@@ -73,8 +73,17 @@ public class ServicoConexoesSteam {
     RepositorioConexoesSteam.ConexaoSteam conexao = conexoes.buscarConexao(usuarioId)
         .orElseThrow(ConexaoSteamNaoEncontradaException::new);
     try {
-      conexoes.substituirBiblioteca(usuarioId, steam.buscarBiblioteca(conexao.steamId()));
-      atividades.registrar(usuarioId, "BIBLIOTECA_STEAM_SINCRONIZADA");
+      boolean primeiraSincronizacao = !conexoes.atividadesBibliotecaInicializadas(usuarioId);
+      java.util.List<RepositorioConexoesSteam.JogoBibliotecaSteam> jogos = steam.buscarBiblioteca(conexao.steamId());
+      java.util.List<RepositorioConexoesSteam.JogoBibliotecaSteam> novos = conexoes.substituirBiblioteca(usuarioId, jogos, !primeiraSincronizacao);
+      if (primeiraSincronizacao) {
+        atividades.registrar(usuarioId, "BIBLIOTECA_STEAM_SINCRONIZADA", jogos.size() + " jogos");
+        conexoes.marcarAtividadesBibliotecaInicializadas(usuarioId);
+      } else {
+        for (RepositorioConexoesSteam.JogoBibliotecaSteam jogo : novos) {
+          atividades.registrar(usuarioId, "JOGO_ADICIONADO_BIBLIOTECA_STEAM", jogo.titulo());
+        }
+      }
     } catch (RuntimeException erro) {
       conexoes.registrarErro(usuarioId, mensagemErro(erro));
       throw erro;
@@ -85,13 +94,7 @@ public class ServicoConexoesSteam {
     if (!steam.configurada()) return 0;
     int atualizados = 0;
     for (RepositorioConexoesSteam.ConexaoUsuarioSteam conexao : conexoes.listarConexoes()) {
-      for (RepositorioConexoesSteam.JogoBibliotecaSteam jogo : conexoes.listarParaConquistas(conexao.usuarioId(), limitePorUsuario)) {
-        ClienteSteamWeb.ConquistasSteam conquistas = steam.buscarConquistas(conexao.steamId(), jogo.appId());
-        if (conquistas == null) continue;
-        conexoes.salvarConquistas(conexao.usuarioId(), jogo.appId(), conquistas.desbloqueadas(), conquistas.total());
-        atualizados++;
-      }
-      conexoes.marcarConquistasSincronizadas(conexao.usuarioId());
+      atualizados += sincronizarConquistasDaConta(conexao.usuarioId(), conexao.steamId(), limitePorUsuario);
     }
     return atualizados;
   }
@@ -100,16 +103,7 @@ public class ServicoConexoesSteam {
     if (!steam.configurada()) return 0;
     RepositorioConexoesSteam.ConexaoSteam conexao = conexoes.buscarConexao(usuarioId)
         .orElseThrow(ConexaoSteamNaoEncontradaException::new);
-    int atualizados = 0;
-    for (RepositorioConexoesSteam.JogoBibliotecaSteam jogo : conexoes.listarParaConquistas(usuarioId, limite)) {
-      ClienteSteamWeb.ConquistasSteam conquistas = steam.buscarConquistas(conexao.steamId(), jogo.appId());
-      if (conquistas == null) continue;
-      conexoes.salvarConquistas(usuarioId, jogo.appId(), conquistas.desbloqueadas(), conquistas.total());
-      atualizados++;
-    }
-    conexoes.marcarConquistasSincronizadas(usuarioId);
-    atividades.registrar(usuarioId, "CONQUISTAS_STEAM_SINCRONIZADAS");
-    return atualizados;
+    return sincronizarConquistasDaConta(usuarioId, conexao.steamId(), limite);
   }
 
   public void sincronizarPerfilCompleto(String usuarioId) {
@@ -123,8 +117,44 @@ public class ServicoConexoesSteam {
 
   public java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId) {
     return conexoes.listarBiblioteca(usuarioId, 100).stream()
-        .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash()))
+        .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash(), jogo.conquistasDesbloqueadas(), jogo.conquistasTotal()))
         .toList();
+  }
+
+  private int sincronizarConquistasDaConta(String usuarioId, String steamId, int limite) {
+    boolean primeiraSincronizacao = !conexoes.atividadesConquistasInicializadas(usuarioId);
+    boolean resumoInicialRegistrado = conexoes.atividadesConquistasIniciadas(usuarioId);
+    int atualizados = 0;
+    for (RepositorioConexoesSteam.JogoBibliotecaSteam jogo : conexoes.listarParaConquistas(usuarioId, limite)) {
+      ClienteSteamWeb.ConquistasSteam conquistas = steam.buscarConquistas(steamId, jogo.appId());
+      if (conquistas == null) {
+        if (primeiraSincronizacao) {
+          conexoes.salvarConquistas(usuarioId, jogo.appId(), 0, 0);
+          atualizados++;
+        }
+        continue;
+      }
+      java.util.Set<String> conhecidas = primeiraSincronizacao ? java.util.Set.of() : conexoes.conquistasDesbloqueadas(usuarioId, jogo.appId());
+      conexoes.salvarConquistas(usuarioId, jogo.appId(), conquistas.desbloqueadas().size(), conquistas.total());
+      conexoes.salvarConquistasDetalhadas(usuarioId, jogo.appId(), conquistas.desbloqueadas());
+      if (!primeiraSincronizacao) {
+        for (ClienteSteamWeb.ConquistaSteam conquista : conquistas.desbloqueadas()) {
+          if (!conhecidas.contains(conquista.identificador())) {
+            atividades.registrar(usuarioId, "CONQUISTA_STEAM_DESBLOQUEADA", jogo.titulo() + " - " + conquista.titulo());
+          }
+        }
+      }
+      atualizados++;
+    }
+    conexoes.marcarConquistasSincronizadas(usuarioId);
+    if (primeiraSincronizacao && !resumoInicialRegistrado) {
+      atividades.registrar(usuarioId, "CONQUISTAS_STEAM_SINCRONIZADAS", atualizados + " jogos analisados");
+      conexoes.marcarAtividadesConquistasIniciadas(usuarioId);
+    }
+    if (primeiraSincronizacao && !conexoes.existemJogosSemConquistas(usuarioId)) {
+      conexoes.marcarAtividadesConquistasInicializadas(usuarioId);
+    }
+    return atualizados;
   }
 
   public StatusConexaoSteam status(String usuarioId) {
@@ -223,7 +253,7 @@ public class ServicoConexoesSteam {
     }
   }
 
-  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash) {}
+  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal) {}
 
   static class ConexaoSteamNaoEncontradaException extends RuntimeException {}
   static class UrlBackendNaoConfiguradaException extends RuntimeException {}

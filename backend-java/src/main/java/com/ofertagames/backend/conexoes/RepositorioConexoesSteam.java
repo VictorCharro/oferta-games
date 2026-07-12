@@ -1,8 +1,10 @@
 package com.ofertagames.backend.conexoes;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -90,13 +92,44 @@ class RepositorioConexoesSteam {
         .orElse(false);
   }
 
+  boolean atividadesBibliotecaInicializadas(String usuarioId) {
+    return jdbc.sql("SELECT library_activity_baselined FROM steam_connections WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId).query(Boolean.class).optional().orElse(false);
+  }
+
+  boolean atividadesConquistasInicializadas(String usuarioId) {
+    return jdbc.sql("SELECT achievement_activity_baselined FROM steam_connections WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId).query(Boolean.class).optional().orElse(false);
+  }
+
+  boolean atividadesConquistasIniciadas(String usuarioId) {
+    return jdbc.sql("SELECT achievement_activity_started FROM steam_connections WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId).query(Boolean.class).optional().orElse(false);
+  }
+
+  void marcarAtividadesBibliotecaInicializadas(String usuarioId) {
+    jdbc.sql("UPDATE steam_connections SET library_activity_baselined = true WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId).update();
+  }
+
+  void marcarAtividadesConquistasInicializadas(String usuarioId) {
+    jdbc.sql("UPDATE steam_connections SET achievement_activity_baselined = true WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId).update();
+  }
+
+  void marcarAtividadesConquistasIniciadas(String usuarioId) {
+    jdbc.sql("UPDATE steam_connections SET achievement_activity_started = true WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId).update();
+  }
+
   List<ConexaoUsuarioSteam> listarConexoes() {
     return jdbc.sql("SELECT user_id::text, steam_id FROM steam_connections ORDER BY connected_at ASC")
         .query((rs, linha) -> new ConexaoUsuarioSteam(rs.getString("user_id"), rs.getString("steam_id")))
         .list();
   }
 
-  void substituirBiblioteca(String usuarioId, List<JogoBibliotecaSteam> jogos) {
+  List<JogoBibliotecaSteam> substituirBiblioteca(String usuarioId, List<JogoBibliotecaSteam> jogos, boolean identificarNovos) {
+    Set<Integer> idsAnteriores = identificarNovos ? idsBiblioteca(usuarioId) : Set.of();
     jdbc.sql("DELETE FROM steam_library_games WHERE user_id = CAST(:usuarioId AS uuid)")
         .param("usuarioId", usuarioId)
         .update();
@@ -115,6 +148,12 @@ class RepositorioConexoesSteam {
     jdbc.sql("UPDATE steam_connections SET last_library_sync_at = now(), last_error = NULL WHERE user_id = CAST(:usuarioId AS uuid)")
         .param("usuarioId", usuarioId)
         .update();
+    return jogos.stream().filter(jogo -> !idsAnteriores.contains(jogo.appId())).toList();
+  }
+
+  private Set<Integer> idsBiblioteca(String usuarioId) {
+    return new HashSet<>(jdbc.sql("SELECT app_id FROM steam_library_games WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId).query(Integer.class).list());
   }
 
   List<JogoBibliotecaSteam> listarParaConquistas(String usuarioId, int limite) {
@@ -136,19 +175,52 @@ class RepositorioConexoesSteam {
         .list();
   }
 
+  boolean existemJogosSemConquistas(String usuarioId) {
+    return jdbc.sql("""
+        SELECT EXISTS (
+          SELECT 1 FROM steam_library_games b
+          LEFT JOIN steam_game_achievements a ON a.user_id = b.user_id AND a.app_id = b.app_id
+          WHERE b.user_id = CAST(:usuarioId AS uuid) AND a.app_id IS NULL
+        )
+        """)
+        .param("usuarioId", usuarioId).query(Boolean.class).single();
+  }
+
   List<JogoBibliotecaSteam> listarBiblioteca(String usuarioId, int limite) {
     return jdbc.sql("""
-        SELECT app_id, title, playtime_minutes, icon_hash
-        FROM steam_library_games
-        WHERE user_id = CAST(:usuarioId AS uuid)
-        ORDER BY playtime_minutes DESC, title ASC
+        SELECT b.app_id, b.title, b.playtime_minutes, b.icon_hash,
+               COALESCE(a.unlocked_count, 0) AS unlocked_count,
+               COALESCE(a.total_count, 0) AS total_count
+        FROM steam_library_games b
+        LEFT JOIN steam_game_achievements a ON a.user_id = b.user_id AND a.app_id = b.app_id
+        WHERE b.user_id = CAST(:usuarioId AS uuid)
+        ORDER BY b.playtime_minutes DESC, b.title ASC
         LIMIT :limite
         """)
         .param("usuarioId", usuarioId)
         .param("limite", limite)
         .query((rs, linha) -> new JogoBibliotecaSteam(rs.getInt("app_id"), rs.getString("title"),
-            rs.getInt("playtime_minutes"), rs.getString("icon_hash")))
+            rs.getInt("playtime_minutes"), rs.getString("icon_hash"), rs.getInt("unlocked_count"), rs.getInt("total_count")))
         .list();
+  }
+
+  Set<String> conquistasDesbloqueadas(String usuarioId, int appId) {
+    return new HashSet<>(jdbc.sql("SELECT api_name FROM steam_user_achievements WHERE user_id = CAST(:usuarioId AS uuid) AND app_id = :appId")
+        .param("usuarioId", usuarioId).param("appId", appId).query(String.class).list());
+  }
+
+  void salvarConquistasDetalhadas(String usuarioId, int appId, List<ClienteSteamWeb.ConquistaSteam> conquistas) {
+    for (ClienteSteamWeb.ConquistaSteam conquista : conquistas) {
+      jdbc.sql("""
+          INSERT INTO steam_user_achievements (user_id, app_id, api_name, title, unlocked_at)
+          VALUES (CAST(:usuarioId AS uuid), :appId, :apiName, :titulo,
+            CASE WHEN :desbloqueadaEm > 0 THEN to_timestamp(:desbloqueadaEm) ELSE NULL END)
+          ON CONFLICT (user_id, app_id, api_name) DO UPDATE
+            SET title = EXCLUDED.title, unlocked_at = COALESCE(steam_user_achievements.unlocked_at, EXCLUDED.unlocked_at)
+          """)
+          .param("usuarioId", usuarioId).param("appId", appId).param("apiName", conquista.identificador())
+          .param("titulo", conquista.titulo()).param("desbloqueadaEm", conquista.desbloqueadaEm()).update();
+    }
   }
 
   void salvarConquistas(String usuarioId, int appId, int desbloqueadas, int total) {
@@ -209,6 +281,10 @@ class RepositorioConexoesSteam {
 
   record ConexaoSteam(String steamId, String nome, String avatarUrl, String conectadoEm, String bibliotecaSincronizadaEm, String conquistasSincronizadasEm, String ultimoErro) {}
   record ConexaoUsuarioSteam(String usuarioId, String steamId) {}
-  record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash) {}
+  record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal) {
+    JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash) {
+      this(appId, titulo, minutosJogadas, iconeHash, 0, 0);
+    }
+  }
   record ResumoSteam(long totalJogos, long totalMinutos, long conquistasDesbloqueadas, long conquistasTotal) {}
 }

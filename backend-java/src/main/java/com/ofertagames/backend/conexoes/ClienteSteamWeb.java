@@ -85,12 +85,15 @@ class ClienteSteamWeb {
           .body(new ParameterizedTypeReference<Map<String, Object>>() {});
       Map<?, ?> playerstats = resposta == null ? null : comoMapa(resposta.get("playerstats"));
       List<?> conquistas = playerstats == null ? List.of() : comoLista(playerstats.get("achievements"));
-      int desbloqueadas = 0;
+      List<ConquistaSteam> detalhes = new ArrayList<>();
       for (Object item : conquistas) {
         Map<?, ?> conquista = comoMapa(item);
-        if (conquista != null && Integer.valueOf(1).equals(comoInteiro(conquista.get("achieved")))) desbloqueadas++;
+        if (conquista == null || !Integer.valueOf(1).equals(comoInteiro(conquista.get("achieved")))) continue;
+        String identificador = comoTexto(conquista.get("apiname"));
+        if (identificador == null || identificador.isBlank()) continue;
+        detalhes.add(new ConquistaSteam(identificador, formatarNomeConquista(identificador), comoInteiro(conquista.get("unlocktime"), 0)));
       }
-      return new ConquistasSteam(desbloqueadas, conquistas.size());
+      return new ConquistasSteam(detalhes, conquistas.size());
     } catch (RuntimeException erro) {
       return null;
     }
@@ -120,8 +123,15 @@ class ClienteSteamWeb {
     return valor instanceof Number numero ? numero.intValue() : padrao;
   }
 
+  private static String formatarNomeConquista(String valor) {
+    String texto = valor.replace('_', ' ').trim().toLowerCase(java.util.Locale.ROOT);
+    if (texto.isBlank()) return valor;
+    return Character.toUpperCase(texto.charAt(0)) + texto.substring(1);
+  }
+
   record PerfilSteam(String nome, String avatarUrl) {}
-  record ConquistasSteam(int desbloqueadas, int total) {}
+  record ConquistasSteam(List<ConquistaSteam> desbloqueadas, int total) {}
+  record ConquistaSteam(String identificador, String titulo, int desbloqueadaEm) {}
   static class ChaveSteamNaoConfiguradaException extends RuntimeException {}
   static class BibliotecaSteamPrivadaException extends RuntimeException {}
 }
