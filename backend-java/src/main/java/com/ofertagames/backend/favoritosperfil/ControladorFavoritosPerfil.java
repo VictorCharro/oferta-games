@@ -1,6 +1,7 @@
 package com.ofertagames.backend.favoritosperfil;
 
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
+import com.ofertagames.backend.atividadesperfil.RepositorioAtividadesPerfil;
 import com.ofertagames.backend.jogos.RepositorioJogos;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -19,11 +20,13 @@ public class ControladorFavoritosPerfil {
   private final ServicoAutenticacao autenticacao;
   private final RepositorioFavoritosPerfil favoritos;
   private final RepositorioJogos jogos;
+  private final RepositorioAtividadesPerfil atividades;
 
-  ControladorFavoritosPerfil(ServicoAutenticacao autenticacao, RepositorioFavoritosPerfil favoritos, RepositorioJogos jogos) {
+  ControladorFavoritosPerfil(ServicoAutenticacao autenticacao, RepositorioFavoritosPerfil favoritos, RepositorioJogos jogos, RepositorioAtividadesPerfil atividades) {
     this.autenticacao = autenticacao;
     this.favoritos = favoritos;
     this.jogos = jogos;
+    this.atividades = atividades;
   }
 
   @GetMapping
@@ -41,7 +44,9 @@ public class ControladorFavoritosPerfil {
     var jogoId = jogos.buscarIdPorSlug(requisicao.slug());
     if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
 
-    favoritos.adicionar(usuarioId.get(), jogoId.get());
+    if (favoritos.adicionar(usuarioId.get(), jogoId.get())) {
+      atividades.registrar(usuarioId.get(), "FAVORITO_PESSOAL_ADICIONADO", jogoId.get());
+    }
     return ResponseEntity.status(201).body(Map.of("ok", true));
   }
 
@@ -52,7 +57,9 @@ public class ControladorFavoritosPerfil {
     var jogoId = jogos.buscarIdPorSlug(slug);
     if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
 
-    favoritos.remover(usuarioId.get(), jogoId.get());
+    if (favoritos.remover(usuarioId.get(), jogoId.get())) {
+      atividades.registrar(usuarioId.get(), "FAVORITO_PESSOAL_REMOVIDO", jogoId.get());
+    }
     return ResponseEntity.ok(Map.of("ok", true));
   }
 }

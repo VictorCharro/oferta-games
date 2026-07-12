@@ -1,6 +1,7 @@
 package com.ofertagames.backend.favoritos;
 
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
+import com.ofertagames.backend.atividadesperfil.RepositorioAtividadesPerfil;
 import com.ofertagames.backend.jogos.RepositorioJogos;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -19,11 +20,13 @@ public class ControladorFavoritos {
   private final ServicoAutenticacao autenticacao;
   private final RepositorioFavoritos favoritos;
   private final RepositorioJogos jogos;
+  private final RepositorioAtividadesPerfil atividades;
 
-  ControladorFavoritos(ServicoAutenticacao autenticacao, RepositorioFavoritos favoritos, RepositorioJogos jogos) {
+  ControladorFavoritos(ServicoAutenticacao autenticacao, RepositorioFavoritos favoritos, RepositorioJogos jogos, RepositorioAtividadesPerfil atividades) {
     this.autenticacao = autenticacao;
     this.favoritos = favoritos;
     this.jogos = jogos;
+    this.atividades = atividades;
   }
 
   @GetMapping
@@ -51,7 +54,9 @@ public class ControladorFavoritos {
       return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
     }
 
-    favoritos.adicionar(usuarioId.get(), jogoId.get());
+    if (favoritos.adicionar(usuarioId.get(), jogoId.get())) {
+      atividades.registrar(usuarioId.get(), "MONITORAMENTO_ADICIONADO", jogoId.get());
+    }
     return ResponseEntity.status(201).body(Map.of("ok", true));
   }
 
@@ -70,7 +75,9 @@ public class ControladorFavoritos {
       return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
     }
 
-    favoritos.remover(usuarioId.get(), jogoId.get());
+    if (favoritos.remover(usuarioId.get(), jogoId.get())) {
+      atividades.registrar(usuarioId.get(), "MONITORAMENTO_REMOVIDO", jogoId.get());
+    }
     return ResponseEntity.ok(Map.of("ok", true));
   }
 }

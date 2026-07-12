@@ -35,6 +35,7 @@ export class PublicProfile implements OnInit {
     try {
       this.profile = await this.perfis.publico(this.route.snapshot.paramMap.get('handle') || '');
       this.profile.favoritos ??= [];
+      this.profile.atividades ??= [];
       this.bioDraft = this.profile.bio || '';
 
       try {
@@ -77,6 +78,39 @@ export class PublicProfile implements OnInit {
       this.message = 'Nao foi possivel remover o jogo dos favoritos.';
     }
     this.cdr.detectChanges();
+  }
+
+  activityIcon(type: string): string {
+    if (type.startsWith('MONITORAMENTO')) return 'jogos-monitorados.png';
+    if (type.startsWith('FAVORITO_PESSOAL')) return 'jogos-favoritos.png';
+    if (type.startsWith('BIBLIOTECA')) return 'biblioteca.png';
+    if (type.startsWith('CONQUISTAS')) return 'conquistas.png';
+    return 'store-logos/steam.svg';
+  }
+
+  activityTitle(type: string, gameTitle: string | null): string {
+    const game = gameTitle || 'um jogo';
+    switch (type) {
+      case 'FAVORITO_PESSOAL_ADICIONADO': return `Adicionou ${game} aos jogos favoritos`;
+      case 'FAVORITO_PESSOAL_REMOVIDO': return `Removeu ${game} dos jogos favoritos`;
+      case 'MONITORAMENTO_ADICIONADO': return `Adicionou ${game} aos jogos monitorados`;
+      case 'MONITORAMENTO_REMOVIDO': return `Removeu ${game} dos jogos monitorados`;
+      case 'STEAM_CONECTADA': return 'Conectou a conta Steam';
+      case 'BIBLIOTECA_STEAM_SINCRONIZADA': return 'Sincronizou a biblioteca Steam';
+      case 'CONQUISTAS_STEAM_SINCRONIZADAS': return 'Sincronizou as conquistas Steam';
+      default: return 'Atualizou o perfil';
+    }
+  }
+
+  relativeTime(value: string): string {
+    const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
+    const minutes = Math.floor(elapsed / 60000);
+    if (minutes < 1) return 'agora';
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} h`;
+    const days = Math.floor(hours / 24);
+    return `${days} d`;
   }
 
   editBio() {

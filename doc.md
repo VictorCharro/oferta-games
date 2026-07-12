@@ -285,6 +285,12 @@ sync_locks
 - A API autenticada usa `GET`, `POST` e `DELETE /api/profile-favorites`; a URL publica do perfil inclui os favoritos somente quando `show_favorite_games` estiver ativo.
 - Executar `backend-java/sql/20260712_favoritos_pessoais.sql` no Supabase antes do deploy do backend.
 
+## Atividade recente do perfil
+
+- Atividades sao registradas em `profile_activities` para adicao/remocao de jogos monitorados, adicao/remocao de favoritos pessoais, conexao Steam e sincronizacoes manuais da Steam.
+- A atividade e privada por enquanto: apenas o proprio dono autenticado recebe os eventos. Visitantes veem somente o estado de atividade privada.
+- Executar `backend-java/sql/20260712_atividades_perfil.sql` no Supabase antes do deploy do backend.
+
 ## Icones de perfil e biblioteca
 
 - `horas-jogadas.png`: estatisticas de horas jogadas.
@@ -313,6 +319,7 @@ sync_locks
 - [ ] Executar `backend-java/sql/20260711_coleta_agendada.sql` no Supabase e ativar `APP_SYNC_SCHEDULER_ENABLED=true` no Render
 - [x] Backend publicado no Render
 - [x] Separar favoritos pessoais do perfil dos jogos monitorados por preço
+- [x] Atividade recente real e privada para o dono do perfil
 - [x] Persistir foto de perfil no Supabase Storage
 - [ ] Conexões de plataformas em Configurações
 - [ ] Sincronizar horas jogadas, conquistas e biblioteca

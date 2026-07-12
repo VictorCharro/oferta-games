@@ -50,21 +50,21 @@ public class RepositorioFavoritos {
         .list();
   }
 
-  public void adicionar(String usuarioId, long jogoId) {
-    jdbc.sql("""
+  public boolean adicionar(String usuarioId, long jogoId) {
+    return jdbc.sql("""
         INSERT INTO favorites (user_id, game_id)
         VALUES (CAST(:usuarioId AS uuid), :jogoId)
         ON CONFLICT (user_id, game_id) DO NOTHING
         """)
         .param("usuarioId", usuarioId)
         .param("jogoId", jogoId)
-        .update();
+        .update() > 0;
   }
 
-  public void remover(String usuarioId, long jogoId) {
-    jdbc.sql("DELETE FROM favorites WHERE user_id = CAST(:usuarioId AS uuid) AND game_id = :jogoId")
+  public boolean remover(String usuarioId, long jogoId) {
+    return jdbc.sql("DELETE FROM favorites WHERE user_id = CAST(:usuarioId AS uuid) AND game_id = :jogoId")
         .param("usuarioId", usuarioId)
         .param("jogoId", jogoId)
-        .update();
+        .update() > 0;
   }
 }

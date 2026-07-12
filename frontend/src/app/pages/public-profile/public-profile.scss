@@ -90,6 +90,7 @@
 .activity-item img { width: 20px; height: 20px; object-fit: contain; }
 .activity-item small { color: var(--text-muted); white-space: nowrap; }
 .activity-item.muted { opacity: .72; }
+.activity-list .activity-item + .activity-item { border-top: 1px solid var(--border-color); }
 .library-list-panel { min-height: 360px; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .panel-heading h2 { margin: 0; }

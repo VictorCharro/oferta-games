@@ -1,5 +1,6 @@
 package com.ofertagames.backend.conexoes;
 
+import com.ofertagames.backend.atividadesperfil.RepositorioAtividadesPerfil;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -21,6 +22,7 @@ public class ServicoConexoesSteam {
 
   private final RepositorioConexoesSteam conexoes;
   private final ClienteSteamWeb steam;
+  private final RepositorioAtividadesPerfil atividades;
   private final RestClient restClient;
   private final String urlFrontend;
   private final String urlBackend;
@@ -28,12 +30,14 @@ public class ServicoConexoesSteam {
   ServicoConexoesSteam(
       RepositorioConexoesSteam conexoes,
       ClienteSteamWeb steam,
+      RepositorioAtividadesPerfil atividades,
       RestClient.Builder restClientBuilder,
       @Value("${app.steam.frontend-url}") String urlFrontend,
       @Value("${app.public-backend-url:}") String urlBackend
   ) {
     this.conexoes = conexoes;
     this.steam = steam;
+    this.atividades = atividades;
     this.restClient = restClientBuilder.build();
     this.urlFrontend = removerBarraFinal(urlFrontend);
     this.urlBackend = removerBarraFinal(urlBackend);
@@ -61,6 +65,7 @@ public class ServicoConexoesSteam {
 
     ClienteSteamWeb.PerfilSteam perfil = buscarPerfilSemBloquearConexao(steamId);
     conexoes.salvarConexao(usuarioId.get(), steamId, perfil.nome(), perfil.avatarUrl());
+    atividades.registrar(usuarioId.get(), "STEAM_CONECTADA");
     return usuarioId;
   }
 
@@ -69,6 +74,7 @@ public class ServicoConexoesSteam {
         .orElseThrow(ConexaoSteamNaoEncontradaException::new);
     try {
       conexoes.substituirBiblioteca(usuarioId, steam.buscarBiblioteca(conexao.steamId()));
+      atividades.registrar(usuarioId, "BIBLIOTECA_STEAM_SINCRONIZADA");
     } catch (RuntimeException erro) {
       conexoes.registrarErro(usuarioId, mensagemErro(erro));
       throw erro;
@@ -102,6 +108,7 @@ public class ServicoConexoesSteam {
       atualizados++;
     }
     conexoes.marcarConquistasSincronizadas(usuarioId);
+    atividades.registrar(usuarioId, "CONQUISTAS_STEAM_SINCRONIZADAS");
     return atualizados;
   }
 
