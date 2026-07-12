@@ -1,5 +1,10 @@
 <div class="page-content public-profile" *ngIf="profile; else pageState">
   <section class="public-hero">
+    <button type="button" class="refresh-profile" (click)="refreshProfile()" [disabled]="refreshing"
+      [attr.aria-label]="refreshing ? 'Atualizando dados do perfil' : 'Atualizar dados do perfil'"
+      [title]="refreshing ? 'Atualizando dados...' : 'Atualizar dados do perfil'">
+      <span aria-hidden="true">↻</span>
+    </button>
     <div class="public-main">
       <div class="avatar-editor">
         <div class="avatar">
@@ -31,7 +36,7 @@
     </div>
 
     <div class="gameplay">
-      <div class="gameplay-heading"><h2>Estatisticas de gameplay</h2><button type="button" class="refresh-profile" (click)="refreshProfile()" [disabled]="refreshing">{{ refreshing ? 'Atualizando...' : 'Atualizar dados' }}</button></div>
+      <h2>Estatisticas de gameplay</h2>
       <div class="gameplay-grid">
         <div class="gameplay-stat">
           <span>Total de horas jogadas</span>
