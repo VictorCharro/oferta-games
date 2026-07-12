@@ -81,6 +81,6 @@ export class AuthService {
   }
 
   private loadAvatar(user: User | null) {
-    this._avatar.next(user ? localStorage.getItem(`oferta-games-avatar-${user.id}`) || '' : '');
+    this._avatar.next(user ? user.user_metadata?.['avatar_url'] || localStorage.getItem(`oferta-games-avatar-${user.id}`) || '' : '');
   }
 }

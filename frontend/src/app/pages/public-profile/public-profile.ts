@@ -109,20 +109,34 @@ export class PublicProfile implements OnInit {
     this.cdr.detectChanges();
   }
 
-  onAvatarSelected(event: Event) {
+  async onAvatarSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
+    if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de ate 2 MB.'; return; }
+    if (!this.auth.user || !this.profile) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.ownerAvatar = String(reader.result || '');
-      this.auth.updateAvatar(this.ownerAvatar);
+    this.message = '';
+    const caminho = `${this.auth.user.id}/avatar`;
+    const { error: erroUpload } = await supabase.storage.from('avatars').upload(caminho, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
+    if (erroUpload) { this.message = 'Nao foi possivel enviar a foto.'; this.cdr.detectChanges(); return; }
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(caminho);
+    const avatarUrl = `${data.publicUrl}?v=${Date.now()}`;
+    const metadata = this.auth.user.user_metadata ?? {};
+    const { error: erroAuth } = await supabase.auth.updateUser({ data: { ...metadata, avatar_url: avatarUrl } });
+    if (erroAuth) { this.message = 'Nao foi possivel salvar a foto.'; this.cdr.detectChanges(); return; }
+
+    try {
+      await this.perfis.atualizarAvatar(avatarUrl);
+      this.ownerAvatar = avatarUrl;
+      this.profile.avatarUrl = avatarUrl;
+      this.auth.updateAvatar(avatarUrl);
       input.value = '';
-      this.message = '';
-      this.cdr.detectChanges();
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      this.message = 'A foto foi enviada, mas nao foi possivel vincula-la ao perfil.';
+    }
+    this.cdr.detectChanges();
   }
 
   get publicUrl(): string {

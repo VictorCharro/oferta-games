@@ -230,7 +230,7 @@ sync_locks
 - **Concorrência da coleta:** jobs de preço e Steam não podem rodar juntos; `sync_locks` é uma trava compartilhada no banco que também protege durante deploys com duas instâncias temporárias.
 - **Login:** página de login sem sidebar/topbar.
 - **Home:** banner com autoplay e seções em carrossel.
-- **Perfil:** dashboard gamer com avatar, bio editável, estatísticas futuras de gameplay, resumo de biblioteca e atividade recente. A aba **Jogos favoritos** é isolada e mostra apenas os favoritos pessoais futuros; preferências ficam somente em Configurações. A troca de foto usa preview local no navegador enquanto não houver storage definitivo, mas atualiza imediatamente perfil e topbar na sessão atual.
+- **Perfil:** dashboard gamer com avatar, bio editável, estatísticas de gameplay, resumo de biblioteca e atividade recente. A aba **Jogos favoritos** é isolada e mostra apenas os favoritos pessoais futuros; preferências ficam somente em Configurações. A foto é enviada ao Supabase Storage, persiste entre sessões e é exibida no perfil público.
 - **Jogos Monitorados:** a rota `/monitorados` e os endpoints `/api/favorites` representam jogos que o usuário quer acompanhar por preço. A rota antiga `/favoritos` redireciona para `/monitorados` por compatibilidade.
 - **Jogos favoritos:** no perfil, este nome é reservado para favoritos pessoais do usuário. Ainda não usa persistência própria; será implementado com estrutura separada dos jogos monitorados.
 - **Configurações:** divididas em Conta, Conexões, Preferências e Privacidade. Conta concentra identidade, senha e sessão; Conexões concentra Steam/Xbox; Preferências afetam o conteúdo da home e os filtros iniciais do catálogo; Privacidade controla a exposição futura dos dados sincronizados no perfil.
@@ -250,7 +250,6 @@ sync_locks
 - **Conexões de plataformas:** implementar em Configurações, começando por Steam/Xbox quando houver decisão técnica. O perfil apenas consome os dados sincronizados.
 - **Persistência de configurações:** migrar preferências e privacidade do `localStorage` para uma tabela vinculada ao usuário no Supabase quando houver perfil público e uso em múltiplos dispositivos.
 - **Gameplay real:** substituir placeholders de horas jogadas, conquistas e biblioteca por dados sincronizados das conexões. Estados que dependem de conexão devem usar o padrão `--` + `Conecte uma plataforma`; cards de horas por plataforma só devem aparecer para plataformas realmente conectadas pelo usuário.
-- **Foto de perfil:** substituir preview local por upload persistente em storage definitivo, provavelmente Supabase Storage, e salvar a URL no perfil do usuário.
 - **Atividade recente:** evoluir de eventos locais/derivados para eventos reais, como jogo favoritado no perfil, jogo monitorado, conquista sincronizada ou plataforma conectada.
 - **Importação de catálogo:** avaliar uma coleta de descoberta separada para incluir jogos novos da ITAD sem misturar essa responsabilidade com a fila de atualização de preços.
 
@@ -275,7 +274,8 @@ sync_locks
 - O perfil e privado por padrao. E-mail, UUID, jogos monitorados e dados de conexao nunca sao expostos.
 - O usuario escolhe se libera horas jogadas, conquistas e biblioteca. O backend filtra os dados antes de responder a rota publica.
 - A persistencia fica em `profiles`; executar `backend-java/sql/20260711_perfis_publicos.sql` no Supabase antes do deploy.
-- A API de perfis usa `PUT /api/perfis/me`; a politica CORS global permite `PUT` para a origem configurada em `CORS_ALLOWED_ORIGINS`.
+- Avatares publicos usam o bucket `avatars` do Supabase Storage. Executar tambem `backend-java/sql/20260712_avatars_perfil.sql`; o upload aceita JPEG, PNG e WebP de ate 2 MB e cada usuario so pode gravar em sua propria pasta.
+- A API de perfis usa `PUT /api/perfis/me` e `PUT /api/perfis/me/avatar`; a politica CORS global permite `PUT` para a origem configurada em `CORS_ALLOWED_ORIGINS`.
 
 ## Icones de perfil e biblioteca
 
@@ -298,14 +298,14 @@ sync_locks
 - [x] Supabase PostgreSQL mantido como banco
 - [x] Supabase Auth usado nos favoritos
 - [x] Frontend Angular implementado
-- [x] Perfil visual implementado com bio editável, avatar local e placeholders de gameplay
+- [x] Perfil visual implementado com bio editável, avatar persistido e dados Steam sincronizados
 - [x] Dockerfile do backend Java configurado para Render
 - [x] Coleta interna de preços e metadados Steam agendada no Spring, com fila e trava no PostgreSQL
 - [x] Workflows de sync e keep alive do GitHub Actions removidos
 - [ ] Executar `backend-java/sql/20260711_coleta_agendada.sql` no Supabase e ativar `APP_SYNC_SCHEDULER_ENABLED=true` no Render
 - [x] Backend publicado no Render
 - [ ] Separar favoritos pessoais do perfil dos jogos monitorados por preço
-- [ ] Persistir foto de perfil em storage definitivo
+- [x] Persistir foto de perfil no Supabase Storage
 - [ ] Conexões de plataformas em Configurações
 - [ ] Sincronizar horas jogadas, conquistas e biblioteca
 - [ ] Integração com Eneba

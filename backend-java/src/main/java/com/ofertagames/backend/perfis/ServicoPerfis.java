@@ -23,8 +23,16 @@ class ServicoPerfis {
   void salvar(String usuarioId, EntradaPerfil entrada) {
     String handle = normalizarHandle(entrada.handle());
     if (entrada.publico() && handle == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Defina a URL do perfil antes de torna-lo publico");
-    try { perfis.salvar(usuarioId, new RepositorioPerfis.DadosPerfil(handle, limitar(entrada.nomeExibicao(), 60), limitar(entrada.bio(), 180), null, entrada.publico(), entrada.mostrarHoras(), entrada.mostrarConquistas(), entrada.mostrarBiblioteca(), entrada.mostrarFavoritos())); }
+    String avatarUrl = perfis.buscarPorUsuario(usuarioId).map(RepositorioPerfis.Perfil::avatarUrl).orElse(null);
+    try { perfis.salvar(usuarioId, new RepositorioPerfis.DadosPerfil(handle, limitar(entrada.nomeExibicao(), 60), limitar(entrada.bio(), 180), avatarUrl, entrada.publico(), entrada.mostrarHoras(), entrada.mostrarConquistas(), entrada.mostrarBiblioteca(), entrada.mostrarFavoritos())); }
     catch (RuntimeException erro) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta URL de perfil ja esta em uso"); }
+  }
+
+  void atualizarAvatar(String usuarioId, EntradaAvatar entrada) {
+    String avatarUrl = entrada.avatarUrl() == null ? "" : entrada.avatarUrl().trim();
+    String padrao = "^https://[a-z0-9-]+\\.supabase\\.co/storage/v1/object/public/avatars/" + java.util.regex.Pattern.quote(usuarioId) + "/[^\\s]{1,900}$";
+    if (!avatarUrl.matches(padrao)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "URL de avatar invalida");
+    perfis.atualizarAvatar(usuarioId, avatarUrl);
   }
 
   PerfilPublico publico(String handle, String visitanteId) {
@@ -44,5 +52,6 @@ class ServicoPerfis {
   private static String limitar(String valor, int maximo) { String resultado = valor == null ? "" : valor.trim(); return resultado.length() > maximo ? resultado.substring(0, maximo) : resultado; }
 
   record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos) {}
+  record EntradaAvatar(String avatarUrl) {}
   record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca) {}
 }

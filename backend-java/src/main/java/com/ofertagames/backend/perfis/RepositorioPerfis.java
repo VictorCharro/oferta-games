@@ -39,6 +39,11 @@ class RepositorioPerfis {
         .param("biblioteca", dados.mostrarBiblioteca()).param("favoritos", dados.mostrarFavoritos()).update();
   }
 
+  void atualizarAvatar(String usuarioId, String avatarUrl) {
+    jdbc.sql("UPDATE profiles SET avatar_url = :avatar, updated_at = now() WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId).param("avatar", avatarUrl).update();
+  }
+
   private static Perfil mapear(java.sql.ResultSet rs) throws java.sql.SQLException {
     return new Perfil(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getBoolean(6), rs.getBoolean(7), rs.getBoolean(8), rs.getBoolean(9), rs.getBoolean(10));
   }
