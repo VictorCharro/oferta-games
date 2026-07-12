@@ -6,6 +6,7 @@ import { ThemeService } from '../../services/theme';
 import { AuthService } from '../../services/auth';
 import { GameService, GameSummary } from '../../services/game';
 import { SearchService } from '../../services/search';
+import { PerfisService } from '../../services/perfis';
 
 @Component({
   selector: 'app-topbar',
@@ -31,6 +32,7 @@ export class Topbar implements OnInit, OnDestroy {
     private router: Router,
     private gameService: GameService,
     private searchService: SearchService,
+    private perfisService: PerfisService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -114,6 +116,15 @@ export class Topbar implements OnInit, OnDestroy {
   }
 
   toggleDropdown() { this.dropdownOpen = !this.dropdownOpen; }
+
+  async abrirPerfil() {
+    this.dropdownOpen = false;
+    try {
+      const perfil = await this.perfisService.proprio();
+      if (perfil?.handle) { await this.router.navigateByUrl(`/${perfil.handle}`); return; }
+    } catch { /* O fallback cria a URL temporaria na pagina privada. */ }
+    await this.router.navigateByUrl('/perfil');
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {

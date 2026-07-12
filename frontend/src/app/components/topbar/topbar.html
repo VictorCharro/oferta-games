@@ -42,9 +42,9 @@
         </div>
       </div>
       <div class="dropdown" *ngIf="dropdownOpen">
-        <a routerLink="/perfil" class="dropdown-item" (click)="dropdownOpen = false">
+        <button type="button" class="dropdown-item" (click)="abrirPerfil()">
           <img src="perfil.png" /> Perfil
-        </a>
+        </button>
         <a routerLink="/configuracoes" class="dropdown-item" (click)="dropdownOpen = false">
           <img src="configuracoes.png" /> Configurações
         </a>
