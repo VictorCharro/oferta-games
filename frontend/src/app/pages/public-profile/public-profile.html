@@ -169,42 +169,58 @@
       [cdkDragDisabled]="!editingLayout"
     >
       <div *ngIf="editingLayout" class="block-editor">
-        <span cdkDragHandle>↕</span
-        ><select class="editor-select" [(ngModel)]="block.tamanho">
-          <option value="pequeno">Pequeno</option>
-          <option value="medio">Médio</option>
-          <option value="largo">Largo</option>
-          <option value="completo">Completo</option></select
-        ><select class="editor-select" [(ngModel)]="block.tipoFundo">
-          <option value="padrao">Padrão</option>
-          <option value="cor">Cor</option>
-          <option value="gradiente">Gradiente</option>
-          <option value="imagem">Imagem</option></select
-        ><input
+        <span cdkDragHandle aria-label="Arrastar bloco" title="Arrastar bloco">↕</span>
+        <div class="editor-custom-select" [class.open]="isEditorSelectOpen(block, 'tamanho')">
+          <button type="button" class="editor-select-trigger" (click)="toggleEditorSelect($event, block, 'tamanho')" [attr.aria-expanded]="isEditorSelectOpen(block, 'tamanho')">
+            <span>{{ selectedEditorOption(block, 'tamanho') }}</span><span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <div *ngIf="isEditorSelectOpen(block, 'tamanho')" class="editor-select-menu" role="listbox" aria-label="Tamanho do bloco">
+            <button *ngFor="let option of sizeOptions" type="button" [class.selected]="block.tamanho === option.value" (click)="selectEditorOption(block, 'tamanho', option.value)">
+              <span>{{ option.label }}</span><span *ngIf="block.tamanho === option.value" class="option-check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+        </div>
+        <div class="editor-custom-select" [class.open]="isEditorSelectOpen(block, 'tipoFundo')">
+          <button type="button" class="editor-select-trigger" (click)="toggleEditorSelect($event, block, 'tipoFundo')" [attr.aria-expanded]="isEditorSelectOpen(block, 'tipoFundo')">
+            <span>{{ selectedEditorOption(block, 'tipoFundo') }}</span><span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <div *ngIf="isEditorSelectOpen(block, 'tipoFundo')" class="editor-select-menu" role="listbox" aria-label="Fundo do bloco">
+            <button *ngFor="let option of backgroundOptions" type="button" [class.selected]="block.tipoFundo === option.value" (click)="selectEditorOption(block, 'tipoFundo', option.value)">
+              <span>{{ option.label }}</span><span *ngIf="block.tipoFundo === option.value" class="option-check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+        </div>
+        <input
           *ngIf="block.tipoFundo === 'cor'"
           type="color"
           [(ngModel)]="block.valorFundo"
           (change)="rememberColor(block)"
-        /><div *ngIf="block.tipoFundo === 'cor'" class="recent-colors"><button *ngFor="let color of recentColors" type="button" [style.background]="color" [title]="color" (click)="block.valorFundo = color"></button></div><input
+        />
+        <div *ngIf="block.tipoFundo === 'cor'" class="recent-colors"><button *ngFor="let color of recentColors" type="button" [style.background]="color" [title]="color" (click)="block.valorFundo = color"></button></div>
+        <input
           *ngIf="block.tipoFundo === 'gradiente'"
           [(ngModel)]="block.valorFundo"
           placeholder="linear-gradient(...)"
-        /><label *ngIf="block.tipoFundo === 'imagem'">Fundo <input type="file" accept="image/*" (change)="onBlockImageSelected($event, block, 'fundo')" /></label><input
+        />
+        <ng-container *ngIf="block.tipoFundo === 'imagem'">
+          <input #backgroundImageInput class="visually-hidden" type="file" accept="image/*" (change)="onBlockImageSelected($event, block, 'fundo')" />
+          <button type="button" class="image-picker-button" (click)="backgroundImageInput.click()">{{ block.valorFundo ? 'Trocar imagem de fundo' : 'Escolher imagem de fundo' }}</button>
+        </ng-container>
+        <input
           *ngIf="block.tipo === 'texto' || block.tipo === 'links'"
           [(ngModel)]="block.titulo"
           placeholder="Título"
-        /><textarea
+        />
+        <textarea
           *ngIf="block.tipo === 'texto' || block.tipo === 'links'"
           [(ngModel)]="block.conteudo"
           [placeholder]="block.tipo === 'links' ? 'Nome | https://exemplo.com (uma linha por link)' : 'Conteúdo'"
-        ></textarea
-        ><label *ngIf="block.tipo === 'imagem'"
-          >Imagem
-          <input
-            type="file"
-            accept="image/*"
-            (change)="onBlockImageSelected($event, block)" /></label
-        ><button type="button" (click)="removeBlock(i)">Remover</button>
+        ></textarea>
+        <ng-container *ngIf="block.tipo === 'imagem'">
+          <input #contentImageInput class="visually-hidden" type="file" accept="image/*" (change)="onBlockImageSelected($event, block)" />
+          <button type="button" class="image-picker-button" (click)="contentImageInput.click()">{{ block.conteudo ? 'Trocar imagem' : 'Escolher imagem' }}</button>
+        </ng-container>
+        <button type="button" (click)="removeBlock(i)">Remover</button>
       </div>
       <ng-container [ngSwitch]="block.tipo"
         ><ng-container *ngSwitchCase="'resumo_favoritos'"

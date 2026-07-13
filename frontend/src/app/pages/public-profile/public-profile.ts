@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -36,6 +36,19 @@ export class PublicProfile implements OnInit, OnDestroy {
   avatarPositionY = 50;
   avatarPreview = '';
   avatarEditing = false;
+  editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
+  readonly sizeOptions = [
+    { value: 'pequeno', label: 'Pequeno' },
+    { value: 'medio', label: 'Médio' },
+    { value: 'largo', label: 'Largo' },
+    { value: 'completo', label: 'Completo' },
+  ];
+  readonly backgroundOptions = [
+    { value: 'padrao', label: 'Padrão' },
+    { value: 'cor', label: 'Cor sólida' },
+    { value: 'gradiente', label: 'Gradiente' },
+    { value: 'imagem', label: 'Imagem' },
+  ];
   private avatarFile: File | null = null;
   private routeSub?: Subscription;
   private profileRequest = 0;
@@ -104,7 +117,39 @@ export class PublicProfile implements OnInit, OnDestroy {
     }
   }
 
-  get visibleBlocks(): PerfilBloco[] { return (this.editingLayout ? this.layoutDraft : this.profile?.blocos || []).filter(block => this.editingLayout || block.visivel).sort((a, b) => a.posicao - b.posicao); }
+  get visibleBlocks(): PerfilBloco[] {
+    const blocks = this.editingLayout ? this.layoutDraft : this.profile?.blocos || [];
+    return [...blocks].sort((a, b) => a.posicao - b.posicao);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (!(event.target as HTMLElement).closest('.editor-custom-select')) this.editorSelectOpen = null;
+  }
+
+  @HostListener('document:keydown.escape')
+  closeEditorSelects() { this.editorSelectOpen = null; }
+
+  isEditorSelectOpen(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
+    return this.editorSelectOpen?.blockId === block.id && this.editorSelectOpen.campo === campo;
+  }
+
+  toggleEditorSelect(event: MouseEvent, block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
+    event.stopPropagation();
+    this.editorSelectOpen = this.isEditorSelectOpen(block, campo) ? null : { blockId: block.id, campo };
+  }
+
+  selectEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo', value: string) {
+    if (campo === 'tamanho') block.tamanho = value as PerfilBloco['tamanho'];
+    else block.tipoFundo = value as PerfilBloco['tipoFundo'];
+    this.editorSelectOpen = null;
+  }
+
+  selectedEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
+    const options = campo === 'tamanho' ? this.sizeOptions : this.backgroundOptions;
+    const value = campo === 'tamanho' ? block.tamanho : block.tipoFundo;
+    return options.find(option => option.value === value)?.label || '';
+  }
 
   startLayoutEdit() {
     if (!this.profile || !this.isOwner) return;
