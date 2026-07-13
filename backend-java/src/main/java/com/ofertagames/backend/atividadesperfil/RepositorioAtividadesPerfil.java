@@ -10,7 +10,7 @@ public class RepositorioAtividadesPerfil {
 
   RepositorioAtividadesPerfil(JdbcClient jdbc) { this.jdbc = jdbc; }
 
-  public void registrar(String usuarioId, String tipo) { registrar(usuarioId, tipo, null); }
+  public void registrar(String usuarioId, String tipo) { registrar(usuarioId, tipo, (Long) null); }
 
   public void registrar(String usuarioId, String tipo, Long jogoId) {
     registrar(usuarioId, tipo, jogoId, null);
