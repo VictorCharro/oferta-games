@@ -1,5 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth';
 import { PerfilPublico, PerfisService } from '../../services/perfis';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
@@ -11,7 +12,7 @@ import { supabase } from '../../services/supabase';
   templateUrl: './public-profile.html',
   styleUrl: './public-profile.scss',
 })
-export class PublicProfile implements OnInit {
+export class PublicProfile implements OnInit, OnDestroy {
   profile: PerfilPublico | null = null;
   missing = false;
   loading = true;
@@ -25,6 +26,8 @@ export class PublicProfile implements OnInit {
   message = '';
   librarySearch = '';
   libraryOrder: 'tempo' | 'nome' | 'conquistas' = 'tempo';
+  private routeSub?: Subscription;
+  private profileRequest = 0;
 
   constructor(
     private route: ActivatedRoute,
@@ -34,24 +37,53 @@ export class PublicProfile implements OnInit {
     private cdr: ChangeDetectorRef,
   ) {}
 
-  async ngOnInit() {
+  ngOnInit() {
+    this.routeSub = this.route.paramMap.subscribe(params => {
+      void this.loadProfile(params.get('handle') || '');
+    });
+  }
+
+  ngOnDestroy() {
+    this.routeSub?.unsubscribe();
+  }
+
+  private async loadProfile(handle: string) {
+    const request = ++this.profileRequest;
+    this.profile = null;
+    this.missing = false;
+    this.loading = true;
+    this.isOwner = false;
+    this.ownerAvatar = '';
+    this.editingBio = false;
+    this.message = '';
+    this.librarySearch = '';
+    this.libraryOrder = 'tempo';
+    this.activeTab = 'resumo';
+    this.cdr.detectChanges();
+
     try {
-      this.profile = await this.perfis.publico(this.route.snapshot.paramMap.get('handle') || '');
-      this.profile.favoritos ??= [];
-      this.profile.atividades ??= [];
-      this.bioDraft = this.profile.bio || '';
+      const profile = await this.perfis.publico(handle);
+      if (request !== this.profileRequest) return;
+      profile.favoritos ??= [];
+      profile.atividades ??= [];
+      this.profile = profile;
+      this.bioDraft = profile.bio || '';
 
       try {
         const own = await this.perfis.proprio();
+        if (request !== this.profileRequest) return;
         this.isOwner = Boolean(own?.handle && own.handle === this.profile?.handle);
         this.ownerAvatar = this.isOwner ? this.auth.avatarUrl : '';
         if (this.isOwner && this.profile) this.profile.favoritos = await this.profileFavorites.load();
       } catch {
+        if (request !== this.profileRequest) return;
         this.isOwner = false;
       }
     } catch {
+      if (request !== this.profileRequest) return;
       this.missing = true;
     } finally {
+      if (request !== this.profileRequest) return;
       this.loading = false;
       this.cdr.detectChanges();
     }
