@@ -31,6 +31,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   savingLayout = false;
   layoutDraft: PerfilBloco[] = [];
   recentColors: string[] = [];
+  recentTextColors: string[] = [];
   avatarZoom = 1;
   avatarPositionX = 50;
   avatarPositionY = 50;
@@ -90,7 +91,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       if (request !== this.profileRequest) return;
       profile.favoritos ??= [];
       profile.atividades ??= [];
-      profile.blocos = profile.blocos?.length ? profile.blocos : this.defaultBlocks();
+      profile.blocos = profile.blocos?.length ? profile.blocos.map(block => ({ ...block, corTexto: block.corTexto ?? null })) : this.defaultBlocks();
       this.profile = profile;
       this.bioDraft = profile.bio || '';
       this.avatarZoom = profile.avatarZoom || 1;
@@ -155,6 +156,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (!this.profile || !this.isOwner) return;
     this.layoutDraft = structuredClone(this.profile.blocos?.length ? this.profile.blocos : this.defaultBlocks());
     this.recentColors = JSON.parse(localStorage.getItem('oferta-games-recent-profile-colors') || '[]');
+    this.recentTextColors = JSON.parse(localStorage.getItem('oferta-games-recent-profile-text-colors') || '[]');
     this.editingLayout = true;
   }
 
@@ -169,7 +171,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (['resumo_favoritos', 'horas', 'conquistas', 'favoritos', 'biblioteca', 'atividade'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
     const id = `custom-${crypto.randomUUID()}`;
     const padrao = ['resumo_favoritos', 'horas', 'conquistas'].includes(tipo);
-    this.layoutDraft.push({ id: padrao ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: padrao ? 'pequeno' : 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 });
+    this.layoutDraft.push({ id: padrao ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: padrao ? 'pequeno' : 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
   }
 
   removeBlock(index: number) { this.layoutDraft.splice(index, 1); this.layoutDraft.forEach((block, position) => block.posicao = position); }
@@ -180,10 +182,16 @@ export class PublicProfile implements OnInit, OnDestroy {
     localStorage.setItem('oferta-games-recent-profile-colors', JSON.stringify(this.recentColors));
   }
 
+  rememberTextColor(block: PerfilBloco) {
+    if (!block.corTexto) return;
+    this.recentTextColors = [block.corTexto, ...this.recentTextColors.filter(color => color !== block.corTexto)].slice(0, 8);
+    localStorage.setItem('oferta-games-recent-profile-text-colors', JSON.stringify(this.recentTextColors));
+  }
+
   async saveLayout() {
     if (!this.profile) return;
     this.savingLayout = true;
-    this.layoutDraft.forEach((block, position) => { block.posicao = position; this.rememberColor(block); });
+    this.layoutDraft.forEach((block, position) => { block.posicao = position; this.rememberColor(block); this.rememberTextColor(block); });
     try {
       await this.perfis.salvarBlocos(this.layoutDraft);
       this.profile.blocos = structuredClone(this.layoutDraft);
@@ -195,10 +203,12 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   blockStyle(block: PerfilBloco): Record<string, string> {
-    if (block.tipoFundo === 'cor' && block.valorFundo) return { background: block.valorFundo };
-    if (block.tipoFundo === 'imagem' && block.valorFundo) return { backgroundImage: `linear-gradient(rgba(8,13,24,${block.opacidade / 100}), rgba(8,13,24,${block.opacidade / 100})), url('${block.valorFundo}')` };
-    if (block.tipoFundo === 'gradiente' && block.valorFundo) return { background: block.valorFundo };
-    return {};
+    const style: Record<string, string> = {};
+    if (block.tipoFundo === 'cor' && block.valorFundo) style['background'] = block.valorFundo;
+    if (block.tipoFundo === 'imagem' && block.valorFundo) style['backgroundImage'] = `linear-gradient(rgba(8,13,24,${block.opacidade / 100}), rgba(8,13,24,${block.opacidade / 100})), url('${block.valorFundo}')`;
+    if (block.tipoFundo === 'gradiente' && block.valorFundo) style['background'] = block.valorFundo;
+    if (block.corTexto) style['--profile-block-text-color'] = block.corTexto;
+    return style;
   }
 
   async onBlockImageSelected(event: Event, block: PerfilBloco, destino: 'conteudo' | 'fundo' = 'conteudo') {
@@ -222,12 +232,12 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   private defaultBlocks(): PerfilBloco[] {
     return [
-      { id: 'resumo-favoritos', tipo: 'resumo_favoritos', titulo: null, conteudo: null, posicao: 0, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
-      { id: 'horas', tipo: 'horas', titulo: null, conteudo: null, posicao: 1, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
-      { id: 'conquistas', tipo: 'conquistas', titulo: null, conteudo: null, posicao: 2, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
-      { id: 'favoritos', tipo: 'favoritos', titulo: null, conteudo: null, posicao: 3, tamanho: 'largo', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
-      { id: 'biblioteca', tipo: 'biblioteca', titulo: null, conteudo: null, posicao: 4, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
-      { id: 'atividade', tipo: 'atividade', titulo: null, conteudo: null, posicao: 5, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
+      { id: 'resumo-favoritos', tipo: 'resumo_favoritos', titulo: null, conteudo: null, posicao: 0, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
+      { id: 'horas', tipo: 'horas', titulo: null, conteudo: null, posicao: 1, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
+      { id: 'conquistas', tipo: 'conquistas', titulo: null, conteudo: null, posicao: 2, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
+      { id: 'favoritos', tipo: 'favoritos', titulo: null, conteudo: null, posicao: 3, tamanho: 'largo', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
+      { id: 'biblioteca', tipo: 'biblioteca', titulo: null, conteudo: null, posicao: 4, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
+      { id: 'atividade', tipo: 'atividade', titulo: null, conteudo: null, posicao: 5, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
     ];
   }
 

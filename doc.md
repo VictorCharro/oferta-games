@@ -181,7 +181,7 @@ profile_activities
 
 profile_blocks
   user_id, block_id, block_type, title, content, position, size
-  visible, background_type, background_value, overlay_opacity
+  visible, background_type, background_value, overlay_opacity, text_color
 ```
 
 Apesar da coluna `profile_blocks.visible` existir por compatibilidade, nao ha privacidade por secao: a privacidade e sempre do perfil como um todo e dos controles gerais de dados.
@@ -203,6 +203,7 @@ Arquivos em `backend-java/sql/`:
 11. `20260713_editor_de_perfil.sql`
 12. `20260713_favoritos_steam_perfil.sql`
 13. `20260713_notificacoes_preco.sql`
+14. `20260713_cor_texto_blocos_perfil.sql`
 
 Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500.
 
@@ -321,7 +322,9 @@ O modo de edicao permite reorganizar blocos por arrastar e soltar, mudar tamanho
 - paineis de favoritos, biblioteca e atividade;
 - blocos personalizados de texto, imagem e links.
 
-Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem. As cores recentes sao guardadas no navegador. A imagem de fundo e escolhida por um comando explicito e enviada ao bucket `avatars`; nao existe privacidade por bloco.
+Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem, alem de cor de texto hexadecimal livre. Fundo e texto possuem historicos de cores recentes separados no navegador. A imagem de fundo e escolhida por um comando explicito e enviada ao bucket `avatars`; nao existe privacidade por bloco.
+
+Os tamanhos sao composicoes diferentes, e nao apenas escala: o pequeno prioriza um item/resumo, o medio acomoda conteudo equilibrado e o largo/completo expande listas, imagens e atividades.
 
 Os dropdowns de tamanho e fundo devem seguir o mesmo padrao visual do filtro de ordenacao do catalogo, nao usar `select` nativo. Links personalizados usam uma linha por item no formato `Nome | https://url` e devem abrir como links reais.
 

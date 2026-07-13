@@ -81,6 +81,35 @@ body {
 a { text-decoration: none; color: inherit; }
 button { cursor: pointer; border: none; outline: none; font-family: inherit; }
 
+app-public-profile .text-color-picker { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-secondary); }
+app-public-profile .text-color-picker input { width: 20px; height: 20px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+app-public-profile .reset-text-color { color: var(--text-secondary) !important; }
+app-public-profile .text-colors { padding-left: 2px; border-left: 1px solid var(--border-color); }
+app-public-profile .profile-block.custom-text-color { color: var(--profile-block-text-color); }
+app-public-profile .profile-block.custom-text-color :is(h2, h3, strong, p, span, small, a) { color: var(--profile-block-text-color) !important; }
+app-public-profile .profile-block.size-pequeno { min-height: 138px; padding: 16px; }
+app-public-profile .profile-block.size-pequeno h2 { margin-bottom: 10px; font-size: 16px; }
+app-public-profile .profile-block.size-pequeno .editable-stat { min-height: 72px; gap: 12px; }
+app-public-profile .profile-block.size-pequeno .editable-stat > img { width: 42px; height: 42px; }
+app-public-profile .profile-block.size-pequeno .editable-stat strong { font-size: 24px; }
+app-public-profile .profile-block.size-pequeno .profile-favorite-item:not(:first-child), app-public-profile .profile-block.size-pequeno .activity-item:nth-child(n+3) { display: none; }
+app-public-profile .profile-block.size-pequeno .profile-favorite-item { padding: 0; border: 0; }
+app-public-profile .profile-block.size-pequeno .profile-favorite-item img { width: 58px; }
+app-public-profile .profile-block.size-pequeno .library-content { grid-template-columns: 1fr auto; gap: 12px; }
+app-public-profile .profile-block.size-pequeno .library-total { align-items: flex-start; padding: 0; border: 0; }
+app-public-profile .profile-block.size-pequeno .library-total strong, app-public-profile .profile-block.size-pequeno .platform-split strong { font-size: 24px; }
+app-public-profile .profile-block.size-pequeno .activity-item { gap: 8px; padding: 7px 0; font-size: 12px; }
+app-public-profile .profile-block.size-pequeno .activity-item small { display: none; }
+app-public-profile .profile-block.size-pequeno .custom-image { max-height: 150px; }
+app-public-profile .profile-block.size-medio { min-height: 220px; }
+app-public-profile .profile-block.size-medio .profile-favorite-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+app-public-profile .profile-block.size-medio .custom-image { max-height: 260px; }
+app-public-profile .profile-block.size-largo { min-height: 270px; }
+app-public-profile .profile-block.size-largo .profile-favorite-list, app-public-profile .profile-block.size-completo .profile-favorite-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+app-public-profile .profile-block.size-largo .custom-image { max-height: 350px; }
+app-public-profile .profile-block.size-completo { min-height: 310px; }
+app-public-profile .profile-block.size-completo .custom-image { max-height: 460px; }
+
 .badge-discount {
   background: var(--color-green);
   color: #000;

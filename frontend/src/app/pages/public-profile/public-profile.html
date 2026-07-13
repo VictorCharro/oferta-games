@@ -163,7 +163,7 @@
     <article
       *ngFor="let block of visibleBlocks; let i = index"
       class="panel profile-block"
-      [class]="'profile-block size-' + block.tamanho"
+      [ngClass]="['size-' + block.tamanho, { 'custom-text-color': !!block.corTexto }]"
       [ngStyle]="blockStyle(block)"
       cdkDrag
       [cdkDragDisabled]="!editingLayout"
@@ -206,6 +206,13 @@
           <input #backgroundImageInput class="visually-hidden" type="file" accept="image/*" (change)="onBlockImageSelected($event, block, 'fundo')" />
           <button type="button" class="image-picker-button" (click)="backgroundImageInput.click()">{{ block.valorFundo ? 'Trocar imagem de fundo' : 'Escolher imagem de fundo' }}</button>
         </ng-container>
+        <label class="text-color-picker">Texto
+          <input type="color" [(ngModel)]="block.corTexto" (change)="rememberTextColor(block)" />
+        </label>
+        <button *ngIf="block.corTexto" type="button" class="reset-text-color" (click)="block.corTexto = null">Texto padrão</button>
+        <div class="recent-colors text-colors" *ngIf="recentTextColors.length">
+          <button *ngFor="let color of recentTextColors" type="button" [style.background]="color" [title]="color" (click)="block.corTexto = color; rememberTextColor(block)"></button>
+        </div>
         <input
           *ngIf="block.tipo === 'texto' || block.tipo === 'links'"
           [(ngModel)]="block.titulo"
@@ -241,7 +248,7 @@
               Gerenciar
             </button>
           </div>
-          <div *ngIf="profile.favoritos.length; else noFav" class="profile-favorite-list compact">
+          <div *ngIf="profile.favoritos.length; else noFav" class="profile-favorite-list" [class.compact]="block.tamanho === 'pequeno'">
             <article
               *ngFor="let game of profile.favoritos.slice(0, 3)"
               class="profile-favorite-item"

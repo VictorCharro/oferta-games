@@ -51,7 +51,7 @@ class ServicoPerfis {
   void salvarBlocos(String usuarioId, List<RepositorioBlocosPerfil.BlocoPerfil> entrada) {
     if (entrada == null || entrada.size() > 20) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantidade de blocos invalida");
     for (RepositorioBlocosPerfil.BlocoPerfil bloco : entrada) {
-      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("resumo_favoritos", "horas", "conquistas", "favoritos", "biblioteca", "atividade", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
+      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("resumo_favoritos", "horas", "conquistas", "favoritos", "biblioteca", "atividade", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
     }
     blocos.substituir(usuarioId, entrada);
   }
