@@ -27,7 +27,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 };
 
 const DEFAULT_PRIVACY: PrivacyPreferences = {
-  publicProfile: false,
+  publicProfile: true,
   showGameHours: true,
   showAchievements: true,
   showLibrary: true,

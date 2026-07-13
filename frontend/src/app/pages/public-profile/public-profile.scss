@@ -73,7 +73,6 @@
 .stat-card strong { display: block; margin: 4px 0; font-size: 28px; }
 .stat-icon { display: grid; flex: 0 0 auto; width: 52px; height: 52px; place-items: center; border-radius: 50%; background: rgba(41, 168, 224, .14); }
 .stat-icon img { width: 34px; height: 34px; object-fit: contain; }
-.stat-icon.trophy { background: rgba(245, 158, 11, .15); }
 .profile-grid { display: grid; grid-template-columns: minmax(520px, 1.15fr) minmax(380px, .85fr); gap: 14px; }
 .panel { padding: 20px; }
 .side-stack { display: flex; flex-direction: column; gap: 14px; }

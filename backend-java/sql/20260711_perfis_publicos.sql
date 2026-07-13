@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   display_name text NOT NULL,
   bio text NULL,
   avatar_url text NULL,
-  is_public boolean NOT NULL DEFAULT false,
+  is_public boolean NOT NULL DEFAULT true,
   show_game_hours boolean NOT NULL DEFAULT true,
   show_achievements boolean NOT NULL DEFAULT true,
   show_library boolean NOT NULL DEFAULT true,

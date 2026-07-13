@@ -272,9 +272,10 @@ sync_locks
 - A URL canonica preserva as tres abas do perfil: Resumo, Jogos favoritos e Biblioteca. O resumo contem os cards de favoritos, horas e conquistas, alem dos paineis de favoritos pessoais, biblioteca e atividade recente; a atividade permanece como placeholder ate possuir eventos persistidos.
 - A topbar resolve o identificador antes de navegar, evitando renderizar `/perfil` como tela intermediaria. A pagina publica aguarda a resposta da API antes de exibir indisponibilidade.
 - A rota `/perfil` e apenas uma ponte autenticada: cria um identificador temporario seguro quando necessario e redireciona para a URL canonica `/<identificador>`. Perfis privados continuam visiveis somente pelo proprio dono autenticado.
-- O perfil e privado por padrao. E-mail, UUID, jogos monitorados e dados de conexao nunca sao expostos.
+- Novos perfis sao publicos por padrao, mas podem ser privados em Configuracoes > Privacidade. E-mail, UUID, jogos monitorados e dados de conexao nunca sao expostos.
 - O usuario escolhe se libera horas jogadas, conquistas e biblioteca. O backend filtra os dados antes de responder a rota publica.
 - A persistencia fica em `profiles`; executar `backend-java/sql/20260711_perfis_publicos.sql` no Supabase antes do deploy.
+- Em bancos ja existentes, executar tambem `backend-java/sql/20260712_perfis_publicos_por_padrao.sql`. A migracao nao altera a visibilidade dos perfis ja criados.
 - Avatares publicos usam o bucket `avatars` do Supabase Storage. Executar tambem `backend-java/sql/20260712_avatars_perfil.sql`; o upload aceita JPEG, PNG e WebP de ate 2 MB e cada usuario so pode gravar em sua propria pasta.
 - A API de perfis usa `PUT /api/perfis/me` e `PUT /api/perfis/me/avatar`; a politica CORS global permite `PUT` para a origem configurada em `CORS_ALLOWED_ORIGINS`.
 
@@ -300,8 +301,12 @@ sync_locks
 - `horas-jogadas.png`: estatisticas de horas jogadas.
 - `conquistas.png`: estatisticas de conquistas.
 - `biblioteca.png`: resumo e abas da biblioteca sincronizada.
+- `biblioteca-modo-escuro.png`: variacao da biblioteca usada no tema escuro.
 - `jogos-favoritos.png`: favoritos pessoais do perfil.
+- `jogos-favoritos-tema-escuro.png`: variacao usada apenas no tema escuro para melhorar o contraste dos favoritos pessoais.
 - `jogos-monitorados.png`: monitoramento de precos e rota `/monitorados`.
+- `jogos-monitorados-modo-claro.png` e `jogos-monitorados-modo-escuro.png`: variacoes do icone de monitoramento por tema.
+- `steam-modo-claro.png`, `steam-modo-escuro.png`, `xbox-modo-claro.png` e `xbox-modo-escuro.png`: variacoes dos icones de plataforma por tema.
 
 - Sem scraping de sites.
 - Sem multi-moeda funcional por enquanto.

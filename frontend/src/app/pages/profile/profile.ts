@@ -68,7 +68,7 @@ export class Profile implements OnInit, OnDestroy {
       if (!profile?.handle) {
         const base = this.auth.displayName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'jogador';
         const handle = `${base}-${this.auth.user?.id.slice(0, 4) || 'user'}`;
-        await this.perfisService.salvar({ handle, nomeExibicao: this.auth.displayName, bio: this.bio, publico: false, mostrarHoras: true, mostrarConquistas: true, mostrarBiblioteca: true, mostrarFavoritos: true, mostrarAtividades: true });
+        await this.perfisService.salvar({ handle, nomeExibicao: this.auth.displayName, bio: this.bio, publico: true, mostrarHoras: true, mostrarConquistas: true, mostrarBiblioteca: true, mostrarFavoritos: true, mostrarAtividades: true });
         profile = await this.perfisService.proprio();
       }
       if (profile?.handle) { await this.router.navigateByUrl(`/${profile.handle}`, { replaceUrl: true }); return true; }

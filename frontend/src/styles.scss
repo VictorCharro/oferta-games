@@ -32,6 +32,39 @@
   --border-color: #e2e8f0;
 }
 
+/* O icone claro de favoritos pessoais preserva contraste no tema escuro. */
+[data-theme="dark"] img[src="jogos-favoritos.png"] {
+  content: url('/jogos-favoritos-tema-escuro.png');
+}
+
+[data-theme="light"] img[src="jogos-monitorados.png"] {
+  content: url('/jogos-monitorados-modo-claro.png');
+}
+
+[data-theme="dark"] img[src="jogos-monitorados.png"] {
+  content: url('/jogos-monitorados-modo-escuro.png');
+}
+
+[data-theme="light"] img[src="store-logos/steam.svg"] {
+  content: url('/steam-modo-claro.png');
+}
+
+[data-theme="dark"] img[src="store-logos/steam.svg"] {
+  content: url('/steam-modo-escuro.png');
+}
+
+[data-theme="light"] img[src="store-logos/xbox.svg"] {
+  content: url('/xbox-modo-claro.png');
+}
+
+[data-theme="dark"] img[src="store-logos/xbox.svg"] {
+  content: url('/xbox-modo-escuro.png');
+}
+
+[data-theme="dark"] img[src="biblioteca.png"] {
+  content: url('/biblioteca-modo-escuro.png');
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
