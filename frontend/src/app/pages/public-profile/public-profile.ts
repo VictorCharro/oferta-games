@@ -45,6 +45,7 @@ export class PublicProfile implements OnInit {
         const own = await this.perfis.proprio();
         this.isOwner = Boolean(own?.handle && own.handle === this.profile?.handle);
         this.ownerAvatar = this.isOwner ? this.auth.avatarUrl : '';
+        if (this.isOwner && this.profile) this.profile.favoritos = await this.profileFavorites.load();
       } catch {
         this.isOwner = false;
       }
@@ -71,16 +72,44 @@ export class PublicProfile implements OnInit {
     return price == null ? 'Preco indisponivel' : price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
-  async removePersonalFavorite(slug: string) {
+  async removePersonalFavorite(game: PerfilPublico['favoritos'][number]) {
     if (!this.profile || !this.isOwner) return;
     try {
-      await this.profileFavorites.remove(slug);
-      this.profile.favoritos = this.profile.favoritos.filter(game => game.slug !== slug);
+      if (game.steamAppId != null) await this.profileFavorites.removeSteam(game.steamAppId);
+      else if (game.slug) await this.profileFavorites.remove(game.slug);
+      this.profile.favoritos = await this.profileFavorites.load();
       this.message = 'Jogo removido dos favoritos.';
     } catch {
       this.message = 'Nao foi possivel remover o jogo dos favoritos.';
     }
     this.cdr.detectChanges();
+  }
+
+  async toggleSteamFavorite(game: PerfilPublico['biblioteca'][number]) {
+    if (!this.profile || !this.isOwner) return;
+    try {
+      await this.profileFavorites.toggleSteam(game.appId);
+      this.profile.favoritos = await this.profileFavorites.load();
+      this.message = this.isSteamFavorite(game.appId) ? 'Jogo adicionado aos favoritos.' : 'Jogo removido dos favoritos.';
+    } catch {
+      this.message = 'Não foi possível atualizar os favoritos.';
+    }
+    this.cdr.detectChanges();
+  }
+
+  isSteamFavorite(appId: number): boolean {
+    return this.profile?.favoritos.some(game => game.steamAppId === appId) ?? false;
+  }
+
+  favoriteImage(game: PerfilPublico['favoritos'][number]): string {
+    if (game.capaUrl) return game.capaUrl;
+    return game.steamAppId != null && game.iconeHash
+      ? `https://media.steampowered.com/steamcommunity/public/images/apps/${game.steamAppId}/${game.iconeHash}.jpg`
+      : 'store-logos/steam.svg';
+  }
+
+  favoriteUrl(game: PerfilPublico['favoritos'][number]): string {
+    return game.slug ? `/jogo/${game.slug}` : `https://store.steampowered.com/app/${game.steamAppId}`;
   }
 
   activityIcon(type: string): string {
@@ -96,6 +125,8 @@ export class PublicProfile implements OnInit {
     switch (type) {
       case 'FAVORITO_PESSOAL_ADICIONADO': return `Adicionou ${game} aos jogos favoritos`;
       case 'FAVORITO_PESSOAL_REMOVIDO': return `Removeu ${game} dos jogos favoritos`;
+      case 'FAVORITO_PESSOAL_STEAM_ADICIONADO': return `Adicionou ${detail || game} aos jogos favoritos`;
+      case 'FAVORITO_PESSOAL_STEAM_REMOVIDO': return `Removeu ${detail || game} dos jogos favoritos`;
       case 'MONITORAMENTO_ADICIONADO': return `Adicionou ${game} aos jogos monitorados`;
       case 'MONITORAMENTO_REMOVIDO': return `Removeu ${game} dos jogos monitorados`;
       case 'STEAM_CONECTADA': return 'Conectou a conta Steam';

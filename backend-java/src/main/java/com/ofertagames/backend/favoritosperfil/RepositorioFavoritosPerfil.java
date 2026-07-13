@@ -16,8 +16,10 @@ public class RepositorioFavoritosPerfil {
     return jdbc.sql("""
         SELECT
           g.slug,
+          NULL::integer AS steam_app_id,
           g.title,
           g.cover_url,
+          NULL::text AS icon_hash,
           g.is_dlc,
           oferta.price AS min_price,
           oferta.regular_price AS regular_price,
@@ -34,13 +36,29 @@ public class RepositorioFavoritosPerfil {
         WHERE f.user_id = CAST(:usuarioId AS uuid)
           %s
           %s
-        ORDER BY f.created_at DESC
+        UNION ALL
+        SELECT
+          NULL::text AS slug,
+          b.app_id AS steam_app_id,
+          b.title,
+          NULL::text AS cover_url,
+          b.icon_hash,
+          NULL::boolean AS is_dlc,
+          NULL::numeric AS min_price,
+          NULL::numeric AS regular_price,
+          f.created_at::text AS favorited_at
+        FROM profile_steam_favorites f
+        JOIN steam_library_games b ON b.user_id = f.user_id AND b.app_id = f.app_id
+        WHERE f.user_id = CAST(:usuarioId AS uuid)
+        ORDER BY favorited_at DESC
         """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
         .param("usuarioId", usuarioId)
         .query((rs, linha) -> new FavoritoPerfilJogo(
             rs.getString("slug"),
+            rs.getObject("steam_app_id", Integer.class),
             rs.getString("title"),
             rs.getString("cover_url"),
+            rs.getString("icon_hash"),
             rs.getObject("is_dlc", Boolean.class),
             rs.getBigDecimal("min_price"),
             rs.getBigDecimal("regular_price"),
@@ -64,5 +82,33 @@ public class RepositorioFavoritosPerfil {
         .param("usuarioId", usuarioId)
         .param("jogoId", jogoId)
         .update() > 0;
+  }
+
+  public boolean adicionarSteam(String usuarioId, int appId) {
+    return jdbc.sql("""
+        INSERT INTO profile_steam_favorites (user_id, app_id)
+        SELECT user_id, app_id
+        FROM steam_library_games
+        WHERE user_id = CAST(:usuarioId AS uuid) AND app_id = :appId
+        ON CONFLICT (user_id, app_id) DO NOTHING
+        """)
+        .param("usuarioId", usuarioId)
+        .param("appId", appId)
+        .update() > 0;
+  }
+
+  public boolean removerSteam(String usuarioId, int appId) {
+    return jdbc.sql("DELETE FROM profile_steam_favorites WHERE user_id = CAST(:usuarioId AS uuid) AND app_id = :appId")
+        .param("usuarioId", usuarioId)
+        .param("appId", appId)
+        .update() > 0;
+  }
+
+  public java.util.Optional<String> tituloSteam(String usuarioId, int appId) {
+    return jdbc.sql("SELECT title FROM steam_library_games WHERE user_id = CAST(:usuarioId AS uuid) AND app_id = :appId")
+        .param("usuarioId", usuarioId)
+        .param("appId", appId)
+        .query(String.class)
+        .optional();
   }
 }

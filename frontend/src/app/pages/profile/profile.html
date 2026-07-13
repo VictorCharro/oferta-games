@@ -45,7 +45,7 @@
         <div class="gameplay-stat">
           <span>Total de horas jogadas</span>
           <strong>{{ steamStatus?.conectada ? formatHours(steamStatus!.totalMinutos) : '--' }}</strong>
-          <small>{{ steamStatus?.conectada ? 'Steam conectada' : 'Conecte uma plataforma' }}</small>
+          <small *ngIf="!steamStatus?.conectada">Conecte uma plataforma</small>
         </div>
         <div class="platform-hours">
           <span>Horas por plataforma</span>
@@ -64,7 +64,7 @@
         <div class="gameplay-stat trophy">
           <span>Total de conquistas</span>
           <strong>{{ steamStatus?.conectada ? (steamStatus!.conquistasDesbloqueadas + '/' + steamStatus!.conquistasTotal) : '--' }}</strong>
-          <small>{{ steamStatus?.conectada ? 'Conquistas sincronizadas' : 'Conecte uma plataforma' }}</small>
+          <small *ngIf="!steamStatus?.conectada">Conecte uma plataforma</small>
         </div>
       </div>
     </div>
@@ -90,7 +90,7 @@
       <div>
         <span>Horas jogadas</span>
         <strong>{{ steamStatus?.conectada ? formatHours(steamStatus!.totalMinutos) : '--' }}</strong>
-        <small>{{ steamStatus?.conectada ? 'Steam conectada' : 'Conecte uma plataforma' }}</small>
+        <small *ngIf="!steamStatus?.conectada">Conecte uma plataforma</small>
       </div>
     </article>
     <article class="stat-card">
@@ -98,7 +98,7 @@
       <div>
         <span>Conquistas</span>
         <strong>{{ steamStatus?.conectada ? (steamStatus!.conquistasDesbloqueadas + '/' + steamStatus!.conquistasTotal) : '--' }}</strong>
-        <small>{{ steamStatus?.conectada ? 'Conquistas sincronizadas' : 'Conecte uma plataforma' }}</small>
+        <small *ngIf="!steamStatus?.conectada">Conecte uma plataforma</small>
       </div>
     </article>
   </section>
@@ -146,7 +146,7 @@
           <div class="library-total">
             <div class="library-icon"><img src="biblioteca.png" alt="" /></div>
             <strong>{{ steamStatus?.conectada ? steamStatus!.totalJogos : '--' }}</strong>
-            <span>Jogos sincronizados</span>
+            <span>Jogos na biblioteca</span>
           </div>
           <div class="platform-split">
             <span>Plataformas conectadas</span>

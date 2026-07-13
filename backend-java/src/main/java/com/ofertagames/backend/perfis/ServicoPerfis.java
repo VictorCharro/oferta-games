@@ -55,6 +55,7 @@ class ServicoPerfis {
         perfil.mostrarHoras() ? status.totalMinutos() : null,
         perfil.mostrarConquistas() ? status.conquistasDesbloqueadas() : null,
         perfil.mostrarConquistas() ? status.conquistasTotal() : null,
+        dono || perfil.mostrarBiblioteca() ? status.totalJogos() : null,
         jogos,
         favoritos,
         atividadeRecente,
@@ -87,5 +88,5 @@ class ServicoPerfis {
   record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades) {}
   record EntradaAvatar(String avatarUrl) {}
   record ResultadoAtualizacao(String status, String usuarioId) {}
-  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades, boolean mostrarAtividades) {}
+  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long totalJogosBiblioteca, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades, boolean mostrarAtividades) {}
 }

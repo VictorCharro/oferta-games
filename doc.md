@@ -119,6 +119,12 @@ price_notifications
   store_name    text NULL
   read_at       timestamptz NULL
   created_at    timestamptz DEFAULT now()
+
+profile_steam_favorites
+  user_id       uuid
+  app_id        integer
+  created_at    timestamptz DEFAULT now()
+  FK (user_id, app_id) -> steam_library_games(user_id, app_id)
 ```
 
 - Menor preço é calculado via query (`MIN(price)`), não armazenado.
@@ -247,7 +253,7 @@ price_notifications
 - **Perfil:** dashboard gamer com avatar, bio editável, estatísticas de gameplay, resumo de biblioteca e atividade recente. A aba **Jogos favoritos** é isolada e mostra apenas os favoritos pessoais futuros; preferências ficam somente em Configurações. A foto é enviada ao Supabase Storage, persiste entre sessões e é exibida no perfil público.
 - **Jogos Monitorados:** a rota `/monitorados` e os endpoints `/api/favorites` representam jogos que o usuário quer acompanhar por preço. A rota antiga `/favoritos` redireciona para `/monitorados` por compatibilidade.
 - **Ações de monitoramento:** cards do catálogo e a página de detalhe usam `jogos-monitorados.png`, nunca o ícone de favoritos pessoais, para incluir ou remover um jogo da lista de preços monitorados.
-- **Jogos favoritos:** no perfil, este nome é reservado para favoritos pessoais do usuário. Ainda não usa persistência própria; será implementado com estrutura separada dos jogos monitorados.
+- **Jogos favoritos:** no perfil, este nome é reservado para favoritos pessoais do usuário e é separado dos Jogos Monitorados. Ele aceita jogos do catálogo e jogos da biblioteca Steam, inclusive itens que não estejam no catálogo.
 - **Configurações:** divididas em Conta, Conexões, Preferências e Privacidade. Conta concentra identidade, senha e sessão; Conexões concentra Steam/Xbox; Preferências afetam o conteúdo da home e os filtros iniciais do catálogo; Privacidade controla a exposição futura dos dados sincronizados no perfil.
 - **Preferências do usuário:** persistidas localmente no navegador enquanto não houver contrato próprio no backend. A home continua com conteúdo geral misturado e, quando existe uma plataforma preferida, mostra a seção exclusiva **Jogos da sua plataforma favorita** logo abaixo de Jogos Monitorados (ou abaixo do banner quando não houver monitorados). Ocultação de DLCs, desconto mínimo e preço máximo também são aplicados à seção. No catálogo, plataforma, DLCs, desconto mínimo e preço máximo inicializam os filtros sem impedir ajustes manuais.
 - **Privacidade do perfil:** persistida localmente por enquanto. As opções já estão preparadas para horas jogadas, conquistas, biblioteca e jogos favoritos, mas só terão efeito público quando existir perfil compartilhável e persistência no backend.
@@ -298,9 +304,11 @@ price_notifications
 ## Favoritos pessoais do perfil
 
 - Favoritos pessoais usam a tabela `profile_favorites`, separada de `favorites`, que continua sendo exclusivamente de Jogos Monitorados.
-- O usuario adiciona ou remove favoritos pessoais pela pagina de detalhe do jogo. A aba **Jogos favoritos** do proprio perfil lista, remove e direciona para o catalogo; visitantes apenas visualizam a lista quando a privacidade permitir.
+- Jogos do catálogo são favoritados pela página de detalhe; jogos da biblioteca Steam podem ser adicionados pelo coração na aba **Biblioteca**. Itens Steam ausentes no catálogo ficam em `profile_steam_favorites` e direcionam para sua página oficial na Steam.
+- A aba **Jogos favoritos** do próprio perfil lista e remove ambos os tipos; visitantes apenas visualizam a lista quando a privacidade permitir.
 - A API autenticada usa `GET`, `POST` e `DELETE /api/profile-favorites`; a URL publica do perfil inclui os favoritos somente quando `show_favorite_games` estiver ativo.
 - Executar `backend-java/sql/20260712_favoritos_pessoais.sql` no Supabase antes do deploy do backend.
+- Executar também `backend-java/sql/20260713_favoritos_steam_perfil.sql` antes do deploy para habilitar favoritos da biblioteca Steam.
 
 ## Atividade recente do perfil
 

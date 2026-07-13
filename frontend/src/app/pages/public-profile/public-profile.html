@@ -41,7 +41,7 @@
         <div class="gameplay-stat">
           <span>Total de horas jogadas</span>
           <strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong>
-          <small>{{ profile.totalMinutos != null ? 'Steam conectada' : 'Conecte uma plataforma' }}</small>
+          <small *ngIf="profile.totalMinutos == null">Conecte uma plataforma</small>
         </div>
         <div class="platform-hours">
           <span>Horas por plataforma</span>
@@ -51,7 +51,7 @@
         <div class="gameplay-stat">
           <span>Total de conquistas</span>
           <strong>{{ profile.conquistasTotal != null ? (profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal) : '--' }}</strong>
-          <small>{{ profile.conquistasTotal != null ? 'Conquistas sincronizadas' : 'Conecte uma plataforma' }}</small>
+          <small *ngIf="profile.conquistasTotal == null">Conecte uma plataforma</small>
         </div>
       </div>
     </div>
@@ -65,15 +65,15 @@
 
   <section class="profile-stats" *ngIf="activeTab === 'resumo'">
     <article class="stat-card"><div class="stat-icon"><img src="jogos-favoritos.png" alt="" /></div><div><span>Jogos favoritos</span><strong>{{ profile.favoritos.length || '--' }}</strong><small>{{ profile.favoritos.length ? 'Favoritos pessoais' : 'Nenhum favorito ainda' }}</small></div></article>
-    <article class="stat-card"><div class="stat-icon"><img src="horas-jogadas.png" alt="" /></div><div><span>Horas jogadas</span><strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong><small>{{ profile.totalMinutos != null ? 'Steam conectada' : 'Conecte uma plataforma' }}</small></div></article>
-    <article class="stat-card"><div class="stat-icon trophy"><img src="conquistas.png" alt="" /></div><div><span>Conquistas</span><strong>{{ profile.conquistasTotal != null ? (profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal) : '--' }}</strong><small>{{ profile.conquistasTotal != null ? 'Conquistas sincronizadas' : 'Conecte uma plataforma' }}</small></div></article>
+    <article class="stat-card"><div class="stat-icon"><img src="horas-jogadas.png" alt="" /></div><div><span>Horas jogadas</span><strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong><small *ngIf="profile.totalMinutos == null">Conecte uma plataforma</small></div></article>
+    <article class="stat-card"><div class="stat-icon trophy"><img src="conquistas.png" alt="" /></div><div><span>Conquistas</span><strong>{{ profile.conquistasTotal != null ? (profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal) : '--' }}</strong><small *ngIf="profile.conquistasTotal == null">Conecte uma plataforma</small></div></article>
   </section>
 
   <section class="profile-grid" *ngIf="activeTab === 'resumo'">
     <article class="panel favorites-panel">
       <div class="panel-heading"><h2>Jogos favoritos</h2><button *ngIf="isOwner" type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">Gerenciar</button></div>
       <div *ngIf="profile.favoritos.length; else noFavoriteSummary" class="profile-favorite-list compact">
-        <article *ngFor="let game of profile.favoritos.slice(0, 3)" class="profile-favorite-item"><a [routerLink]="['/jogo', game.slug]"><img [src]="game.capaUrl || 'no-cover.svg'" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</span></div></a><button *ngIf="isOwner" type="button" class="remove-favorite" (click)="removePersonalFavorite(game.slug)" title="Remover dos jogos favoritos">Remover</button></article>
+        <article *ngFor="let game of profile.favoritos.slice(0, 3)" class="profile-favorite-item"><a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam' }}</span></div></a><button *ngIf="isOwner" type="button" class="remove-favorite" (click)="removePersonalFavorite(game)" title="Remover dos jogos favoritos">Remover</button></article>
       </div>
       <ng-template #noFavoriteSummary><div class="empty-panel"><img src="jogos-favoritos.png" alt="" /><h3>Nenhum jogo favorito ainda</h3><p *ngIf="isOwner">Adicione favoritos na pagina de cada jogo.</p><p *ngIf="!isOwner">Este perfil ainda nao possui jogos favoritos.</p></div></ng-template>
     </article>
@@ -82,8 +82,8 @@
       <article class="panel library-summary">
         <h2>Resumo da biblioteca</h2>
         <div class="library-content">
-          <div class="library-total"><div class="library-icon"><img src="biblioteca.png" alt="" /></div><strong>{{ profile.biblioteca.length || '--' }}</strong><span>Jogos sincronizados</span></div>
-          <div class="platform-split"><span>Plataformas conectadas</span><strong>{{ profile.biblioteca.length ? 'Steam' : '--' }}</strong><small>{{ profile.biblioteca.length ? 'Biblioteca sincronizada' : 'Conecte uma plataforma' }}</small></div>
+          <div class="library-total"><div class="library-icon"><img src="biblioteca.png" alt="" /></div><strong>{{ profile.totalJogosBiblioteca ?? '--' }}</strong><span>Jogos na biblioteca</span></div>
+          <div class="platform-split"><span>Plataformas conectadas</span><strong>{{ profile.totalJogosBiblioteca != null ? 'Steam' : '--' }}</strong><small>{{ profile.totalJogosBiblioteca != null ? 'Biblioteca sincronizada' : 'Conecte uma plataforma' }}</small></div>
         </div>
       </article>
 
@@ -101,18 +101,18 @@
   <section class="panel favorites-only" *ngIf="activeTab === 'jogosFavoritos'">
     <div class="panel-heading"><h2>Jogos favoritos</h2><a *ngIf="isOwner" routerLink="/catalogo" class="panel-link">Explorar catalogo</a></div>
     <div *ngIf="profile.favoritos.length; else noFavorites" class="profile-favorite-list">
-      <article *ngFor="let game of profile.favoritos" class="profile-favorite-item"><a [routerLink]="['/jogo', game.slug]"><img [src]="game.capaUrl || 'no-cover.svg'" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></div></a><button *ngIf="isOwner" type="button" class="remove-favorite" (click)="removePersonalFavorite(game.slug)">Remover</button></article>
+      <article *ngFor="let game of profile.favoritos" class="profile-favorite-item"><a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam' }}</strong></div></a><button *ngIf="isOwner" type="button" class="remove-favorite" (click)="removePersonalFavorite(game)">Remover</button></article>
     </div>
     <ng-template #noFavorites><div class="empty-panel"><img src="jogos-favoritos.png" alt="" /><h3>Nenhum jogo favorito ainda</h3><p *ngIf="isOwner">Abra um jogo para adiciona-lo aos favoritos pessoais.</p><p *ngIf="!isOwner">Este perfil ainda nao possui jogos favoritos.</p></div></ng-template>
   </section>
 
   <section class="panel library-list-panel" *ngIf="activeTab === 'biblioteca'">
-    <div class="panel-heading"><h2>Biblioteca Steam</h2><span>{{ libraryGames.length }} de {{ profile.biblioteca.length }} jogos</span></div>
+    <div class="panel-heading"><h2>Biblioteca Steam</h2><span>{{ libraryGames.length }} de {{ profile.totalJogosBiblioteca ?? profile.biblioteca.length }} jogos</span></div>
     <div class="library-controls" *ngIf="profile.biblioteca.length">
       <input type="search" [(ngModel)]="librarySearch" placeholder="Buscar na biblioteca" aria-label="Buscar na biblioteca" />
       <select [(ngModel)]="libraryOrder" aria-label="Ordenar biblioteca"><option value="tempo">Mais jogados</option><option value="conquistas">Mais conquistas</option><option value="nome">Nome</option></select>
     </div>
-    <div class="games" *ngIf="libraryGames.length; else emptyLibrary"><article *ngFor="let game of libraryGames"><img [src]="icon(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="game.conquistasTotal">{{ game.conquistasDesbloqueadas }}/{{ game.conquistasTotal }} conquistas</small></div></article></div>
+    <div class="games" *ngIf="libraryGames.length; else emptyLibrary"><article *ngFor="let game of libraryGames"><img [src]="icon(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="game.conquistasTotal">{{ game.conquistasDesbloqueadas }}/{{ game.conquistasTotal }} conquistas</small></div><button *ngIf="isOwner" type="button" class="library-favorite" [class.active]="isSteamFavorite(game.appId)" (click)="toggleSteamFavorite(game)" [title]="isSteamFavorite(game.appId) ? 'Remover dos jogos favoritos' : 'Adicionar aos jogos favoritos'"><img src="jogos-favoritos.png" alt="" /></button></article></div>
     <ng-template #emptyLibrary><div class="empty-panel"><img src="biblioteca.png" alt="" /><h3>Biblioteca vazia</h3><p>Nenhum jogo sincronizado para exibir.</p></div></ng-template>
   </section>
 </div>

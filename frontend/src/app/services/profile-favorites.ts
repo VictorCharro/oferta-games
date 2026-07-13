@@ -5,9 +5,11 @@ import { GameSummary } from './game';
 import { supabase } from './supabase';
 
 export interface FavoriteProfileGame {
-  slug: string;
+  slug: string | null;
+  steamAppId: number | null;
   titulo: string;
   capaUrl: string | null;
+  iconeHash: string | null;
   ehDlc: boolean | null;
   precoMinimo: number | null;
   precoRegular: number | null;
@@ -18,17 +20,20 @@ export interface FavoriteProfileGame {
 export class ProfileFavoritesService {
   private readonly api = 'https://oferta-games.onrender.com/api/profile-favorites';
   private readonly slugsSubject = new BehaviorSubject<Set<string>>(new Set());
+  private readonly steamAppIdsSubject = new BehaviorSubject<Set<number>>(new Set());
   readonly slugs$ = this.slugsSubject.asObservable();
 
   constructor(private http: HttpClient) {}
 
   isFavorite(slug: string): boolean { return this.slugsSubject.value.has(slug); }
+  isSteamFavorite(appId: number): boolean { return this.steamAppIdsSubject.value.has(appId); }
 
   async load(): Promise<FavoriteProfileGame[]> {
     const headers = await this.authHeaders();
-    if (!headers) { this.slugsSubject.next(new Set()); return []; }
+    if (!headers) { this.slugsSubject.next(new Set()); this.steamAppIdsSubject.next(new Set()); return []; }
     const favorites = await firstValueFrom(this.http.get<FavoriteProfileGame[]>(this.api, { headers }));
-    this.slugsSubject.next(new Set(favorites.map(game => game.slug)));
+    this.slugsSubject.next(new Set(favorites.flatMap(game => game.slug ? [game.slug] : [])));
+    this.steamAppIdsSubject.next(new Set(favorites.flatMap(game => game.steamAppId != null ? [game.steamAppId] : [])));
     return favorites;
   }
 
@@ -47,6 +52,23 @@ export class ProfileFavoritesService {
     const next = new Set(this.slugsSubject.value);
     next.delete(slug);
     this.slugsSubject.next(next);
+  }
+
+  async toggleSteam(appId: number): Promise<void> {
+    const headers = await this.authHeaders();
+    if (!headers) return;
+    if (this.isSteamFavorite(appId)) await this.removeSteam(appId, headers);
+    else await firstValueFrom(this.http.post(`${this.api}/steam`, { appId }, { headers }));
+    await this.load();
+  }
+
+  async removeSteam(appId: number, headers?: { Authorization: string }): Promise<void> {
+    const authorization = headers ?? await this.authHeaders();
+    if (!authorization) return;
+    await firstValueFrom(this.http.delete(`${this.api}/steam/${appId}`, { headers: authorization }));
+    const next = new Set(this.steamAppIdsSubject.value);
+    next.delete(appId);
+    this.steamAppIdsSubject.next(next);
   }
 
   private async authHeaders(): Promise<{ Authorization: string } | null> {

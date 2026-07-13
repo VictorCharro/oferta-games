@@ -121,6 +121,11 @@
 .games img { width: 42px; height: 42px; border-radius: 6px; object-fit: cover; }
 .games h3 { overflow: hidden; margin: 0 0 4px; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .games small { display: block; margin-top: 3px; font-size: 11px; }
+.games article > div { min-width: 0; flex: 1; }
+.library-favorite { display: grid; width: 32px; height: 32px; padding: 0; place-items: center; border: 1px solid var(--border-color); border-radius: 7px; background: transparent; cursor: pointer; }
+.library-favorite img { width: 20px; height: 20px; border-radius: 0; opacity: .72; }
+.library-favorite:hover, .library-favorite.active { border-color: var(--color-purple); background: rgba(41, 168, 224, .1); }
+.library-favorite.active img { opacity: 1; }
 .unavailable { display: grid; min-height: 50vh; place-items: center; text-align: center; }
 .unavailable p { color: var(--text-secondary); }
 

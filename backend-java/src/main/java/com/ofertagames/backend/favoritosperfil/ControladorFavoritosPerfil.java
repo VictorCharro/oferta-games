@@ -62,4 +62,31 @@ public class ControladorFavoritosPerfil {
     }
     return ResponseEntity.ok(Map.of("ok", true));
   }
+
+  @PostMapping("/steam")
+  ResponseEntity<?> adicionarSteam(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody(required = false) RequisicaoFavoritoSteam requisicao) {
+    var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
+    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+    if (requisicao == null || requisicao.appId() == null || requisicao.appId() <= 0) return ResponseEntity.badRequest().body(Map.of("error", "appId e obrigatorio"));
+    String titulo = favoritos.tituloSteam(usuarioId.get(), requisicao.appId()).orElse(null);
+    if (titulo == null) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado na biblioteca Steam"));
+
+    if (favoritos.adicionarSteam(usuarioId.get(), requisicao.appId())) {
+      atividades.registrar(usuarioId.get(), "FAVORITO_PESSOAL_STEAM_ADICIONADO", titulo);
+    }
+    return ResponseEntity.status(201).body(Map.of("ok", true));
+  }
+
+  @DeleteMapping("/steam/{appId}")
+  ResponseEntity<?> removerSteam(@RequestHeader(value = "Authorization", required = false) String autorizacao, @PathVariable int appId) {
+    var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
+    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+    String titulo = favoritos.tituloSteam(usuarioId.get(), appId).orElse(null);
+    if (titulo == null) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado na biblioteca Steam"));
+
+    if (favoritos.removerSteam(usuarioId.get(), appId)) {
+      atividades.registrar(usuarioId.get(), "FAVORITO_PESSOAL_STEAM_REMOVIDO", titulo);
+    }
+    return ResponseEntity.ok(Map.of("ok", true));
+  }
 }
