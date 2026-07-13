@@ -7,7 +7,9 @@ import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -251,6 +253,17 @@ public class RepositorioJogos {
     return salvarOfertas(ofertas);
   }
 
+  public Map<Long, BigDecimal> precosMinimos(List<Long> jogosIds) {
+    if (jogosIds == null || jogosIds.isEmpty()) return Map.of();
+    Map<Long, BigDecimal> precos = new HashMap<>();
+    jdbc.sql("SELECT game_id, MIN(price) AS preco FROM offers WHERE game_id IN (:jogosIds) GROUP BY game_id")
+        .param("jogosIds", jogosIds)
+        .query((rs, linha) -> new PrecoMinimo(rs.getLong("game_id"), rs.getBigDecimal("preco")))
+        .list()
+        .forEach(preco -> precos.put(preco.jogoId(), preco.preco()));
+    return precos;
+  }
+
   public List<JogoParaSincronizar> listarParaSincronizar(int limiteRelevantes, int limiteGerais) {
     return jdbc.sql("""
         WITH relevantes AS (
@@ -463,5 +476,6 @@ public class RepositorioJogos {
   record JogoParaSalvar(String itadId, String title, String slug, String coverUrl, Integer rank) {}
   record IdJogoItad(long id, String itadId) {}
   public record JogoParaSincronizar(long id, String itadId) {}
+  private record PrecoMinimo(long jogoId, BigDecimal preco) {}
   public record ResumoFilaColeta(long nuncaSincronizados, String sincronizacaoMaisAntiga, long pendentesSteam) {}
 }

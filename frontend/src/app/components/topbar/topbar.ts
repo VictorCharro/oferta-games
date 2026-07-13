@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth';
 import { GameService, GameSummary } from '../../services/game';
 import { SearchService } from '../../services/search';
 import { PerfisService } from '../../services/perfis';
+import { NotificationsService, PriceNotification } from '../../services/notifications';
 
 @Component({
   selector: 'app-topbar',
@@ -17,13 +18,16 @@ import { PerfisService } from '../../services/perfis';
 export class Topbar implements OnInit, OnDestroy {
   searchQuery = '';
   dropdownOpen = false;
+  notificationsOpen = false;
   suggestions: GameSummary[] = [];
+  notifications: PriceNotification[] = [];
   showSuggestions = false;
   private isCatalogPage = false;
   private sub!: Subscription;
   private avatarSub!: Subscription;
   private routeSub!: Subscription;
   private searchSub!: Subscription;
+  private notificationsSub!: Subscription;
   private searchInput$ = new Subject<string>();
 
   constructor(
@@ -33,12 +37,14 @@ export class Topbar implements OnInit, OnDestroy {
     private gameService: GameService,
     private searchService: SearchService,
     private perfisService: PerfisService,
+    private notificationsService: NotificationsService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
     this.sub = this.auth.user$.subscribe(() => this.cdr.detectChanges());
     this.avatarSub = this.auth.avatar$.subscribe(() => this.cdr.detectChanges());
+    this.notificationsSub = this.notificationsService.list$.subscribe(notifications => { this.notifications = notifications; this.cdr.detectChanges(); });
 
     this.isCatalogPage = this.router.url.startsWith('/catalogo');
     this.routeSub = this.router.events
@@ -74,6 +80,7 @@ export class Topbar implements OnInit, OnDestroy {
     this.avatarSub?.unsubscribe();
     this.routeSub?.unsubscribe();
     this.searchSub?.unsubscribe();
+    this.notificationsSub?.unsubscribe();
   }
 
   onSearchInput(value: string) {
@@ -116,6 +123,32 @@ export class Topbar implements OnInit, OnDestroy {
   }
 
   toggleDropdown() { this.dropdownOpen = !this.dropdownOpen; }
+  toggleNotifications() { this.notificationsOpen = !this.notificationsOpen; }
+
+  get unreadNotifications(): number { return this.notifications.filter(notification => !notification.lida).length; }
+
+  formatNotificationPrice(price: number): string { return Number(price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+
+  relativeNotificationTime(value: string): string {
+    const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+    if (minutes < 1) return 'agora';
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} h`;
+    return `${Math.floor(hours / 24)} d`;
+  }
+
+  async markNotificationRead(notification: PriceNotification) {
+    if (!notification.lida) await this.notificationsService.markRead(notification.id);
+  }
+
+  async markAllNotificationsRead() { await this.notificationsService.markAllRead(); }
+
+  async removeNotification(event: MouseEvent, id: number) {
+    event.preventDefault();
+    event.stopPropagation();
+    await this.notificationsService.remove(id);
+  }
 
   async abrirPerfil() {
     this.dropdownOpen = false;
@@ -130,6 +163,7 @@ export class Topbar implements OnInit, OnDestroy {
   onDocumentClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (!target.closest('.user-menu')) this.dropdownOpen = false;
+    if (!target.closest('.notifications-menu')) this.notificationsOpen = false;
     if (!target.closest('.search-wrapper')) this.showSuggestions = false;
   }
 

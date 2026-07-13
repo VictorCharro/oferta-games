@@ -30,6 +30,24 @@
       <img [src]="theme.isDark() ? 'sol-tema-claro.png' : 'lua-tema-escuro.png'" style="width:20px;height:20px;object-fit:contain;" />
     </button>
 
+    <div class="notifications-menu" *ngIf="auth.isLoggedIn">
+      <button type="button" class="action-btn notification-btn" (click)="toggleNotifications()" title="Notificacoes" aria-label="Notificacoes">
+        <img src="notificacao.png" alt="" />
+        <span class="notification-badge" *ngIf="unreadNotifications">{{ unreadNotifications > 9 ? '9+' : unreadNotifications }}</span>
+      </button>
+      <div class="notifications-panel" *ngIf="notificationsOpen">
+        <div class="notifications-heading"><strong>Notificacoes</strong><button type="button" *ngIf="unreadNotifications" (click)="markAllNotificationsRead()">Marcar todas como lidas</button></div>
+        <div class="notification-list" *ngIf="notifications.length; else noNotifications">
+          <a *ngFor="let notification of notifications" [routerLink]="['/jogo', notification.slug]" (click)="markNotificationRead(notification)" [class.unread]="!notification.lida" class="notification-item">
+            <img src="jogos-monitorados.png" alt="" />
+            <span><b>{{ notification.titulo }}</b> caiu de {{ formatNotificationPrice(notification.precoAnterior) }} para <strong>{{ formatNotificationPrice(notification.precoAtual) }}</strong><small>{{ notification.loja || 'Melhor oferta' }} · {{ relativeNotificationTime(notification.criadaEm) }}</small></span>
+            <button type="button" (click)="removeNotification($event, notification.id)" title="Remover notificacao" aria-label="Remover notificacao">×</button>
+          </a>
+        </div>
+        <ng-template #noNotifications><p class="notifications-empty">Nenhum alerta de preco por enquanto.</p></ng-template>
+      </div>
+    </div>
+
     <!-- Logado: avatar com dropdown -->
     <div class="user-menu" *ngIf="auth.isLoggedIn">
       <div class="avatar" (click)="toggleDropdown()">

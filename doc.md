@@ -109,6 +109,16 @@ favorites
 sync_locks
   name          text PK
   locked_until  timestamptz NOT NULL
+
+price_notifications
+  id            bigserial PK
+  user_id       uuid FK -> auth.users
+  game_id       bigint FK -> games.id
+  previous_price numeric(10,2)
+  current_price numeric(10,2)
+  store_name    text NULL
+  read_at       timestamptz NULL
+  created_at    timestamptz DEFAULT now()
 ```
 
 - Menor preço é calculado via query (`MIN(price)`), não armazenado.
@@ -146,6 +156,10 @@ sync_locks
   - Adiciona jogo aos monitorados (`{ slug }`).
 - `DELETE /api/favorites/{slug}`
   - Remove jogo dos monitorados.
+- `GET /api/notifications`
+  - Lista os 30 alertas mais recentes de queda de preco do usuario autenticado.
+- `PATCH /api/notifications/{id}/read`, `PATCH /api/notifications/read-all` e `DELETE /api/notifications/{id}`
+  - Marca alertas como lidos ou remove uma notificacao.
 - `GET /actuator/health`
   - Health check usado pelo Render e pelo bot de monitoramento.
 - `GET /api/admin/coleta`
@@ -237,7 +251,8 @@ sync_locks
 - **Configurações:** divididas em Conta, Conexões, Preferências e Privacidade. Conta concentra identidade, senha e sessão; Conexões concentra Steam/Xbox; Preferências afetam o conteúdo da home e os filtros iniciais do catálogo; Privacidade controla a exposição futura dos dados sincronizados no perfil.
 - **Preferências do usuário:** persistidas localmente no navegador enquanto não houver contrato próprio no backend. A home continua com conteúdo geral misturado e, quando existe uma plataforma preferida, mostra a seção exclusiva **Jogos da sua plataforma favorita** logo abaixo de Jogos Monitorados (ou abaixo do banner quando não houver monitorados). Ocultação de DLCs, desconto mínimo e preço máximo também são aplicados à seção. No catálogo, plataforma, DLCs, desconto mínimo e preço máximo inicializam os filtros sem impedir ajustes manuais.
 - **Privacidade do perfil:** persistida localmente por enquanto. As opções já estão preparadas para horas jogadas, conquistas, biblioteca e jogos favoritos, mas só terão efeito público quando existir perfil compartilhável e persistência no backend.
-- **Topbar:** menu do usuário exibe Perfil, Configurações e Sair, sem nível de usuário.
+- **Notificações:** o sino da topbar lista alertas de queda de preço para Jogos Monitorados, permite marcar como lidos ou remover e mostra badge de itens não lidos. A coleta cria alerta apenas quando o menor preço passa a ser menor que o valor anterior.
+- **Alerta de preço:** antes de substituir o lote de ofertas ITAD, a coleta lê o menor preço atual; depois compara o novo menor preço e cria uma notificação para cada usuário que monitora o jogo quando houver queda. O mesmo preço não gera alerta repetido porque não é uma nova queda.
 - **Capa ausente:** fallback visual em `no-cover.svg`; backend tenta preencher capa oficial da Steam quando possível.
 - **Catálogo:** scroll infinito via `window:scroll` com throttle por `requestAnimationFrame`.
 - **Navegação:** toda mudança de rota inicia no topo da página; o scroll infinito permanece restrito ao comportamento da própria tela de catálogo.
@@ -245,6 +260,7 @@ sync_locks
 
 ## Implementações futuras planejadas
 
+- **Preferências de alertas:** adicionar limite de preço desejado e canais externos, como e-mail ou push, depois de validar as notificações internas.
 - **Favoritos pessoais do perfil:** evoluir a lista já persistida com ordenação manual, limite de exibição pública e, futuramente, coleções.
 - **Monitoramento de preço:** manter os favoritos atuais como lista de jogos monitorados. No produto, usar o nome **Jogos Monitorados** para esse conceito.
 - **Perfil:** evoluir favoritos pessoais com ordenação manual e coleções quando houver necessidade de mais organização.
@@ -293,6 +309,7 @@ sync_locks
 - Executar `backend-java/sql/20260712_atividades_perfil.sql` e `backend-java/sql/20260712_visibilidade_atividade_perfil.sql` no Supabase antes do deploy do backend.
 - Qualquer visitante pode usar **Atualizar dados** no perfil publico para solicitar uma sincronizacao completa da Steam (biblioteca, horas e conquistas). A operacao roda em segundo plano e cada perfil aceita uma solicitacao a cada 10 minutos, protegendo a Steam e o backend contra abuso. Executar tambem `backend-java/sql/20260712_atualizacao_publica_perfil.sql`.
 - A primeira sincronizacao Steam registra apenas os resumos de biblioteca e conquistas. A partir da linha de base, novos jogos da biblioteca e novas conquistas viram eventos individuais. Executar `backend-java/sql/20260712_atividades_steam_detalhadas.sql` antes do deploy.
+- Se o backend ja estiver consultando atividades detalhadas e o perfil retornar erro, aplique imediatamente essa migration no SQL Editor do Supabase: ela cria a coluna `profile_activities.detalhe` usada pela atividade recente.
 - A aba Biblioteca permite buscar os jogos sincronizados e ordenar por tempo jogado, nome ou percentual de conquistas.
 - **Xbox:** permanece como futura integracao. A documentacao oficial concentra as APIs de conquistas e dados de jogador no GDK/XSAPI para titulos registrados, sem um fluxo publico equivalente ao Steam OpenID + Web API para importar bibliotecas de qualquer conta. Nao usar APIs nao oficiais ou scraping para isso.
 

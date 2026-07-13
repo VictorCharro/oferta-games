@@ -180,6 +180,37 @@
   position: relative;
 }
 
+.notifications-menu { position: relative; }
+.notification-btn { width: 40px; height: 40px; padding: 0; justify-content: center; }
+.notification-btn img { width: 20px; height: 20px; object-fit: contain; }
+.notification-badge { position: absolute; top: 1px; right: 1px; min-width: 16px; height: 16px; padding: 0 3px; border: 2px solid var(--bg-sidebar); border-radius: 9px; background: var(--color-red); color: #fff; font-size: 9px; font-weight: 700; line-height: 12px; }
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 350px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-card);
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  z-index: 200;
+}
+.notifications-heading { display: flex; align-items: center; justify-content: space-between; padding: 6px 6px 10px; }
+.notifications-heading strong { font-size: 14px; }
+.notifications-heading button { border: 0; background: transparent; color: var(--color-purple); cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
+.notification-list { max-height: 370px; overflow-y: auto; }
+.notification-item { display: grid; grid-template-columns: 24px minmax(0, 1fr) 20px; gap: 8px; align-items: start; padding: 10px 6px; border-radius: 7px; color: var(--text-secondary); font-size: 12px; text-decoration: none; }
+.notification-item:hover, .notification-item.unread { background: var(--bg-card-hover); }
+.notification-item.unread { color: var(--text-primary); }
+.notification-item > img { width: 20px; height: 20px; margin-top: 2px; object-fit: contain; }
+.notification-item b { display: block; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.notification-item strong { color: var(--color-green); }
+.notification-item small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 11px; }
+.notification-item button { width: 20px; height: 20px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 17px; line-height: 1; }
+.notification-item button:hover { background: var(--bg-input); color: var(--text-primary); }
+.notifications-empty { margin: 8px 6px 6px; padding: 22px 8px; color: var(--text-secondary); font-size: 13px; text-align: center; }
+
 .dropdown {
   position: absolute;
   top: calc(100% + 8px);

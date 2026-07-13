@@ -6,6 +6,7 @@ import com.ofertagames.backend.itad.ItemOfertaItad;
 import com.ofertagames.backend.itad.OfertaPrecoItad;
 import com.ofertagames.backend.itad.ResultadoBuscaItad;
 import com.ofertagames.backend.itad.ResultadoPrecoItad;
+import com.ofertagames.backend.notificacoes.RepositorioNotificacoes;
 import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
 import java.util.ArrayList;
@@ -21,11 +22,13 @@ public class ServicoCatalogo {
   private final RepositorioJogos jogos;
   private final ClienteItad itad;
   private final ServicoSteam steam;
+  private final RepositorioNotificacoes notificacoes;
 
-  ServicoCatalogo(RepositorioJogos jogos, ClienteItad itad, ServicoSteam steam) {
+  ServicoCatalogo(RepositorioJogos jogos, ClienteItad itad, ServicoSteam steam, RepositorioNotificacoes notificacoes) {
     this.jogos = jogos;
     this.itad = itad;
     this.steam = steam;
+    this.notificacoes = notificacoes;
   }
 
   public List<ResumoJogo> buscarComFallbackItad(String busca) {
@@ -149,7 +152,13 @@ public class ServicoCatalogo {
       throw new IllegalStateException("A ITAD nao retornou jogos reconhecidos para o lote da coleta agendada");
     }
 
+    List<Long> jogosIds = new ArrayList<>(ofertasPorJogo.keySet());
+    Map<Long, java.math.BigDecimal> precosAnteriores = jogos.precosMinimos(jogosIds);
     int ofertasAtualizadas = jogos.substituirOfertasItadEmLote(ofertasPorJogo);
+    Map<Long, java.math.BigDecimal> precosAtuais = jogos.precosMinimos(jogosIds);
+    for (Long jogoId : jogosIds) {
+      notificacoes.registrarQueda(jogoId, precosAnteriores.get(jogoId), precosAtuais.get(jogoId));
+    }
     jogos.marcarPrecosSincronizados(new ArrayList<>(ofertasPorJogo.keySet()));
     return new ResultadoAtualizacaoLote(ofertasPorJogo.size(), ofertasAtualizadas);
   }
