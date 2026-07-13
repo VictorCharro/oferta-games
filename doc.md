@@ -1,373 +1,417 @@
-# doc.md
+# Oferta Games - Contexto do Projeto
 
-> Este arquivo DEVE ser atualizado sempre que houver uma mudança significativa no projeto: decisão de arquitetura, fonte de dados, tecnologia, schema, deploy ou contrato de API. É a fonte de verdade sobre o que o projeto é e onde ele está.
+> Este arquivo e a fonte de verdade do projeto. Atualize-o sempre que uma decisao de arquitetura, schema, deploy, contrato de API ou fluxo relevante mudar. Nao registre segredos, tokens ou senhas aqui.
 
-## Objetivo do projeto
+## Produto
 
-Site de catálogo de promoções de jogos. O usuário entra, vê uma lista de jogos com o menor preço encontrado entre várias lojas, clica no jogo e vê todas as ofertas daquele jogo ordenadas por preço, com link direto para a loja.
+O Oferta Games e um comparador de precos de jogos. Ele nao vende jogos: coleta ofertas de lojas parceiras por meio da API IsThereAnyDeal (ITAD), mostra o menor preco em BRL e encaminha o usuario para a loja.
 
-Não é uma loja própria. É um agregador/comparador de preços.
+O produto tambem tem contas, Jogos Monitorados para alertas de preco, perfis publicos personalizaveis e conexao Steam para biblioteca, horas e conquistas.
 
-## Stack
+## Arquitetura Atual
 
-- **Backend:** Java 21 + Spring Boot 3 em `backend-java`.
-- **Frontend:** Angular, hospedado no Vercel.
-- **Banco:** PostgreSQL no Supabase. Conexão via transaction pooler (porta 6543), com prepared statements desativados no JDBC (`prepareThreshold=0`) por incompatibilidade do modo transaction do Supavisor.
-- **Auth:** Supabase Auth (email/senha e OAuth). Frontend usa `@supabase/supabase-js`; backend valida Bearer token via Supabase Auth.
-- **Deploy backend:** Render via Docker.
+| Camada | Tecnologia | Hospedagem atual |
+|---|---|---|
+| Frontend | Angular 21 + TypeScript | Vercel |
+| Backend | Java 21 + Spring Boot 3 | Render, via Docker |
+| Banco e Auth | PostgreSQL + Supabase Auth + Storage | Supabase |
+| Precos | ITAD API | Consumida pelo backend |
+| Perfil gamer | Steam OpenID + Steam Web API | Consumida pelo backend |
 
-## Deploy
+URLs de producao atuais:
 
-| Parte | Onde roda |
-|---|---|
-| Backend | Render |
-| Frontend | Vercel |
-| Banco/Auth | Supabase |
+- Frontend: `https://ofertagames.vercel.app`
+- Backend: `https://oferta-games.onrender.com`
+- Health check: `https://oferta-games.onrender.com/actuator/health`
 
-O backend usa `backend-java/Dockerfile`. O Render pode ser criado manualmente ou via `render.yaml`.
+O banco usa o transaction pooler do Supabase. A conversao da `DATABASE_URL` para JDBC e feita pelo backend, com `prepareThreshold=0`, pois prepared statements persistentes nao sao compativeis com esse modo do Supavisor.
 
-Configuração no Render:
+## Deploy e Operacao
+
+### Render
 
 | Campo | Valor |
 |---|---|
 | Runtime | Docker |
 | Root Directory | `backend-java` |
+| Dockerfile | `backend-java/Dockerfile` |
 | Health Check Path | `/actuator/health` |
-| Plan | Free por enquanto |
+| Plano | Free, por enquanto |
 
-Coleta de preços: o próprio backend Spring executa jobs agendados no Render. Não há mais sync por GitHub Actions.
+O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de heap `-Xmx384m`. O Render faz deploy automatico quando ha push na branch configurada do repositorio.
 
-- A cada 10 minutos, atualiza 5.000 jogos: 200 relevantes (top 2.000 por `rank`) e 4.800 da fila geral.
-- A seleção usa `games.last_price_sync_at`, do mais antigo para o mais recente. Depois de atualizado, cada jogo vai naturalmente ao fim da fila.
-- A ITAD recebe no máximo 200 IDs por chamada; cada rodada faz até 25 chamadas sequenciais.
-- Se uma chamada falhar, o lote é tentado três vezes; se continuar falhando, os demais lotes seguem e o lote com falha permanece prioritário na próxima rodada.
-- A coleta de metadados Steam é um job separado a cada 15 minutos, com até 25 jogos pendentes por rodada.
-- Uma trava compartilhada no PostgreSQL impede sobreposição entre os jobs, inclusive se houver mais de uma instância durante um deploy.
+O bot externo que visita o health check mantem o Render ativo. Nao existe mais workflow de keep-alive ou sincronizacao recorrente no GitHub Actions.
 
-O bot que ja mantem o Render ativo tambem substitui o antigo keep alive do GitHub Actions.
+### Variaveis do backend
 
-## Variáveis de ambiente do backend
+| Variavel | Obrigatoria | Uso |
+|---|---:|---|
+| `DATABASE_URL` | sim | PostgreSQL Supabase pelo pooler |
+| `SUPABASE_URL` | sim | Validacao de tokens Supabase |
+| `SUPABASE_ANON_KEY` | sim | Validacao de tokens Supabase |
+| `ITAD_API_KEY` | sim | Coleta e refresh de ofertas |
+| `STEAM_WEB_API_KEY` | sim para Steam | Biblioteca, horas e conquistas Steam |
+| `PUBLIC_BACKEND_URL` | sim para Steam | URL publica do backend para retorno OpenID |
+| `FRONTEND_URL` | sim para Steam | URL do frontend para redirecionamentos |
+| `CORS_ALLOWED_ORIGINS` | sim | Separar por virgula; incluir Vercel e `http://localhost:4200` |
+| `APP_SYNC_SCHEDULER_ENABLED` | sim | `true` em producao |
+| `APP_SYNC_SCHEDULER_PRICE_DELAY_MS` | nao | Padrao `600000` (10 min) |
+| `APP_SYNC_SCHEDULER_STEAM_DELAY_MS` | nao | Padrao `900000` (15 min) |
+| `SYNC_SECRET_KEY` | sim para endpoint legado | Protege `POST /api/sync` |
+| `PORT` | nao | Fornecida pelo Render; padrao `8080` |
 
-| Variável | Descrição |
-|---|---|
-| `DATABASE_URL` | URL do pooler do Supabase, formato `postgresql://...` |
-| `ITAD_API_KEY` | Chave da API do IsThereAnyDeal |
-| `SYNC_SECRET_KEY` | Chave secreta para o endpoint `/api/sync` |
-| `APP_SYNC_SCHEDULER_ENABLED` | Ativa a coleta interna no Render. Usar `true` depois de executar a migração SQL. |
-| `APP_SYNC_SCHEDULER_PRICE_DELAY_MS` | Intervalo da coleta de preços. Padrão `600000` (10 minutos). |
-| `APP_SYNC_SCHEDULER_STEAM_DELAY_MS` | Intervalo da coleta de metadados Steam. Padrão `900000` (15 minutos). |
-| `SUPABASE_URL` | URL do projeto Supabase |
-| `SUPABASE_ANON_KEY` | Chave anônima do Supabase usada para validar tokens |
-| `CORS_ALLOWED_ORIGINS` | Origens permitidas separadas por vírgula |
-| `PORT` | Porta HTTP do Spring Boot, padrão `8080` |
+Nunca colocar essas variaveis no Git ou em arquivos do frontend.
 
-## Fontes de dados de preços
+### Possivel migracao para Oracle
 
-| Fonte | Status | Como integra |
-|---|---|---|
-| **IsThereAnyDeal (ITAD)** | Fonte principal, em uso | API oficial. Lojas configuradas incluem Nuuvem, Fanatical, GamersGate, IndieGala, 2game, Steam, Epic, Blizzard, EA Store, Microsoft Store e Ubisoft Store. Algumas lojas podem estar bloqueadas por regra de produto quando seus links não abrem corretamente. |
-| **Steam** | Complementar | Usada para derivar capa oficial e classificar DLC quando há oferta Steam. |
-| **Eneba** | Planejada | Feed de afiliados XML/CSV após aprovação no cadastro. |
-| **Instant Gaming** | Sem integração automática | Aguardando aprovação no programa de afiliados deles. |
+A meta futura e migrar o backend para Oracle Always Free em Sao Paulo, de preferencia uma VM Ampere A1 Flex. Enquanto a regiao estiver sem capacidade, manter Render. A migracao so deve ocorrer com Docker, HTTPS, logs, backup e deploy automatico pelo GitHub Actions; nao voltar ao processo manual por SSH.
 
-Todas as fontes gravam na tabela `offers`, diferenciadas pela coluna `source`.
+## Coletas e Atualizacao de Catalogo
 
-## Schema do banco
+### Precos ITAD
 
-```sql
-games
-  id            bigserial PK
-  itad_id       uuid UNIQUE NULL
-  title         text NOT NULL
-  slug          text UNIQUE NOT NULL
-  cover_url     text NULL
-  rank          integer NULL
-  is_dlc        boolean NULL
-  last_price_sync_at timestamptz NULL
-  last_steam_sync_at timestamptz NULL
-  created_at    timestamptz DEFAULT now()
+O Spring executa a coleta internamente quando `APP_SYNC_SCHEDULER_ENABLED=true`.
 
-offers
-  id            bigserial PK
-  game_id       bigint FK -> games.id
-  source        text NOT NULL
-  store_name    text NOT NULL
-  price         numeric(10,2) NOT NULL
-  regular_price numeric(10,2) NULL
-  currency      text NOT NULL DEFAULT 'BRL'
-  url           text NOT NULL
-  updated_at    timestamptz NOT NULL
-  UNIQUE (game_id, source, store_name)
+- Intervalo padrao: 10 minutos.
+- Cada rodada seleciona 5.000 jogos: 200 relevantes (top 2.000 por `rank`) e 4.800 da fila geral.
+- A fila e dada por `games.last_price_sync_at`: o item mais antigo e atualizado primeiro e volta naturalmente ao fim da fila.
+- A ITAD recebe lotes de ate 200 IDs, em ate 25 chamadas sequenciais por rodada.
+- Cada lote e tentado ate tres vezes. Uma falha nao cancela os demais lotes; o jogo permanece prioritario na proxima rodada.
+- A coleta atualiza **todas as ofertas retornadas pela ITAD** para cada jogo, como o botao manual `Atualizar precos`. Ofertas ITAD antigas que nao retornam mais sao removidas.
+- Antes e depois da troca de ofertas, o backend compara o menor preco para criar notificacoes de queda para quem monitora o jogo.
+- `sync_locks` impede jobs simultaneos, inclusive em deploys com duas instancias temporarias.
 
-favorites
-  id            bigserial PK
-  user_id       uuid NOT NULL
-  game_id       bigint FK -> games.id
-  created_at    timestamptz DEFAULT now()
-  UNIQUE (user_id, game_id)
+O endpoint `POST /api/sync?page=0` e legado: serve para diagnostico/manual e exige `X-Sync-Key`. Nao usar GitHub Actions para processar o catalogo completo.
 
-sync_locks
-  name          text PK
-  locked_until  timestamptz NOT NULL
+### Metadados Steam de catalogo
 
-price_notifications
-  id            bigserial PK
-  user_id       uuid FK -> auth.users
-  game_id       bigint FK -> games.id
-  previous_price numeric(10,2)
-  current_price numeric(10,2)
-  store_name    text NULL
-  read_at       timestamptz NULL
-  created_at    timestamptz DEFAULT now()
+Job separado, em geral a cada 15 minutos:
 
-profile_steam_favorites
-  user_id       uuid
-  app_id        integer
-  created_at    timestamptz DEFAULT now()
-  FK (user_id, app_id) -> steam_library_games(user_id, app_id)
+- Completa capa oficial quando ela esta ausente.
+- Ajuda a identificar DLCs quando existe uma oferta Steam correspondente.
+- Processa um lote pequeno de jogos pendentes com `games.last_steam_sync_at`.
+- Compartilha a mesma trava da coleta de preco.
 
-profile_blocks
-  user_id, block_id  PK composta
-  block_type         favoritos | biblioteca | atividade | texto | imagem | links
-  position, size
-  background_type, background_value, overlay_opacity
-```
+## Fonte de Dados e Regras de Catalogo
 
-- Menor preço é calculado via query (`MIN(price)`), não armazenado.
-- `rank` vem do feed ITAD; menor = mais popular.
-- Somente BRL por enquanto.
-- A tabela `favorites` representa hoje jogos monitorados/salvos pelo usuário para acompanhar preço. No produto, isso aparece como **Jogos Monitorados**. Favoritos pessoais do perfil serão separados em outra estrutura futura.
+### ITAD
 
-## Endpoints da API
+ITAD e a fonte principal de catalogo e ofertas. O sistema trabalha somente com BRL por enquanto.
 
-- `GET /api/games?page=0&size=20&sort=rank&type=all&platform=all&minPrice=&maxPrice=&minDiscount=&q=`
-  - `sort`: `rank`, `discount`, `price_asc`, `price_desc`
-  - `type`: `all`, `game`, `dlc`
-  - `platform`: `all`, `pc`, `xbox`. PlayStation fica oculto no frontend enquanto não houver ofertas dessa plataforma.
-  - `minDiscount`: desconto percentual mínimo calculado a partir do menor preço e do preço regular.
-  - Retorna também `storeName` e `url` da oferta usada como menor preço quando disponível, para exibir loja e plataforma nos cards.
-  - Ordenação padrão: top 200 por rank com desconto ativo sobem ao topo.
-- `GET /api/games/search?q=nome`
-  - Busca primeiro no banco.
-  - Se não achar, busca na ITAD e insere os jogos encontrados.
-- `GET /api/games/{slug}`
-  - Retorna detalhe do jogo e ofertas ordenadas por preço.
-- `POST /api/games/{slug}/refresh`
-  - Atualiza preços do jogo na ITAD.
-  - Complementa capa e classificação DLC via Steam quando possível.
-- `GET /api/deals/top?size=20&sort=discount`
-  - Retorna melhores descontos deduplicados por jogo.
-  - `sort=rank` prioriza jogos mais famosos com desconto.
-- `POST /api/sync?page=0`
-  - Endpoint legado para diagnóstico ou sincronização manual pontual de uma página da ITAD.
-  - Exige header `X-Sync-Key`.
-  - O job interno é o responsável pela atualização recorrente do catálogo.
-- `GET /api/favorites`
-  - Lista jogos monitorados/salvos pelo usuário autenticado para acompanhar preço.
-- `POST /api/favorites`
-  - Adiciona jogo aos monitorados (`{ slug }`).
-- `DELETE /api/favorites/{slug}`
-  - Remove jogo dos monitorados.
-- `GET /api/notifications`
-  - Lista os 30 alertas mais recentes de queda de preco do usuario autenticado.
-- `PATCH /api/notifications/{id}/read`, `PATCH /api/notifications/read-all` e `DELETE /api/notifications/{id}`
-  - Marca alertas como lidos ou remove uma notificacao.
-- `GET /actuator/health`
-  - Health check usado pelo Render e pelo bot de monitoramento.
-- `GET /api/admin/coleta`
-  - Retorna status em memória das coletas de preços/Steam e resumo da fila.
-  - Exige token Supabase do UID administrador configurado no backend.
-- `POST /api/admin/coleta/precos` e `POST /api/admin/coleta/steam`
-  - Disparam uma coleta manual em segundo plano.
-  - Exigem o mesmo UID administrador; os jobs continuam protegidos pela trava compartilhada.
+- Menor preco e calculado em query com `MIN(price)`, nao armazenado.
+- `rank` vem da ITAD: menor rank significa jogo mais relevante.
+- A busca consulta o banco primeiro; se nao encontrar, consulta ITAD e persiste os resultados.
+- A pagina de detalhe pode atualizar um jogo individualmente via ITAD.
 
-## Estrutura de pastas
+### Lojas e conteudos bloqueados
+
+As regras ficam no backend em classes de dominio, nao no frontend:
+
+- `LojasBloqueadas.java`: GreenManGaming, AllYouPay/AllYouPlay, PlanetPlay, PlayerLand, JoyBuggy, WinGameStore, MacGameStore e Humble Store/Humble Bundle, porque os links nao abriam corretamente.
+- `JogosBloqueados.java`: itens especificos com link quebrado, incluindo `tell-me-why-chapter-1` e a URL ITAD `019e8518-404a-709b-ae47-a4ef949552ea`.
+- `ConteudosNaoJogos.java`: cursos, bundles educacionais e musicais nao aparecem como jogos. Exemplos de termos filtrados: certification, e-learning, Kali Linux, programming bundle, cybersecurity, phonk e masterclass.
+
+Ao adicionar uma nova loja ou excecao, garantir que ela seja filtrada em catalogo, home, busca, detalhe, favoritos e fila de coleta.
+
+### Plataformas e DLCs
+
+- O catalogo recebe `platform=all|pc|xbox`.
+- Como a plataforma ainda nao e persistida diretamente da ITAD, o frontend infere PC/Xbox pelo nome e URL da loja. PlayStation permanece oculto ate haver ofertas confiaveis.
+- DLCs sao separados de jogos base por `games.is_dlc` e heuristicas de titulo. A Steam ajuda a preencher esse campo; enquanto nulo, a heuristica permanece como fallback.
+- A home deve manter uma secao de maiores descontos de DLC separada quando houver itens elegiveis.
+
+## Schema Relevante
+
+### Catalogo
 
 ```text
-/backend-java
-  Dockerfile
-  pom.xml
-  src/main/java/com/ofertagames/backend/
-    AplicacaoOfertaGames.java
-    autenticacao/       -> valida Bearer token via Supabase Auth
-    comum/              -> utilitários compartilhados, incluindo lojas bloqueadas
-    configuracao/       -> CORS e conexão PostgreSQL
-    descontos/          -> endpoint /api/deals/top
-    favoritos/          -> endpoints /api/favorites
-    itad/               -> cliente e modelos da API ITAD
-    jogos/              -> catálogo, detalhe, busca e refresh
-    saude/              -> endpoint /actuator/health
-    sincronizacao/      -> endpoint legado, agendador e trava de coleta
-    steam/              -> capa oficial e detecção de DLC
+games
+  id, itad_id, title, slug, cover_url, rank, is_dlc
+  last_price_sync_at, last_steam_sync_at, created_at
 
-/frontend
-  src/app/
-    pages/
-      home/
-      catalog/
-      best-sellers/
-      game-detail/
-      free-games/
-      search/
-      login/
-      profile/
-      settings/
-      favorites/
-    components/
-      sidebar/
-      topbar/
-      game-card/
-      deals-carousel/
-    services/
-      game.ts            -> chamadas para `https://oferta-games.onrender.com/api`
-      auth.ts
-      favorites.ts       -> favoritos via backend Render
-      supabase.ts
-      theme.ts
-      filters.ts
-      store-brand.ts      -> resolve logos locais e plataformas inferidas pelo nome da loja
-    guards/
-      auth.guard.ts
+offers
+  id, game_id, source, store_name, price, regular_price
+  currency, url, updated_at
+  UNIQUE (game_id, source, store_name)
 
+sync_locks
+  name, locked_until
 ```
 
-## Padrão de código do backend
+### Conta, monitoramento e notificacoes
 
-- Classes, pacotes, métodos e variáveis em português.
-- Exemplos: `ControladorJogos`, `RepositorioJogos`, `ServicoCatalogo`, `ServicoAutenticacao`.
-- Marcas, termos externos e contrato JSON podem manter o nome original: `ITAD`, `Steam`, `Spring`, `Bearer`, `coverUrl`, `minPrice`, `regularPrice`, `discountPct`.
+```text
+favorites
+  user_id, game_id, created_at
+  -- representa Jogos Monitorados, nunca favoritos pessoais
 
-## Decisões de design e produto
+price_notifications
+  user_id, game_id, previous_price, current_price, store_name
+  read_at, created_at
+```
 
-- **Cor principal:** `#29A8E0` (azul).
-- **Ícones:** PNGs em `frontend/public/`.
-- **Logos de loja/plataforma:** SVGs locais em `frontend/public/store-logos/` e `frontend/public/platform-logos/`, resolvidos no frontend por `store-brand.ts` a partir de `storeName`.
-- **Plataformas:** enquanto o backend não persiste `platforms/drm` do ITAD, o frontend infere PC e Xbox pelo nome/link da loja. PlayStation fica suportado internamente, mas sem botão no catálogo enquanto não houver ofertas.
-- **Filtro de plataforma no catálogo:** o backend recebe `platform` em `/api/games` e calcula preço/loja considerando ofertas da plataforma filtrada.
-- **Lojas bloqueadas:** lojas com links quebrados são filtradas por `LojasBloqueadas.java` e também ignoradas no salvamento do sync. Lista atual: GreenManGaming, AllYouPay/AllYouPlay, PlanetPlay, PlayerLand, JoyBuggy, WinGameStore, MacGameStore, Humble Store/Humble Bundle.
-- **Jogos bloqueados:** itens específicos com oferta/link quebrado são ocultados por slug e URL da oferta em `JogosBloqueados.java`. A lista atual inclui `tell-me-why-chapter-1` e o link `https://itad.link/019e8518-404a-709b-ae47-a4ef949552ea/`.
-- **Conteúdo que não é jogo:** cursos, bundles educacionais e musicais da ITAD são filtrados por `ConteudosNaoJogos.java` no catálogo, descontos, busca, detalhe, favoritos e filas de coleta. A regra cobre termos como certification, e-learning, Kali Linux, programming bundle, cybersecurity, phonk e masterclass.
-- **DLCs nos descontos:** a home separa jogos base e DLCs a partir de `games.is_dlc` e heurísticas de título. `ClassificadorDlc.java` atende os filtros do catálogo e a mesma lista de pacotes de Lords of the Fallen está no frontend, mantendo Monk Decipher e similares na seção de DLCs.
-- **DLC detection:** `games.is_dlc` é preenchido via Steam quando há oferta Steam; enquanto `is_dlc IS NULL`, o frontend usa heurística por título.
-- **Deduplicação de deals:** `DISTINCT ON (g.id)` mantém apenas a oferta mais barata por jogo.
-- **Catálogo rotativo:** top 200 por rank com desconto ativo sobem ao topo.
-- **Coleta de preços:** roda internamente no Spring, em fila baseada em `last_price_sync_at`. Cada rodada atualiza 200 jogos relevantes e 4.800 jogos gerais em lotes de 200 IDs da ITAD. As ofertas ITAD retornadas substituem o conjunto anterior do mesmo jogo, removendo lojas e preços que não existam mais.
-- **Coleta Steam:** roda em job separado e preenche capa/DLC dos jogos pendentes. Ela usa `last_steam_sync_at` para evitar repetir o mesmo jogo antes dos demais.
-- **Concorrência da coleta:** jobs de preço e Steam não podem rodar juntos; `sync_locks` é uma trava compartilhada no banco que também protege durante deploys com duas instâncias temporárias.
-- **Login:** página de login sem sidebar/topbar.
-- **Home:** banner com autoplay e seções em carrossel.
-- **Perfil:** dashboard gamer com avatar, bio editável, estatísticas de gameplay, resumo de biblioteca e atividade recente. A aba **Jogos favoritos** é isolada e mostra apenas os favoritos pessoais futuros; preferências ficam somente em Configurações. A foto é enviada ao Supabase Storage, persiste entre sessões e é exibida no perfil público.
-- **Jogos Monitorados:** a rota `/monitorados` e os endpoints `/api/favorites` representam jogos que o usuário quer acompanhar por preço. A rota antiga `/favoritos` redireciona para `/monitorados` por compatibilidade.
-- **Ações de monitoramento:** cards do catálogo e a página de detalhe usam `jogos-monitorados.png`, nunca o ícone de favoritos pessoais, para incluir ou remover um jogo da lista de preços monitorados.
-- **Jogos favoritos:** no perfil, este nome é reservado para favoritos pessoais do usuário e é separado dos Jogos Monitorados. Ele aceita jogos do catálogo e jogos da biblioteca Steam, inclusive itens que não estejam no catálogo.
-- **Configurações:** divididas em Conta, Conexões, Preferências e Privacidade. Conta concentra identidade, senha e sessão; Conexões concentra Steam/Xbox; Preferências afetam o conteúdo da home e os filtros iniciais do catálogo; Privacidade controla a exposição futura dos dados sincronizados no perfil.
-- **Preferências do usuário:** persistidas localmente no navegador enquanto não houver contrato próprio no backend. A home continua com conteúdo geral misturado e, quando existe uma plataforma preferida, mostra a seção exclusiva **Jogos da sua plataforma favorita** logo abaixo de Jogos Monitorados (ou abaixo do banner quando não houver monitorados). Ocultação de DLCs, desconto mínimo e preço máximo também são aplicados à seção. No catálogo, plataforma, DLCs, desconto mínimo e preço máximo inicializam os filtros sem impedir ajustes manuais.
-- **Privacidade do perfil:** persistida localmente por enquanto. As opções já estão preparadas para horas jogadas, conquistas, biblioteca e jogos favoritos, mas só terão efeito público quando existir perfil compartilhável e persistência no backend.
-- **Notificações:** o sino da topbar lista alertas de queda de preço para Jogos Monitorados, permite marcar como lidos ou remover e mostra badge de itens não lidos. A coleta cria alerta apenas quando o menor preço passa a ser menor que o valor anterior.
-- **Alerta de preço:** antes de substituir o lote de ofertas ITAD, a coleta lê o menor preço atual; depois compara o novo menor preço e cria uma notificação para cada usuário que monitora o jogo quando houver queda. O mesmo preço não gera alerta repetido porque não é uma nova queda.
-- **Capa ausente:** fallback visual em `no-cover.svg`; backend tenta preencher capa oficial da Steam quando possível.
-- **Catálogo:** scroll infinito via `window:scroll` com throttle por `requestAnimationFrame`.
-- **Navegação:** toda mudança de rota inicia no topo da página; o scroll infinito permanece restrito ao comportamento da própria tela de catálogo.
-- **Administração de coleta:** a rota `/admin/coleta` mostra status de preços, Steam e fila, além de permitir disparo manual em segundo plano. O frontend limita a rota ao UID administrador e o backend exige o mesmo UID no token Supabase para todos os endpoints `/api/admin/*`; UID permitido: `0a6eb06b-756e-4434-899b-33420bed8609`.
+### Perfis e Steam
 
-## Implementações futuras planejadas
+```text
+profiles
+  user_id, handle, display_name, bio, avatar_url, is_public
+  show_game_hours, show_achievements, show_library
+  show_favorite_games, show_recent_activity
+  avatar_zoom, avatar_position_x, avatar_position_y
 
-- **Preferências de alertas:** adicionar limite de preço desejado e canais externos, como e-mail ou push, depois de validar as notificações internas.
-- **Favoritos pessoais do perfil:** evoluir a lista já persistida com ordenação manual, limite de exibição pública e, futuramente, coleções.
-- **Monitoramento de preço:** manter os favoritos atuais como lista de jogos monitorados. No produto, usar o nome **Jogos Monitorados** para esse conceito.
-- **Perfil:** evoluir favoritos pessoais com ordenação manual e coleções quando houver necessidade de mais organização.
-- **Conexões de plataformas:** implementar em Configurações, começando por Steam/Xbox quando houver decisão técnica. O perfil apenas consome os dados sincronizados.
-- **Persistência de configurações:** migrar preferências e privacidade do `localStorage` para uma tabela vinculada ao usuário no Supabase quando houver perfil público e uso em múltiplos dispositivos.
-- **Gameplay real:** substituir placeholders de horas jogadas, conquistas e biblioteca por dados sincronizados das conexões. Estados que dependem de conexão devem usar o padrão `--` + `Conecte uma plataforma`; cards de horas por plataforma só devem aparecer para plataformas realmente conectadas pelo usuário.
-- **Atividade recente:** evoluir de eventos locais/derivados para eventos reais, como jogo favoritado no perfil, jogo monitorado, conquista sincronizada ou plataforma conectada.
-- **Importação de catálogo:** avaliar uma coleta de descoberta separada para incluir jogos novos da ITAD sem misturar essa responsabilidade com a fila de atualização de preços.
+steam_connections
+  user_id, steam_id, persona_name, avatar_url
+  connected_at, last_library_sync_at, last_achievement_sync_at, last_error
 
-## O que NÃO fazer
+steam_library_games
+  user_id, app_id, title, playtime_minutes, icon_hash, last_synced_at
 
-## Conexao Steam
+steam_game_achievements
+  user_id, app_id, unlocked_count, total_count, last_synced_at
 
-- A conexao e feita pelo Steam OpenID; o usuario confirma a propria conta na Steam e o sistema nao solicita Steam ID ou URL manualmente.
-- A Steam Web API sincroniza perfil, biblioteca, horas jogadas e conquistas. A biblioteca e carregada apos conectar ou por acao manual; conquistas sao atualizadas gradualmente.
-- A aba Biblioteca mostra os 100 jogos Steam com maior tempo jogado. A acao manual de sincronizacao tambem prioriza conquistas dos 50 jogos mais relevantes da conta.
-- Lista de desejos nao e coletada.
-- Antes do deploy, executar `backend-java/sql/20260711_conexoes_steam.sql` no Supabase e configurar no Render: `STEAM_WEB_API_KEY`, `PUBLIC_BACKEND_URL=https://oferta-games.onrender.com` e a URL publica correta em `FRONTEND_URL`.
+profile_favorites
+  user_id, game_id, created_at
 
-## Perfis publicos
+profile_steam_favorites
+  user_id, app_id, created_at
+  -- usado para jogos da biblioteca Steam ausentes do catalogo
 
-- Cada usuario escolhe um identificador unico e compartilhavel na raiz, no formato `/identificador`. Rotas do produto sao reservadas e nao podem ser usadas como identificador.
-- A URL canonica do perfil e o proprio endereco compartilhavel do usuario, sem exibir um link duplicado dentro do perfil.
-- O perfil publico replica a linguagem visual do perfil privado e mostra somente os blocos autorizados pela privacidade. Quando o proprio dono autenticado abre sua URL canonica, recebe tambem os controles de trocar foto e editar bio; visitantes nunca recebem essas acoes.
-- O dono tambem pode abrir o **Modo de edicao** no perfil para reorganizar blocos por arrastar e soltar, definir tamanho e personalizar fundos. Os menus de tamanho e fundo seguem o mesmo dropdown do catalogo; ao escolher fundo por imagem, o editor mostra o comando de escolher/trocar imagem. O layout fica salvo em `profile_blocks`; a privacidade continua sendo controlada apenas pelas configuracoes gerais do perfil.
-- Blocos personalizados suportados: texto, imagem e links. Imagens sao enviadas ao bucket publico `avatars` dentro da pasta do proprio usuario, com limite de 2 MB.
-- Ao trocar a foto de perfil, o usuario ajusta zoom e posicao antes de confirmar. Os valores sao persistidos em `profiles.avatar_zoom`, `avatar_position_x` e `avatar_position_y` para que o mesmo enquadramento apareca a todos os visitantes.
-- A URL canonica preserva as tres abas do perfil: Resumo, Jogos favoritos e Biblioteca. O resumo contem os cards de favoritos, horas e conquistas, alem dos paineis de favoritos pessoais, biblioteca e atividade recente; a atividade permanece como placeholder ate possuir eventos persistidos.
-- A topbar resolve o identificador antes de navegar, evitando renderizar `/perfil` como tela intermediaria. A pagina publica aguarda a resposta da API antes de exibir indisponibilidade.
-- A pagina publica observa alteracoes no parametro da rota; ao navegar diretamente de `/<outro-perfil>` para `/<meu-perfil>`, ela descarta a resposta anterior e recarrega o conteudo correspondente a nova URL.
-- A rota `/perfil` e apenas uma ponte autenticada: cria um identificador temporario seguro quando necessario e redireciona para a URL canonica `/<identificador>`. Perfis privados continuam visiveis somente pelo proprio dono autenticado.
-- Novos perfis sao publicos por padrao, mas podem ser privados em Configuracoes > Privacidade. E-mail, UUID, jogos monitorados e dados de conexao nunca sao expostos.
-- O usuario escolhe se libera horas jogadas, conquistas e biblioteca. O backend filtra os dados antes de responder a rota publica.
-- A persistencia fica em `profiles`; executar `backend-java/sql/20260711_perfis_publicos.sql` no Supabase antes do deploy.
-- Executar `backend-java/sql/20260713_editor_de_perfil.sql` para habilitar o editor, os blocos e o enquadramento persistente do avatar.
-- Em bancos ja existentes, executar tambem `backend-java/sql/20260712_perfis_publicos_por_padrao.sql`. A migracao nao altera a visibilidade dos perfis ja criados.
-- Avatares publicos usam o bucket `avatars` do Supabase Storage. Executar tambem `backend-java/sql/20260712_avatars_perfil.sql`; o upload aceita JPEG, PNG e WebP de ate 2 MB e cada usuario so pode gravar em sua propria pasta.
-- A API de perfis usa `PUT /api/perfis/me` e `PUT /api/perfis/me/avatar`; a politica CORS global permite `PUT` para a origem configurada em `CORS_ALLOWED_ORIGINS`.
+profile_activities
+  user_id, type, game_id, detail, created_at
 
-## Favoritos pessoais do perfil
+profile_blocks
+  user_id, block_id, block_type, title, content, position, size
+  visible, background_type, background_value, overlay_opacity
+```
 
-- Favoritos pessoais usam a tabela `profile_favorites`, separada de `favorites`, que continua sendo exclusivamente de Jogos Monitorados.
-- Jogos do catálogo são favoritados pela página de detalhe; jogos da biblioteca Steam podem ser adicionados pelo coração na aba **Biblioteca**. Itens Steam ausentes no catálogo ficam em `profile_steam_favorites` e direcionam para sua página oficial na Steam.
-- A aba **Jogos favoritos** do próprio perfil lista e remove ambos os tipos; visitantes apenas visualizam a lista quando a privacidade permitir.
-- A API autenticada usa `GET`, `POST` e `DELETE /api/profile-favorites`; a URL publica do perfil inclui os favoritos somente quando `show_favorite_games` estiver ativo.
-- Executar `backend-java/sql/20260712_favoritos_pessoais.sql` no Supabase antes do deploy do backend.
-- Executar também `backend-java/sql/20260713_favoritos_steam_perfil.sql` antes do deploy para habilitar favoritos da biblioteca Steam.
+Apesar da coluna `profile_blocks.visible` existir por compatibilidade, nao ha privacidade por secao: a privacidade e sempre do perfil como um todo e dos controles gerais de dados.
 
-## Atividade recente do perfil
+## Migrations Supabase
 
-- Atividades sao registradas em `profile_activities` para adicao/remocao de jogos monitorados, adicao/remocao de favoritos pessoais, conexao Steam e sincronizacoes manuais da Steam.
-- A atividade e publica por padrao: visitantes veem os eventos quando o perfil esta publico. Em Privacidade, o dono pode desativar **Mostrar atividade recente**; nesse caso os eventos nao sao enviados pela API para visitantes.
-- Executar `backend-java/sql/20260712_atividades_perfil.sql` e `backend-java/sql/20260712_visibilidade_atividade_perfil.sql` no Supabase antes do deploy do backend.
-- Qualquer visitante pode usar **Atualizar dados** no perfil publico para solicitar uma sincronizacao completa da Steam (biblioteca, horas e conquistas). A operacao roda em segundo plano e cada perfil aceita uma solicitacao a cada 10 minutos, protegendo a Steam e o backend contra abuso. Executar tambem `backend-java/sql/20260712_atualizacao_publica_perfil.sql`.
-- A primeira sincronizacao Steam registra apenas os resumos de biblioteca e conquistas. A partir da linha de base, novos jogos da biblioteca e novas conquistas viram eventos individuais. Executar `backend-java/sql/20260712_atividades_steam_detalhadas.sql` antes do deploy.
-- Se o backend ja estiver consultando atividades detalhadas e o perfil retornar erro, aplique imediatamente essa migration no SQL Editor do Supabase: ela cria a coluna `profile_activities.detalhe` usada pela atividade recente.
-- A aba Biblioteca permite buscar os jogos sincronizados e ordenar por tempo jogado, nome ou percentual de conquistas.
-- **Xbox:** permanece como futura integracao. A documentacao oficial concentra as APIs de conquistas e dados de jogador no GDK/XSAPI para titulos registrados, sem um fluxo publico equivalente ao Steam OpenID + Web API para importar bibliotecas de qualquer conta. Nao usar APIs nao oficiais ou scraping para isso.
+Arquivos em `backend-java/sql/`:
 
-## Icones de perfil e biblioteca
+1. `20260711_coleta_agendada.sql`
+2. `20260711_conexoes_steam.sql`
+3. `20260711_perfis_publicos.sql`
+4. `20260712_atividades_perfil.sql`
+5. `20260712_atividades_steam_detalhadas.sql`
+6. `20260712_atualizacao_publica_perfil.sql`
+7. `20260712_avatars_perfil.sql`
+8. `20260712_favoritos_pessoais.sql`
+9. `20260712_perfis_publicos_por_padrao.sql`
+10. `20260712_visibilidade_atividade_perfil.sql`
+11. `20260713_editor_de_perfil.sql`
+12. `20260713_favoritos_steam_perfil.sql`
+13. `20260713_notificacoes_preco.sql`
 
-- `horas-jogadas.png`: estatisticas de horas jogadas.
-- `conquistas.png`: estatisticas de conquistas.
-- `biblioteca.png`: resumo e abas da biblioteca sincronizada.
-- `biblioteca-modo-escuro.png`: variacao da biblioteca usada no tema escuro.
-- `jogos-favoritos.png`: favoritos pessoais do perfil.
-- `jogos-favoritos-tema-escuro.png`: variacao usada apenas no tema escuro para melhorar o contraste dos favoritos pessoais.
-- `jogos-monitorados.png`: monitoramento de precos e rota `/monitorados`.
-- `jogos-monitorados-modo-claro.png` e `jogos-monitorados-modo-escuro.png`: variacoes do icone de monitoramento por tema.
-- `steam-modo-claro.png`, `steam-modo-escuro.png`, `xbox-modo-claro.png` e `xbox-modo-escuro.png`: variacoes dos icones de plataforma por tema.
+Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500.
 
-- Sem scraping de sites.
+O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos e seus fundos. Cada usuario so pode gravar na propria pasta. Limite de upload de imagem no frontend: 2 MB.
+
+## API HTTP
+
+### Catalogo
+
+- `GET /api/games?page=&size=&sort=&type=&platform=&minPrice=&maxPrice=&minDiscount=&q=`
+  - `sort`: `rank`, `discount`, `price_asc`, `price_desc`.
+  - `type`: `all`, `game`, `dlc`.
+  - Retorna a oferta minima, incluindo loja e URL quando disponiveis.
+- `GET /api/games/search?q=nome`
+- `GET /api/games/{slug}`
+- `POST /api/games/{slug}/refresh`
+- `GET /api/deals/top?size=&sort=discount|rank`
+- `POST /api/sync?page=` (legado, exige `X-Sync-Key`)
+
+### Jogos Monitorados e notificacoes
+
+- `GET|POST /api/favorites`
+- `DELETE /api/favorites/{slug}`
+- `GET /api/notifications`
+- `GET /api/notifications/unread-count`
+- `PATCH /api/notifications/{id}/read`
+- `PATCH /api/notifications/read-all`
+- `DELETE /api/notifications/{id}`
+
+### Perfil e favoritos pessoais
+
+- `GET /api/perfis/me`
+- `PUT /api/perfis/me`
+- `PUT /api/perfis/me/avatar`
+- `GET|PUT /api/perfis/me/blocos`
+- `GET /api/perfis/{handle}`
+- `POST /api/perfis/{handle}/atualizar`
+  - qualquer visitante pode pedir atualizacao Steam publica; cada perfil aceita uma solicitacao a cada 10 minutos.
+- `GET|POST /api/profile-favorites`
+- `DELETE /api/profile-favorites/{slug}`
+- `POST /api/profile-favorites/steam`
+- `DELETE /api/profile-favorites/steam/{appId}`
+
+### Steam e administracao
+
+- `POST /api/conexoes/steam/iniciar`
+- `GET /api/conexoes/steam/retorno`
+- `GET|DELETE /api/conexoes/steam`
+- `GET /api/conexoes/steam/biblioteca`
+- `POST /api/conexoes/steam/sincronizar`
+- `GET /api/admin/coleta`
+- `POST /api/admin/coleta/precos`
+- `POST /api/admin/coleta/steam`
+- `GET /actuator/health`
+
+Os endpoints autenticados recebem token Bearer do Supabase. A administracao exige o UID autorizado no backend: `0a6eb06b-756e-4434-899b-33420bed8609`.
+
+## Frontend e UX
+
+### Rotas e navegacao
+
+- `/` home.
+- `/catalogo` usa scroll infinito e filtros.
+- `/jogo/:slug` mostra ofertas e atualizacao individual.
+- `/monitorados` mostra a lista de precos acompanhados. `/favoritos` redireciona por compatibilidade.
+- `/perfil` e uma ponte autenticada: resolve/cria o handle e redireciona para a URL canonica.
+- `/:handle` e a pagina publica do perfil. As rotas de produto sao reservadas e nao podem ser handles.
+- Toda mudanca de rota deve iniciar no topo. A pagina publica observa mudancas de `handle` e descarta respostas de requisicoes antigas para nao manter o perfil anterior na tela.
+
+### Mapa de paginas
+
+| Pagina/rota | Finalidade | Comportamentos e dados importantes |
+|---|---|---|
+| **Inicio** (`/`) | Apresentar ofertas de interesse imediato. | Banner de melhor oferta, carrosseis de Jogos Monitorados, plataforma favorita quando definida, descontos em jogos, descontos em DLCs, mais vendidos e gratuitos. O conteudo geral nunca deve desaparecer ao selecionar uma plataforma favorita. |
+| **Catalogo** (`/catalogo`) | Explorar todo o catalogo. | Scroll infinito; filtros de tipo, plataforma, desconto minimo e faixa de preco; ordenacao por dropdown customizado. As preferencias preenchem os filtros iniciais, mas o usuario pode mudar tudo manualmente. |
+| **Detalhe do jogo** (`/jogo/:slug`) | Comparar todas as lojas de um jogo. | Hero com capa, melhor preco, botao `Atualizar precos`, acao de Jogos Monitorados e tabela de ofertas. A tabela mostra loja, plataforma, desconto, preco regular, preco atual e link externo. |
+| **Busca** | Encontrar jogos, lojas e categorias pela topbar. | Sugestoes devem navegar diretamente para o jogo escolhido; a mudanca de URL precisa recarregar o detalhe mesmo quando o usuario ja esta em outro detalhe. |
+| **Jogos Monitorados** (`/monitorados`) | Listar jogos acompanhados por preco. | Usa a tabela `favorites` e os endpoints `/api/favorites`. E diferente de favoritos pessoais do perfil. A rota antiga `/favoritos` somente redireciona para aqui. |
+| **Mais vendidos** | Mostrar jogos relevantes/populares. | Usa rank ITAD e deve respeitar as mesmas regras de filtro de conteudo nao-jogo, DLC e lojas bloqueadas. |
+| **Gratuitos** | Mostrar ofertas com preco zero. | Itens com link invalido ou filtrados por `JogosBloqueados` nao devem aparecer. |
+| **Login** | Autenticar por Supabase Auth. | Nao usa sidebar nem topbar. Depois do login, a navegacao volta ao fluxo normal do aplicativo. |
+| **Configuracoes** (`/configuracoes`) | Centralizar opcoes da conta. | Abas separadas: Conta, Conexoes, Preferencias e Privacidade. Nao misturar assuntos entre abas. Preferencias afetam home/catalogo; Privacidade afeta o perfil publico; Conexoes concentra Steam e futura Xbox. |
+| **Perfil proprio** (`/perfil` -> `/:handle`) | Personalizar e visualizar o perfil do usuario. | `/perfil` redireciona para o handle canonico. O dono pode editar bio, foto, layout, blocos e pedir atualizacao Steam. A pagina canonica e a mesma que visitantes veem, com controles extras apenas para o dono. |
+| **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra Resumo, Jogos favoritos e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
+| **Administracao de coleta** (`/admin/coleta`) | Acompanhar e disparar jobs internos. | Exclusiva do UID administrador. Exibe status das filas de preco/Steam e permite disparar coleta manual em segundo plano; nao substitui o scheduler. |
+
+### Componentes globais
+
+- **Sidebar:** navegacao principal. O item de monitoramento deve se chamar **Jogos Monitorados** e usar o icone correspondente, nunca o de favoritos pessoais.
+- **Topbar:** busca global, alternancia de tema, notificacoes e menu da conta. Ao clicar em Perfil, deve resolver o handle do usuario e navegar diretamente para `/:handle`, nunca permanecer em `/perfil`.
+- **Notificacoes:** sino da topbar; lista quedas de preco de Jogos Monitorados, permite marcar como lida ou remover e mostra badge de nao lidas.
+- **Card de jogo:** exibe capa, desconto, preco, loja e plataforma quando conhecidos. O icone de acao nele monitora preco, nao adiciona aos favoritos pessoais.
+
+### Home, catalogo e monitoramento
+
+- A home mantem conteudo geral misturado. Se houver plataforma preferida, cria uma secao adicional **Jogos da sua plataforma favorita** abaixo de Jogos Monitorados, sem esconder o restante.
+- Preferencias de plataforma, ocultar DLC, desconto minimo e preco maximo preenchem inicialmente os filtros do catalogo; o usuario ainda pode altera-los.
+- Cards e detalhe usam o icone `jogos-monitorados.png` para monitoramento de preco. Nunca usar o icone de favorito pessoal nesse fluxo.
+- Favoritos pessoais sao outra funcionalidade, mostrada no perfil e biblioteca Steam.
+
+### Perfil publico e privado
+
+- Perfis novos sao publicos por padrao. O dono pode tornar o perfil privado em Configuracoes > Privacidade.
+- E-mail, UUID, Jogos Monitorados e dados de autenticacao nunca sao publicos.
+- O dono escolhe a exposicao de horas, conquistas, biblioteca, favoritos pessoais e atividade recente. O backend filtra a resposta publica.
+- O dono na propria URL canonica ve controles de avatar, bio, atualizacao e modo de edicao; visitantes nao veem esses comandos.
+- O avatar e salvo no Storage com zoom e posicao persistidos para todos verem o mesmo enquadramento.
+- A primeira sincronizacao Steam gera somente os resumos. Nas posteriores, novos jogos e conquistas viram atividades individuais.
+- A atividade recente e publica por padrao, salvo escolha do dono na privacidade.
+
+### Editor de perfil
+
+O modo de edicao permite reorganizar blocos por arrastar e soltar, mudar tamanho, remover e adicionar blocos. Tipos suportados:
+
+- cards de resumo: favoritos pessoais, horas e conquistas;
+- paineis de favoritos, biblioteca e atividade;
+- blocos personalizados de texto, imagem e links.
+
+Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem. As cores recentes sao guardadas no navegador. A imagem de fundo e escolhida por um comando explicito e enviada ao bucket `avatars`; nao existe privacidade por bloco.
+
+Os dropdowns de tamanho e fundo devem seguir o mesmo padrao visual do filtro de ordenacao do catalogo, nao usar `select` nativo. Links personalizados usam uma linha por item no formato `Nome | https://url` e devem abrir como links reais.
+
+### Steam e Xbox
+
+- Steam esta funcional por OpenID: nao solicitar Steam ID ou URL manualmente.
+- Sincroniza biblioteca, horas totais/por jogo e conquistas gradualmente via Steam Web API.
+- A aba Biblioteca busca, ordena por tempo/nome/conquistas e permite favoritar itens Steam ausentes do catalogo.
+- Wishlist Steam nao e coletada.
+- Xbox permanece planejado. Nao usar scraping nem API nao oficial: nao ha um fluxo publico equivalente ao Steam OpenID + Web API para importar a biblioteca de qualquer conta.
+
+## Estrutura de Codigo
+
+```text
+backend-java/
+  Dockerfile
+  pom.xml
+  sql/
+  src/main/java/com/ofertagames/backend/
+    administracao/       status e disparo manual de coleta
+    autenticacao/        Bearer token Supabase
+    configuracao/        CORS e banco
+    conexoes/            Steam OpenID e sincronizacao
+    descontos/           home e melhores descontos
+    favoritos/           Jogos Monitorados
+    favoritosperfil/     favoritos pessoais
+    jogos/               catalogo, busca, detalhe e refresh
+    notificacoes/        alertas de preco
+    perfis/              perfil publico, avatar e blocos
+    sincronizacao/       scheduler, ITAD e locks
+    steam/               metadados Steam de catalogo
+
+frontend/src/app/
+  components/            sidebar, topbar, cards e carrosseis
+  guards/                auth.guard
+  pages/                 home, catalog, game-detail, profile, settings,
+                         favorites/monitorados, login, search e outras
+  services/              API, Auth, Supabase, tema, preferencias,
+                         favoritos, favoritos pessoais e perfis
+```
+
+Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portugues. Marcas e contratos JSON podem manter termos externos, por exemplo ITAD, Steam, Bearer, `coverUrl` e `minPrice`.
+
+## Assets e Tema
+
+- Cor principal: `#29A8E0`.
+- PNGs de perfil em `frontend/public/`: `horas-jogadas.png`, `conquistas.png`, `biblioteca.png`, `jogos-favoritos.png` e `jogos-monitorados.png`, com variantes por tema quando existentes.
+- Logos de lojas/plataformas em `frontend/public/store-logos/` e `frontend/public/platform-logos/`.
+- `store-brand.ts` resolve icones de loja e plataforma no frontend.
+
+## Estado e Proximos Passos
+
+### Implementado
+
+- Catalogo, busca, detalhe, refresh individual, descontos, DLCs e filtros.
+- Scheduler interno de precos ITAD e metadados Steam com fila e lock no PostgreSQL.
+- Jogos Monitorados, notificacoes de queda de preco e sino na topbar.
+- Login Supabase, perfis compartilhaveis, avatar persistente, bio e privacidade geral.
+- Steam OpenID, biblioteca, horas, conquistas, favoritos pessoais e atividade recente.
+- Pagina admin de coleta protegida por UID.
+- Editor de perfil persistido com blocos e upload de imagens.
+
+### Em validacao no worktree atual
+
+- Editor de perfil: menus customizados de tamanho/fundo, botao explicito para selecionar imagem de fundo/conteudo e cores recentes. O build Angular passou; ainda e necessario testar visualmente antes do proximo push.
+
+### Planejado
+
+1. Validar completamente o editor de perfil em desktop e mobile.
+2. Evoluir favoritos pessoais com ordenacao manual, limite de exibicao e colecoes.
+3. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
+4. Implementar Xbox somente com um caminho oficial suportado.
+5. Integrar Eneba depois de aprovar afiliacao; Instant Gaming aguarda aprovacao.
+6. Migrar backend para Oracle Always Free quando houver capacidade em Sao Paulo, com deploy automatico.
+7. Avaliar mover Supabase para Sao Paulo apenas depois do backend Oracle estar estavel; exige migracao planejada de banco, Auth e Storage.
+
+## Checklist antes de Publicar
+
+1. Conferir `git status --short` e nunca reverter mudancas do usuario.
+2. Para frontend: `cd frontend; npm.cmd run build`.
+3. Para backend: `cd backend-java; mvn -q -DskipTests package` quando Maven estiver disponivel.
+4. Conferir se uma migration nova precisa ser aplicada no Supabase antes do deploy.
+5. Conferir CORS quando uma rota `PUT`, `PATCH` ou `POST` nova for adicionada.
+6. Validar em producao: catalogo, detalhes, monitorados, perfil proprio, perfil anonimo e conexao Steam quando afetados.
+
+## Regras de Seguranca e Produto
+
+- Sem scraping de lojas ou plataformas.
 - Sem multi-moeda funcional por enquanto.
-- Não disparar mais a sincronização recorrente pelo GitHub Actions.
-
-## Estado atual
-
-- [x] Backend Spring Boot estruturado em `backend-java`
-- [x] Endpoints de catálogo, busca, detalhe, refresh, descontos, sync e favoritos implementados
-- [x] Integração ITAD implementada
-- [x] Complemento Steam para capa/DLC implementado
-- [x] Supabase PostgreSQL mantido como banco
-- [x] Supabase Auth usado nos favoritos
-- [x] Frontend Angular implementado
-- [x] Perfil visual implementado com bio editável, avatar persistido e dados Steam sincronizados
-- [x] Dockerfile do backend Java configurado para Render
-- [x] Coleta interna de preços e metadados Steam agendada no Spring, com fila e trava no PostgreSQL
-- [x] Workflows de sync e keep alive do GitHub Actions removidos
-- [ ] Executar `backend-java/sql/20260711_coleta_agendada.sql` no Supabase e ativar `APP_SYNC_SCHEDULER_ENABLED=true` no Render
-- [x] Backend publicado no Render
-- [x] Separar favoritos pessoais do perfil dos jogos monitorados por preço
-- [x] Atividade recente real, publica por padrao e configuravel na privacidade do perfil
-- [x] Atividade Steam detalhada e Biblioteca pesquisavel com progresso de conquistas
-- [x] Persistir foto de perfil no Supabase Storage
-- [ ] Conexões de plataformas em Configurações
-- [ ] Sincronizar horas jogadas, conquistas e biblioteca
-- [ ] Integração com Eneba
-- [ ] Integração com Instant Gaming
+- Sem exibir dados privados de perfil na rota publica.
+- Nao reintroduzir sincronizacao recorrente pelo GitHub Actions.
+- Nao colocar chaves do backend no frontend.
+- Nao transformar favoritos pessoais em Jogos Monitorados nem o contrario.
