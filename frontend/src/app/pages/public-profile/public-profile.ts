@@ -297,7 +297,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   activityIcon(type: string): string {
-    if (type.startsWith('MONITORAMENTO')) return 'jogos-monitorados.png';
+    if (type.startsWith('MONITORAMENTO')) return 'jogos-monitorados-modo-escuro.png';
     if (type.startsWith('FAVORITO_PESSOAL')) return 'jogos-favoritos.png';
     if (type.startsWith('BIBLIOTECA')) return 'biblioteca.png';
     if (type.startsWith('CONQUISTA')) return 'conquistas.png';

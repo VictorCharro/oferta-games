@@ -37,13 +37,6 @@
   content: url('/jogos-favoritos-tema-escuro.png');
 }
 
-[data-theme="light"] img[src="jogos-monitorados.png"] {
-  content: url('/jogos-monitorados-modo-claro.png');
-}
-
-[data-theme="dark"] img[src="jogos-monitorados.png"] {
-  content: url('/jogos-monitorados-modo-escuro.png');
-}
 
 [data-theme="light"] img[src="store-logos/steam.svg"] {
   content: url('/steam-modo-claro.png');

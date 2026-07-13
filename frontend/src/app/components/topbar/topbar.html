@@ -39,7 +39,7 @@
         <div class="notifications-heading"><strong>Notificações</strong><button type="button" *ngIf="unreadNotifications" (click)="markAllNotificationsRead()">Marcar todas como lidas</button></div>
         <div class="notification-list" *ngIf="notifications.length; else noNotifications">
           <a *ngFor="let notification of notifications" [routerLink]="['/jogo', notification.slug]" (click)="markNotificationRead(notification)" [class.unread]="!notification.lida" class="notification-item">
-            <img src="jogos-monitorados.png" alt="" />
+            <img src="jogos-monitorados-modo-escuro.png" alt="" />
             <span><b>{{ notification.titulo }}</b> caiu de {{ formatNotificationPrice(notification.precoAnterior) }} para <strong>{{ formatNotificationPrice(notification.precoAtual) }}</strong><small>{{ notification.loja || 'Melhor oferta' }} · {{ relativeNotificationTime(notification.criadaEm) }}</small></span>
             <button type="button" (click)="removeNotification($event, notification.id)" title="Remover notificação" aria-label="Remover notificação">×</button>
           </a>

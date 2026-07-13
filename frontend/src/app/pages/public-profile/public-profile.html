@@ -163,7 +163,8 @@
     <article
       *ngFor="let block of visibleBlocks; let i = index"
       class="panel profile-block"
-      [ngClass]="['size-' + block.tamanho, { 'custom-text-color': !!block.corTexto }]"
+      [class]="'size-' + block.tamanho"
+      [class.custom-text-color]="!!block.corTexto"
       [ngStyle]="blockStyle(block)"
       cdkDrag
       [cdkDragDisabled]="!editingLayout"
