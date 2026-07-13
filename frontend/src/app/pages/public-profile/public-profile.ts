@@ -1,8 +1,9 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth';
-import { PerfilPublico, PerfisService } from '../../services/perfis';
+import { PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { supabase } from '../../services/supabase';
 
@@ -26,6 +27,16 @@ export class PublicProfile implements OnInit, OnDestroy {
   message = '';
   librarySearch = '';
   libraryOrder: 'tempo' | 'nome' | 'conquistas' = 'tempo';
+  editingLayout = false;
+  savingLayout = false;
+  layoutDraft: PerfilBloco[] = [];
+  recentColors: string[] = [];
+  avatarZoom = 1;
+  avatarPositionX = 50;
+  avatarPositionY = 50;
+  avatarPreview = '';
+  avatarEditing = false;
+  private avatarFile: File | null = null;
   private routeSub?: Subscription;
   private profileRequest = 0;
 
@@ -66,8 +77,12 @@ export class PublicProfile implements OnInit, OnDestroy {
       if (request !== this.profileRequest) return;
       profile.favoritos ??= [];
       profile.atividades ??= [];
+      profile.blocos = profile.blocos?.length ? profile.blocos : this.defaultBlocks();
       this.profile = profile;
       this.bioDraft = profile.bio || '';
+      this.avatarZoom = profile.avatarZoom || 1;
+      this.avatarPositionX = profile.avatarPosicaoX ?? 50;
+      this.avatarPositionY = profile.avatarPosicaoY ?? 50;
 
       try {
         const own = await this.perfis.proprio();
@@ -87,6 +102,88 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.loading = false;
       this.cdr.detectChanges();
     }
+  }
+
+  get visibleBlocks(): PerfilBloco[] { return (this.editingLayout ? this.layoutDraft : this.profile?.blocos || []).filter(block => this.editingLayout || block.visivel).sort((a, b) => a.posicao - b.posicao); }
+
+  startLayoutEdit() {
+    if (!this.profile || !this.isOwner) return;
+    this.layoutDraft = structuredClone(this.profile.blocos?.length ? this.profile.blocos : this.defaultBlocks());
+    this.recentColors = JSON.parse(localStorage.getItem('oferta-games-recent-profile-colors') || '[]');
+    this.editingLayout = true;
+  }
+
+  cancelLayoutEdit() { this.editingLayout = false; this.layoutDraft = []; }
+
+  dropBlock(event: CdkDragDrop<PerfilBloco[]>) {
+    moveItemInArray(this.layoutDraft, event.previousIndex, event.currentIndex);
+    this.layoutDraft.forEach((block, index) => block.posicao = index);
+  }
+
+  addBlock(tipo: PerfilBloco['tipo']) {
+    if (['resumo_favoritos', 'horas', 'conquistas', 'favoritos', 'biblioteca', 'atividade'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
+    const id = `custom-${crypto.randomUUID()}`;
+    const padrao = ['resumo_favoritos', 'horas', 'conquistas'].includes(tipo);
+    this.layoutDraft.push({ id: padrao ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: padrao ? 'pequeno' : 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 });
+  }
+
+  removeBlock(index: number) { this.layoutDraft.splice(index, 1); this.layoutDraft.forEach((block, position) => block.posicao = position); }
+
+  rememberColor(block: PerfilBloco) {
+    if (block.tipoFundo !== 'cor' || !block.valorFundo) return;
+    this.recentColors = [block.valorFundo, ...this.recentColors.filter(color => color !== block.valorFundo)].slice(0, 8);
+    localStorage.setItem('oferta-games-recent-profile-colors', JSON.stringify(this.recentColors));
+  }
+
+  async saveLayout() {
+    if (!this.profile) return;
+    this.savingLayout = true;
+    this.layoutDraft.forEach((block, position) => { block.posicao = position; this.rememberColor(block); });
+    try {
+      await this.perfis.salvarBlocos(this.layoutDraft);
+      this.profile.blocos = structuredClone(this.layoutDraft);
+      this.editingLayout = false;
+      this.message = 'Layout do perfil salvo.';
+    } catch { this.message = 'Não foi possível salvar o layout.'; }
+    this.savingLayout = false;
+    this.cdr.detectChanges();
+  }
+
+  blockStyle(block: PerfilBloco): Record<string, string> {
+    if (block.tipoFundo === 'cor' && block.valorFundo) return { background: block.valorFundo };
+    if (block.tipoFundo === 'imagem' && block.valorFundo) return { backgroundImage: `linear-gradient(rgba(8,13,24,${block.opacidade / 100}), rgba(8,13,24,${block.opacidade / 100})), url('${block.valorFundo}')` };
+    if (block.tipoFundo === 'gradiente' && block.valorFundo) return { background: block.valorFundo };
+    return {};
+  }
+
+  async onBlockImageSelected(event: Event, block: PerfilBloco, destino: 'conteudo' | 'fundo' = 'conteudo') {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file || !file.type.startsWith('image/') || !this.auth.user) return;
+    if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de até 2 MB.'; return; }
+    const caminho = `${this.auth.user.id}/blocks/${block.id}-${Date.now()}`;
+    const { error } = await supabase.storage.from('avatars').upload(caminho, file, { contentType: file.type, cacheControl: '3600' });
+    if (error) { this.message = 'Não foi possível enviar a imagem.'; return; }
+    const { data } = supabase.storage.from('avatars').getPublicUrl(caminho);
+    if (destino === 'fundo') block.valorFundo = data.publicUrl;
+    else block.conteudo = data.publicUrl;
+    this.cdr.detectChanges();
+  }
+
+  links(block: PerfilBloco): Array<{ nome: string; url: string }> {
+    return (block.conteudo || '').split('\n').map(linha => linha.split('|').map(valor => valor.trim()))
+      .filter(([, url]) => /^https:\/\//i.test(url || ''))
+      .map(([nome, url]) => ({ nome: nome || url, url }));
+  }
+
+  private defaultBlocks(): PerfilBloco[] {
+    return [
+      { id: 'resumo-favoritos', tipo: 'resumo_favoritos', titulo: null, conteudo: null, posicao: 0, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
+      { id: 'horas', tipo: 'horas', titulo: null, conteudo: null, posicao: 1, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
+      { id: 'conquistas', tipo: 'conquistas', titulo: null, conteudo: null, posicao: 2, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
+      { id: 'favoritos', tipo: 'favoritos', titulo: null, conteudo: null, posicao: 3, tamanho: 'largo', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
+      { id: 'biblioteca', tipo: 'biblioteca', titulo: null, conteudo: null, posicao: 4, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
+      { id: 'atividade', tipo: 'atividade', titulo: null, conteudo: null, posicao: 5, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0 },
+    ];
   }
 
   hours(minutes: number | null): string {
@@ -265,6 +362,30 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de ate 2 MB.'; return; }
     if (!this.auth.user || !this.profile) return;
 
+    this.avatarPreview = URL.createObjectURL(file);
+    this.avatarFile = file;
+    this.avatarZoom = 1;
+    this.avatarPositionX = 50;
+    this.avatarPositionY = 50;
+    this.avatarEditing = true;
+    input.value = '';
+    this.cdr.detectChanges();
+  }
+
+  cancelAvatarEdit() {
+    if (this.avatarPreview) URL.revokeObjectURL(this.avatarPreview);
+    this.avatarPreview = '';
+    this.avatarFile = null;
+    this.avatarEditing = false;
+    this.avatarZoom = this.profile?.avatarZoom || 1;
+    this.avatarPositionX = this.profile?.avatarPosicaoX ?? 50;
+    this.avatarPositionY = this.profile?.avatarPosicaoY ?? 50;
+  }
+
+  async saveAvatarEdit() {
+    const file = this.avatarFile;
+    if (!file || !this.auth.user || !this.profile) return;
+
     this.message = '';
     const caminho = `${this.auth.user.id}/avatar`;
     const { error: erroUpload } = await supabase.storage.from('avatars').upload(caminho, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
@@ -277,11 +398,14 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (erroAuth) { this.message = 'Nao foi possivel salvar a foto.'; this.cdr.detectChanges(); return; }
 
     try {
-      await this.perfis.atualizarAvatar(avatarUrl);
+      await this.perfis.atualizarAvatar(avatarUrl, this.avatarZoom, this.avatarPositionX, this.avatarPositionY);
       this.ownerAvatar = avatarUrl;
       this.profile.avatarUrl = avatarUrl;
+      this.profile.avatarZoom = this.avatarZoom;
+      this.profile.avatarPosicaoX = this.avatarPositionX;
+      this.profile.avatarPosicaoY = this.avatarPositionY;
       this.auth.updateAvatar(avatarUrl);
-      input.value = '';
+      this.cancelAvatarEdit();
     } catch {
       this.message = 'A foto foi enviada, mas nao foi possivel vincula-la ao perfil.';
     }

@@ -125,6 +125,12 @@ profile_steam_favorites
   app_id        integer
   created_at    timestamptz DEFAULT now()
   FK (user_id, app_id) -> steam_library_games(user_id, app_id)
+
+profile_blocks
+  user_id, block_id  PK composta
+  block_type         favoritos | biblioteca | atividade | texto | imagem | links
+  position, size
+  background_type, background_value, overlay_opacity
 ```
 
 - Menor preço é calculado via query (`MIN(price)`), não armazenado.
@@ -291,6 +297,9 @@ profile_steam_favorites
 - Cada usuario escolhe um identificador unico e compartilhavel na raiz, no formato `/identificador`. Rotas do produto sao reservadas e nao podem ser usadas como identificador.
 - A URL canonica do perfil e o proprio endereco compartilhavel do usuario, sem exibir um link duplicado dentro do perfil.
 - O perfil publico replica a linguagem visual do perfil privado e mostra somente os blocos autorizados pela privacidade. Quando o proprio dono autenticado abre sua URL canonica, recebe tambem os controles de trocar foto e editar bio; visitantes nunca recebem essas acoes.
+- O dono tambem pode abrir o **Modo de edicao** no perfil para reorganizar blocos por arrastar e soltar, definir tamanho e personalizar fundos. O layout fica salvo em `profile_blocks`; a privacidade continua sendo controlada apenas pelas configuracoes gerais do perfil.
+- Blocos personalizados suportados: texto, imagem e links. Imagens sao enviadas ao bucket publico `avatars` dentro da pasta do proprio usuario, com limite de 2 MB.
+- Ao trocar a foto de perfil, o usuario ajusta zoom e posicao antes de confirmar. Os valores sao persistidos em `profiles.avatar_zoom`, `avatar_position_x` e `avatar_position_y` para que o mesmo enquadramento apareca a todos os visitantes.
 - A URL canonica preserva as tres abas do perfil: Resumo, Jogos favoritos e Biblioteca. O resumo contem os cards de favoritos, horas e conquistas, alem dos paineis de favoritos pessoais, biblioteca e atividade recente; a atividade permanece como placeholder ate possuir eventos persistidos.
 - A topbar resolve o identificador antes de navegar, evitando renderizar `/perfil` como tela intermediaria. A pagina publica aguarda a resposta da API antes de exibir indisponibilidade.
 - A pagina publica observa alteracoes no parametro da rota; ao navegar diretamente de `/<outro-perfil>` para `/<meu-perfil>`, ela descarta a resposta anterior e recarrega o conteudo correspondente a nova URL.
@@ -298,6 +307,7 @@ profile_steam_favorites
 - Novos perfis sao publicos por padrao, mas podem ser privados em Configuracoes > Privacidade. E-mail, UUID, jogos monitorados e dados de conexao nunca sao expostos.
 - O usuario escolhe se libera horas jogadas, conquistas e biblioteca. O backend filtra os dados antes de responder a rota publica.
 - A persistencia fica em `profiles`; executar `backend-java/sql/20260711_perfis_publicos.sql` no Supabase antes do deploy.
+- Executar `backend-java/sql/20260713_editor_de_perfil.sql` para habilitar o editor, os blocos e o enquadramento persistente do avatar.
 - Em bancos ja existentes, executar tambem `backend-java/sql/20260712_perfis_publicos_por_padrao.sql`. A migracao nao altera a visibilidade dos perfis ja criados.
 - Avatares publicos usam o bucket `avatars` do Supabase Storage. Executar tambem `backend-java/sql/20260712_avatars_perfil.sql`; o upload aceita JPEG, PNG e WebP de ate 2 MB e cada usuario so pode gravar em sua propria pasta.
 - A API de perfis usa `PUT /api/perfis/me` e `PUT /api/perfis/me/avatar`; a politica CORS global permite `PUT` para a origem configurada em `CORS_ALLOWED_ORIGINS`.

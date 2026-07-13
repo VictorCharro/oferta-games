@@ -11,17 +11,17 @@ class RepositorioPerfis {
   RepositorioPerfis(JdbcClient jdbc) { this.jdbc = jdbc; }
 
   Optional<Perfil> buscarPorUsuario(String usuarioId) {
-    return jdbc.sql("SELECT user_id::text, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games, show_recent_activity FROM profiles WHERE user_id = CAST(:usuarioId AS uuid)")
+    return jdbc.sql("SELECT user_id::text, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games, show_recent_activity, avatar_zoom, avatar_position_x, avatar_position_y FROM profiles WHERE user_id = CAST(:usuarioId AS uuid)")
         .param("usuarioId", usuarioId).query((rs, linha) -> mapear(rs)).optional();
   }
 
   Optional<Perfil> buscarPublicoPorHandle(String handle) {
-    return jdbc.sql("SELECT user_id::text, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games, show_recent_activity FROM profiles WHERE handle = :handle AND is_public = true")
+    return jdbc.sql("SELECT user_id::text, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games, show_recent_activity, avatar_zoom, avatar_position_x, avatar_position_y FROM profiles WHERE handle = :handle AND is_public = true")
         .param("handle", handle).query((rs, linha) -> mapear(rs)).optional();
   }
 
   Optional<Perfil> buscarPorHandle(String handle) {
-    return jdbc.sql("SELECT user_id::text, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games, show_recent_activity FROM profiles WHERE handle = :handle")
+    return jdbc.sql("SELECT user_id::text, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games, show_recent_activity, avatar_zoom, avatar_position_x, avatar_position_y FROM profiles WHERE handle = :handle")
         .param("handle", handle).query((rs, linha) -> mapear(rs)).optional();
   }
 
@@ -40,15 +40,15 @@ class RepositorioPerfis {
         .param("atividades", dados.mostrarAtividades()).update();
   }
 
-  void atualizarAvatar(String usuarioId, String avatarUrl) {
-    jdbc.sql("UPDATE profiles SET avatar_url = :avatar, updated_at = now() WHERE user_id = CAST(:usuarioId AS uuid)")
-        .param("usuarioId", usuarioId).param("avatar", avatarUrl).update();
+  void atualizarAvatar(String usuarioId, String avatarUrl, double zoom, int posicaoX, int posicaoY) {
+    jdbc.sql("UPDATE profiles SET avatar_url = :avatar, avatar_zoom = :zoom, avatar_position_x = :posicaoX, avatar_position_y = :posicaoY, updated_at = now() WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId).param("avatar", avatarUrl).param("zoom", zoom).param("posicaoX", posicaoX).param("posicaoY", posicaoY).update();
   }
 
   private static Perfil mapear(java.sql.ResultSet rs) throws java.sql.SQLException {
-    return new Perfil(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getBoolean(6), rs.getBoolean(7), rs.getBoolean(8), rs.getBoolean(9), rs.getBoolean(10), rs.getBoolean(11));
+    return new Perfil(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getBoolean(6), rs.getBoolean(7), rs.getBoolean(8), rs.getBoolean(9), rs.getBoolean(10), rs.getBoolean(11), rs.getDouble(12), rs.getInt(13), rs.getInt(14));
   }
 
-  record Perfil(String usuarioId, String handle, String nomeExibicao, String bio, String avatarUrl, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades) {}
+  record Perfil(String usuarioId, String handle, String nomeExibicao, String bio, String avatarUrl, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY) {}
   record DadosPerfil(String handle, String nomeExibicao, String bio, String avatarUrl, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades) {}
 }

@@ -3,6 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
@@ -43,7 +44,7 @@ import { PublicProfile } from './pages/public-profile/public-profile';
     AdminColeta,
     PublicProfile,
   ],
-  imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule, FormsModule],
+  imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule, FormsModule, DragDropModule],
   providers: [provideBrowserGlobalErrorListeners()],
   bootstrap: [App],
 })

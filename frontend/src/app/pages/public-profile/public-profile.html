@@ -1,32 +1,85 @@
 <div class="page-content public-profile" *ngIf="profile; else pageState">
   <section class="public-hero">
-    <button type="button" class="refresh-profile" (click)="refreshProfile()" [disabled]="refreshing"
+    <button
+      type="button"
+      class="refresh-profile"
+      (click)="refreshProfile()"
+      [disabled]="refreshing"
       [attr.aria-label]="refreshing ? 'Atualizando dados do perfil' : 'Atualizar dados do perfil'"
-      [title]="refreshing ? 'Atualizando dados...' : 'Atualizar dados do perfil'">
+      [title]="refreshing ? 'Atualizando dados...' : 'Atualizar dados do perfil'"
+    >
       <span aria-hidden="true">↻</span>
+    </button>
+    <button
+      *ngIf="isOwner"
+      type="button"
+      class="edit-layout"
+      (click)="editingLayout ? cancelLayoutEdit() : startLayoutEdit()"
+      [title]="editingLayout ? 'Sair do modo de edição' : 'Editar perfil'"
+    >
+      ✎
     </button>
     <div class="public-main">
       <div class="avatar-editor">
         <div class="avatar">
-          <img *ngIf="ownerAvatar || profile.avatarUrl" [src]="ownerAvatar || profile.avatarUrl" alt="Foto de perfil" />
-          <span *ngIf="!ownerAvatar && !profile.avatarUrl">{{ profile.nomeExibicao.charAt(0) }}</span>
+          <img
+            *ngIf="avatarPreview || ownerAvatar || profile.avatarUrl"
+            [src]="avatarPreview || ownerAvatar || profile.avatarUrl"
+            alt="Foto de perfil"
+            [style.object-position]="avatarPositionX + '% ' + avatarPositionY + '%'"
+            [style.transform]="'scale(' + avatarZoom + ')'"
+          />
+          <span *ngIf="!ownerAvatar && !profile.avatarUrl">{{
+            profile.nomeExibicao.charAt(0)
+          }}</span>
         </div>
         <label *ngIf="isOwner" class="avatar-action" for="public-avatar-input">Trocar foto</label>
-        <input *ngIf="isOwner" id="public-avatar-input" type="file" accept="image/*" (change)="onAvatarSelected($event)" />
+        <input
+          *ngIf="isOwner"
+          id="public-avatar-input"
+          type="file"
+          accept="image/*"
+          (change)="onAvatarSelected($event)"
+        />
+        <div *ngIf="avatarEditing" class="avatar-crop-controls">
+          <label
+            >Zoom <input type="range" min="1" max="3" step="0.05" [(ngModel)]="avatarZoom" /></label
+          ><label
+            >Horizontal
+            <input type="range" min="0" max="100" [(ngModel)]="avatarPositionX" /></label
+          ><label
+            >Vertical <input type="range" min="0" max="100" [(ngModel)]="avatarPositionY"
+          /></label>
+          <div>
+            <button type="button" class="ghost-btn" (click)="cancelAvatarEdit()">Cancelar</button
+            ><button type="button" class="save-btn" (click)="saveAvatarEdit()">Usar foto</button>
+          </div>
+        </div>
       </div>
 
       <div class="identity">
         <h1>{{ profile.nomeExibicao }}</h1>
         <span>@{{ profile.handle }}</span>
         <div *ngIf="isOwner && editingBio" class="bio-editor">
-          <textarea [(ngModel)]="bioDraft" maxlength="180" rows="3" placeholder="Conte um pouco sobre voce como jogador"></textarea>
+          <textarea
+            [(ngModel)]="bioDraft"
+            maxlength="180"
+            rows="3"
+            placeholder="Conte um pouco sobre voce como jogador"
+          ></textarea>
           <div class="bio-actions">
             <span>{{ bioDraft.length }}/180</span>
-            <button class="ghost-btn" type="button" (click)="cancelBio()" [disabled]="savingBio">Cancelar</button>
-            <button class="save-btn" type="button" (click)="saveBio()" [disabled]="savingBio">{{ savingBio ? 'Salvando...' : 'Salvar bio' }}</button>
+            <button class="ghost-btn" type="button" (click)="cancelBio()" [disabled]="savingBio">
+              Cancelar
+            </button>
+            <button class="save-btn" type="button" (click)="saveBio()" [disabled]="savingBio">
+              {{ savingBio ? 'Salvando...' : 'Salvar bio' }}
+            </button>
           </div>
         </div>
-        <button *ngIf="isOwner && !editingBio" class="bio-btn" type="button" (click)="editBio()">{{ profile.bio || 'Adicionar uma bio' }}</button>
+        <button *ngIf="isOwner && !editingBio" class="bio-btn" type="button" (click)="editBio()">
+          {{ profile.bio || 'Adicionar uma bio' }}
+        </button>
         <ng-container *ngIf="!isOwner">
           <p *ngIf="profile.bio; else noBio">{{ profile.bio }}</p>
           <ng-template #noBio><p>Perfil publico do Oferta Games</p></ng-template>
@@ -45,12 +98,21 @@
         </div>
         <div class="platform-hours">
           <span>Horas por plataforma</span>
-          <div *ngIf="profile.totalMinutos != null; else noPlatformHours" class="platform-pill"><img src="store-logos/steam.svg" alt="Steam" /><b>Steam</b><strong>{{ hours(profile.totalMinutos) }}</strong></div>
-          <ng-template #noPlatformHours><strong>--</strong><small>Conecte uma plataforma</small></ng-template>
+          <div *ngIf="profile.totalMinutos != null; else noPlatformHours" class="platform-pill">
+            <img src="store-logos/steam.svg" alt="Steam" /><b>Steam</b
+            ><strong>{{ hours(profile.totalMinutos) }}</strong>
+          </div>
+          <ng-template #noPlatformHours
+            ><strong>--</strong><small>Conecte uma plataforma</small></ng-template
+          >
         </div>
         <div class="gameplay-stat">
           <span>Total de conquistas</span>
-          <strong>{{ profile.conquistasTotal != null ? (profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal) : '--' }}</strong>
+          <strong>{{
+            profile.conquistasTotal != null
+              ? profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal
+              : '--'
+          }}</strong>
           <small *ngIf="profile.conquistasTotal == null">Conecte uma plataforma</small>
         </div>
       </div>
@@ -58,66 +120,266 @@
   </section>
 
   <section class="tabs" aria-label="Secoes do perfil">
-    <button type="button" [class.active]="activeTab === 'resumo'" (click)="activeTab = 'resumo'">Resumo</button>
-    <button type="button" [class.active]="activeTab === 'jogosFavoritos'" (click)="activeTab = 'jogosFavoritos'">Jogos favoritos</button>
-    <button type="button" [class.active]="activeTab === 'biblioteca'" (click)="activeTab = 'biblioteca'">Biblioteca</button>
+    <button type="button" [class.active]="activeTab === 'resumo'" (click)="activeTab = 'resumo'">
+      Resumo
+    </button>
+    <button
+      type="button"
+      [class.active]="activeTab === 'jogosFavoritos'"
+      (click)="activeTab = 'jogosFavoritos'"
+    >
+      Jogos favoritos
+    </button>
+    <button
+      type="button"
+      [class.active]="activeTab === 'biblioteca'"
+      (click)="activeTab = 'biblioteca'"
+    >
+      Biblioteca
+    </button>
   </section>
 
-  <section class="profile-stats" *ngIf="activeTab === 'resumo'">
-    <article class="stat-card"><div class="stat-icon"><img src="jogos-favoritos.png" alt="" /></div><div><span>Jogos favoritos</span><strong>{{ profile.favoritos.length || '--' }}</strong><small>{{ profile.favoritos.length ? 'Favoritos pessoais' : 'Nenhum favorito ainda' }}</small></div></article>
-    <article class="stat-card"><div class="stat-icon"><img src="horas-jogadas.png" alt="" /></div><div><span>Horas jogadas</span><strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong><small *ngIf="profile.totalMinutos == null">Conecte uma plataforma</small></div></article>
-    <article class="stat-card"><div class="stat-icon trophy"><img src="conquistas.png" alt="" /></div><div><span>Conquistas</span><strong>{{ profile.conquistasTotal != null ? (profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal) : '--' }}</strong><small *ngIf="profile.conquistasTotal == null">Conecte uma plataforma</small></div></article>
-  </section>
-
-  <section class="profile-grid" *ngIf="activeTab === 'resumo'">
-    <article class="panel favorites-panel">
-      <div class="panel-heading"><h2>Jogos favoritos</h2><button *ngIf="isOwner" type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">Gerenciar</button></div>
-      <div *ngIf="profile.favoritos.length; else noFavoriteSummary" class="profile-favorite-list compact">
-        <article *ngFor="let game of profile.favoritos.slice(0, 3)" class="profile-favorite-item"><a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam' }}</span></div></a><button *ngIf="isOwner" type="button" class="remove-favorite" (click)="removePersonalFavorite(game)" title="Remover dos jogos favoritos">Remover</button></article>
+  <section class="layout-editor" *ngIf="editingLayout">
+    <div class="editor-heading">
+      <strong>Modo de edição</strong
+      ><span>Arraste os blocos, ajuste a aparência e salve quando terminar.</span>
+      <div>
+        <button type="button" (click)="addBlock('resumo_favoritos')">Favoritos</button><button type="button" (click)="addBlock('horas')">Horas</button><button type="button" (click)="addBlock('conquistas')">Conquistas</button><button type="button" (click)="addBlock('favoritos')">Lista favoritos</button><button type="button" (click)="addBlock('biblioteca')">Biblioteca</button><button type="button" (click)="addBlock('atividade')">Atividade</button><button type="button" (click)="addBlock('texto')">Texto</button
+        ><button type="button" (click)="addBlock('imagem')">Imagem</button
+        ><button type="button" (click)="addBlock('links')">Links</button
+        ><button type="button" class="ghost-btn" (click)="cancelLayoutEdit()">Cancelar</button
+        ><button type="button" class="save-btn" (click)="saveLayout()" [disabled]="savingLayout">
+          {{ savingLayout ? 'Salvando...' : 'Salvar' }}
+        </button>
       </div>
-      <ng-template #noFavoriteSummary><div class="empty-panel"><img src="jogos-favoritos.png" alt="" /><h3>Nenhum jogo favorito ainda</h3><p *ngIf="isOwner">Adicione favoritos na pagina de cada jogo.</p><p *ngIf="!isOwner">Este perfil ainda nao possui jogos favoritos.</p></div></ng-template>
+    </div>
+  </section>
+  <section
+    class="custom-layout"
+    *ngIf="activeTab === 'resumo'"
+    cdkDropList
+    (cdkDropListDropped)="dropBlock($event)"
+  >
+    <article
+      *ngFor="let block of visibleBlocks; let i = index"
+      class="panel profile-block"
+      [class]="'profile-block size-' + block.tamanho"
+      [ngStyle]="blockStyle(block)"
+      cdkDrag
+      [cdkDragDisabled]="!editingLayout"
+    >
+      <div *ngIf="editingLayout" class="block-editor">
+        <span cdkDragHandle>↕</span
+        ><select class="editor-select" [(ngModel)]="block.tamanho">
+          <option value="pequeno">Pequeno</option>
+          <option value="medio">Médio</option>
+          <option value="largo">Largo</option>
+          <option value="completo">Completo</option></select
+        ><select class="editor-select" [(ngModel)]="block.tipoFundo">
+          <option value="padrao">Padrão</option>
+          <option value="cor">Cor</option>
+          <option value="gradiente">Gradiente</option>
+          <option value="imagem">Imagem</option></select
+        ><input
+          *ngIf="block.tipoFundo === 'cor'"
+          type="color"
+          [(ngModel)]="block.valorFundo"
+          (change)="rememberColor(block)"
+        /><div *ngIf="block.tipoFundo === 'cor'" class="recent-colors"><button *ngFor="let color of recentColors" type="button" [style.background]="color" [title]="color" (click)="block.valorFundo = color"></button></div><input
+          *ngIf="block.tipoFundo === 'gradiente'"
+          [(ngModel)]="block.valorFundo"
+          placeholder="linear-gradient(...)"
+        /><label *ngIf="block.tipoFundo === 'imagem'">Fundo <input type="file" accept="image/*" (change)="onBlockImageSelected($event, block, 'fundo')" /></label><input
+          *ngIf="block.tipo === 'texto' || block.tipo === 'links'"
+          [(ngModel)]="block.titulo"
+          placeholder="Título"
+        /><textarea
+          *ngIf="block.tipo === 'texto' || block.tipo === 'links'"
+          [(ngModel)]="block.conteudo"
+          [placeholder]="block.tipo === 'links' ? 'Nome | https://exemplo.com (uma linha por link)' : 'Conteúdo'"
+        ></textarea
+        ><label *ngIf="block.tipo === 'imagem'"
+          >Imagem
+          <input
+            type="file"
+            accept="image/*"
+            (change)="onBlockImageSelected($event, block)" /></label
+        ><button type="button" (click)="removeBlock(i)">Remover</button>
+      </div>
+      <ng-container [ngSwitch]="block.tipo"
+        ><ng-container *ngSwitchCase="'resumo_favoritos'"
+          ><div class="editable-stat"><img src="jogos-favoritos.png" alt="" /><div><span>Jogos favoritos</span><strong>{{ profile.favoritos.length || '--' }}</strong><small>{{ profile.favoritos.length ? 'Favoritos pessoais' : 'Nenhum favorito ainda' }}</small></div></div></ng-container
+        ><ng-container *ngSwitchCase="'horas'"
+          ><div class="editable-stat"><img src="horas-jogadas.png" alt="" /><div><span>Horas jogadas</span><strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong><small *ngIf="profile.totalMinutos == null">Conecte uma plataforma</small></div></div></ng-container
+        ><ng-container *ngSwitchCase="'conquistas'"
+          ><div class="editable-stat"><img src="conquistas.png" alt="" /><div><span>Conquistas</span><strong>{{ profile.conquistasTotal != null ? profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal : '--' }}</strong><small *ngIf="profile.conquistasTotal == null">Conecte uma plataforma</small></div></div></ng-container
+        ><ng-container *ngSwitchCase="'favoritos'"
+          ><div class="panel-heading">
+            <h2>Jogos favoritos</h2>
+            <button
+              *ngIf="isOwner"
+              type="button"
+              class="panel-link"
+              (click)="activeTab = 'jogosFavoritos'"
+            >
+              Gerenciar
+            </button>
+          </div>
+          <div *ngIf="profile.favoritos.length; else noFav" class="profile-favorite-list compact">
+            <article
+              *ngFor="let game of profile.favoritos.slice(0, 3)"
+              class="profile-favorite-item"
+            >
+              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'"
+                ><img [src]="favoriteImage(game)" />
+                <div>
+                  <h3>{{ game.titulo }}</h3>
+                  <span>{{
+                    game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam'
+                  }}</span>
+                </div></a
+              >
+            </article>
+          </div>
+          <ng-template #noFav
+            ><div class="empty-panel"><h3>Nenhum jogo favorito ainda</h3></div></ng-template
+          ></ng-container
+        ><ng-container *ngSwitchCase="'biblioteca'"
+          ><h2>Resumo da biblioteca</h2>
+          <div class="library-content">
+            <div class="library-total">
+              <strong>{{ profile.totalJogosBiblioteca ?? '--' }}</strong
+              ><span>Jogos na biblioteca</span>
+            </div>
+            <div class="platform-split">
+              <span>Plataformas conectadas</span
+              ><strong>{{ profile.totalJogosBiblioteca != null ? 'Steam' : '--' }}</strong>
+            </div>
+          </div></ng-container
+        ><ng-container *ngSwitchCase="'atividade'"
+          ><h2>Atividade recente</h2>
+          <div class="activity-list">
+            <div *ngFor="let activity of profile.atividades.slice(0, 5)" class="activity-item">
+              <img [src]="activityIcon(activity.tipo)" /><span>{{
+                activityTitle(activity.tipo, activity.tituloJogo, activity.detalhe)
+              }}</span
+              ><small>{{ relativeTime(activity.criadaEm) }}</small>
+            </div>
+          </div></ng-container
+        ><ng-container *ngSwitchCase="'texto'"
+          ><h2>{{ block.titulo || 'Texto' }}</h2>
+          <p>{{ block.conteudo || 'Escreva algo sobre você.' }}</p></ng-container
+        ><ng-container *ngSwitchCase="'imagem'"
+          ><h2 *ngIf="block.titulo">{{ block.titulo }}</h2>
+          <img *ngIf="block.conteudo" class="custom-image" [src]="block.conteudo" />
+          <p *ngIf="!block.conteudo">Adicione uma imagem no modo de edição.</p></ng-container
+        ><ng-container *ngSwitchCase="'links'"
+          ><h2>{{ block.titulo || 'Links' }}</h2>
+          <div *ngIf="links(block).length; else emptyLinks" class="custom-links"><a *ngFor="let link of links(block)" [href]="link.url" target="_blank" rel="noopener">{{ link.nome }}</a></div><ng-template #emptyLinks><p>Adicione seus links no modo de edição.</p></ng-template></ng-container
+        ></ng-container
+      >
     </article>
-
-    <aside class="side-stack">
-      <article class="panel library-summary">
-        <h2>Resumo da biblioteca</h2>
-        <div class="library-content">
-          <div class="library-total"><div class="library-icon"><img src="biblioteca.png" alt="" /></div><strong>{{ profile.totalJogosBiblioteca ?? '--' }}</strong><span>Jogos na biblioteca</span></div>
-          <div class="platform-split"><span>Plataformas conectadas</span><strong>{{ profile.totalJogosBiblioteca != null ? 'Steam' : '--' }}</strong><small>{{ profile.totalJogosBiblioteca != null ? 'Biblioteca sincronizada' : 'Conecte uma plataforma' }}</small></div>
-        </div>
-      </article>
-
-      <article class="panel activity-panel">
-        <div class="panel-heading"><h2>Atividade recente</h2></div>
-        <ng-container *ngIf="isOwner || profile.mostrarAtividades; else privateActivity">
-          <div *ngIf="profile.atividades.length; else noActivity" class="activity-list"><div *ngFor="let activity of profile.atividades" class="activity-item"><img [src]="activityIcon(activity.tipo)" alt="" /><span>{{ activityTitle(activity.tipo, activity.tituloJogo, activity.detalhe) }}</span><small>{{ relativeTime(activity.criadaEm) }}</small></div></div>
-          <ng-template #noActivity><div class="activity-item muted"><img src="jogos-monitorados.png" alt="" /><span>Suas atividades aparecerao aqui</span><small>comece pelo catalogo</small></div></ng-template>
-        </ng-container>
-        <ng-template #privateActivity><div class="activity-item muted"><img src="jogos-favoritos.png" alt="" /><span>Atividade nao esta visivel</span><small>ocultada pelo dono do perfil</small></div></ng-template>
-      </article>
-    </aside>
   </section>
 
   <section class="panel favorites-only" *ngIf="activeTab === 'jogosFavoritos'">
-    <div class="panel-heading"><h2>Jogos favoritos</h2><a *ngIf="isOwner" routerLink="/catalogo" class="panel-link">Explorar catalogo</a></div>
-    <div *ngIf="profile.favoritos.length; else noFavorites" class="profile-favorite-list">
-      <article *ngFor="let game of profile.favoritos" class="profile-favorite-item"><a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam' }}</strong></div></a><button *ngIf="isOwner" type="button" class="remove-favorite" (click)="removePersonalFavorite(game)">Remover</button></article>
+    <div class="panel-heading">
+      <h2>Jogos favoritos</h2>
+      <a *ngIf="isOwner" routerLink="/catalogo" class="panel-link">Explorar catalogo</a>
     </div>
-    <ng-template #noFavorites><div class="empty-panel"><img src="jogos-favoritos.png" alt="" /><h3>Nenhum jogo favorito ainda</h3><p *ngIf="isOwner">Abra um jogo para adiciona-lo aos favoritos pessoais.</p><p *ngIf="!isOwner">Este perfil ainda nao possui jogos favoritos.</p></div></ng-template>
+    <div *ngIf="profile.favoritos.length; else noFavorites" class="profile-favorite-list">
+      <article *ngFor="let game of profile.favoritos" class="profile-favorite-item">
+        <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"
+          ><img [src]="favoriteImage(game)" [alt]="game.titulo" />
+          <div>
+            <h3>{{ game.titulo }}</h3>
+            <span *ngIf="game.ehDlc" class="favorite-tag">DLC</span
+            ><strong>{{
+              game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam'
+            }}</strong>
+          </div></a
+        ><button
+          *ngIf="isOwner"
+          type="button"
+          class="remove-favorite"
+          (click)="removePersonalFavorite(game)"
+        >
+          Remover
+        </button>
+      </article>
+    </div>
+    <ng-template #noFavorites
+      ><div class="empty-panel">
+        <img src="jogos-favoritos.png" alt="" />
+        <h3>Nenhum jogo favorito ainda</h3>
+        <p *ngIf="isOwner">Abra um jogo para adiciona-lo aos favoritos pessoais.</p>
+        <p *ngIf="!isOwner">Este perfil ainda nao possui jogos favoritos.</p>
+      </div></ng-template
+    >
   </section>
 
   <section class="panel library-list-panel" *ngIf="activeTab === 'biblioteca'">
-    <div class="panel-heading"><h2>Biblioteca Steam</h2><span>{{ libraryGames.length }} de {{ profile.totalJogosBiblioteca ?? profile.biblioteca.length }} jogos</span></div>
-    <div class="library-controls" *ngIf="profile.biblioteca.length">
-      <input type="search" [(ngModel)]="librarySearch" placeholder="Buscar na biblioteca" aria-label="Buscar na biblioteca" />
-      <select [(ngModel)]="libraryOrder" aria-label="Ordenar biblioteca"><option value="tempo">Mais jogados</option><option value="conquistas">Mais conquistas</option><option value="nome">Nome</option></select>
+    <div class="panel-heading">
+      <h2>Biblioteca Steam</h2>
+      <span
+        >{{ libraryGames.length }} de
+        {{ profile.totalJogosBiblioteca ?? profile.biblioteca.length }} jogos</span
+      >
     </div>
-    <div class="games" *ngIf="libraryGames.length; else emptyLibrary"><article *ngFor="let game of libraryGames"><img [src]="icon(game)" [alt]="game.titulo" /><div><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="game.conquistasTotal">{{ game.conquistasDesbloqueadas }}/{{ game.conquistasTotal }} conquistas</small></div><button *ngIf="isOwner" type="button" class="library-favorite" [class.active]="isSteamFavorite(game.appId)" (click)="toggleSteamFavorite(game)" [title]="isSteamFavorite(game.appId) ? 'Remover dos jogos favoritos' : 'Adicionar aos jogos favoritos'"><img src="jogos-favoritos.png" alt="" /></button></article></div>
-    <ng-template #emptyLibrary><div class="empty-panel"><img src="biblioteca.png" alt="" /><h3>Biblioteca vazia</h3><p>Nenhum jogo sincronizado para exibir.</p></div></ng-template>
+    <div class="library-controls" *ngIf="profile.biblioteca.length">
+      <input
+        type="search"
+        [(ngModel)]="librarySearch"
+        placeholder="Buscar na biblioteca"
+        aria-label="Buscar na biblioteca"
+      />
+      <select [(ngModel)]="libraryOrder" aria-label="Ordenar biblioteca">
+        <option value="tempo">Mais jogados</option>
+        <option value="conquistas">Mais conquistas</option>
+        <option value="nome">Nome</option>
+      </select>
+    </div>
+    <div class="games" *ngIf="libraryGames.length; else emptyLibrary">
+      <article *ngFor="let game of libraryGames">
+        <img [src]="icon(game)" [alt]="game.titulo" />
+        <div>
+          <h3>{{ game.titulo }}</h3>
+          <span>{{ hours(game.minutosJogadas) }} jogadas</span
+          ><small *ngIf="game.conquistasTotal"
+            >{{ game.conquistasDesbloqueadas }}/{{ game.conquistasTotal }} conquistas</small
+          >
+        </div>
+        <button
+          *ngIf="isOwner"
+          type="button"
+          class="library-favorite"
+          [class.active]="isSteamFavorite(game.appId)"
+          (click)="toggleSteamFavorite(game)"
+          [title]="
+            isSteamFavorite(game.appId)
+              ? 'Remover dos jogos favoritos'
+              : 'Adicionar aos jogos favoritos'
+          "
+        >
+          <img src="jogos-favoritos.png" alt="" />
+        </button>
+      </article>
+    </div>
+    <ng-template #emptyLibrary
+      ><div class="empty-panel">
+        <img src="biblioteca.png" alt="" />
+        <h3>Biblioteca vazia</h3>
+        <p>Nenhum jogo sincronizado para exibir.</p>
+      </div></ng-template
+    >
   </section>
 </div>
 
 <ng-template #pageState>
-  <div class="page-content unavailable" *ngIf="loading"><span class="loading-line"></span><span class="loading-line short"></span></div>
-  <div class="page-content unavailable" *ngIf="!loading && missing"><h1>Perfil indisponivel</h1><p>Este perfil nao existe ou nao esta publico.</p></div>
+  <div class="page-content unavailable" *ngIf="loading">
+    <span class="loading-line"></span><span class="loading-line short"></span>
+  </div>
+  <div class="page-content unavailable" *ngIf="!loading && missing">
+    <h1>Perfil indisponivel</h1>
+    <p>Este perfil nao existe ou nao esta publico.</p>
+  </div>
 </ng-template>
