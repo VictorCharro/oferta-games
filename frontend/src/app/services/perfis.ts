@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { supabase } from './supabase';
+import { URL_API } from '../configuracao/url-api';
 
 export interface PerfilProprio { handle: string | null; nomeExibicao: string; bio: string | null; publico: boolean; mostrarHoras: boolean; mostrarConquistas: boolean; mostrarBiblioteca: boolean; mostrarFavoritos: boolean; mostrarAtividades: boolean; avatarZoom: number; avatarPosicaoX: number; avatarPosicaoY: number; }
 export type EntradaPerfil = Pick<PerfilProprio, 'handle' | 'nomeExibicao' | 'publico' | 'mostrarHoras' | 'mostrarConquistas' | 'mostrarBiblioteca' | 'mostrarFavoritos' | 'mostrarAtividades'> & { bio: string };
@@ -10,7 +11,7 @@ export interface PerfilPublico { handle: string; nomeExibicao: string; bio: stri
 
 @Injectable({ providedIn: 'root' })
 export class PerfisService {
-  private readonly api = 'https://oferta-games.onrender.com/api/perfis';
+  private readonly api = `${URL_API}/perfis`;
   constructor(private http: HttpClient) {}
   async proprio(): Promise<PerfilProprio | null> { return firstValueFrom(this.http.get<PerfilProprio | null>(`${this.api}/me`, { headers: await this.headers() })); }
   async salvar(perfil: EntradaPerfil): Promise<void> { await firstValueFrom(this.http.put(`${this.api}/me`, perfil, { headers: await this.headers() })); }

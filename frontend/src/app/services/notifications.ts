@@ -3,6 +3,7 @@ import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { supabase } from './supabase';
 import { AuthService } from './auth';
+import { URL_API } from '../configuracao/url-api';
 
 export interface PriceNotification {
   id: number;
@@ -17,7 +18,7 @@ export interface PriceNotification {
 
 @Injectable({ providedIn: 'root' })
 export class NotificationsService {
-  private readonly api = 'https://oferta-games.onrender.com/api/notifications';
+  private readonly api = `${URL_API}/notifications`;
   private readonly listSubject = new BehaviorSubject<PriceNotification[]>([]);
   readonly list$ = this.listSubject.asObservable();
 

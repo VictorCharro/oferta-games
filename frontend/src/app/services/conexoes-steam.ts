@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { supabase } from './supabase';
+import { URL_API } from '../configuracao/url-api';
 
 export interface StatusSteam {
   conectada: boolean;
@@ -20,7 +21,7 @@ export interface JogoBibliotecaSteam { appId: number; titulo: string; minutosJog
 
 @Injectable({ providedIn: 'root' })
 export class ConexoesSteamService {
-  private readonly api = 'https://oferta-games.onrender.com/api/conexoes/steam';
+  private readonly api = `${URL_API}/conexoes/steam`;
   constructor(private http: HttpClient) {}
   async status(): Promise<StatusSteam> { return firstValueFrom(this.http.get<StatusSteam>(this.api, { headers: await this.headers() })); }
   async biblioteca(): Promise<JogoBibliotecaSteam[]> { return firstValueFrom(this.http.get<JogoBibliotecaSteam[]>(`${this.api}/biblioteca`, { headers: await this.headers() })); }

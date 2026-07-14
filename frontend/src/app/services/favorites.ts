@@ -4,6 +4,7 @@ import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { AuthService } from './auth';
 import { supabase } from './supabase';
 import { GameSummary } from './game';
+import { URL_API } from '../configuracao/url-api';
 
 export interface FavoriteGame extends GameSummary {
   favoritedAt: string;
@@ -11,7 +12,7 @@ export interface FavoriteGame extends GameSummary {
 
 @Injectable({ providedIn: 'root' })
 export class FavoritesService {
-  private api = 'https://oferta-games.onrender.com/api';
+  private api = URL_API;
 
   private _slugs = new BehaviorSubject<Set<string>>(new Set());
   slugs$ = this._slugs.asObservable();

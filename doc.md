@@ -13,7 +13,7 @@ O produto tambem tem contas, Jogos Monitorados para alertas de preco, perfis pub
 | Camada | Tecnologia | Hospedagem atual |
 |---|---|---|
 | Frontend | Angular 21 + TypeScript | Vercel |
-| Backend | Java 21 + Spring Boot 3 | Render em producao; migracao preparada para Oracle Always Free via Docker |
+| Backend | Java 21 + Spring Boot 3 | Oracle Always Free via Docker; Render em retirada |
 | Banco e Auth | PostgreSQL + Supabase Auth + Storage | Supabase |
 | Precos | ITAD API | Consumida pelo backend |
 | Perfil gamer | Steam OpenID + Steam Web API | Consumida pelo backend |
@@ -21,8 +21,8 @@ O produto tambem tem contas, Jogos Monitorados para alertas de preco, perfis pub
 URLs de producao atuais:
 
 - Frontend: `https://ofertagames.vercel.app`
-- Backend: `https://oferta-games.onrender.com`
-- Health check: `https://oferta-games.onrender.com/actuator/health`
+- Backend Oracle temporario: `https://api.163.176.220.243.sslip.io`
+- Health check Oracle: `https://api.163.176.220.243.sslip.io/actuator/health`
 
 O banco usa o transaction pooler do Supabase. A conversao da `DATABASE_URL` para JDBC e feita pelo backend, com `prepareThreshold=0`, pois prepared statements persistentes nao sao compativeis com esse modo do Supavisor.
 
@@ -38,9 +38,9 @@ O banco usa o transaction pooler do Supabase. A conversao da `DATABASE_URL` para
 | Health Check Path | `/actuator/health` |
 | Plano | Free, por enquanto |
 
-O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de heap `-Xmx384m`. O Render faz deploy automatico quando ha push na branch configurada do repositorio.
+O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de heap `-Xmx384m`. O Render permanece somente como contingencia ate a troca do frontend ser validada.
 
-O bot externo que visita o health check mantem o Render ativo. Nao existe mais workflow de keep-alive ou sincronizacao recorrente no GitHub Actions.
+O bot externo que visita o health check deve ser desativado ao retirar o Render. Nao existe workflow de sincronizacao recorrente no GitHub Actions.
 
 ### Variaveis do backend
 

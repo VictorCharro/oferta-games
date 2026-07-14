@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { GameSummary } from './game';
 import { supabase } from './supabase';
+import { URL_API } from '../configuracao/url-api';
 
 export interface FavoriteProfileGame {
   slug: string | null;
@@ -21,7 +22,7 @@ export interface FavoriteProfileGame {
 
 @Injectable({ providedIn: 'root' })
 export class ProfileFavoritesService {
-  private readonly api = 'https://oferta-games.onrender.com/api/profile-favorites';
+  private readonly api = `${URL_API}/profile-favorites`;
   private readonly slugsSubject = new BehaviorSubject<Set<string>>(new Set());
   private readonly steamAppIdsSubject = new BehaviorSubject<Set<number>>(new Set());
   readonly slugs$ = this.slugsSubject.asObservable();

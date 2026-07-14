@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { URL_API } from '../configuracao/url-api';
 
 export interface GameSummary {
   slug: string;
@@ -44,7 +45,7 @@ export interface TopDeal {
 
 @Injectable({ providedIn: 'root' })
 export class GameService {
-  private api = 'https://oferta-games.onrender.com/api';
+  private api = URL_API;
 
   constructor(private http: HttpClient) {}
 

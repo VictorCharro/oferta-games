@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { supabase } from './supabase';
+import { URL_API } from '../configuracao/url-api';
 
 export interface StatusColeta {
   tipo: string;
@@ -27,7 +28,7 @@ export interface StatusAdministrativoColeta {
 
 @Injectable({ providedIn: 'root' })
 export class AdministracaoService {
-  private api = 'https://oferta-games.onrender.com/api/admin';
+  private api = `${URL_API}/admin`;
 
   constructor(private http: HttpClient) {}
 
