@@ -30,14 +30,13 @@ export class PublicProfile implements OnInit, OnDestroy {
   editingLayout = false;
   savingLayout = false;
   layoutDraft: PerfilBloco[] = [];
-  recentColors: string[] = [];
-  recentTextColors: string[] = [];
   avatarZoom = 1;
   avatarPositionX = 50;
   avatarPositionY = 50;
   avatarPreview = '';
   avatarEditing = false;
   editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
+  textColorMenuBlockId: string | null = null;
   readonly sizeOptions = [
     { value: 'pequeno', label: 'Pequeno' },
     { value: 'medio', label: 'Médio' },
@@ -125,11 +124,17 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
-    if (!(event.target as HTMLElement).closest('.editor-custom-select')) this.editorSelectOpen = null;
+    if (!(event.target as HTMLElement).closest('.editor-custom-select')) {
+      this.editorSelectOpen = null;
+      this.textColorMenuBlockId = null;
+    }
   }
 
   @HostListener('document:keydown.escape')
-  closeEditorSelects() { this.editorSelectOpen = null; }
+  closeEditorSelects() {
+    this.editorSelectOpen = null;
+    this.textColorMenuBlockId = null;
+  }
 
   isEditorSelectOpen(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
     return this.editorSelectOpen?.blockId === block.id && this.editorSelectOpen.campo === campo;
@@ -138,12 +143,27 @@ export class PublicProfile implements OnInit, OnDestroy {
   toggleEditorSelect(event: MouseEvent, block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
     event.stopPropagation();
     this.editorSelectOpen = this.isEditorSelectOpen(block, campo) ? null : { blockId: block.id, campo };
+    this.textColorMenuBlockId = null;
   }
 
   selectEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo', value: string) {
     if (campo === 'tamanho') block.tamanho = value as PerfilBloco['tamanho'];
-    else block.tipoFundo = value as PerfilBloco['tipoFundo'];
+    else {
+      block.tipoFundo = value as PerfilBloco['tipoFundo'];
+      if (value === 'cor' && !block.valorFundo?.match(/^#[0-9a-fA-F]{6}$/)) block.valorFundo = '#121a2a';
+      if (value === 'gradiente' && !block.valorFundo?.startsWith('linear-gradient')) block.valorFundo = 'linear-gradient(135deg, #0ea5e9, #312e81)';
+    }
     this.editorSelectOpen = null;
+  }
+
+  isTextColorMenuOpen(block: PerfilBloco) {
+    return this.textColorMenuBlockId === block.id;
+  }
+
+  toggleTextColorMenu(event: MouseEvent, block: PerfilBloco) {
+    event.stopPropagation();
+    this.textColorMenuBlockId = this.isTextColorMenuOpen(block) ? null : block.id;
+    this.editorSelectOpen = { blockId: block.id, campo: 'tipoFundo' };
   }
 
   selectedEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
@@ -155,8 +175,6 @@ export class PublicProfile implements OnInit, OnDestroy {
   startLayoutEdit() {
     if (!this.profile || !this.isOwner) return;
     this.layoutDraft = structuredClone(this.profile.blocos?.length ? this.profile.blocos : this.defaultBlocks());
-    this.recentColors = JSON.parse(localStorage.getItem('oferta-games-recent-profile-colors') || '[]');
-    this.recentTextColors = JSON.parse(localStorage.getItem('oferta-games-recent-profile-text-colors') || '[]');
     this.editingLayout = true;
   }
 
@@ -176,22 +194,10 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   removeBlock(index: number) { this.layoutDraft.splice(index, 1); this.layoutDraft.forEach((block, position) => block.posicao = position); }
 
-  rememberColor(block: PerfilBloco) {
-    if (block.tipoFundo !== 'cor' || !block.valorFundo) return;
-    this.recentColors = [block.valorFundo, ...this.recentColors.filter(color => color !== block.valorFundo)].slice(0, 8);
-    localStorage.setItem('oferta-games-recent-profile-colors', JSON.stringify(this.recentColors));
-  }
-
-  rememberTextColor(block: PerfilBloco) {
-    if (!block.corTexto) return;
-    this.recentTextColors = [block.corTexto, ...this.recentTextColors.filter(color => color !== block.corTexto)].slice(0, 8);
-    localStorage.setItem('oferta-games-recent-profile-text-colors', JSON.stringify(this.recentTextColors));
-  }
-
   async saveLayout() {
     if (!this.profile) return;
     this.savingLayout = true;
-    this.layoutDraft.forEach((block, position) => { block.posicao = position; this.rememberColor(block); this.rememberTextColor(block); });
+    this.layoutDraft.forEach((block, position) => block.posicao = position);
     try {
       await this.perfis.salvarBlocos(this.layoutDraft);
       this.profile.blocos = structuredClone(this.layoutDraft);
@@ -200,6 +206,21 @@ export class PublicProfile implements OnInit, OnDestroy {
     } catch { this.message = 'Não foi possível salvar o layout.'; }
     this.savingLayout = false;
     this.cdr.detectChanges();
+  }
+
+  setTextColor(block: PerfilBloco, color: string) {
+    block.corTexto = color.trim() || null;
+  }
+
+  gradientColors(block: PerfilBloco): [string, string] {
+    const colors = block.valorFundo?.match(/#[0-9a-fA-F]{6}/g) || [];
+    return [colors[0] || '#0ea5e9', colors[1] || '#312e81'];
+  }
+
+  setGradientColor(block: PerfilBloco, index: 0 | 1, color: string) {
+    const colors = this.gradientColors(block);
+    colors[index] = color;
+    block.valorFundo = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
   }
 
   blockStyle(block: PerfilBloco): Record<string, string> {

@@ -165,6 +165,7 @@
       class="panel profile-block"
       [class]="'size-' + block.tamanho"
       [class.custom-text-color]="!!block.corTexto"
+      [class.editor-open]="isEditorSelectOpen(block, 'tamanho') || isEditorSelectOpen(block, 'tipoFundo') || isTextColorMenuOpen(block)"
       [ngStyle]="blockStyle(block)"
       cdkDrag
       [cdkDragDisabled]="!editingLayout"
@@ -189,31 +190,32 @@
             <button *ngFor="let option of backgroundOptions" type="button" [class.selected]="block.tipoFundo === option.value" (click)="selectEditorOption(block, 'tipoFundo', option.value)">
               <span>{{ option.label }}</span><span *ngIf="block.tipoFundo === option.value" class="option-check" aria-hidden="true">✓</span>
             </button>
+            <div class="editor-menu-divider"></div>
+            <button type="button" class="text-color-option" [class.text-open]="isTextColorMenuOpen(block)" (click)="toggleTextColorMenu($event, block)" [attr.aria-expanded]="isTextColorMenuOpen(block)">
+              <span>Texto</span><span class="color-preview" [style.background]="block.corTexto || '#f5f7fb'"></span><span class="select-chevron" aria-hidden="true"></span>
+            </button>
+            <div *ngIf="isTextColorMenuOpen(block)" class="text-color-inline" role="group" aria-label="Cor do texto">
+              <div class="color-control">
+                <input type="color" [ngModel]="block.corTexto || '#f5f7fb'" (ngModelChange)="block.corTexto = $event" aria-label="Selecionar cor do texto" />
+                <input type="text" [ngModel]="block.corTexto || ''" (ngModelChange)="setTextColor(block, $event)" maxlength="7" pattern="#[0-9a-fA-F]{6}" placeholder="#F5F7FB" aria-label="Cor do texto em hexadecimal" />
+              </div>
+              <button *ngIf="block.corTexto" type="button" class="reset-text-color" (click)="block.corTexto = null">Texto padrão</button>
+            </div>
           </div>
         </div>
-        <input
-          *ngIf="block.tipoFundo === 'cor'"
-          type="color"
-          [(ngModel)]="block.valorFundo"
-          (change)="rememberColor(block)"
-        />
-        <div *ngIf="block.tipoFundo === 'cor'" class="recent-colors"><button *ngFor="let color of recentColors" type="button" [style.background]="color" [title]="color" (click)="block.valorFundo = color"></button></div>
-        <input
-          *ngIf="block.tipoFundo === 'gradiente'"
-          [(ngModel)]="block.valorFundo"
-          placeholder="linear-gradient(...)"
-        />
+        <div *ngIf="block.tipoFundo === 'cor'" class="color-control">
+          <input type="color" [ngModel]="block.valorFundo || '#121a2a'" (ngModelChange)="block.valorFundo = $event" aria-label="Selecionar cor de fundo" />
+          <input type="text" [(ngModel)]="block.valorFundo" maxlength="7" pattern="#[0-9a-fA-F]{6}" placeholder="#121A2A" aria-label="Cor de fundo em hexadecimal" />
+        </div>
+        <div *ngIf="block.tipoFundo === 'gradiente'" class="gradient-color-control">
+          <label><span>Cor inicial</span><input type="color" [ngModel]="gradientColors(block)[0]" (ngModelChange)="setGradientColor(block, 0, $event)" aria-label="Cor inicial do gradiente" /></label>
+          <span class="gradient-arrow" aria-hidden="true">&#8594;</span>
+          <label><span>Cor final</span><input type="color" [ngModel]="gradientColors(block)[1]" (ngModelChange)="setGradientColor(block, 1, $event)" aria-label="Cor final do gradiente" /></label>
+        </div>
         <ng-container *ngIf="block.tipoFundo === 'imagem'">
           <input #backgroundImageInput class="visually-hidden" type="file" accept="image/*" (change)="onBlockImageSelected($event, block, 'fundo')" />
           <button type="button" class="image-picker-button" (click)="backgroundImageInput.click()">{{ block.valorFundo ? 'Trocar imagem de fundo' : 'Escolher imagem de fundo' }}</button>
         </ng-container>
-        <label class="text-color-picker">Texto
-          <input type="color" [(ngModel)]="block.corTexto" (change)="rememberTextColor(block)" />
-        </label>
-        <button *ngIf="block.corTexto" type="button" class="reset-text-color" (click)="block.corTexto = null">Texto padrão</button>
-        <div class="recent-colors text-colors" *ngIf="recentTextColors.length">
-          <button *ngFor="let color of recentTextColors" type="button" [style.background]="color" [title]="color" (click)="block.corTexto = color; rememberTextColor(block)"></button>
-        </div>
         <input
           *ngIf="block.tipo === 'texto' || block.tipo === 'links'"
           [(ngModel)]="block.titulo"

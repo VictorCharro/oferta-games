@@ -78,8 +78,21 @@ app-public-profile .text-color-picker { display: inline-flex; align-items: cente
 app-public-profile .text-color-picker input { width: 20px; height: 20px; padding: 0; border: 0; background: transparent; cursor: pointer; }
 app-public-profile .reset-text-color { color: var(--text-secondary) !important; }
 app-public-profile .text-colors { padding-left: 2px; border-left: 1px solid var(--border-color); }
-app-public-profile .profile-block.custom-text-color { color: var(--profile-block-text-color); }
-app-public-profile .profile-block.custom-text-color :is(h2, h3, strong, p, span, small, a) { color: var(--profile-block-text-color) !important; }
+app-public-profile .profile-block.custom-text-color > :not(.block-editor) { color: var(--profile-block-text-color); }
+app-public-profile .profile-block.custom-text-color > :not(.block-editor) :is(h2, h3, strong, p, span, small, a) { color: var(--profile-block-text-color) !important; }
+app-public-profile .color-preview { width: 14px; height: 14px; margin-left: auto; border: 1px solid rgba(255, 255, 255, .45); border-radius: 50%; }
+app-public-profile .editor-menu-divider { height: 1px; margin: 5px 3px; background: var(--border-color); }
+app-public-profile .text-color-option { gap: 7px; }
+app-public-profile .text-color-option .select-chevron { transform: rotate(45deg) translateY(-2px) !important; }
+app-public-profile .text-color-option.text-open .select-chevron { transform: rotate(225deg) translate(-1px, -1px) !important; }
+app-public-profile .text-color-inline { padding: 3px 5px 6px; }
+app-public-profile .text-color-inline .color-control { padding: 4px 0 6px; }
+app-public-profile .text-color-inline .reset-text-color { width: 100%; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-secondary); text-align: center; }
+app-public-profile .gradient-color-control { display: flex; align-items: end; gap: 8px; padding: 1px 3px; }
+app-public-profile .gradient-color-control label { display: flex; flex-direction: column; gap: 4px; }
+app-public-profile .gradient-color-control label span { font-size: 11px; }
+app-public-profile .gradient-color-control input[type="color"] { width: 52px; height: 30px; padding: 1px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-input); }
+app-public-profile .gradient-arrow { padding-bottom: 7px; color: var(--text-muted); }
 app-public-profile .profile-block.size-pequeno { min-height: 138px; padding: 16px; }
 app-public-profile .profile-block.size-pequeno h2 { margin-bottom: 10px; font-size: 16px; }
 app-public-profile .profile-block.size-pequeno .editable-stat { min-height: 72px; gap: 12px; }

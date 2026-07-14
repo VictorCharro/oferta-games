@@ -322,7 +322,7 @@ O modo de edicao permite reorganizar blocos por arrastar e soltar, mudar tamanho
 - paineis de favoritos, biblioteca e atividade;
 - blocos personalizados de texto, imagem e links.
 
-Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem, alem de cor de texto hexadecimal livre. Fundo e texto possuem historicos de cores recentes separados no navegador. A imagem de fundo e escolhida por um comando explicito e enviada ao bucket `avatars`; nao existe privacidade por bloco.
+Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem, alem de cor de texto hexadecimal livre. Cor solida e texto aceitam seletor visual e digitacao direta de `#RRGGBB`; o gradiente e montado visualmente por duas cores, sem exigir CSS. A opcao de texto fica dentro do menu de fundo e altera somente o conteudo do card, nunca os controles do editor. A imagem de fundo e escolhida por um comando explicito e enviada ao bucket `avatars`; nao existe privacidade por bloco.
 
 Os tamanhos sao composicoes diferentes, e nao apenas escala: o pequeno prioriza um item/resumo, o medio acomoda conteudo equilibrado e o largo/completo expande listas, imagens e atividades.
 
@@ -389,7 +389,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 
 ### Em validacao no worktree atual
 
-- Editor de perfil: menus customizados de tamanho/fundo, botao explicito para selecionar imagem de fundo/conteudo e cores recentes. O build Angular passou; ainda e necessario testar visualmente antes do proximo push.
+- Editor de perfil: menus customizados de tamanho/fundo, botao explicito para selecionar imagem de fundo/conteudo e cores hexadecimais diretas. O build Angular passou; ainda e necessario testar visualmente antes do proximo push.
 
 ### Planejado
 
