@@ -88,34 +88,24 @@
       </div>
     </div>
 
-    <div class="gameplay">
-      <h2>Estatisticas de gameplay</h2>
-      <div class="gameplay-grid">
-        <div class="gameplay-stat">
-          <span>Total de horas jogadas</span>
-          <strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong>
-          <small *ngIf="profile.totalMinutos == null">Conecte uma plataforma</small>
-        </div>
-        <div class="platform-hours">
-          <span>Horas por plataforma</span>
-          <div *ngIf="profile.totalMinutos != null; else noPlatformHours" class="platform-pill">
-            <img src="store-logos/steam.svg" alt="Steam" /><b>Steam</b
-            ><strong>{{ hours(profile.totalMinutos) }}</strong>
-          </div>
-          <ng-template #noPlatformHours
-            ><strong>--</strong><small>Conecte uma plataforma</small></ng-template
-          >
-        </div>
-        <div class="gameplay-stat">
-          <span>Total de conquistas</span>
-          <strong>{{
-            profile.conquistasTotal != null
-              ? profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal
-              : '--'
-          }}</strong>
-          <small *ngIf="profile.conquistasTotal == null">Conecte uma plataforma</small>
-        </div>
+  </section>
+
+  <section class="profile-stat-strip" aria-label="Estatísticas do perfil">
+    <div class="profile-strip-item">
+      <img src="biblioteca.png" alt="" /><div><strong>{{ profile.totalJogosBiblioteca ?? '--' }}</strong><span>Jogos na biblioteca</span></div>
+    </div>
+    <div class="profile-strip-item">
+      <img src="horas-jogadas.png" alt="" /><div><strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong><span>Horas jogadas</span></div>
+    </div>
+    <div class="profile-strip-item">
+      <img src="conquistas.png" alt="" /><div><strong>{{ profile.conquistasDesbloqueadas ?? '--' }}</strong><span>Conquistas desbloqueadas</span></div>
+    </div>
+    <div class="profile-strip-item platforms-strip">
+      <span>Plataformas conectadas</span>
+      <div *ngIf="profile.plataformasConectadas.length; else noPlatforms" class="platform-icons">
+        <img *ngFor="let platform of profile.plataformasConectadas" [src]="platformIcon(platform)" [alt]="platform === 'steam' ? 'Steam' : 'Xbox'" [title]="platform === 'steam' ? 'Steam' : 'Xbox'" />
       </div>
+      <ng-template #noPlatforms><strong>--</strong></ng-template>
     </div>
   </section>
 
@@ -144,7 +134,7 @@
       <strong>Modo de edição</strong
       ><span>Arraste os blocos, ajuste a aparência e salve quando terminar.</span>
       <div>
-        <button type="button" (click)="addBlock('resumo_favoritos')">Favoritos</button><button type="button" (click)="addBlock('horas')">Horas</button><button type="button" (click)="addBlock('conquistas')">Conquistas</button><button type="button" (click)="addBlock('favoritos')">Lista favoritos</button><button type="button" (click)="addBlock('biblioteca')">Biblioteca</button><button type="button" (click)="addBlock('atividade')">Atividade</button><button type="button" (click)="addBlock('texto')">Texto</button
+        <button type="button" (click)="addBlock('favoritos')">Jogos favoritos</button><button type="button" (click)="addBlock('biblioteca')">Biblioteca</button><button type="button" (click)="addBlock('atividade')">Atividade</button><button type="button" (click)="addBlock('texto')">Texto</button
         ><button type="button" (click)="addBlock('imagem')">Imagem</button
         ><button type="button" (click)="addBlock('links')">Links</button
         ><button type="button" class="ghost-btn" (click)="cancelLayoutEdit()">Cancelar</button
@@ -165,7 +155,6 @@
       class="panel profile-block"
       [class]="'size-' + block.tamanho"
       [class.custom-text-color]="!!block.corTexto"
-      [class.stat-block]="!editingLayout && (block.tipo === 'resumo_favoritos' || block.tipo === 'horas' || block.tipo === 'conquistas')"
       [class.editor-open]="isEditorSelectOpen(block, 'tamanho') || isEditorSelectOpen(block, 'tipoFundo') || isTextColorMenuOpen(block)"
       [ngStyle]="blockStyle(block)"
       cdkDrag
@@ -234,55 +223,30 @@
         <button type="button" (click)="removeBlock(i)">Remover</button>
       </div>
       <ng-container [ngSwitch]="block.tipo"
-        ><ng-container *ngSwitchCase="'resumo_favoritos'"
-          ><div class="editable-stat"><img src="jogos-favoritos.png" alt="" /><div><span>Jogos favoritos</span><strong>{{ profile.favoritos.length || '--' }}</strong><small>{{ profile.favoritos.length ? 'Favoritos pessoais' : 'Nenhum favorito ainda' }}</small></div></div></ng-container
-        ><ng-container *ngSwitchCase="'horas'"
-          ><div class="editable-stat"><img src="horas-jogadas.png" alt="" /><div><span>Horas jogadas</span><strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong><small *ngIf="profile.totalMinutos == null">Conecte uma plataforma</small></div></div></ng-container
-        ><ng-container *ngSwitchCase="'conquistas'"
-          ><div class="editable-stat"><img src="conquistas.png" alt="" /><div><span>Conquistas</span><strong>{{ profile.conquistasTotal != null ? profile.conquistasDesbloqueadas + '/' + profile.conquistasTotal : '--' }}</strong><small *ngIf="profile.conquistasTotal == null">Conecte uma plataforma</small></div></div></ng-container
         ><ng-container *ngSwitchCase="'favoritos'"
           ><div class="panel-heading">
             <h2>Jogos favoritos</h2>
-            <button
-              *ngIf="isOwner"
-              type="button"
-              class="panel-link"
-              (click)="activeTab = 'jogosFavoritos'"
-            >
-              Gerenciar
-            </button>
+            <button type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">{{ isOwner ? 'Gerenciar' : 'Ver favoritos' }}</button>
           </div>
-          <div *ngIf="profile.favoritos.length; else noFav" class="profile-favorite-list" [class.compact]="block.tamanho === 'pequeno'">
-            <article
-              *ngFor="let game of profile.favoritos.slice(0, 3)"
-              class="profile-favorite-item"
-            >
-              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'"
-                ><img [src]="favoriteImage(game)" />
-                <div>
-                  <h3>{{ game.titulo }}</h3>
-                  <span>{{
-                    game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam'
-                  }}</span>
-                </div></a
-              >
+          <div *ngIf="profile.favoritos.length; else noFav" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
+            <article *ngFor="let game of favoritePreview(block)" class="profile-game-card">
+              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener">
+                <img [src]="favoriteImage(game)" [alt]="game.titulo" />
+                <div class="game-card-shade"></div><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam' }}</span></div>
+              </a>
             </article>
           </div>
           <ng-template #noFav
             ><div class="empty-panel"><h3>Nenhum jogo favorito ainda</h3></div></ng-template
           ></ng-container
         ><ng-container *ngSwitchCase="'biblioteca'"
-          ><h2>Resumo da biblioteca</h2>
-          <div class="library-content">
-            <div class="library-total">
-              <strong>{{ profile.totalJogosBiblioteca ?? '--' }}</strong
-              ><span>Jogos na biblioteca</span>
-            </div>
-            <div class="platform-split">
-              <span>Plataformas conectadas</span
-              ><strong>{{ profile.totalJogosBiblioteca != null ? 'Steam' : '--' }}</strong>
-            </div>
-          </div></ng-container
+          ><div class="panel-heading"><h2>Biblioteca</h2><button type="button" class="panel-link" (click)="openLibrary()">Ver biblioteca</button></div>
+          <div *ngIf="libraryPreview(block).length; else noLibraryPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
+            <article *ngFor="let game of libraryPreview(block)" class="profile-game-card library-game-card">
+              <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img [src]="steamCover(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
+            </article>
+          </div>
+          <ng-template #noLibraryPreview><div class="empty-panel"><h3>Biblioteca vazia</h3><p>Nenhum jogo sincronizado para exibir.</p></div></ng-template></ng-container
         ><ng-container *ngSwitchCase="'atividade'"
           ><h2>Atividade recente</h2>
           <div class="activity-list">
@@ -313,21 +277,13 @@
       <h2>Jogos favoritos</h2>
       <a *ngIf="isOwner" routerLink="/catalogo" class="panel-link">Explorar catalogo</a>
     </div>
-    <div *ngIf="profile.favoritos.length; else noFavorites" class="profile-favorite-list">
-      <article *ngFor="let game of profile.favoritos" class="profile-favorite-item">
-        <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"
-          ><img [src]="favoriteImage(game)" [alt]="game.titulo" />
-          <div>
-            <h3>{{ game.titulo }}</h3>
-            <span *ngIf="game.ehDlc" class="favorite-tag">DLC</span
-            ><strong>{{
-              game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam'
-            }}</strong>
-          </div></a
-        ><button
+    <div *ngIf="profile.favoritos.length; else noFavorites" class="profile-game-grid grid-completo favorites-gallery">
+      <article *ngFor="let game of profile.favoritos" class="profile-game-card">
+        <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><div class="game-card-info"><h3>{{ game.titulo }}</h3><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam' }}</strong></div></a>
+        <button
           *ngIf="isOwner"
           type="button"
-          class="remove-favorite"
+          class="remove-favorite gallery-remove"
           (click)="removePersonalFavorite(game)"
         >
           Remover
@@ -365,20 +321,13 @@
         <option value="nome">Nome</option>
       </select>
     </div>
-    <div class="games" *ngIf="libraryGames.length; else emptyLibrary">
-      <article *ngFor="let game of libraryGames">
-        <img [src]="icon(game)" [alt]="game.titulo" />
-        <div>
-          <h3>{{ game.titulo }}</h3>
-          <span>{{ hours(game.minutosJogadas) }} jogadas</span
-          ><small *ngIf="game.conquistasTotal"
-            >{{ game.conquistasDesbloqueadas }}/{{ game.conquistasTotal }} conquistas</small
-          >
-        </div>
+    <div class="profile-game-grid grid-completo library-gallery" *ngIf="libraryGames.length; else emptyLibrary">
+      <article *ngFor="let game of libraryGames" class="profile-game-card library-game-card">
+        <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img [src]="steamCover(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
         <button
           *ngIf="isOwner"
           type="button"
-          class="library-favorite"
+          class="library-favorite gallery-favorite"
           [class.active]="isSteamFavorite(game.appId)"
           (click)="toggleSteamFavorite(game)"
           [title]="

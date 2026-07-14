@@ -51,7 +51,7 @@ class ServicoPerfis {
   void salvarBlocos(String usuarioId, List<RepositorioBlocosPerfil.BlocoPerfil> entrada) {
     if (entrada == null || entrada.size() > 20) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantidade de blocos invalida");
     for (RepositorioBlocosPerfil.BlocoPerfil bloco : entrada) {
-      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("resumo_favoritos", "horas", "conquistas", "favoritos", "biblioteca", "atividade", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
+      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("favoritos", "biblioteca", "atividade", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
     }
     blocos.substituir(usuarioId, entrada);
   }
@@ -66,10 +66,11 @@ class ServicoPerfis {
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
     List<AtividadePerfil> atividadeRecente = mostrarAtividades ? carregarAtividades(perfil.usuarioId()) : List.of();
     return new PerfilPublico(perfil.handle(), perfil.nomeExibicao(), perfil.bio(), perfil.avatarUrl(), perfil.avatarZoom(), perfil.avatarPosicaoX(), perfil.avatarPosicaoY(),
-        perfil.mostrarHoras() ? status.totalMinutos() : null,
-        perfil.mostrarConquistas() ? status.conquistasDesbloqueadas() : null,
-        perfil.mostrarConquistas() ? status.conquistasTotal() : null,
+        dono || perfil.mostrarHoras() ? status.totalMinutos() : null,
+        dono || perfil.mostrarConquistas() ? status.conquistasDesbloqueadas() : null,
+        dono || perfil.mostrarConquistas() ? status.conquistasTotal() : null,
         dono || perfil.mostrarBiblioteca() ? status.totalJogos() : null,
+        status.conectada() && (dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca()) ? List.of("steam") : List.of(),
         jogos,
         favoritos,
         atividadeRecente,
@@ -101,6 +102,7 @@ class ServicoPerfis {
 
   private List<RepositorioBlocosPerfil.BlocoPerfil> blocosPublicos(RepositorioPerfis.Perfil perfil, boolean dono) {
     return blocos.listar(perfil.usuarioId()).stream()
+        .filter(bloco -> !Set.of("resumo_favoritos", "horas", "conquistas").contains(bloco.tipo()))
         .filter(bloco -> dono || !"favoritos".equals(bloco.tipo()) || perfil.mostrarFavoritos())
         .filter(bloco -> dono || !"biblioteca".equals(bloco.tipo()) || perfil.mostrarBiblioteca())
         .filter(bloco -> dono || !"atividade".equals(bloco.tipo()) || perfil.mostrarAtividades())
@@ -110,5 +112,5 @@ class ServicoPerfis {
   record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades) {}
   record EntradaAvatar(String avatarUrl, double zoom, int posicaoX, int posicaoY) {}
   record ResultadoAtualizacao(String status, String usuarioId) {}
-  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long totalJogosBiblioteca, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos) {}
+  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos) {}
 }

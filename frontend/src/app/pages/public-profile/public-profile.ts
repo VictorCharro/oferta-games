@@ -90,7 +90,12 @@ export class PublicProfile implements OnInit, OnDestroy {
       if (request !== this.profileRequest) return;
       profile.favoritos ??= [];
       profile.atividades ??= [];
-      profile.blocos = profile.blocos?.length ? profile.blocos.map(block => ({ ...block, corTexto: block.corTexto ?? null })) : this.defaultBlocks();
+      profile.plataformasConectadas ??= [];
+      profile.blocos = profile.blocos?.length
+        ? profile.blocos
+            .filter(block => !['resumo_favoritos', 'horas', 'conquistas'].includes(block.tipo as string))
+            .map(block => ({ ...block, corTexto: block.corTexto ?? null }))
+        : this.defaultBlocks();
       this.profile = profile;
       this.bioDraft = profile.bio || '';
       this.avatarZoom = profile.avatarZoom || 1;
@@ -186,10 +191,9 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   addBlock(tipo: PerfilBloco['tipo']) {
-    if (['resumo_favoritos', 'horas', 'conquistas', 'favoritos', 'biblioteca', 'atividade'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
+    if (['favoritos', 'biblioteca', 'atividade'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
     const id = `custom-${crypto.randomUUID()}`;
-    const padrao = ['resumo_favoritos', 'horas', 'conquistas'].includes(tipo);
-    this.layoutDraft.push({ id: padrao ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: padrao ? 'pequeno' : 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
+    this.layoutDraft.push({ id: ['favoritos', 'biblioteca', 'atividade'].includes(tipo) ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
   }
 
   removeBlock(index: number) { this.layoutDraft.splice(index, 1); this.layoutDraft.forEach((block, position) => block.posicao = position); }
@@ -253,13 +257,39 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   private defaultBlocks(): PerfilBloco[] {
     return [
-      { id: 'resumo-favoritos', tipo: 'resumo_favoritos', titulo: null, conteudo: null, posicao: 0, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
-      { id: 'horas', tipo: 'horas', titulo: null, conteudo: null, posicao: 1, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
-      { id: 'conquistas', tipo: 'conquistas', titulo: null, conteudo: null, posicao: 2, tamanho: 'pequeno', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
-      { id: 'favoritos', tipo: 'favoritos', titulo: null, conteudo: null, posicao: 3, tamanho: 'largo', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
-      { id: 'biblioteca', tipo: 'biblioteca', titulo: null, conteudo: null, posicao: 4, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
-      { id: 'atividade', tipo: 'atividade', titulo: null, conteudo: null, posicao: 5, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
+      { id: 'favoritos', tipo: 'favoritos', titulo: null, conteudo: null, posicao: 0, tamanho: 'largo', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
+      { id: 'biblioteca', tipo: 'biblioteca', titulo: null, conteudo: null, posicao: 1, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
+      { id: 'atividade', tipo: 'atividade', titulo: null, conteudo: null, posicao: 2, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
     ];
+  }
+
+  previewLimit(size: PerfilBloco['tamanho']): number {
+    return { pequeno: 1, medio: 4, largo: 6, completo: 8 }[size];
+  }
+
+  favoritePreview(block: PerfilBloco) {
+    return this.profile?.favoritos.slice(0, this.previewLimit(block.tamanho)) || [];
+  }
+
+  libraryPreview(block: PerfilBloco) {
+    return this.libraryGames.slice(0, this.previewLimit(block.tamanho));
+  }
+
+  steamCover(game: PerfilPublico['biblioteca'][number]): string {
+    return `https://cdn.akamai.steamstatic.com/steam/apps/${game.appId}/header.jpg`;
+  }
+
+  achievementProgress(game: PerfilPublico['biblioteca'][number]): number | null {
+    return game.conquistasTotal > 0 ? Math.round((game.conquistasDesbloqueadas / game.conquistasTotal) * 100) : null;
+  }
+
+  platformIcon(platform: PerfilPublico['plataformasConectadas'][number]): string {
+    return platform === 'xbox' ? 'xbox-modo-escuro.png' : 'steam-modo-escuro.png';
+  }
+
+  openLibrary() {
+    this.activeTab = 'biblioteca';
+    setTimeout(() => document.querySelector('.library-list-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 
   hours(minutes: number | null): string {
@@ -307,10 +337,11 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   favoriteImage(game: PerfilPublico['favoritos'][number]): string {
+    if (game.steamAppId != null) {
+      return `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
+    }
     if (game.capaUrl) return game.capaUrl;
-    return game.steamAppId != null && game.iconeHash
-      ? `https://media.steampowered.com/steamcommunity/public/images/apps/${game.steamAppId}/${game.iconeHash}.jpg`
-      : 'store-logos/steam.svg';
+    return 'store-logos/steam.svg';
   }
 
   favoriteUrl(game: PerfilPublico['favoritos'][number]): string {

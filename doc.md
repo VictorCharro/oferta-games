@@ -287,7 +287,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 | **Login** | Autenticar por Supabase Auth. | Nao usa sidebar nem topbar. Depois do login, a navegacao volta ao fluxo normal do aplicativo. |
 | **Configuracoes** (`/configuracoes`) | Centralizar opcoes da conta. | Abas separadas: Conta, Conexoes, Preferencias e Privacidade. Nao misturar assuntos entre abas. Preferencias afetam home/catalogo; Privacidade afeta o perfil publico; Conexoes concentra Steam e futura Xbox. |
 | **Perfil proprio** (`/perfil` -> `/:handle`) | Personalizar e visualizar o perfil do usuario. | `/perfil` redireciona para o handle canonico. O dono pode editar bio, foto, layout, blocos e pedir atualizacao Steam. A pagina canonica e a mesma que visitantes veem, com controles extras apenas para o dono. |
-| **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra Resumo, Jogos favoritos e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
+| **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra uma faixa fixa com biblioteca, horas, conquistas desbloqueadas e icones das plataformas conectadas; abaixo, mostra Resumo, Jogos favoritos e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
 | **Administracao de coleta** (`/admin/coleta`) | Acompanhar e disparar jobs internos. | Exclusiva do UID administrador. Exibe status das filas de preco/Steam e permite disparar coleta manual em segundo plano; nao substitui o scheduler. |
 
 ### Componentes globais
@@ -316,15 +316,14 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 
 ### Editor de perfil
 
-O modo de edicao permite reorganizar blocos por arrastar e soltar, mudar tamanho, remover e adicionar blocos. Tipos suportados:
+O modo de edicao permite reorganizar blocos por arrastar e soltar, mudar tamanho, remover e adicionar blocos. A faixa de estatisticas logo abaixo do cabecalho e fixa, portanto nao entra no editor: mostra jogos na biblioteca, horas jogadas, somente conquistas desbloqueadas e icones das plataformas conectadas. Tipos suportados:
 
-- cards de resumo: favoritos pessoais, horas e conquistas;
-- paineis de favoritos, biblioteca e atividade;
+- paineis de favoritos pessoais, biblioteca e atividade;
 - blocos personalizados de texto, imagem e links.
 
 Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem, alem de cor de texto hexadecimal livre. Cor solida e texto aceitam seletor visual e digitacao direta de `#RRGGBB`; o gradiente e montado visualmente por duas cores, sem exigir CSS. A opcao de texto fica dentro do menu de fundo e altera somente o conteudo do card, nunca os controles do editor. A imagem de fundo e escolhida por um comando explicito e enviada ao bucket `avatars`; nao existe privacidade por bloco.
 
-Os tamanhos sao composicoes diferentes, e nao apenas escala: o pequeno prioriza um item/resumo, o medio acomoda conteudo equilibrado e o largo/completo expande listas, imagens e atividades.
+Os tamanhos sao composicoes diferentes, e nao apenas escala. Nos blocos de jogos, o pequeno mostra 1 card por linha, o medio 2, o largo 3 e o completo 4; os cards crescem verticalmente quando houver mais itens. Favoritos pessoais e biblioteca usam cards visuais com capa, titulo e dados relevantes. Favoritos Steam usam a capa horizontal oficial `header.jpg`, igual aos cards da biblioteca, e nao o icone quadrado da Steam. O bloco de Biblioteca tem o comando **Ver biblioteca** no canto superior direito e abre a aba completa, que permite busca, ordenacao e favoritar jogos Steam mesmo quando eles nao existem no catalogo.
 
 Os dropdowns de tamanho e fundo devem seguir o mesmo padrao visual do filtro de ordenacao do catalogo, nao usar `select` nativo. Links personalizados usam uma linha por item no formato `Nome | https://url` e devem abrir como links reais.
 
@@ -386,10 +385,11 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Steam OpenID, biblioteca, horas, conquistas, favoritos pessoais e atividade recente.
 - Pagina admin de coleta protegida por UID.
 - Editor de perfil persistido com blocos e upload de imagens.
+- Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam.
 
 ### Em validacao no worktree atual
 
-- Editor de perfil: menus customizados de tamanho/fundo, botao explicito para selecionar imagem de fundo/conteudo e cores hexadecimais diretas. O build Angular passou; ainda e necessario testar visualmente antes do proximo push.
+- Faixa fixa de estatisticas e galerias de cards da Biblioteca/Favoritos no perfil. O build Angular passou; ainda e necessario conferir visualmente os quatro tamanhos de bloco em desktop e mobile antes do proximo push.
 
 ### Planejado
 
