@@ -11,6 +11,9 @@ export interface FavoriteProfileGame {
   capaUrl: string | null;
   iconeHash: string | null;
   ehDlc: boolean | null;
+  minutosJogadas: number | null;
+  conquistasDesbloqueadas: number | null;
+  conquistasTotal: number | null;
   precoMinimo: number | null;
   precoRegular: number | null;
   favoritadoEm: string;

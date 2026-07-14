@@ -9,6 +9,9 @@ public record FavoritoPerfilJogo(
     String capaUrl,
     String iconeHash,
     Boolean ehDlc,
+    Integer minutosJogadas,
+    Integer conquistasDesbloqueadas,
+    Integer conquistasTotal,
     BigDecimal precoMinimo,
     BigDecimal precoRegular,
     String favoritadoEm

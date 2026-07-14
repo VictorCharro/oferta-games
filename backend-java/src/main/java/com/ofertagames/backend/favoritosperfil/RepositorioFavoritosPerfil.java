@@ -21,6 +21,9 @@ public class RepositorioFavoritosPerfil {
           g.cover_url,
           NULL::text AS icon_hash,
           g.is_dlc,
+          NULL::integer AS playtime_minutes,
+          NULL::integer AS unlocked_count,
+          NULL::integer AS total_count,
           oferta.price AS min_price,
           oferta.regular_price AS regular_price,
           f.created_at::text AS favorited_at
@@ -44,11 +47,15 @@ public class RepositorioFavoritosPerfil {
           NULL::text AS cover_url,
           b.icon_hash,
           NULL::boolean AS is_dlc,
+          b.playtime_minutes,
+          COALESCE(a.unlocked_count, 0) AS unlocked_count,
+          COALESCE(a.total_count, 0) AS total_count,
           NULL::numeric AS min_price,
           NULL::numeric AS regular_price,
           f.created_at::text AS favorited_at
         FROM profile_steam_favorites f
         JOIN steam_library_games b ON b.user_id = f.user_id AND b.app_id = f.app_id
+        LEFT JOIN steam_game_achievements a ON a.user_id = b.user_id AND a.app_id = b.app_id
         WHERE f.user_id = CAST(:usuarioId AS uuid)
         ORDER BY favorited_at DESC
         """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
@@ -60,6 +67,9 @@ public class RepositorioFavoritosPerfil {
             rs.getString("cover_url"),
             rs.getString("icon_hash"),
             rs.getObject("is_dlc", Boolean.class),
+            rs.getObject("playtime_minutes", Integer.class),
+            rs.getObject("unlocked_count", Integer.class),
+            rs.getObject("total_count", Integer.class),
             rs.getBigDecimal("min_price"),
             rs.getBigDecimal("regular_price"),
             rs.getString("favorited_at")))

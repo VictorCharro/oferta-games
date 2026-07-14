@@ -283,6 +283,12 @@ export class PublicProfile implements OnInit, OnDestroy {
     return game.conquistasTotal > 0 ? Math.round((game.conquistasDesbloqueadas / game.conquistasTotal) * 100) : null;
   }
 
+  favoriteAchievementProgress(game: PerfilPublico['favoritos'][number]): number | null {
+    return game.conquistasTotal != null && game.conquistasTotal > 0 && game.conquistasDesbloqueadas != null
+      ? Math.round((game.conquistasDesbloqueadas / game.conquistasTotal) * 100)
+      : null;
+  }
+
   platformIcon(platform: PerfilPublico['plataformasConectadas'][number]): string {
     return platform === 'xbox' ? 'xbox-modo-escuro.png' : 'steam-modo-escuro.png';
   }

@@ -232,7 +232,7 @@
             <article *ngFor="let game of favoritePreview(block)" class="profile-game-card">
               <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener">
                 <img [src]="favoriteImage(game)" [alt]="game.titulo" />
-                <div class="game-card-shade"></div><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam' }}</span></div>
+                <div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else favoriteCatalogInfo"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #favoriteCatalogInfo><span>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</span></ng-template></div>
               </a>
             </article>
           </div>
@@ -279,7 +279,7 @@
     </div>
     <div *ngIf="profile.favoritos.length; else noFavorites" class="profile-game-grid grid-completo favorites-gallery">
       <article *ngFor="let game of profile.favoritos" class="profile-game-card">
-        <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><div class="game-card-info"><h3>{{ game.titulo }}</h3><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Steam' }}</strong></div></a>
+        <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else favoriteCatalogDetail"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #favoriteCatalogDetail><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template></div></a>
         <button
           *ngIf="isOwner"
           type="button"
