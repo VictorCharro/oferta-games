@@ -40,6 +40,7 @@ build/
 
 ### Environment / secrets ###
 .env
+deploy/oracle/.env
 *.env.local
 application-local.properties
 

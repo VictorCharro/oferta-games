@@ -1,0 +1,32 @@
+name: Deploy backend na Oracle
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'backend-java/**'
+      - 'deploy/oracle/**'
+      - '.github/workflows/deploy-oracle.yml'
+
+concurrency:
+  group: deploy-oracle-producao
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configurar chave SSH
+        env:
+          ORACLE_SSH_PRIVATE_KEY: ${{ secrets.ORACLE_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "$ORACLE_SSH_PRIVATE_KEY" > ~/.ssh/id_oracle
+          chmod 600 ~/.ssh/id_oracle
+
+      - name: Atualizar backend na VM
+        env:
+          ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+        run: |
+          ssh -i ~/.ssh/id_oracle -o StrictHostKeyChecking=accept-new ubuntu@"$ORACLE_HOST" \
+            'cd /opt/oferta-games && git pull --ff-only origin master && docker compose -f deploy/oracle/compose.yml up -d --build'

@@ -13,7 +13,7 @@ O produto tambem tem contas, Jogos Monitorados para alertas de preco, perfis pub
 | Camada | Tecnologia | Hospedagem atual |
 |---|---|---|
 | Frontend | Angular 21 + TypeScript | Vercel |
-| Backend | Java 21 + Spring Boot 3 | Render, via Docker |
+| Backend | Java 21 + Spring Boot 3 | Render em producao; migracao preparada para Oracle Always Free via Docker |
 | Banco e Auth | PostgreSQL + Supabase Auth + Storage | Supabase |
 | Precos | ITAD API | Consumida pelo backend |
 | Perfil gamer | Steam OpenID + Steam Web API | Consumida pelo backend |
@@ -62,9 +62,9 @@ O bot externo que visita o health check mantem o Render ativo. Nao existe mais w
 
 Nunca colocar essas variaveis no Git ou em arquivos do frontend.
 
-### Possivel migracao para Oracle
+### Migracao para Oracle
 
-A meta futura e migrar o backend para Oracle Always Free em Sao Paulo, de preferencia uma VM Ampere A1 Flex. Enquanto a regiao estiver sem capacidade, manter Render. A migracao so deve ocorrer com Docker, HTTPS, logs, backup e deploy automatico pelo GitHub Actions; nao voltar ao processo manual por SSH.
+A VM Oracle Always Free em Sao Paulo foi criada com Ubuntu 24.04 ARM, `1 OCPU` e `6 GB`. A migracao permanece gradual: Render continua atendendo producao ate a Oracle receber Docker, variaveis, health check e HTTPS. O compose da VM fica em `deploy/oracle/compose.yml`, com o arquivo secreto `deploy/oracle/.env` criado somente no servidor. Ele inclui as chaves de banco/Supabase/ITAD/Steam, CORS, `FRONTEND_URL` e `PUBLIC_BACKEND_URL`; esta ultima so deve apontar para a URL HTTPS definitiva da Oracle quando houver dominio. O workflow `.github/workflows/deploy-oracle.yml` atualiza o backend na VM por SSH em cada push relevante para `master`; exige os segredos `ORACLE_HOST` e `ORACLE_SSH_PRIVATE_KEY` no GitHub. Nao voltar ao processo manual de atualizacao por SSH depois da configuracao inicial.
 
 ## Coletas e Atualizacao de Catalogo
 
