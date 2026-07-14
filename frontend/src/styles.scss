@@ -164,6 +164,9 @@ app-public-profile .profile-game-card > a { display: block; width: 100%; height:
 app-public-profile .profile-game-card > a > img { width: 100%; height: 100%; object-fit: cover; transition: transform .18s ease; }
 app-public-profile .profile-game-card:hover > a > img { transform: scale(1.035); }
 app-public-profile .game-card-shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 22%, rgba(5, 9, 18, .14) 42%, rgba(5, 9, 18, .94) 100%); pointer-events: none; }
+app-public-profile .profile-game-card.cover-unavailable > a { background: radial-gradient(circle at 18% 18%, rgba(41, 168, 224, .24), transparent 42%), linear-gradient(145deg, #17243a, #080d18 72%); }
+app-public-profile .profile-game-card.cover-unavailable > a::before { position: absolute; top: 18px; left: 18px; color: rgba(255, 255, 255, .22); content: 'STEAM'; font-size: 12px; font-weight: 800; letter-spacing: 2px; }
+app-public-profile .profile-game-card.cover-unavailable .game-card-shade { background: linear-gradient(180deg, transparent 28%, rgba(5, 9, 18, .35) 52%, rgba(5, 9, 18, .95) 100%); }
 app-public-profile .game-card-info { position: absolute; right: 10px; bottom: 9px; left: 10px; z-index: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; pointer-events: none; }
 app-public-profile .game-card-info h3 { display: -webkit-box; overflow: hidden; margin: 0; color: #fff; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 13px; line-height: 1.18; text-overflow: ellipsis; }
 app-public-profile .game-card-info span, app-public-profile .game-card-info small { overflow: hidden; color: #cbd5e1; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }

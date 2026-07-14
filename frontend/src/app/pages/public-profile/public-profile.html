@@ -242,8 +242,8 @@
         ><ng-container *ngSwitchCase="'biblioteca'"
           ><div class="panel-heading"><h2>Biblioteca</h2><button type="button" class="panel-link" (click)="openLibrary()">Ver biblioteca</button></div>
           <div *ngIf="libraryPreview(block).length; else noLibraryPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
-            <article *ngFor="let game of libraryPreview(block)" class="profile-game-card library-game-card">
-              <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img [src]="steamCover(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
+            <article *ngFor="let game of libraryPreview(block)" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">
+              <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
             </article>
           </div>
           <ng-template #noLibraryPreview><div class="empty-panel"><h3>Biblioteca vazia</h3><p>Nenhum jogo sincronizado para exibir.</p></div></ng-template></ng-container
@@ -322,8 +322,8 @@
       </select>
     </div>
     <div class="profile-game-grid grid-completo library-gallery" *ngIf="libraryGames.length; else emptyLibrary">
-      <article *ngFor="let game of libraryGames" class="profile-game-card library-game-card">
-        <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img [src]="steamCover(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
+      <article *ngFor="let game of libraryGames" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">
+        <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
         <button
           *ngIf="isOwner"
           type="button"

@@ -395,7 +395,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Steam OpenID, biblioteca, horas, conquistas, favoritos pessoais e atividade recente.
 - Pagina admin de coleta protegida por UID.
 - Editor de perfil persistido com blocos e upload de imagens.
-- Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam.
+- Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada.
 
 ### Em validacao no worktree atual
 

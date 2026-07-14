@@ -18,6 +18,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   missing = false;
   loading = true;
   activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' = 'resumo';
+  readonly capasSteamIndisponiveis = new Set<number>();
   isOwner = false;
   ownerAvatar = '';
   editingBio = false;
@@ -277,6 +278,16 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   steamCover(game: PerfilPublico['biblioteca'][number]): string {
     return `https://cdn.akamai.steamstatic.com/steam/apps/${game.appId}/header.jpg`;
+  }
+
+  tentarCapaSteamAlternativa(evento: Event, jogo: PerfilPublico['biblioteca'][number]) {
+    const imagem = evento.target as HTMLImageElement;
+    if (imagem.dataset['capaAlternativa'] !== 'true') {
+      imagem.dataset['capaAlternativa'] = 'true';
+      imagem.src = `https://cdn.akamai.steamstatic.com/steam/apps/${jogo.appId}/capsule_616x353.jpg`;
+      return;
+    }
+    this.capasSteamIndisponiveis.add(jogo.appId);
   }
 
   achievementProgress(game: PerfilPublico['biblioteca'][number]): number | null {
