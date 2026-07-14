@@ -93,7 +93,10 @@ app-public-profile .gradient-color-control label { display: flex; flex-direction
 app-public-profile .gradient-color-control label span { font-size: 11px; }
 app-public-profile .gradient-color-control input[type="color"] { width: 52px; height: 30px; padding: 1px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-input); }
 app-public-profile .gradient-arrow { padding-bottom: 7px; color: var(--text-muted); }
+app-public-profile .profile-favorite-item a > div { min-width: 0; }
+app-public-profile .profile-favorite-item h3 { display: -webkit-box; overflow: hidden; margin: 0 0 5px; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 14px; line-height: 1.25; text-overflow: ellipsis; }
 app-public-profile .profile-block.size-pequeno { min-height: 138px; padding: 16px; }
+app-public-profile .profile-block.size-pequeno.stat-block { display: flex; align-items: center; }
 app-public-profile .profile-block.size-pequeno h2 { margin-bottom: 10px; font-size: 16px; }
 app-public-profile .profile-block.size-pequeno .editable-stat { min-height: 72px; gap: 12px; }
 app-public-profile .profile-block.size-pequeno .editable-stat > img { width: 42px; height: 42px; }

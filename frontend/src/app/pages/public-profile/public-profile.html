@@ -165,6 +165,7 @@
       class="panel profile-block"
       [class]="'size-' + block.tamanho"
       [class.custom-text-color]="!!block.corTexto"
+      [class.stat-block]="!editingLayout && (block.tipo === 'resumo_favoritos' || block.tipo === 'horas' || block.tipo === 'conquistas')"
       [class.editor-open]="isEditorSelectOpen(block, 'tamanho') || isEditorSelectOpen(block, 'tipoFundo') || isTextColorMenuOpen(block)"
       [ngStyle]="blockStyle(block)"
       cdkDrag
