@@ -41,6 +41,9 @@ export class PublicProfile implements OnInit, OnDestroy {
   blockImageEditingId: string | null = null;
   blockImagePreview = '';
   blockImageFile: File | null = null;
+  blockImageExternalUrl = '';
+  blockImageUrlInput: { blockId: string; destino: 'conteudo' | 'fundo' } | null = null;
+  blockImageUrlDraft = '';
   blockImageZoom = 1;
   blockImagePositionX = 50;
   blockImagePositionY = 50;
@@ -246,6 +249,10 @@ export class PublicProfile implements OnInit, OnDestroy {
   async onBlockImageSelected(event: Event, block: PerfilBloco, destino: 'conteudo' | 'fundo' = 'conteudo') {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file || !file.type.startsWith('image/') || !this.auth.user) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      this.message = 'Escolha uma imagem JPG, PNG ou WebP.';
+      return;
+    }
     if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de até 2 MB.'; return; }
 
     if (destino === 'conteudo') {
@@ -256,10 +263,37 @@ export class PublicProfile implements OnInit, OnDestroy {
 
     const caminho = `${this.auth.user.id}/blocks/${block.id}-${Date.now()}`;
     const { error } = await supabase.storage.from('avatars').upload(caminho, file, { contentType: file.type, cacheControl: '3600' });
-    if (error) { this.message = 'Não foi possível enviar a imagem.'; return; }
+    if (error) { this.message = `Não foi possível enviar a imagem: ${error.message}`; return; }
     const { data } = supabase.storage.from('avatars').getPublicUrl(caminho);
     block.valorFundo = data.publicUrl;
     this.cdr.detectChanges();
+  }
+
+  isBlockImageUrlInputOpen(block: PerfilBloco, destino: 'conteudo' | 'fundo') {
+    return this.blockImageUrlInput?.blockId === block.id && this.blockImageUrlInput.destino === destino;
+  }
+
+  toggleBlockImageUrlInput(block: PerfilBloco, destino: 'conteudo' | 'fundo') {
+    if (this.isBlockImageUrlInputOpen(block, destino)) {
+      this.blockImageUrlInput = null;
+      return;
+    }
+    this.blockImageUrlInput = { blockId: block.id, destino };
+    this.blockImageUrlDraft = destino === 'conteudo' ? this.blockImageUrl(block) : block.valorFundo || '';
+  }
+
+  useBlockImageUrl(block: PerfilBloco, destino: 'conteudo' | 'fundo') {
+    const url = this.normalizarUrlImagem(this.blockImageUrlDraft);
+    if (!url) {
+      this.message = 'Informe uma URL de imagem valida, com http:// ou https://.';
+      return;
+    }
+    this.blockImageUrlInput = null;
+    if (destino === 'fundo') {
+      block.valorFundo = url;
+      return;
+    }
+    this.startBlockImageEdit(block, null, url);
   }
 
   blockImageUrl(block: PerfilBloco): string {
@@ -278,12 +312,13 @@ export class PublicProfile implements OnInit, OnDestroy {
     return this.blockImageEditingId === block.id;
   }
 
-  startBlockImageEdit(block: PerfilBloco, file: File | null = null) {
+  startBlockImageEdit(block: PerfilBloco, file: File | null = null, externalUrl = '') {
     const image = this.blockImageData(block);
     if (this.blockImagePreview.startsWith('blob:')) URL.revokeObjectURL(this.blockImagePreview);
     this.blockImageEditingId = block.id;
     this.blockImageFile = file;
-    this.blockImagePreview = file ? URL.createObjectURL(file) : image.url;
+    this.blockImageExternalUrl = externalUrl;
+    this.blockImagePreview = file ? URL.createObjectURL(file) : externalUrl || image.url;
     this.blockImageZoom = image.zoom;
     this.blockImagePositionX = image.positionX;
     this.blockImagePositionY = image.positionY;
@@ -294,11 +329,12 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.blockImageEditingId = null;
     this.blockImagePreview = '';
     this.blockImageFile = null;
+    this.blockImageExternalUrl = '';
   }
 
   async saveBlockImageEdit(block: PerfilBloco) {
     if (!this.auth.user) return;
-    let imageUrl = this.blockImageData(block).url;
+    let imageUrl = this.blockImageExternalUrl || this.blockImageData(block).url;
 
     if (this.blockImageFile) {
       const caminho = `${this.auth.user.id}/blocks/${block.id}-${Date.now()}`;
@@ -307,7 +343,7 @@ export class PublicProfile implements OnInit, OnDestroy {
         cacheControl: '3600',
       });
       if (error) {
-        this.message = 'Não foi possível enviar a imagem.';
+        this.message = `Não foi possível enviar a imagem: ${error.message}`;
         this.cdr.detectChanges();
         return;
       }
@@ -368,6 +404,10 @@ export class PublicProfile implements OnInit, OnDestroy {
     } catch {
       return null;
     }
+  }
+
+  private normalizarUrlImagem(endereco: string): string | null {
+    return this.normalizarUrlLink(endereco);
   }
 
   private defaultBlocks(): PerfilBloco[] {

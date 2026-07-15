@@ -205,8 +205,13 @@
           <label><span>Cor final</span><input type="color" [ngModel]="gradientColors(block)[1]" (ngModelChange)="setGradientColor(block, 1, $event)" aria-label="Cor final do gradiente" /></label>
         </div>
         <ng-container *ngIf="block.tipoFundo === 'imagem'">
-          <input #backgroundImageInput class="visually-hidden" type="file" accept="image/*" (change)="onBlockImageSelected($event, block, 'fundo')" />
+          <input #backgroundImageInput class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" (change)="onBlockImageSelected($event, block, 'fundo')" />
           <button type="button" class="image-picker-button" (click)="backgroundImageInput.click()">{{ block.valorFundo ? 'Trocar imagem de fundo' : 'Escolher imagem de fundo' }}</button>
+          <button type="button" class="image-picker-button" (click)="toggleBlockImageUrlInput(block, 'fundo')">Usar URL</button>
+          <div *ngIf="isBlockImageUrlInputOpen(block, 'fundo')" class="block-image-url-input">
+            <input [(ngModel)]="blockImageUrlDraft" placeholder="https://exemplo.com/imagem.jpg" aria-label="URL da imagem de fundo" />
+            <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'fundo')">Usar URL</button>
+          </div>
         </ng-container>
         <div *ngIf="block.tipo === 'texto' || block.tipo === 'links'" class="block-content-fields">
           <label>
@@ -224,8 +229,13 @@
           <small *ngIf="block.tipo === 'links'">Use um link por linha: nome | endereco.com</small>
         </div>
         <ng-container *ngIf="block.tipo === 'imagem'">
-          <input #contentImageInput class="visually-hidden" type="file" accept="image/*" (change)="onBlockImageSelected($event, block)" />
+          <input #contentImageInput class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" (change)="onBlockImageSelected($event, block)" />
           <button type="button" class="image-picker-button" (click)="contentImageInput.click()">{{ blockImageUrl(block) ? 'Trocar imagem' : 'Escolher imagem' }}</button>
+          <button type="button" class="image-picker-button" (click)="toggleBlockImageUrlInput(block, 'conteudo')">Usar URL</button>
+          <div *ngIf="isBlockImageUrlInputOpen(block, 'conteudo')" class="block-image-url-input">
+            <input [(ngModel)]="blockImageUrlDraft" placeholder="https://exemplo.com/imagem.jpg" aria-label="URL da imagem" />
+            <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'conteudo')">Continuar</button>
+          </div>
           <button *ngIf="blockImageUrl(block)" type="button" class="image-picker-button" (click)="startBlockImageEdit(block)">Ajustar enquadramento</button>
           <div *ngIf="isEditingBlockImage(block)" class="block-image-crop-editor">
             <div class="block-image-crop-preview">

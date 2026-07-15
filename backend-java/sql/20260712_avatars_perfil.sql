@@ -22,3 +22,8 @@ CREATE POLICY "Atualizacao do proprio avatar"
 ON storage.objects FOR UPDATE TO authenticated
 USING (bucket_id = 'avatars' AND owner_id = (select auth.uid()::text))
 WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = (select auth.uid()::text));
+
+DROP POLICY IF EXISTS "Remocao do proprio avatar" ON storage.objects;
+CREATE POLICY "Remocao do proprio avatar"
+ON storage.objects FOR DELETE TO authenticated
+USING (bucket_id = 'avatars' AND owner_id = (select auth.uid()::text));

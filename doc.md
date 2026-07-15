@@ -384,7 +384,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Login Supabase, perfis compartilhaveis, avatar persistente, bio e privacidade geral.
 - Steam OpenID, biblioteca, horas, conquistas, favoritos pessoais e atividade recente.
 - Pagina admin de coleta protegida por UID.
-- Editor de perfil persistido com blocos e upload de imagens.
+- Editor de perfil persistido com blocos, upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`.
 - Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada.
 - PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle usa o novo banco, executa o scheduler e expoe a API por Caddy/HTTPS. O frontend publicado na Vercel usa o mesmo projeto Supabase. O Render esta desligado; o Supabase antigo permanece somente como rollback temporario.
 
