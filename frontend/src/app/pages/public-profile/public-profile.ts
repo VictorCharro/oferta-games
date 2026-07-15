@@ -348,9 +348,26 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   links(block: PerfilBloco): Array<{ nome: string; url: string }> {
-    return (block.conteudo || '').split('\n').map(linha => linha.split('|').map(valor => valor.trim()))
-      .filter(([, url]) => /^https:\/\//i.test(url || ''))
-      .map(([nome, url]) => ({ nome: nome || url, url }));
+    return (block.conteudo || '')
+      .split('\n')
+      .map(linha => linha.split('|').map(valor => valor.trim()))
+      .map(([nome, endereco]) => {
+        const url = this.normalizarUrlLink(endereco || '');
+        return url ? { nome: nome || url, url } : null;
+      })
+      .filter((link): link is { nome: string; url: string } => link !== null);
+  }
+
+  private normalizarUrlLink(endereco: string): string | null {
+    const valor = endereco.trim();
+    if (!valor) return null;
+    const urlCompleta = /^https?:\/\//i.test(valor) ? valor : `https://${valor}`;
+    try {
+      const url = new URL(urlCompleta);
+      return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+    } catch {
+      return null;
+    }
   }
 
   private defaultBlocks(): PerfilBloco[] {
