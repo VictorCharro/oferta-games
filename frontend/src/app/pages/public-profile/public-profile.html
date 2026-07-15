@@ -11,7 +11,7 @@
       <span aria-hidden="true">↻</span>
     </button>
     <button
-      *ngIf="isOwner"
+      *ngIf="isOwner && activeTab === 'resumo'"
       type="button"
       class="edit-layout"
       (click)="editingLayout ? cancelLayoutEdit() : startLayoutEdit()"
@@ -117,6 +117,7 @@
       type="button"
       [class.active]="activeTab === 'jogosFavoritos'"
       (click)="activeTab = 'jogosFavoritos'"
+      [disabled]="editingLayout"
     >
       Jogos favoritos
     </button>
@@ -124,12 +125,13 @@
       type="button"
       [class.active]="activeTab === 'biblioteca'"
       (click)="activeTab = 'biblioteca'"
+      [disabled]="editingLayout"
     >
       Biblioteca
     </button>
   </section>
 
-  <section class="layout-editor" *ngIf="editingLayout">
+  <section class="layout-editor" *ngIf="editingLayout && activeTab === 'resumo'">
     <div class="editor-heading">
       <strong>Modo de edição</strong
       ><span>Arraste os blocos, ajuste a aparência e salve quando terminar.</span>
@@ -208,13 +210,14 @@
         </ng-container>
         <div *ngIf="block.tipo === 'texto' || block.tipo === 'links'" class="block-content-fields">
           <label>
-            <span>Titulo do bloco</span>
-            <input [(ngModel)]="block.titulo" placeholder="Titulo" />
+            <span>Titulo do bloco <small>{{ (block.titulo || '').length }}/{{ maxTitleLength(block) }}</small></span>
+            <input [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Titulo" />
           </label>
           <label>
-            <span>{{ block.tipo === 'links' ? 'Links' : 'Conteudo' }}</span>
+            <span>{{ block.tipo === 'links' ? 'Links' : 'Conteudo' }} <small>{{ (block.conteudo || '').length }}/{{ maxContentLength(block) }}</small></span>
             <textarea
               [(ngModel)]="block.conteudo"
+              [maxlength]="maxContentLength(block)"
               [placeholder]="block.tipo === 'links' ? 'Nome | exemplo.com (uma linha por link)' : 'Conteudo'"
             ></textarea>
           </label>
@@ -245,7 +248,7 @@
         ><ng-container *ngSwitchCase="'favoritos'"
           ><div class="panel-heading">
             <h2>Jogos favoritos</h2>
-            <button type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">{{ isOwner ? 'Gerenciar' : 'Ver favoritos' }}</button>
+            <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">{{ isOwner ? 'Gerenciar' : 'Ver favoritos' }}</button>
           </div>
           <div *ngIf="profile.favoritos.length; else noFav" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
             <article *ngFor="let game of favoritePreview(block)" class="profile-game-card">
@@ -259,7 +262,7 @@
             ><div class="empty-panel"><h3>Nenhum jogo favorito ainda</h3></div></ng-template
           ></ng-container
         ><ng-container *ngSwitchCase="'biblioteca'"
-          ><div class="panel-heading"><h2>Biblioteca</h2><button type="button" class="panel-link" (click)="openLibrary()">Ver biblioteca</button></div>
+          ><div class="panel-heading"><h2>Biblioteca</h2><button *ngIf="!editingLayout" type="button" class="panel-link" (click)="openLibrary()">Ver biblioteca</button></div>
           <div *ngIf="libraryPreview(block).length; else noLibraryPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
             <article *ngFor="let game of libraryPreview(block)" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">
               <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
@@ -277,8 +280,8 @@
             </div>
           </div></ng-container
         ><ng-container *ngSwitchCase="'texto'"
-          ><h2>{{ block.titulo || 'Texto' }}</h2>
-          <p>{{ block.conteudo || 'Escreva algo sobre você.' }}</p></ng-container
+          ><h2 class="custom-block-title">{{ block.titulo || 'Texto' }}</h2>
+          <p class="custom-text-content">{{ block.conteudo || 'Escreva algo sobre você.' }}</p></ng-container
         ><ng-container *ngSwitchCase="'imagem'"
           ><h2 *ngIf="block.titulo">{{ block.titulo }}</h2>
           <div *ngIf="blockImageUrl(block); else emptyImage" class="custom-image-frame"><img class="custom-image" [src]="blockImageUrl(block)" alt="Imagem do perfil" [ngStyle]="blockImageStyle(block)" /></div>

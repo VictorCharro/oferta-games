@@ -185,7 +185,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   startLayoutEdit() {
-    if (!this.profile || !this.isOwner) return;
+    if (!this.profile || !this.isOwner || this.activeTab !== 'resumo') return;
     this.layoutDraft = structuredClone(this.profile.blocos?.length ? this.profile.blocos : this.defaultBlocks());
     this.editingLayout = true;
   }
@@ -382,6 +382,14 @@ export class PublicProfile implements OnInit, OnDestroy {
     return { pequeno: 1, medio: 4, largo: 6, completo: 8 }[size];
   }
 
+  maxTitleLength(block: PerfilBloco): number {
+    return { pequeno: 42, medio: 64, largo: 88, completo: 120 }[block.tamanho];
+  }
+
+  maxContentLength(block: PerfilBloco): number {
+    return { pequeno: 180, medio: 420, largo: 800, completo: 1400 }[block.tamanho];
+  }
+
   favoritePreview(block: PerfilBloco) {
     return this.profile?.favoritos.slice(0, this.previewLimit(block.tamanho)) || [];
   }
@@ -419,6 +427,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   openLibrary() {
+    if (this.editingLayout) return;
     this.activeTab = 'biblioteca';
     setTimeout(() => document.querySelector('.library-list-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
