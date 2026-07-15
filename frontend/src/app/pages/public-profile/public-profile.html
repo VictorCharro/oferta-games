@@ -237,18 +237,23 @@
             <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'conteudo')">Continuar</button>
           </div>
           <button *ngIf="blockImageUrl(block)" type="button" class="image-picker-button" (click)="startBlockImageEdit(block)">Ajustar enquadramento</button>
-          <div *ngIf="isEditingBlockImage(block)" class="block-image-crop-editor">
-            <div class="block-image-crop-preview">
-              <img [src]="blockImagePreview" alt="Previa da imagem" [style.object-position]="blockImagePositionX + '% ' + blockImagePositionY + '%'" [style.transform]="'scale(' + blockImageZoom + ')'" />
-            </div>
-            <div class="block-image-crop-controls">
-              <label>Zoom <input type="range" min="1" max="3" step="0.05" [(ngModel)]="blockImageZoom" /></label>
-              <label>Horizontal <input type="range" min="0" max="100" [(ngModel)]="blockImagePositionX" /></label>
-              <label>Vertical <input type="range" min="0" max="100" [(ngModel)]="blockImagePositionY" /></label>
-            </div>
-            <div class="block-image-crop-actions">
-              <button type="button" class="ghost-btn" (click)="cancelBlockImageEdit()">Cancelar</button>
-              <button type="button" class="save-btn" (click)="saveBlockImageEdit(block)">Usar imagem</button>
+          <div *ngIf="isEditingBlockImage(block)" class="block-image-crop-backdrop" (click)="cancelBlockImageEdit()">
+            <div class="block-image-crop-editor" (click)="$event.stopPropagation()">
+              <h3>Ajustar imagem</h3>
+              <div
+                class="block-image-crop-preview"
+                #blockCropFrame
+                (mousedown)="onBlockImageDragStart($event)"
+                (touchstart)="onBlockImageDragStart($event)"
+                (wheel)="onBlockImageWheel($event)"
+              >
+                <img [src]="blockImagePreview" alt="Previa da imagem" (load)="onBlockCropImageLoad($event)" [ngStyle]="blockImageEditStyle()" draggable="false" />
+              </div>
+              <small class="block-image-crop-hint">Arraste para posicionar e use o scroll (ou pinça) para dar zoom.</small>
+              <div class="block-image-crop-actions">
+                <button type="button" class="ghost-btn" (click)="cancelBlockImageEdit()">Cancelar</button>
+                <button type="button" class="save-btn" (click)="saveBlockImageEdit(block)">Usar imagem</button>
+              </div>
             </div>
           </div>
         </ng-container>
@@ -294,7 +299,7 @@
           <p class="custom-text-content">{{ block.conteudo || 'Escreva algo sobre você.' }}</p></ng-container
         ><ng-container *ngSwitchCase="'imagem'"
           ><h2 *ngIf="block.titulo">{{ block.titulo }}</h2>
-          <div *ngIf="blockImageUrl(block); else emptyImage" class="custom-image-frame"><img class="custom-image" [src]="blockImageUrl(block)" alt="Imagem do perfil" [ngStyle]="blockImageStyle(block)" /></div>
+          <div *ngIf="blockImageUrl(block); else emptyImage" class="custom-image-frame" #imgFrame><img class="custom-image" [src]="blockImageUrl(block)" alt="Imagem do perfil" (load)="onCustomImageLoad($event, block)" [ngStyle]="blockImageStyle(block, imgFrame)" /></div>
           <ng-template #emptyImage><p>Adicione uma imagem no modo de edição.</p></ng-template></ng-container
         ><ng-container *ngSwitchCase="'links'"
           ><h2>{{ block.titulo || 'Links' }}</h2>

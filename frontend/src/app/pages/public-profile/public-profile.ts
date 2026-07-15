@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -47,6 +47,12 @@ export class PublicProfile implements OnInit, OnDestroy {
   blockImageZoom = 1;
   blockImagePositionX = 50;
   blockImagePositionY = 50;
+  readonly blockImageMinZoom = 1.15;
+  @ViewChild('blockCropFrame') blockCropFrame?: ElementRef<HTMLDivElement>;
+  private blockImageNaturalWidth = 0;
+  private blockImageNaturalHeight = 0;
+  private blockImageDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
+  private readonly customImageNaturalSize = new Map<string, { width: number; height: number }>();
   readonly sizeOptions = [
     { value: 'pequeno', label: 'Pequeno' },
     { value: 'medio', label: 'Médio' },
@@ -279,7 +285,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       return;
     }
     this.blockImageUrlInput = { blockId: block.id, destino };
-    this.blockImageUrlDraft = destino === 'conteudo' ? this.blockImageUrl(block) : block.valorFundo || '';
+    this.blockImageUrlDraft = '';
   }
 
   useBlockImageUrl(block: PerfilBloco, destino: 'conteudo' | 'fundo') {
@@ -300,12 +306,15 @@ export class PublicProfile implements OnInit, OnDestroy {
     return this.blockImageData(block).url;
   }
 
-  blockImageStyle(block: PerfilBloco): Record<string, string> {
+  onCustomImageLoad(event: Event, block: PerfilBloco) {
+    const img = event.target as HTMLImageElement;
+    this.customImageNaturalSize.set(block.id, { width: img.naturalWidth, height: img.naturalHeight });
+  }
+
+  blockImageStyle(block: PerfilBloco, frame: HTMLElement): Record<string, string> {
     const image = this.blockImageData(block);
-    return {
-      objectPosition: `${image.positionX}% ${image.positionY}%`,
-      transform: `scale(${image.zoom})`,
-    };
+    const natural = this.customImageNaturalSize.get(block.id);
+    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, natural?.width || 0, natural?.height || 0, image.zoom, image.positionX, image.positionY);
   }
 
   isEditingBlockImage(block: PerfilBloco) {
@@ -319,9 +328,11 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.blockImageFile = file;
     this.blockImageExternalUrl = externalUrl;
     this.blockImagePreview = file ? URL.createObjectURL(file) : externalUrl || image.url;
-    this.blockImageZoom = image.zoom;
+    this.blockImageZoom = Math.max(this.blockImageMinZoom, image.zoom);
     this.blockImagePositionX = image.positionX;
     this.blockImagePositionY = image.positionY;
+    this.blockImageNaturalWidth = 0;
+    this.blockImageNaturalHeight = 0;
   }
 
   cancelBlockImageEdit() {
@@ -330,6 +341,101 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.blockImagePreview = '';
     this.blockImageFile = null;
     this.blockImageExternalUrl = '';
+    this.blockImageDrag = null;
+  }
+
+  onBlockCropImageLoad(event: Event) {
+    const img = event.target as HTMLImageElement;
+    this.blockImageNaturalWidth = img.naturalWidth;
+    this.blockImageNaturalHeight = img.naturalHeight;
+  }
+
+  blockImageEditStyle(): Record<string, string> {
+    const frame = this.blockCropFrame?.nativeElement;
+    return this.coverStyle(
+      frame?.clientWidth || 0,
+      frame?.clientHeight || 0,
+      this.blockImageNaturalWidth,
+      this.blockImageNaturalHeight,
+      this.blockImageZoom,
+      this.blockImagePositionX,
+      this.blockImagePositionY,
+    );
+  }
+
+  onBlockImageDragStart(event: MouseEvent | TouchEvent) {
+    event.preventDefault();
+    const point = 'touches' in event ? event.touches[0] : event;
+    this.blockImageDrag = {
+      startX: point.clientX,
+      startY: point.clientY,
+      startPosX: this.blockImagePositionX,
+      startPosY: this.blockImagePositionY,
+    };
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  @HostListener('document:touchmove', ['$event'])
+  onBlockImageDragMove(event: MouseEvent | TouchEvent) {
+    if (!this.blockImageDrag) return;
+    event.preventDefault();
+    const point = 'touches' in event ? event.touches[0] : event;
+    const frame = this.blockCropFrame?.nativeElement;
+    const geo = this.coverGeometry(frame?.clientWidth || 0, frame?.clientHeight || 0, this.blockImageNaturalWidth, this.blockImageNaturalHeight, this.blockImageZoom);
+    const dx = point.clientX - this.blockImageDrag.startX;
+    const dy = point.clientY - this.blockImageDrag.startY;
+    this.blockImagePositionX = this.clampPercent(this.blockImageDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
+    this.blockImagePositionY = this.clampPercent(this.blockImageDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
+  }
+
+  @HostListener('document:mouseup')
+  @HostListener('document:touchend')
+  onBlockImageDragEnd() {
+    this.blockImageDrag = null;
+  }
+
+  onBlockImageWheel(event: WheelEvent) {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -0.1 : 0.1;
+    this.blockImageZoom = Math.min(3, Math.max(this.blockImageMinZoom, +(this.blockImageZoom + delta).toFixed(2)));
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.cdr.detectChanges();
+  }
+
+  private coverGeometry(frameW: number, frameH: number, naturalW: number, naturalH: number, zoom: number) {
+    if (!frameW || !frameH || !naturalW || !naturalH) return { width: 0, height: 0, maxOffsetX: 0, maxOffsetY: 0 };
+    const scale = Math.max(frameW / naturalW, frameH / naturalH) * Math.max(zoom, 1);
+    const width = naturalW * scale;
+    const height = naturalH * scale;
+    return { width, height, maxOffsetX: Math.max(0, (width - frameW) / 2), maxOffsetY: Math.max(0, (height - frameH) / 2) };
+  }
+
+  private coverStyle(frameW: number, frameH: number, naturalW: number, naturalH: number, zoom: number, positionX: number, positionY: number): Record<string, string> {
+    const geo = this.coverGeometry(frameW, frameH, naturalW, naturalH, zoom);
+    if (!geo.width || !geo.height) {
+      return { width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${positionX}% ${positionY}%` };
+    }
+    const offsetX = ((positionX - 50) / 50) * geo.maxOffsetX;
+    const offsetY = ((positionY - 50) / 50) * geo.maxOffsetY;
+    return {
+      position: 'absolute',
+      left: '50%',
+      top: '50%',
+      width: `${geo.width}px`,
+      height: `${geo.height}px`,
+      transform: `translate(-50%, -50%) translate(${offsetX}px, ${offsetY}px)`,
+    };
+  }
+
+  private pixelsToPercent(deltaPx: number, maxOffset: number): number {
+    return maxOffset > 0 ? (deltaPx / maxOffset) * 50 : 0;
+  }
+
+  private clampPercent(value: number): number {
+    return Math.min(100, Math.max(0, value));
   }
 
   async saveBlockImageEdit(block: PerfilBloco) {
