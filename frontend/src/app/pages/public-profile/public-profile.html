@@ -206,19 +206,38 @@
           <input #backgroundImageInput class="visually-hidden" type="file" accept="image/*" (change)="onBlockImageSelected($event, block, 'fundo')" />
           <button type="button" class="image-picker-button" (click)="backgroundImageInput.click()">{{ block.valorFundo ? 'Trocar imagem de fundo' : 'Escolher imagem de fundo' }}</button>
         </ng-container>
-        <input
-          *ngIf="block.tipo === 'texto' || block.tipo === 'links'"
-          [(ngModel)]="block.titulo"
-          placeholder="Título"
-        />
-        <textarea
-          *ngIf="block.tipo === 'texto' || block.tipo === 'links'"
-          [(ngModel)]="block.conteudo"
-          [placeholder]="block.tipo === 'links' ? 'Nome | https://exemplo.com (uma linha por link)' : 'Conteúdo'"
-        ></textarea>
+        <div *ngIf="block.tipo === 'texto' || block.tipo === 'links'" class="block-content-fields">
+          <label>
+            <span>Titulo do bloco</span>
+            <input [(ngModel)]="block.titulo" placeholder="Titulo" />
+          </label>
+          <label>
+            <span>{{ block.tipo === 'links' ? 'Links' : 'Conteudo' }}</span>
+            <textarea
+              [(ngModel)]="block.conteudo"
+              [placeholder]="block.tipo === 'links' ? 'Nome | https://exemplo.com (uma linha por link)' : 'Conteudo'"
+            ></textarea>
+          </label>
+          <small *ngIf="block.tipo === 'links'">Use um link por linha: nome | https://endereco.com</small>
+        </div>
         <ng-container *ngIf="block.tipo === 'imagem'">
           <input #contentImageInput class="visually-hidden" type="file" accept="image/*" (change)="onBlockImageSelected($event, block)" />
-          <button type="button" class="image-picker-button" (click)="contentImageInput.click()">{{ block.conteudo ? 'Trocar imagem' : 'Escolher imagem' }}</button>
+          <button type="button" class="image-picker-button" (click)="contentImageInput.click()">{{ blockImageUrl(block) ? 'Trocar imagem' : 'Escolher imagem' }}</button>
+          <button *ngIf="blockImageUrl(block)" type="button" class="image-picker-button" (click)="startBlockImageEdit(block)">Ajustar enquadramento</button>
+          <div *ngIf="isEditingBlockImage(block)" class="block-image-crop-editor">
+            <div class="block-image-crop-preview">
+              <img [src]="blockImagePreview" alt="Previa da imagem" [style.object-position]="blockImagePositionX + '% ' + blockImagePositionY + '%'" [style.transform]="'scale(' + blockImageZoom + ')'" />
+            </div>
+            <div class="block-image-crop-controls">
+              <label>Zoom <input type="range" min="1" max="3" step="0.05" [(ngModel)]="blockImageZoom" /></label>
+              <label>Horizontal <input type="range" min="0" max="100" [(ngModel)]="blockImagePositionX" /></label>
+              <label>Vertical <input type="range" min="0" max="100" [(ngModel)]="blockImagePositionY" /></label>
+            </div>
+            <div class="block-image-crop-actions">
+              <button type="button" class="ghost-btn" (click)="cancelBlockImageEdit()">Cancelar</button>
+              <button type="button" class="save-btn" (click)="saveBlockImageEdit(block)">Usar imagem</button>
+            </div>
+          </div>
         </ng-container>
         <button type="button" (click)="removeBlock(i)">Remover</button>
       </div>
@@ -262,8 +281,8 @@
           <p>{{ block.conteudo || 'Escreva algo sobre você.' }}</p></ng-container
         ><ng-container *ngSwitchCase="'imagem'"
           ><h2 *ngIf="block.titulo">{{ block.titulo }}</h2>
-          <img *ngIf="block.conteudo" class="custom-image" [src]="block.conteudo" />
-          <p *ngIf="!block.conteudo">Adicione uma imagem no modo de edição.</p></ng-container
+          <div *ngIf="blockImageUrl(block); else emptyImage" class="custom-image-frame"><img class="custom-image" [src]="blockImageUrl(block)" alt="Imagem do perfil" [ngStyle]="blockImageStyle(block)" /></div>
+          <ng-template #emptyImage><p>Adicione uma imagem no modo de edição.</p></ng-template></ng-container
         ><ng-container *ngSwitchCase="'links'"
           ><h2>{{ block.titulo || 'Links' }}</h2>
           <div *ngIf="links(block).length; else emptyLinks" class="custom-links"><a *ngFor="let link of links(block)" [href]="link.url" target="_blank" rel="noopener">{{ link.nome }}</a></div><ng-template #emptyLinks><p>Adicione seus links no modo de edição.</p></ng-template></ng-container

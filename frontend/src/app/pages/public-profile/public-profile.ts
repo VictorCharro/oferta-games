@@ -38,6 +38,12 @@ export class PublicProfile implements OnInit, OnDestroy {
   avatarEditing = false;
   editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
   textColorMenuBlockId: string | null = null;
+  blockImageEditingId: string | null = null;
+  blockImagePreview = '';
+  blockImageFile: File | null = null;
+  blockImageZoom = 1;
+  blockImagePositionX = 50;
+  blockImagePositionY = 50;
   readonly sizeOptions = [
     { value: 'pequeno', label: 'Pequeno' },
     { value: 'medio', label: 'Médio' },
@@ -241,13 +247,104 @@ export class PublicProfile implements OnInit, OnDestroy {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file || !file.type.startsWith('image/') || !this.auth.user) return;
     if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de até 2 MB.'; return; }
+
+    if (destino === 'conteudo') {
+      this.startBlockImageEdit(block, file);
+      (event.target as HTMLInputElement).value = '';
+      return;
+    }
+
     const caminho = `${this.auth.user.id}/blocks/${block.id}-${Date.now()}`;
     const { error } = await supabase.storage.from('avatars').upload(caminho, file, { contentType: file.type, cacheControl: '3600' });
     if (error) { this.message = 'Não foi possível enviar a imagem.'; return; }
     const { data } = supabase.storage.from('avatars').getPublicUrl(caminho);
-    if (destino === 'fundo') block.valorFundo = data.publicUrl;
-    else block.conteudo = data.publicUrl;
+    block.valorFundo = data.publicUrl;
     this.cdr.detectChanges();
+  }
+
+  blockImageUrl(block: PerfilBloco): string {
+    return this.blockImageData(block).url;
+  }
+
+  blockImageStyle(block: PerfilBloco): Record<string, string> {
+    const image = this.blockImageData(block);
+    return {
+      objectPosition: `${image.positionX}% ${image.positionY}%`,
+      transform: `scale(${image.zoom})`,
+    };
+  }
+
+  isEditingBlockImage(block: PerfilBloco) {
+    return this.blockImageEditingId === block.id;
+  }
+
+  startBlockImageEdit(block: PerfilBloco, file: File | null = null) {
+    const image = this.blockImageData(block);
+    if (this.blockImagePreview.startsWith('blob:')) URL.revokeObjectURL(this.blockImagePreview);
+    this.blockImageEditingId = block.id;
+    this.blockImageFile = file;
+    this.blockImagePreview = file ? URL.createObjectURL(file) : image.url;
+    this.blockImageZoom = image.zoom;
+    this.blockImagePositionX = image.positionX;
+    this.blockImagePositionY = image.positionY;
+  }
+
+  cancelBlockImageEdit() {
+    if (this.blockImagePreview.startsWith('blob:')) URL.revokeObjectURL(this.blockImagePreview);
+    this.blockImageEditingId = null;
+    this.blockImagePreview = '';
+    this.blockImageFile = null;
+  }
+
+  async saveBlockImageEdit(block: PerfilBloco) {
+    if (!this.auth.user) return;
+    let imageUrl = this.blockImageData(block).url;
+
+    if (this.blockImageFile) {
+      const caminho = `${this.auth.user.id}/blocks/${block.id}-${Date.now()}`;
+      const { error } = await supabase.storage.from('avatars').upload(caminho, this.blockImageFile, {
+        contentType: this.blockImageFile.type,
+        cacheControl: '3600',
+      });
+      if (error) {
+        this.message = 'Não foi possível enviar a imagem.';
+        this.cdr.detectChanges();
+        return;
+      }
+      imageUrl = supabase.storage.from('avatars').getPublicUrl(caminho).data.publicUrl;
+    }
+
+    if (!imageUrl) return;
+    block.conteudo = JSON.stringify({
+      url: imageUrl,
+      zoom: this.blockImageZoom,
+      positionX: this.blockImagePositionX,
+      positionY: this.blockImagePositionY,
+    });
+    this.cancelBlockImageEdit();
+    this.cdr.detectChanges();
+  }
+
+  private blockImageData(block: PerfilBloco): { url: string; zoom: number; positionX: number; positionY: number } {
+    const raw = block.conteudo?.trim() || '';
+    if (!raw) return { url: '', zoom: 1, positionX: 50, positionY: 50 };
+    try {
+      const image = JSON.parse(raw) as Partial<{ url: string; zoom: number; positionX: number; positionY: number }>;
+      if (typeof image.url === 'string') {
+        const zoom = Number(image.zoom);
+        const positionX = Number(image.positionX);
+        const positionY = Number(image.positionY);
+        return {
+          url: image.url,
+          zoom: Math.min(Math.max(Number.isFinite(zoom) ? zoom : 1, 1), 3),
+          positionX: Math.min(Math.max(Number.isFinite(positionX) ? positionX : 50, 0), 100),
+          positionY: Math.min(Math.max(Number.isFinite(positionY) ? positionY : 50, 0), 100),
+        };
+      }
+    } catch {
+      // Blocos antigos armazenavam somente a URL no conteudo.
+    }
+    return { url: raw, zoom: 1, positionX: 50, positionY: 50 };
   }
 
   links(block: PerfilBloco): Array<{ nome: string; url: string }> {

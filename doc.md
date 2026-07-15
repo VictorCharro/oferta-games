@@ -13,7 +13,7 @@ O produto tambem tem contas, Jogos Monitorados para alertas de preco, perfis pub
 | Camada | Tecnologia | Hospedagem atual |
 |---|---|---|
 | Frontend | Angular 21 + TypeScript | Vercel |
-| Backend | Java 21 + Spring Boot 3 | Oracle Always Free via Docker; Render em retirada |
+| Backend | Java 21 + Spring Boot 3 | Oracle Always Free via Docker |
 | Banco e Auth | PostgreSQL + Supabase Auth + Storage | Supabase |
 | Precos | ITAD API | Consumida pelo backend |
 | Perfil gamer | Steam OpenID + Steam Web API | Consumida pelo backend |
@@ -28,19 +28,7 @@ O banco usa o transaction pooler do Supabase. A conversao da `DATABASE_URL` para
 
 ## Deploy e Operacao
 
-### Render
-
-| Campo | Valor |
-|---|---|
-| Runtime | Docker |
-| Root Directory | `backend-java` |
-| Dockerfile | `backend-java/Dockerfile` |
-| Health Check Path | `/actuator/health` |
-| Plano | Free, por enquanto |
-
-O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de heap `-Xmx384m`. O Render permanece somente como contingencia ate a troca do frontend ser validada.
-
-O bot externo que visita o health check deve ser desativado ao retirar o Render. Nao existe workflow de sincronizacao recorrente no GitHub Actions.
+O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de heap `-Xmx384m`. O Render esta desligado e nao deve receber novos deploys. Nao existe workflow de sincronizacao recorrente no GitHub Actions.
 
 ### Variaveis do backend
 
@@ -62,9 +50,9 @@ O bot externo que visita o health check deve ser desativado ao retirar o Render.
 
 Nunca colocar essas variaveis no Git ou em arquivos do frontend.
 
-### Migracao para Oracle
+### Oracle
 
-A VM Oracle Always Free em Sao Paulo foi criada com Ubuntu 24.04 ARM, `1 OCPU` e `6 GB`. A migracao permanece gradual: Render continua atendendo producao ate a Oracle receber Docker, variaveis, health check e HTTPS. O compose da VM fica em `deploy/oracle/compose.yml`, com o arquivo secreto `deploy/oracle/.env` criado somente no servidor. Ele inclui as chaves de banco/Supabase/ITAD/Steam, CORS, `FRONTEND_URL`, `API_DOMAIN` e `PUBLIC_BACKEND_URL`.
+A VM Oracle Always Free em Sao Paulo foi criada com Ubuntu 24.04 ARM, `1 OCPU` e `6 GB`. Ela atende a producao. O compose da VM fica em `deploy/oracle/compose.yml`, com o arquivo secreto `deploy/oracle/.env` criado somente no servidor. Ele inclui as chaves de banco/Supabase/ITAD/Steam, CORS, `FRONTEND_URL`, `API_DOMAIN` e `PUBLIC_BACKEND_URL`.
 
 O Caddy e executado no mesmo compose e entrega HTTPS na frente do backend, que nao expoe mais a porta 8080 fora da rede Docker. Enquanto nao houver dominio proprio, pode ser usado temporariamente `api.163.176.220.243.sslip.io`; ele aponta para o IP publico da VM. O frontend so deve trocar do Render para a Oracle depois que `https://<API_DOMAIN>/actuator/health` responder `UP`.
 
@@ -331,7 +319,7 @@ O modo de edicao permite reorganizar blocos por arrastar e soltar, mudar tamanho
 - paineis de favoritos pessoais, biblioteca e atividade;
 - blocos personalizados de texto, imagem e links.
 
-Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem, alem de cor de texto hexadecimal livre. Cor solida e texto aceitam seletor visual e digitacao direta de `#RRGGBB`; o gradiente e montado visualmente por duas cores, sem exigir CSS. A opcao de texto fica dentro do menu de fundo e altera somente o conteudo do card, nunca os controles do editor. A imagem de fundo e escolhida por um comando explicito e enviada ao bucket `avatars`; nao existe privacidade por bloco.
+Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem, alem de cor de texto hexadecimal livre. Cor solida e texto aceitam seletor visual e digitacao direta de `#RRGGBB`; o gradiente e montado visualmente por duas cores, sem exigir CSS. A opcao de texto fica dentro do menu de fundo e altera somente o conteudo do card, nunca os controles do editor. A imagem de fundo e escolhida por um comando explicito e enviada ao bucket `avatars`; nao existe privacidade por bloco. Blocos personalizados de imagem abrem um editor antes de salvar, com pre-visualizacao, zoom e posicionamento horizontal/vertical; esses dados sao persistidos junto da URL em formato compativel com blocos antigos que guardavam somente a URL. O editor de links separa titulo e lista de URLs no mesmo padrao visual dos demais campos.
 
 Os tamanhos sao composicoes diferentes, e nao apenas escala. Nos blocos de jogos, o pequeno mostra 1 card por linha, o medio 2, o largo 3 e o completo 4; os cards crescem verticalmente quando houver mais itens. Favoritos pessoais e biblioteca usam cards visuais com capa, titulo e dados relevantes. Favoritos Steam usam a capa horizontal oficial `header.jpg`, igual aos cards da biblioteca, e exibem plataforma, horas jogadas e percentual de conquistas; favoritos do catalogo exibem a capa e o menor preco conhecido. O bloco de Biblioteca tem o comando **Ver biblioteca** no canto superior direito e abre a aba completa, que permite busca, ordenacao e favoritar jogos Steam mesmo quando eles nao existem no catalogo.
 
@@ -405,7 +393,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 
 ### Planejado
 
-1. Validar completamente o editor de perfil em desktop e mobile.
+1. Validar completamente o editor de perfil em desktop e mobile, incluindo o enquadramento de imagem e os links personalizados.
 2. Evoluir favoritos pessoais com ordenacao manual, limite de exibicao e colecoes.
 3. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
 4. Implementar Xbox somente com um caminho oficial suportado.
