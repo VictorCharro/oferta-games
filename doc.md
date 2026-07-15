@@ -396,11 +396,12 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Pagina admin de coleta protegida por UID.
 - Editor de perfil persistido com blocos e upload de imagens.
 - Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada.
-- PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle ja usa o novo banco e executa o scheduler. O frontend esta configurado para o projeto novo e deve ser publicado na Vercel no mesmo corte; o Supabase antigo deve permanecer apenas como rollback ate a validacao final.
+- PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle usa o novo banco, executa o scheduler e expoe a API por Caddy/HTTPS. O frontend publicado na Vercel usa o mesmo projeto Supabase. O Render esta desligado; o Supabase antigo permanece somente como rollback temporario.
 
-### Em validacao no worktree atual
+### Em validacao
 
-- Faixa fixa de estatisticas e galerias de cards da Biblioteca/Favoritos no perfil. O build Angular passou; ainda e necessario conferir visualmente os quatro tamanhos de bloco em desktop e mobile antes do proximo push.
+- Faixa fixa de estatisticas e galerias de cards da Biblioteca/Favoritos no perfil. Conferir visualmente os quatro tamanhos de bloco em desktop e mobile conforme forem usados por perfis reais.
+- Validacao pos-migracao: login Google/Discord, catalogo, perfil, avatares, blocos e scheduler na Oracle. O projeto Supabase antigo so deve ser excluido apos essa validacao.
 
 ### Planejado
 
@@ -409,8 +410,8 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 3. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
 4. Implementar Xbox somente com um caminho oficial suportado.
 5. Integrar Eneba depois de aprovar afiliacao; Instant Gaming aguarda aprovacao.
-6. Concluir a migracao do Storage do Supabase com `frontend/scripts/migrar-storage-supabase.mjs`. O script exige variaveis de ambiente com URLs e chaves `service_role` da origem/destino; nunca salvar ou versionar essas chaves.
-7. Validar login Google/Discord, catalogo, perfil, avatares e blocos apos cada corte de infraestrutura. Manter o projeto Supabase antigo como rollback ate a validacao completa.
+6. Melhorar observabilidade operacional da Oracle: uso de memoria, erros do scheduler e status da API.
+7. Depois de alguns dias de estabilidade, exportar um ultimo backup e excluir o projeto Supabase antigo.
 
 ## Checklist antes de Publicar
 
