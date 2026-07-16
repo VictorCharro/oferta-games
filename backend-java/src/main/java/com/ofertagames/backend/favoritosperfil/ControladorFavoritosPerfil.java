@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -87,6 +88,14 @@ public class ControladorFavoritosPerfil {
     if (favoritos.removerSteam(usuarioId.get(), appId)) {
       atividades.registrar(usuarioId.get(), "FAVORITO_PESSOAL_STEAM_REMOVIDO", titulo);
     }
+    return ResponseEntity.ok(Map.of("ok", true));
+  }
+
+  @PutMapping("/ordem")
+  ResponseEntity<?> ordenar(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody(required = false) RequisicaoOrdemFavoritos requisicao) {
+    var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
+    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+    favoritos.reordenar(usuarioId.get(), requisicao == null ? java.util.List.of() : requisicao.itens());
     return ResponseEntity.ok(Map.of("ok", true));
   }
 }

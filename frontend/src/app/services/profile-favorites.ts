@@ -75,6 +75,12 @@ export class ProfileFavoritesService {
     this.steamAppIdsSubject.next(next);
   }
 
+  async reorder(itens: Array<{ slug: string | null; steamAppId: number | null }>): Promise<void> {
+    const headers = await this.authHeaders();
+    if (!headers) return;
+    await firstValueFrom(this.http.put(`${this.api}/ordem`, { itens }, { headers }));
+  }
+
   private async authHeaders(): Promise<{ Authorization: string } | null> {
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : null;

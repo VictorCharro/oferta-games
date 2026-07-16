@@ -242,6 +242,16 @@
             </div>
           </div>
         </div>
+        <div *ngIf="block.tipo === 'favoritos'" class="editor-custom-select" [class.open]="isEditorSelectOpen(block, 'limite')">
+          <button type="button" class="editor-select-trigger" (click)="toggleEditorSelect($event, block, 'limite')" [attr.aria-expanded]="isEditorSelectOpen(block, 'limite')" title="Quantos favoritos mostrar neste bloco">
+            <span>Mostrar: {{ selectedEditorOption(block, 'limite') }}</span><span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <div *ngIf="isEditorSelectOpen(block, 'limite')" class="editor-select-menu" role="listbox" aria-label="Quantidade de favoritos exibidos">
+            <button *ngFor="let option of favoriteLimitOptions" type="button" [class.selected]="(block.conteudo || '') === option.value" (click)="selectEditorOption(block, 'limite', option.value)">
+              <span>{{ option.label }}</span><span *ngIf="(block.conteudo || '') === option.value" class="option-check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+        </div>
         <div *ngIf="block.tipoFundo === 'cor'" class="color-control">
           <input type="color" [ngModel]="block.valorFundo || '#121a2a'" (ngModelChange)="block.valorFundo = $event" aria-label="Selecionar cor de fundo" />
           <input type="text" [(ngModel)]="block.valorFundo" maxlength="7" pattern="#[0-9a-fA-F]{6}" placeholder="#121A2A" aria-label="Cor de fundo em hexadecimal" />
@@ -364,8 +374,17 @@
       <h2>Jogos favoritos</h2>
       <a *ngIf="isOwner" routerLink="/catalogo" class="panel-link">Explorar catalogo</a>
     </div>
-    <div *ngIf="profile.favoritos.length; else noFavorites" class="profile-game-grid grid-completo favorites-gallery">
-      <article *ngFor="let game of profile.favoritos" class="profile-game-card">
+    <p *ngIf="isOwner && profile.favoritos.length > 1" class="favorites-reorder-hint">Arraste os cards para reordenar. A ordem e salva automaticamente.</p>
+    <div
+      *ngIf="profile.favoritos.length; else noFavorites"
+      class="profile-game-grid grid-completo favorites-gallery"
+      cdkDropList
+      cdkDropListOrientation="mixed"
+      [cdkDropListDisabled]="!isOwner"
+      (cdkDropListDropped)="dropFavorite($event)"
+    >
+      <article *ngFor="let game of profile.favoritos" class="profile-game-card" cdkDrag [cdkDragDisabled]="!isOwner">
+        <span *ngIf="isOwner" class="favorite-drag-handle" cdkDragHandle aria-label="Arrastar para reordenar" title="Arrastar para reordenar">↕</span>
         <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else favoriteCatalogDetail"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #favoriteCatalogDetail><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template></div></a>
         <button
           *ngIf="isOwner"

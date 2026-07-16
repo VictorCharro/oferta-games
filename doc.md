@@ -169,11 +169,12 @@ steam_game_achievements
   user_id, app_id, unlocked_count, total_count, last_synced_at
 
 profile_favorites
-  user_id, game_id, created_at
+  user_id, game_id, created_at, position
 
 profile_steam_favorites
-  user_id, app_id, created_at
+  user_id, app_id, created_at, position
   -- usado para jogos da biblioteca Steam ausentes do catalogo
+  -- position: sequencia manual unica por usuario, combinando as duas tabelas
 
 profile_activities
   user_id, type, game_id, detail, created_at
@@ -204,8 +205,9 @@ Arquivos em `backend-java/sql/`:
 13. `20260713_notificacoes_preco.sql`
 14. `20260713_cor_texto_blocos_perfil.sql`
 15. `20260716_banner_perfil.sql`
+16. `20260716_ordem_favoritos_perfil.sql`
 
-Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500.
+Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna.
 
 O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos e seus fundos. Cada usuario so pode gravar na propria pasta. As politicas RLS de `SELECT`, `INSERT`, `UPDATE` e `DELETE` foram aplicadas ao projeto novo em 15/07/2026; sem elas o Storage retorna HTTP 400 nos uploads. Limite de upload de imagem no frontend: 2 MB, JPG/PNG/WebP. Blocos de imagem e fundos tambem aceitam URL externa `http(s)`.
 
@@ -247,6 +249,8 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 - `DELETE /api/profile-favorites/{slug}`
 - `POST /api/profile-favorites/steam`
 - `DELETE /api/profile-favorites/steam/{appId}`
+- `PUT /api/profile-favorites/ordem`
+  - recebe `{ itens: [{ slug?, steamAppId? }] }` na ordem desejada e grava `position` 0,1,2... Novos favoritos entram no fim da fila.
 
 ### Steam e administracao
 
@@ -303,7 +307,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - A home mantem conteudo geral misturado. Se houver plataforma preferida, cria uma secao adicional **Jogos da sua plataforma favorita** abaixo de Jogos Monitorados, sem esconder o restante.
 - Preferencias de plataforma, ocultar DLC, desconto minimo e preco maximo preenchem inicialmente os filtros do catalogo; o usuario ainda pode altera-los.
 - Cards e detalhe usam o icone `jogos-monitorados.png` para monitoramento de preco. Nunca usar o icone de favorito pessoal nesse fluxo.
-- Favoritos pessoais sao outra funcionalidade, mostrada no perfil e biblioteca Steam.
+- Favoritos pessoais sao outra funcionalidade, mostrada no perfil e biblioteca Steam. Na aba **Jogos favoritos**, o dono reordena os cards por arrastar e soltar (ordem salva automaticamente via `PUT /api/profile-favorites/ordem`); visitantes so visualizam. A ordem manual e unica por usuario e vale para favoritos de catalogo e Steam juntos.
 
 ### Perfil publico e privado
 
@@ -326,7 +330,7 @@ Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem, alem de cor 
 
 Blocos de texto e links respeitam limites conforme o tamanho escolhido: pequeno (`42` caracteres de titulo e `180` de conteudo), medio (`64` e `420`), largo (`88` e `800`) e completo (`120` e `1400`). O conteudo aplica quebra de palavras longas para nunca vazar horizontalmente do card.
 
-Os tamanhos sao composicoes diferentes, e nao apenas escala. Nos blocos de jogos, o pequeno mostra 1 card por linha, o medio 2, o largo 3 e o completo 4; os cards crescem verticalmente quando houver mais itens. Favoritos pessoais e biblioteca usam cards visuais com capa, titulo e dados relevantes. Favoritos Steam usam a capa horizontal oficial `header.jpg`, igual aos cards da biblioteca, e exibem plataforma, horas jogadas e percentual de conquistas; favoritos do catalogo exibem a capa e o menor preco conhecido. O bloco de Biblioteca tem o comando **Ver biblioteca** no canto superior direito e abre a aba completa, que permite busca, ordenacao e favoritar jogos Steam mesmo quando eles nao existem no catalogo.
+Os tamanhos sao composicoes diferentes, e nao apenas escala. Nos blocos de jogos, o pequeno mostra 1 card por linha, o medio 2, o largo 3 e o completo 4; os cards crescem verticalmente quando houver mais itens. O bloco de favoritos tem ainda um seletor **Mostrar** (Padrao/4/8/12/20/Todos) que define quantos favoritos aparecem naquele bloco; o limite escolhido e guardado no `conteudo` do bloco (vazio = padrao por tamanho: pequeno 1, medio 4, largo 6, completo 8). Favoritos pessoais e biblioteca usam cards visuais com capa, titulo e dados relevantes. Favoritos Steam usam a capa horizontal oficial `header.jpg`, igual aos cards da biblioteca, e exibem plataforma, horas jogadas e percentual de conquistas; favoritos do catalogo exibem a capa e o menor preco conhecido. O bloco de Biblioteca tem o comando **Ver biblioteca** no canto superior direito e abre a aba completa, que permite busca, ordenacao e favoritar jogos Steam mesmo quando eles nao existem no catalogo.
 
 Os dropdowns de tamanho e fundo devem seguir o mesmo padrao visual do filtro de ordenacao do catalogo, nao usar `select` nativo. Links personalizados usam uma linha por item no formato `Nome - endereco.com` ou `Nome - https://url`; enderecos sem protocolo recebem `https://` automaticamente e devem abrir como links reais. No perfil publico, cada link renderiza como um card empilhado (nao mais uma pill inline), com o nome a esquerda e um icone de link externo a direita.
 
@@ -389,23 +393,22 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Pagina admin de coleta protegida por UID.
 - Editor de perfil persistido com blocos (favoritos, biblioteca, atividade, texto, links, imagem), upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`, validado em desktop. O enquadramento de imagens de bloco aceita zoom por scroll/pinca e reposicionamento por arrasto direto na previa, em mouse ou toque.
 - Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada.
+- Favoritos pessoais com ordenacao manual (arrastar e soltar, persistida) e limite de exibicao configuravel por bloco. Colecoes de favoritos ainda nao implementadas.
 - PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle usa o novo banco, executa o scheduler e expoe a API por Caddy/HTTPS. O frontend publicado na Vercel usa o mesmo projeto Supabase. O Render esta desligado; o Supabase antigo permanece somente como rollback temporario.
 - Validacao pos-migracao concluida: login Google/Discord, catalogo, perfil, avatares, blocos e scheduler confirmados funcionando na Oracle com o Supabase novo.
 
 ### Em validacao
 
-- Faixa fixa de estatisticas e galerias de cards da Biblioteca/Favoritos no perfil. Conferir visualmente os quatro tamanhos de bloco em desktop e mobile conforme forem usados por perfis reais.
 - O layout mobile do editor de perfil ainda nao e responsivo e nao esta sendo trabalhado por enquanto (prioridade e desktop).
 
 ### Planejado
 
-1. Concluir a validacao do editor de perfil em desktop (texto, links, fundo) antes de investir em responsividade mobile.
-2. Evoluir favoritos pessoais com ordenacao manual, limite de exibicao e colecoes.
-3. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
-4. Implementar Xbox somente com um caminho oficial suportado.
-5. Integrar Eneba depois de aprovar afiliacao; Instant Gaming aguarda aprovacao.
-6. Melhorar observabilidade operacional da Oracle: uso de memoria, erros do scheduler e status da API.
-7. Depois de alguns dias de estabilidade, exportar um ultimo backup e excluir o projeto Supabase antigo.
+1. Evoluir favoritos pessoais com colecoes (ordenacao manual e limite de exibicao ja implementados).
+2. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
+3. Implementar Xbox somente com um caminho oficial suportado (pausado ate acesso ao Azure).
+4. Integrar Eneba depois de aprovar afiliacao; Instant Gaming aguarda aprovacao.
+5. Melhorar observabilidade operacional da Oracle: uso de memoria, erros do scheduler e status da API.
+6. Depois de alguns dias de estabilidade, exportar um ultimo backup e excluir o projeto Supabase antigo.
 
 ## Checklist antes de Publicar
 

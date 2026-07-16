@@ -56,7 +56,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   private bannerDisplayNaturalWidth = 0;
   private bannerDisplayNaturalHeight = 0;
   private bannerDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
-  editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
+  editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' | 'limite' } | null = null;
   textColorMenuBlockId: string | null = null;
   blockImageEditingId: string | null = null;
   blockImagePreview = '';
@@ -85,6 +85,14 @@ export class PublicProfile implements OnInit, OnDestroy {
     { value: 'cor', label: 'Cor sólida' },
     { value: 'gradiente', label: 'Gradiente' },
     { value: 'imagem', label: 'Imagem' },
+  ];
+  readonly favoriteLimitOptions = [
+    { value: '', label: 'Padrão' },
+    { value: '4', label: '4 jogos' },
+    { value: '8', label: '8 jogos' },
+    { value: '12', label: '12 jogos' },
+    { value: '20', label: '20 jogos' },
+    { value: 'todos', label: 'Todos' },
   ];
   private avatarFile: File | null = null;
   private routeSub?: Subscription;
@@ -181,18 +189,19 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.textColorMenuBlockId = null;
   }
 
-  isEditorSelectOpen(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
+  isEditorSelectOpen(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo' | 'limite') {
     return this.editorSelectOpen?.blockId === block.id && this.editorSelectOpen.campo === campo;
   }
 
-  toggleEditorSelect(event: MouseEvent, block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
+  toggleEditorSelect(event: MouseEvent, block: PerfilBloco, campo: 'tamanho' | 'tipoFundo' | 'limite') {
     event.stopPropagation();
     this.editorSelectOpen = this.isEditorSelectOpen(block, campo) ? null : { blockId: block.id, campo };
     this.textColorMenuBlockId = null;
   }
 
-  selectEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo', value: string) {
+  selectEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo' | 'limite', value: string) {
     if (campo === 'tamanho') block.tamanho = value as PerfilBloco['tamanho'];
+    else if (campo === 'limite') block.conteudo = value;
     else {
       block.tipoFundo = value as PerfilBloco['tipoFundo'];
       if (value === 'cor' && !block.valorFundo?.match(/^#[0-9a-fA-F]{6}$/)) block.valorFundo = '#121a2a';
@@ -211,7 +220,8 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.editorSelectOpen = { blockId: block.id, campo: 'tipoFundo' };
   }
 
-  selectedEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
+  selectedEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo' | 'limite') {
+    if (campo === 'limite') return this.favoriteLimitOptions.find(option => option.value === (block.conteudo || ''))?.label || 'Padrão';
     const options = campo === 'tamanho' ? this.sizeOptions : this.backgroundOptions;
     const value = campo === 'tamanho' ? block.tamanho : block.tipoFundo;
     return options.find(option => option.value === value)?.label || '';
@@ -228,6 +238,19 @@ export class PublicProfile implements OnInit, OnDestroy {
   dropBlock(event: CdkDragDrop<PerfilBloco[]>) {
     moveItemInArray(this.layoutDraft, event.previousIndex, event.currentIndex);
     this.layoutDraft.forEach((block, index) => block.posicao = index);
+  }
+
+  async dropFavorite(event: CdkDragDrop<unknown>) {
+    if (!this.profile || !this.isOwner || event.previousIndex === event.currentIndex) return;
+    moveItemInArray(this.profile.favoritos, event.previousIndex, event.currentIndex);
+    this.cdr.detectChanges();
+    try {
+      await this.profileFavorites.reorder(this.profile.favoritos.map(game => ({ slug: game.slug, steamAppId: game.steamAppId })));
+    } catch {
+      this.message = 'Nao foi possivel salvar a nova ordem dos favoritos.';
+      this.profile.favoritos = await this.profileFavorites.load();
+      this.cdr.detectChanges();
+    }
   }
 
   addBlock(tipo: PerfilBloco['tipo']) {
@@ -591,7 +614,15 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   favoritePreview(block: PerfilBloco) {
-    return this.profile?.favoritos.slice(0, this.previewLimit(block.tamanho)) || [];
+    return this.profile?.favoritos.slice(0, this.favoriteDisplayLimit(block)) || [];
+  }
+
+  // O limite escolhido no editor fica guardado no conteudo do bloco de favoritos (vazio = padrao por tamanho).
+  favoriteDisplayLimit(block: PerfilBloco): number {
+    if (block.conteudo === 'todos') return this.profile?.favoritos.length || 0;
+    const escolhido = Number(block.conteudo);
+    if (Number.isFinite(escolhido) && escolhido > 0) return escolhido;
+    return this.previewLimit(block.tamanho);
   }
 
   libraryPreview(block: PerfilBloco) {

@@ -179,6 +179,14 @@ app-public-profile .gallery-remove { padding: 5px 7px; border-radius: 6px; backg
 app-public-profile .gallery-favorite { width: 28px; height: 28px; border-color: rgba(255, 255, 255, .28); border-radius: 6px; background: rgba(8, 13, 24, .9); }
 app-public-profile .gallery-favorite img { width: 17px; height: 17px; }
 app-public-profile .favorites-gallery, app-public-profile .library-gallery { margin-top: 4px; }
+app-public-profile .favorites-reorder-hint { margin: -4px 0 12px; color: var(--text-muted); font-size: 12px; }
+app-public-profile .favorite-drag-handle { position: absolute; top: 8px; left: 50%; z-index: 3; display: grid; width: 28px; height: 24px; place-items: center; transform: translateX(-50%); border: 1px solid rgba(255, 255, 255, .18); border-radius: 6px; background: rgba(8, 13, 24, .9); color: #fff; cursor: grab; font-size: 14px; line-height: 1; }
+app-public-profile .favorite-drag-handle:active { cursor: grabbing; }
+app-public-profile .favorites-gallery .profile-game-card.cdk-drag-preview { overflow: hidden; box-shadow: 0 18px 40px rgba(0, 0, 0, .5); }
+app-public-profile .favorites-gallery .cdk-drag-placeholder { opacity: .3; }
+app-public-profile .favorites-gallery .cdk-drag-preview .favorite-drag-handle { display: none; }
+app-public-profile .favorites-gallery.cdk-drop-list-dragging .profile-game-card:not(.cdk-drag-placeholder) { transition: transform .2s cubic-bezier(0, 0, .2, 1); }
+app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(0, 0, .2, 1); }
 
 @media (max-width: 900px) {
   app-public-profile .profile-stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
