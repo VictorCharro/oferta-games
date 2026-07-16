@@ -101,14 +101,15 @@ app-public-profile .profile-block.size-pequeno h2 { margin-bottom: 10px; font-si
 app-public-profile .profile-block.size-pequeno .editable-stat { min-height: 72px; gap: 12px; }
 app-public-profile .profile-block.size-pequeno .editable-stat > img { width: 42px; height: 42px; }
 app-public-profile .profile-block.size-pequeno .editable-stat strong { font-size: 24px; }
-app-public-profile .profile-block.size-pequeno .profile-favorite-item:not(:first-child), app-public-profile .profile-block.size-pequeno .activity-item:nth-child(n+3) { display: none; }
+app-public-profile .profile-block.size-pequeno .profile-favorite-item:not(:first-child) { display: none; }
 app-public-profile .profile-block.size-pequeno .profile-favorite-item { padding: 0; border: 0; }
 app-public-profile .profile-block.size-pequeno .profile-favorite-item img { width: 58px; }
 app-public-profile .profile-block.size-pequeno .library-content { grid-template-columns: 1fr auto; gap: 12px; }
 app-public-profile .profile-block.size-pequeno .library-total { align-items: flex-start; padding: 0; border: 0; }
 app-public-profile .profile-block.size-pequeno .library-total strong, app-public-profile .profile-block.size-pequeno .platform-split strong { font-size: 24px; }
-app-public-profile .profile-block.size-pequeno .activity-item { gap: 8px; padding: 7px 0; font-size: 12px; }
-app-public-profile .profile-block.size-pequeno .activity-item small { display: none; }
+app-public-profile .profile-block.size-pequeno .activity-item { grid-template-columns: 20px minmax(0, 1fr) auto; align-items: start; gap: 8px; padding: 8px 0; font-size: 12px; }
+app-public-profile .profile-block.size-pequeno .activity-item span { min-width: 0; overflow-wrap: anywhere; }
+app-public-profile .profile-block.size-pequeno .activity-item small { display: block; padding-top: 1px; font-size: 11px; }
 app-public-profile .profile-block.size-pequeno .custom-image { max-height: 150px; }
 app-public-profile .profile-block.size-medio { min-height: 220px; }
 app-public-profile .profile-block.size-medio .profile-favorite-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }

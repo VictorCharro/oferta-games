@@ -72,6 +72,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   private blockImageNaturalWidth = 0;
   private blockImageNaturalHeight = 0;
   private blockImageDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
+  private blockImagePointerId: number | null = null;
   private readonly customImageNaturalSize = new Map<string, { width: number; height: number }>();
   readonly sizeOptions = [
     { value: 'pequeno', label: 'Pequeno' },
@@ -365,12 +366,14 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.blockImageFile = null;
     this.blockImageExternalUrl = '';
     this.blockImageDrag = null;
+    this.blockImagePointerId = null;
   }
 
   onBlockCropImageLoad(event: Event) {
     const img = event.target as HTMLImageElement;
     this.blockImageNaturalWidth = img.naturalWidth;
     this.blockImageNaturalHeight = img.naturalHeight;
+    this.cdr.detectChanges();
   }
 
   blockImageEditStyle(): Record<string, string> {
@@ -386,35 +389,59 @@ export class PublicProfile implements OnInit, OnDestroy {
     );
   }
 
-  onBlockImageDragStart(event: MouseEvent | TouchEvent) {
+  private blockImageAspectRatio(tamanho: PerfilBloco['tamanho']): number {
+    switch (tamanho) {
+      case 'pequeno': return 1;
+      case 'medio': return 4 / 3;
+      case 'largo': return 16 / 9;
+      case 'completo': return 21 / 9;
+      default: return 4 / 3;
+    }
+  }
+
+  blockImagePreviewSize(tamanho: PerfilBloco['tamanho']): Record<string, string> {
+    const maxWidth = 576;
+    const maxHeight = 420;
+    const ratio = this.blockImageAspectRatio(tamanho);
+    let width = maxWidth;
+    let height = width / ratio;
+    if (height > maxHeight) {
+      height = maxHeight;
+      width = height * ratio;
+    }
+    return { width: `${width}px`, height: `${height}px` };
+  }
+
+  onBlockImagePointerStart(event: PointerEvent) {
     event.preventDefault();
-    const point = 'touches' in event ? event.touches[0] : event;
+    const frame = event.currentTarget as HTMLDivElement;
+    frame.setPointerCapture(event.pointerId);
+    this.blockImagePointerId = event.pointerId;
     this.blockImageDrag = {
-      startX: point.clientX,
-      startY: point.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
       startPosX: this.blockImagePositionX,
       startPosY: this.blockImagePositionY,
     };
   }
 
-  @HostListener('document:mousemove', ['$event'])
-  @HostListener('document:touchmove', ['$event'])
-  onBlockImageDragMove(event: MouseEvent | TouchEvent) {
-    if (!this.blockImageDrag) return;
+  onBlockImagePointerMove(event: PointerEvent) {
+    if (!this.blockImageDrag || this.blockImagePointerId !== event.pointerId) return;
     event.preventDefault();
-    const point = 'touches' in event ? event.touches[0] : event;
     const frame = this.blockCropFrame?.nativeElement;
     const geo = this.coverGeometry(frame?.clientWidth || 0, frame?.clientHeight || 0, this.blockImageNaturalWidth, this.blockImageNaturalHeight, this.blockImageZoom);
-    const dx = point.clientX - this.blockImageDrag.startX;
-    const dy = point.clientY - this.blockImageDrag.startY;
+    const dx = event.clientX - this.blockImageDrag.startX;
+    const dy = event.clientY - this.blockImageDrag.startY;
     this.blockImagePositionX = this.clampPercent(this.blockImageDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
     this.blockImagePositionY = this.clampPercent(this.blockImageDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
   }
 
-  @HostListener('document:mouseup')
-  @HostListener('document:touchend')
-  onBlockImageDragEnd() {
+  onBlockImagePointerEnd(event: PointerEvent) {
+    if (this.blockImagePointerId !== event.pointerId) return;
+    const frame = event.currentTarget as HTMLDivElement;
+    if (frame.hasPointerCapture(event.pointerId)) frame.releasePointerCapture(event.pointerId);
     this.blockImageDrag = null;
+    this.blockImagePointerId = null;
   }
 
   onBlockImageWheel(event: WheelEvent) {

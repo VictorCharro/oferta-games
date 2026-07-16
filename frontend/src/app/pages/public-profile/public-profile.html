@@ -286,8 +286,11 @@
               <div
                 class="block-image-crop-preview"
                 #blockCropFrame
-                (mousedown)="onBlockImageDragStart($event)"
-                (touchstart)="onBlockImageDragStart($event)"
+                [ngStyle]="blockImagePreviewSize(block.tamanho)"
+                (pointerdown)="onBlockImagePointerStart($event)"
+                (pointermove)="onBlockImagePointerMove($event)"
+                (pointerup)="onBlockImagePointerEnd($event)"
+                (pointercancel)="onBlockImagePointerEnd($event)"
                 (wheel)="onBlockImageWheel($event)"
               >
                 <img [src]="blockImagePreview" alt="Previa da imagem" (load)="onBlockCropImageLoad($event)" [ngStyle]="blockImageEditStyle()" draggable="false" />
