@@ -266,10 +266,10 @@
             <textarea
               [(ngModel)]="block.conteudo"
               [maxlength]="maxContentLength(block)"
-              [placeholder]="block.tipo === 'links' ? 'Nome | exemplo.com (uma linha por link)' : 'Conteudo'"
+              [placeholder]="block.tipo === 'links' ? 'Nome - exemplo.com (uma linha por link)' : 'Conteudo'"
             ></textarea>
           </label>
-          <small *ngIf="block.tipo === 'links'">Use um link por linha: nome | endereco.com</small>
+          <small *ngIf="block.tipo === 'links'">Use um link por linha: nome - endereco.com</small>
         </div>
         <ng-container *ngIf="block.tipo === 'imagem'">
           <input #contentImageInput class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" (change)="onBlockImageSelected($event, block)" />

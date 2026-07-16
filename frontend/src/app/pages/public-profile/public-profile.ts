@@ -515,9 +515,13 @@ export class PublicProfile implements OnInit, OnDestroy {
   links(block: PerfilBloco): Array<{ nome: string; url: string }> {
     return (block.conteudo || '')
       .split('\n')
-      .map(linha => linha.split('|').map(valor => valor.trim()))
-      .map(([nome, endereco]) => {
-        const url = this.normalizarUrlLink(endereco || '');
+      .map(linha => {
+        // Aceita o formato atual "Nome - url" e o antigo "Nome | url", para nao quebrar links ja salvos.
+        const separador = linha.includes(' - ') ? linha.indexOf(' - ') : linha.indexOf('|');
+        const tamanhoSeparador = linha.includes(' - ') ? 3 : 1;
+        const nome = separador === -1 ? '' : linha.slice(0, separador).trim();
+        const endereco = separador === -1 ? linha.trim() : linha.slice(separador + tamanhoSeparador).trim();
+        const url = this.normalizarUrlLink(endereco);
         return url ? { nome: nome || url, url } : null;
       })
       .filter((link): link is { nome: string; url: string } => link !== null);
