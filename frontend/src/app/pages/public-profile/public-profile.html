@@ -1,4 +1,4 @@
-<div class="page-content public-profile" *ngIf="profile; else pageState">
+<div class="page-content public-profile" [class.editor-mode]="editingLayout && activeTab === 'resumo'" *ngIf="profile; else pageState">
   <section class="public-hero" #bannerFrame>
     <div class="hero-banner" *ngIf="profile.bannerUrl">
       <img [src]="profile.bannerUrl" alt="" (load)="onBannerDisplayLoad($event)" [ngStyle]="bannerDisplayStyle(bannerFrame)" />
@@ -176,14 +176,18 @@
 
   <section class="layout-editor" *ngIf="editingLayout && activeTab === 'resumo'">
     <div class="editor-heading">
-      <strong>Modo de edição</strong
-      ><span>Arraste os blocos, ajuste a aparência e salve quando terminar.</span>
-      <div>
+      <div class="editor-heading-info">
+        <strong>Modo de edição</strong>
+        <span>Arraste os blocos, ajuste a aparência e salve quando terminar.</span>
+      </div>
+      <div class="editor-heading-add">
         <button type="button" (click)="addBlock('favoritos')">Jogos favoritos</button><button type="button" (click)="addBlock('biblioteca')">Biblioteca</button><button type="button" (click)="addBlock('atividade')">Atividade</button><button type="button" (click)="addBlock('texto')">Texto</button
         ><button type="button" (click)="addBlock('imagem')">Imagem</button
-        ><button type="button" (click)="addBlock('links')">Links</button
-        ><button type="button" class="ghost-btn" (click)="cancelLayoutEdit()">Cancelar</button
-        ><button type="button" class="save-btn" (click)="saveLayout()" [disabled]="savingLayout">
+        ><button type="button" (click)="addBlock('links')">Links</button>
+      </div>
+      <div class="editor-heading-actions">
+        <button type="button" class="ghost-btn" (click)="cancelLayoutEdit()">Cancelar</button>
+        <button type="button" class="save-btn" (click)="saveLayout()" [disabled]="savingLayout">
           {{ savingLayout ? 'Salvando...' : 'Salvar' }}
         </button>
       </div>
