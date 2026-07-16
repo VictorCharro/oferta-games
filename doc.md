@@ -308,7 +308,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - E-mail, UUID, Jogos Monitorados e dados de autenticacao nunca sao publicos.
 - O dono escolhe a exposicao de horas, conquistas, biblioteca, favoritos pessoais e atividade recente. O backend filtra a resposta publica.
 - O dono na propria URL canonica ve controles de avatar, bio, atualizacao e modo de edicao; visitantes nao veem esses comandos.
-- O avatar e salvo no Storage com zoom e posicao persistidos para todos verem o mesmo enquadramento.
+- O avatar e salvo no Storage com zoom e posicao persistidos para todos verem o mesmo enquadramento. O ajuste usa o mesmo editor em modal dos blocos de imagem: arrastar com mouse/touch para posicionar e scroll/pinca para zoom, com folga minima de 115% para sempre permitir arrastar em qualquer direcao, calculado em pixels reais (imagem x quadro) tanto no modal quanto na exibicao final do avatar.
 - A primeira sincronizacao Steam gera somente os resumos. Nas posteriores, novos jogos e conquistas viram atividades individuais.
 - A atividade recente e publica por padrao, salvo escolha do dono na privacidade.
 
@@ -384,18 +384,19 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Login Supabase, perfis compartilhaveis, avatar persistente, bio e privacidade geral.
 - Steam OpenID, biblioteca, horas, conquistas, favoritos pessoais e atividade recente.
 - Pagina admin de coleta protegida por UID.
-- Editor de perfil persistido com blocos, upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`.
+- Editor de perfil persistido com blocos (favoritos, biblioteca, atividade, texto, links, imagem), upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`, validado em desktop.
 - Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada.
 - PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle usa o novo banco, executa o scheduler e expoe a API por Caddy/HTTPS. O frontend publicado na Vercel usa o mesmo projeto Supabase. O Render esta desligado; o Supabase antigo permanece somente como rollback temporario.
+- Validacao pos-migracao concluida: login Google/Discord, catalogo, perfil, avatares, blocos e scheduler confirmados funcionando na Oracle com o Supabase novo.
 
 ### Em validacao
 
 - Faixa fixa de estatisticas e galerias de cards da Biblioteca/Favoritos no perfil. Conferir visualmente os quatro tamanhos de bloco em desktop e mobile conforme forem usados por perfis reais.
-- Validacao pos-migracao: login Google/Discord, catalogo, perfil, avatares, blocos e scheduler na Oracle. O projeto Supabase antigo so deve ser excluido apos essa validacao.
+- O layout mobile do editor de perfil ainda nao e responsivo e nao esta sendo trabalhado por enquanto (prioridade e desktop).
 
 ### Planejado
 
-1. Validar completamente o editor de perfil em desktop e mobile, incluindo o enquadramento de imagem e os links personalizados.
+1. Concluir a validacao do editor de perfil em desktop (texto, links, fundo) antes de investir em responsividade mobile.
 2. Evoluir favoritos pessoais com ordenacao manual, limite de exibicao e colecoes.
 3. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
 4. Implementar Xbox somente com um caminho oficial suportado.

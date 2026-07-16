@@ -36,6 +36,13 @@ export class PublicProfile implements OnInit, OnDestroy {
   avatarPositionY = 50;
   avatarPreview = '';
   avatarEditing = false;
+  readonly avatarMinZoom = 1.15;
+  @ViewChild('avatarCropFrame') avatarCropFrame?: ElementRef<HTMLDivElement>;
+  private avatarNaturalWidth = 0;
+  private avatarNaturalHeight = 0;
+  private avatarDisplayNaturalWidth = 0;
+  private avatarDisplayNaturalHeight = 0;
+  private avatarDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
   editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
   textColorMenuBlockId: string | null = null;
   blockImageEditingId: string | null = null;
@@ -757,9 +764,11 @@ export class PublicProfile implements OnInit, OnDestroy {
 
     this.avatarPreview = URL.createObjectURL(file);
     this.avatarFile = file;
-    this.avatarZoom = 1;
+    this.avatarZoom = this.avatarMinZoom;
     this.avatarPositionX = 50;
     this.avatarPositionY = 50;
+    this.avatarNaturalWidth = 0;
+    this.avatarNaturalHeight = 0;
     this.avatarEditing = true;
     input.value = '';
     this.cdr.detectChanges();
@@ -770,9 +779,68 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.avatarPreview = '';
     this.avatarFile = null;
     this.avatarEditing = false;
+    this.avatarDrag = null;
     this.avatarZoom = this.profile?.avatarZoom || 1;
     this.avatarPositionX = this.profile?.avatarPosicaoX ?? 50;
     this.avatarPositionY = this.profile?.avatarPosicaoY ?? 50;
+  }
+
+  onAvatarDisplayLoad(event: Event) {
+    const img = event.target as HTMLImageElement;
+    this.avatarDisplayNaturalWidth = img.naturalWidth;
+    this.avatarDisplayNaturalHeight = img.naturalHeight;
+  }
+
+  avatarDisplayStyle(frame: HTMLElement): Record<string, string> {
+    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarDisplayNaturalWidth, this.avatarDisplayNaturalHeight, this.avatarZoom, this.avatarPositionX, this.avatarPositionY);
+  }
+
+  onAvatarCropImageLoad(event: Event) {
+    const img = event.target as HTMLImageElement;
+    this.avatarNaturalWidth = img.naturalWidth;
+    this.avatarNaturalHeight = img.naturalHeight;
+  }
+
+  avatarEditStyle(): Record<string, string> {
+    const frame = this.avatarCropFrame?.nativeElement;
+    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarNaturalWidth, this.avatarNaturalHeight, this.avatarZoom, this.avatarPositionX, this.avatarPositionY);
+  }
+
+  onAvatarDragStart(event: MouseEvent | TouchEvent) {
+    event.preventDefault();
+    const point = 'touches' in event ? event.touches[0] : event;
+    this.avatarDrag = {
+      startX: point.clientX,
+      startY: point.clientY,
+      startPosX: this.avatarPositionX,
+      startPosY: this.avatarPositionY,
+    };
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  @HostListener('document:touchmove', ['$event'])
+  onAvatarDragMove(event: MouseEvent | TouchEvent) {
+    if (!this.avatarDrag) return;
+    event.preventDefault();
+    const point = 'touches' in event ? event.touches[0] : event;
+    const frame = this.avatarCropFrame?.nativeElement;
+    const geo = this.coverGeometry(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarNaturalWidth, this.avatarNaturalHeight, this.avatarZoom);
+    const dx = point.clientX - this.avatarDrag.startX;
+    const dy = point.clientY - this.avatarDrag.startY;
+    this.avatarPositionX = this.clampPercent(this.avatarDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
+    this.avatarPositionY = this.clampPercent(this.avatarDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
+  }
+
+  @HostListener('document:mouseup')
+  @HostListener('document:touchend')
+  onAvatarDragEnd() {
+    this.avatarDrag = null;
+  }
+
+  onAvatarWheel(event: WheelEvent) {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -0.1 : 0.1;
+    this.avatarZoom = Math.min(3, Math.max(this.avatarMinZoom, +(this.avatarZoom + delta).toFixed(2)));
   }
 
   async saveAvatarEdit() {
