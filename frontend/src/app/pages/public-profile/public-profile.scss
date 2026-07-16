@@ -18,7 +18,7 @@
 .hero-banner { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
 .hero-banner img { position: absolute; }
 .hero-banner::after { position: absolute; inset: 0; background: linear-gradient(120deg, rgba(8, 13, 24, .55), rgba(8, 13, 24, .75) 45%, rgba(8, 13, 24, .92)); content: ''; }
-.edit-banner { position: absolute; top: 16px; left: 16px; z-index: 2; padding: 8px 14px; border: 1px solid var(--color-purple); border-radius: 999px; background: rgba(8, 13, 24, .55); color: var(--color-purple); cursor: pointer; font-size: 13px; font-weight: 700; }
+.edit-banner { position: absolute; top: 16px; right: 104px; z-index: 2; height: 36px; padding: 0 14px; display: grid; place-items: center; border: 1px solid var(--color-purple); border-radius: 999px; background: rgba(8, 13, 24, .55); color: var(--color-purple); cursor: pointer; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .block-image-crop-preview.banner-crop-preview { height: min(45vh, 280px); }
 
 .public-main { position: relative; z-index: 1; display: flex; align-items: center; gap: 28px; min-width: 0; }
