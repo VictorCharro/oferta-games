@@ -156,6 +156,7 @@ profiles
   show_game_hours, show_achievements, show_library
   show_favorite_games, show_recent_activity
   avatar_zoom, avatar_position_x, avatar_position_y
+  banner_url, banner_zoom, banner_position_x, banner_position_y
 
 steam_connections
   user_id, steam_id, persona_name, avatar_url
@@ -202,8 +203,9 @@ Arquivos em `backend-java/sql/`:
 12. `20260713_favoritos_steam_perfil.sql`
 13. `20260713_notificacoes_preco.sql`
 14. `20260713_cor_texto_blocos_perfil.sql`
+15. `20260716_banner_perfil.sql`
 
-Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500.
+Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500.
 
 O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos e seus fundos. Cada usuario so pode gravar na propria pasta. As politicas RLS de `SELECT`, `INSERT`, `UPDATE` e `DELETE` foram aplicadas ao projeto novo em 15/07/2026; sem elas o Storage retorna HTTP 400 nos uploads. Limite de upload de imagem no frontend: 2 MB, JPG/PNG/WebP. Blocos de imagem e fundos tambem aceitam URL externa `http(s)`.
 
@@ -236,6 +238,7 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 - `GET /api/perfis/me`
 - `PUT /api/perfis/me`
 - `PUT /api/perfis/me/avatar`
+- `PUT /api/perfis/me/banner`
 - `GET|PUT /api/perfis/me/blocos`
 - `GET /api/perfis/{handle}`
 - `POST /api/perfis/{handle}/atualizar`
@@ -307,8 +310,8 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - Perfis novos sao publicos por padrao. O dono pode tornar o perfil privado em Configuracoes > Privacidade.
 - E-mail, UUID, Jogos Monitorados e dados de autenticacao nunca sao publicos.
 - O dono escolhe a exposicao de horas, conquistas, biblioteca, favoritos pessoais e atividade recente. O backend filtra a resposta publica.
-- O dono na propria URL canonica ve controles de avatar, bio, atualizacao e modo de edicao; visitantes nao veem esses comandos.
-- O avatar e salvo no Storage com zoom e posicao persistidos para todos verem o mesmo enquadramento. O ajuste usa o mesmo editor em modal dos blocos de imagem: arrastar com mouse/touch para posicionar e scroll/pinca para zoom, com folga minima de 115% para sempre permitir arrastar em qualquer direcao, calculado em pixels reais (imagem x quadro) tanto no modal quanto na exibicao final do avatar.
+- O dono na propria URL canonica ve controles de avatar, banner, bio, atualizacao e modo de edicao; visitantes nao veem esses comandos.
+- O avatar e o banner do topo do perfil sao salvos no Storage com zoom e posicao persistidos para todos verem o mesmo enquadramento. O ajuste usa o mesmo editor em modal dos blocos de imagem: arrastar com mouse/touch para posicionar e scroll/pinca para zoom, com folga minima de 115% para sempre permitir arrastar em qualquer direcao, calculado em pixels reais (imagem x quadro) tanto no modal quanto na exibicao final. Os botoes "Trocar foto" e "Trocar banner" só aparecem no modo de edicao do perfil.
 - A primeira sincronizacao Steam gera somente os resumos. Nas posteriores, novos jogos e conquistas viram atividades individuais.
 - A atividade recente e publica por padrao, salvo escolha do dono na privacidade.
 

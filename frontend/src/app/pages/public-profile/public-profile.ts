@@ -43,6 +43,19 @@ export class PublicProfile implements OnInit, OnDestroy {
   private avatarDisplayNaturalWidth = 0;
   private avatarDisplayNaturalHeight = 0;
   private avatarDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
+  bannerZoom = 1;
+  bannerPositionX = 50;
+  bannerPositionY = 50;
+  bannerPreview = '';
+  bannerEditing = false;
+  readonly bannerMinZoom = 1.15;
+  @ViewChild('bannerCropFrame') bannerCropFrame?: ElementRef<HTMLDivElement>;
+  private bannerFile: File | null = null;
+  private bannerNaturalWidth = 0;
+  private bannerNaturalHeight = 0;
+  private bannerDisplayNaturalWidth = 0;
+  private bannerDisplayNaturalHeight = 0;
+  private bannerDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
   editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
   textColorMenuBlockId: string | null = null;
   blockImageEditingId: string | null = null;
@@ -124,6 +137,9 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.avatarZoom = profile.avatarZoom || 1;
       this.avatarPositionX = profile.avatarPosicaoX ?? 50;
       this.avatarPositionY = profile.avatarPosicaoY ?? 50;
+      this.bannerZoom = profile.bannerZoom || 1;
+      this.bannerPositionX = profile.bannerPosicaoX ?? 50;
+      this.bannerPositionY = profile.bannerPosicaoY ?? 50;
 
       try {
         const own = await this.perfis.proprio();
@@ -869,6 +885,119 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.cancelAvatarEdit();
     } catch {
       this.message = 'A foto foi enviada, mas nao foi possivel vincula-la ao perfil.';
+    }
+    this.cdr.detectChanges();
+  }
+
+  async onBannerSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de ate 2 MB.'; return; }
+    if (!this.auth.user || !this.profile) return;
+
+    this.bannerPreview = URL.createObjectURL(file);
+    this.bannerFile = file;
+    this.bannerZoom = this.bannerMinZoom;
+    this.bannerPositionX = 50;
+    this.bannerPositionY = 50;
+    this.bannerNaturalWidth = 0;
+    this.bannerNaturalHeight = 0;
+    this.bannerEditing = true;
+    input.value = '';
+    this.cdr.detectChanges();
+  }
+
+  cancelBannerEdit() {
+    if (this.bannerPreview) URL.revokeObjectURL(this.bannerPreview);
+    this.bannerPreview = '';
+    this.bannerFile = null;
+    this.bannerEditing = false;
+    this.bannerDrag = null;
+    this.bannerZoom = this.profile?.bannerZoom || 1;
+    this.bannerPositionX = this.profile?.bannerPosicaoX ?? 50;
+    this.bannerPositionY = this.profile?.bannerPosicaoY ?? 50;
+  }
+
+  onBannerDisplayLoad(event: Event) {
+    const img = event.target as HTMLImageElement;
+    this.bannerDisplayNaturalWidth = img.naturalWidth;
+    this.bannerDisplayNaturalHeight = img.naturalHeight;
+  }
+
+  bannerDisplayStyle(frame: HTMLElement): Record<string, string> {
+    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerDisplayNaturalWidth, this.bannerDisplayNaturalHeight, this.bannerZoom, this.bannerPositionX, this.bannerPositionY);
+  }
+
+  onBannerCropImageLoad(event: Event) {
+    const img = event.target as HTMLImageElement;
+    this.bannerNaturalWidth = img.naturalWidth;
+    this.bannerNaturalHeight = img.naturalHeight;
+  }
+
+  bannerEditStyle(): Record<string, string> {
+    const frame = this.bannerCropFrame?.nativeElement;
+    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerNaturalWidth, this.bannerNaturalHeight, this.bannerZoom, this.bannerPositionX, this.bannerPositionY);
+  }
+
+  onBannerDragStart(event: MouseEvent | TouchEvent) {
+    event.preventDefault();
+    const point = 'touches' in event ? event.touches[0] : event;
+    this.bannerDrag = {
+      startX: point.clientX,
+      startY: point.clientY,
+      startPosX: this.bannerPositionX,
+      startPosY: this.bannerPositionY,
+    };
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  @HostListener('document:touchmove', ['$event'])
+  onBannerDragMove(event: MouseEvent | TouchEvent) {
+    if (!this.bannerDrag) return;
+    event.preventDefault();
+    const point = 'touches' in event ? event.touches[0] : event;
+    const frame = this.bannerCropFrame?.nativeElement;
+    const geo = this.coverGeometry(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerNaturalWidth, this.bannerNaturalHeight, this.bannerZoom);
+    const dx = point.clientX - this.bannerDrag.startX;
+    const dy = point.clientY - this.bannerDrag.startY;
+    this.bannerPositionX = this.clampPercent(this.bannerDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
+    this.bannerPositionY = this.clampPercent(this.bannerDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
+  }
+
+  @HostListener('document:mouseup')
+  @HostListener('document:touchend')
+  onBannerDragEnd() {
+    this.bannerDrag = null;
+  }
+
+  onBannerWheel(event: WheelEvent) {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -0.1 : 0.1;
+    this.bannerZoom = Math.min(3, Math.max(this.bannerMinZoom, +(this.bannerZoom + delta).toFixed(2)));
+  }
+
+  async saveBannerEdit() {
+    const file = this.bannerFile;
+    if (!file || !this.auth.user || !this.profile) return;
+
+    this.message = '';
+    const caminho = `${this.auth.user.id}/banner`;
+    const { error: erroUpload } = await supabase.storage.from('avatars').upload(caminho, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
+    if (erroUpload) { this.message = 'Nao foi possivel enviar o banner.'; this.cdr.detectChanges(); return; }
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(caminho);
+    const bannerUrl = `${data.publicUrl}?v=${Date.now()}`;
+
+    try {
+      await this.perfis.atualizarBanner(bannerUrl, this.bannerZoom, this.bannerPositionX, this.bannerPositionY);
+      this.profile.bannerUrl = bannerUrl;
+      this.profile.bannerZoom = this.bannerZoom;
+      this.profile.bannerPosicaoX = this.bannerPositionX;
+      this.profile.bannerPosicaoY = this.bannerPositionY;
+      this.cancelBannerEdit();
+    } catch {
+      this.message = 'O banner foi enviado, mas nao foi possivel vincula-lo ao perfil.';
     }
     this.cdr.detectChanges();
   }

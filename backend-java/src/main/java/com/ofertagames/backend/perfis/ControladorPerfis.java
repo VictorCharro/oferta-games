@@ -41,6 +41,9 @@ public class ControladorPerfis {
   @PutMapping("/me/avatar")
   void atualizarAvatar(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody ServicoPerfis.EntradaAvatar entrada) { perfis.atualizarAvatar(usuario(autorizacao), entrada); }
 
+  @PutMapping("/me/banner")
+  void atualizarBanner(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody ServicoPerfis.EntradaBanner entrada) { perfis.atualizarBanner(usuario(autorizacao), entrada); }
+
   @GetMapping("/me/blocos")
   java.util.List<RepositorioBlocosPerfil.BlocoPerfil> blocos(@RequestHeader(value = "Authorization", required = false) String autorizacao) { return perfis.blocos(usuario(autorizacao)); }
 

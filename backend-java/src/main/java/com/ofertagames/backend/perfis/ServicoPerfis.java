@@ -37,13 +37,26 @@ class ServicoPerfis {
   }
 
   void atualizarAvatar(String usuarioId, EntradaAvatar entrada) {
-    String avatarUrl = entrada.avatarUrl() == null ? "" : entrada.avatarUrl().trim();
-    String padrao = "^https://[a-z0-9-]+\\.supabase\\.co/storage/v1/object/public/avatars/" + java.util.regex.Pattern.quote(usuarioId) + "/[^\\s]{1,900}$";
-    if (!avatarUrl.matches(padrao)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "URL de avatar invalida");
+    String avatarUrl = validarUrlPropriaPasta(usuarioId, entrada.avatarUrl(), "URL de avatar invalida");
     double zoom = Math.max(1, Math.min(3, entrada.zoom()));
     int posicaoX = Math.max(0, Math.min(100, entrada.posicaoX()));
     int posicaoY = Math.max(0, Math.min(100, entrada.posicaoY()));
     perfis.atualizarAvatar(usuarioId, avatarUrl, zoom, posicaoX, posicaoY);
+  }
+
+  void atualizarBanner(String usuarioId, EntradaBanner entrada) {
+    String bannerUrl = validarUrlPropriaPasta(usuarioId, entrada.bannerUrl(), "URL de banner invalida");
+    double zoom = Math.max(1, Math.min(3, entrada.zoom()));
+    int posicaoX = Math.max(0, Math.min(100, entrada.posicaoX()));
+    int posicaoY = Math.max(0, Math.min(100, entrada.posicaoY()));
+    perfis.atualizarBanner(usuarioId, bannerUrl, zoom, posicaoX, posicaoY);
+  }
+
+  private static String validarUrlPropriaPasta(String usuarioId, String url, String mensagemErro) {
+    String valor = url == null ? "" : url.trim();
+    String padrao = "^https://[a-z0-9-]+\\.supabase\\.co/storage/v1/object/public/avatars/" + java.util.regex.Pattern.quote(usuarioId) + "/[^\\s]{1,900}$";
+    if (!valor.matches(padrao)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, mensagemErro);
+    return valor;
   }
 
   List<RepositorioBlocosPerfil.BlocoPerfil> blocos(String usuarioId) { return blocos.listar(usuarioId); }
@@ -66,6 +79,7 @@ class ServicoPerfis {
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
     List<AtividadePerfil> atividadeRecente = mostrarAtividades ? carregarAtividades(perfil.usuarioId()) : List.of();
     return new PerfilPublico(perfil.handle(), perfil.nomeExibicao(), perfil.bio(), perfil.avatarUrl(), perfil.avatarZoom(), perfil.avatarPosicaoX(), perfil.avatarPosicaoY(),
+        perfil.bannerUrl(), perfil.bannerZoom(), perfil.bannerPosicaoX(), perfil.bannerPosicaoY(),
         dono || perfil.mostrarHoras() ? status.totalMinutos() : null,
         dono || perfil.mostrarConquistas() ? status.conquistasDesbloqueadas() : null,
         dono || perfil.mostrarConquistas() ? status.conquistasTotal() : null,
@@ -111,6 +125,9 @@ class ServicoPerfis {
 
   record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades) {}
   record EntradaAvatar(String avatarUrl, double zoom, int posicaoX, int posicaoY) {}
+  record EntradaBanner(String bannerUrl, double zoom, int posicaoX, int posicaoY) {}
   record ResultadoAtualizacao(String status, String usuarioId) {}
-  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY, Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos) {}
+  record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY,
+      String bannerUrl, double bannerZoom, int bannerPosicaoX, int bannerPosicaoY,
+      Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos) {}
 }

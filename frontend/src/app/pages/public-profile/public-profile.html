@@ -1,5 +1,43 @@
 <div class="page-content public-profile" *ngIf="profile; else pageState">
-  <section class="public-hero">
+  <section class="public-hero" #bannerFrame>
+    <div class="hero-banner" *ngIf="profile.bannerUrl">
+      <img [src]="profile.bannerUrl" alt="" (load)="onBannerDisplayLoad($event)" [ngStyle]="bannerDisplayStyle(bannerFrame)" />
+    </div>
+    <button
+      *ngIf="isOwner && editingLayout"
+      type="button"
+      class="edit-banner"
+      (click)="bannerInput.click()"
+      title="Trocar banner"
+    >
+      Trocar banner
+    </button>
+    <input
+      #bannerInput
+      class="visually-hidden"
+      type="file"
+      accept="image/*"
+      (change)="onBannerSelected($event)"
+    />
+    <div *ngIf="bannerEditing" class="block-image-crop-backdrop" (click)="cancelBannerEdit()">
+      <div class="block-image-crop-editor" (click)="$event.stopPropagation()">
+        <h3>Ajustar banner do perfil</h3>
+        <div
+          class="block-image-crop-preview banner-crop-preview"
+          #bannerCropFrame
+          (mousedown)="onBannerDragStart($event)"
+          (touchstart)="onBannerDragStart($event)"
+          (wheel)="onBannerWheel($event)"
+        >
+          <img [src]="bannerPreview" alt="Previa do banner" (load)="onBannerCropImageLoad($event)" [ngStyle]="bannerEditStyle()" draggable="false" />
+        </div>
+        <small class="block-image-crop-hint">Arraste para posicionar e use o scroll (ou pinça) para dar zoom.</small>
+        <div class="block-image-crop-actions">
+          <button type="button" class="ghost-btn" (click)="cancelBannerEdit()">Cancelar</button>
+          <button type="button" class="save-btn" (click)="saveBannerEdit()">Usar banner</button>
+        </div>
+      </div>
+    </div>
     <button
       type="button"
       class="refresh-profile"
@@ -33,7 +71,7 @@
             profile.nomeExibicao.charAt(0)
           }}</span>
         </div>
-        <label *ngIf="isOwner" class="avatar-action" for="public-avatar-input">Trocar foto</label>
+        <label *ngIf="isOwner && editingLayout" class="avatar-action" for="public-avatar-input">Trocar foto</label>
         <input
           *ngIf="isOwner"
           id="public-avatar-input"
