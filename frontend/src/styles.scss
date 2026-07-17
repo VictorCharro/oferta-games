@@ -180,6 +180,9 @@ app-public-profile .gallery-favorite { width: 28px; height: 28px; border-color: 
 app-public-profile .gallery-favorite img { width: 17px; height: 17px; }
 app-public-profile .favorites-gallery, app-public-profile .library-gallery { margin-top: 4px; }
 app-public-profile .favorites-reorder-hint { margin: -4px 0 12px; color: var(--text-muted); font-size: 12px; }
+/* Ao organizar, o card nao navega: so o handle e o Remover respondem. */
+app-public-profile .favorites-gallery.organizando .profile-game-card > a { pointer-events: none; }
+app-public-profile .favorites-gallery.organizando .profile-game-card { border-color: rgba(41, 168, 224, .45); }
 app-public-profile .favorite-drag-handle { position: absolute; top: 8px; left: 50%; z-index: 3; display: grid; width: 28px; height: 24px; place-items: center; transform: translateX(-50%); border: 1px solid rgba(255, 255, 255, .18); border-radius: 6px; background: rgba(8, 13, 24, .9); color: #fff; cursor: grab; font-size: 14px; line-height: 1; }
 app-public-profile .favorite-drag-handle:active { cursor: grabbing; }
 app-public-profile .favorites-gallery .profile-game-card.cdk-drag-preview { overflow: hidden; box-shadow: 0 18px 40px rgba(0, 0, 0, .5); }

@@ -307,7 +307,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - A home mantem conteudo geral misturado. Se houver plataforma preferida, cria uma secao adicional **Jogos da sua plataforma favorita** abaixo de Jogos Monitorados, sem esconder o restante.
 - Preferencias de plataforma, ocultar DLC, desconto minimo e preco maximo preenchem inicialmente os filtros do catalogo; o usuario ainda pode altera-los.
 - Cards e detalhe usam o icone `jogos-monitorados.png` para monitoramento de preco. Nunca usar o icone de favorito pessoal nesse fluxo.
-- Favoritos pessoais sao outra funcionalidade, mostrada no perfil e biblioteca Steam. Na aba **Jogos favoritos**, o dono reordena os cards por arrastar e soltar (ordem salva automaticamente via `PUT /api/profile-favorites/ordem`); visitantes so visualizam. A ordem manual e unica por usuario e vale para favoritos de catalogo e Steam juntos.
+- Favoritos pessoais sao outra funcionalidade, mostrada no perfil e biblioteca Steam. Na aba **Jogos favoritos**, o dono entra no modo **Organizar** (botao no cabecalho da aba) para reordenar por arrastar e soltar e remover itens; fora desse modo os controles ficam escondidos e os cards navegam normalmente. A ordem e salva automaticamente via `PUT /api/profile-favorites/ordem`; visitantes so visualizam. A ordem manual e unica por usuario e vale para favoritos de catalogo e Steam juntos.
 
 ### Perfil publico e privado
 
@@ -330,7 +330,7 @@ Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem, alem de cor 
 
 Blocos de texto e links respeitam limites conforme o tamanho escolhido: pequeno (`42` caracteres de titulo e `180` de conteudo), medio (`64` e `420`), largo (`88` e `800`) e completo (`120` e `1400`). O conteudo aplica quebra de palavras longas para nunca vazar horizontalmente do card.
 
-Os tamanhos sao composicoes diferentes, e nao apenas escala. Nos blocos de jogos, o pequeno mostra 1 card por linha, o medio 2, o largo 3 e o completo 4; os cards crescem verticalmente quando houver mais itens. O bloco de favoritos tem ainda um seletor **Mostrar** (Padrao/4/8/12/20/Todos) que define quantos favoritos aparecem naquele bloco; o limite escolhido e guardado no `conteudo` do bloco (vazio = padrao por tamanho: pequeno 1, medio 4, largo 6, completo 8). Favoritos pessoais e biblioteca usam cards visuais com capa, titulo e dados relevantes. Favoritos Steam usam a capa horizontal oficial `header.jpg`, igual aos cards da biblioteca, e exibem plataforma, horas jogadas e percentual de conquistas; favoritos do catalogo exibem a capa e o menor preco conhecido. O bloco de Biblioteca tem o comando **Ver biblioteca** no canto superior direito e abre a aba completa, que permite busca, ordenacao e favoritar jogos Steam mesmo quando eles nao existem no catalogo.
+Os tamanhos sao composicoes diferentes, e nao apenas escala. Nos blocos de jogos, o pequeno mostra 1 card por linha, o medio 2, o largo 3 e o completo 4; os cards crescem verticalmente quando houver mais itens. A quantidade de itens exibida no bloco vem sempre do tamanho escolhido (pequeno 1, medio 4, largo 6, completo 8) e nao e configuravel separadamente. Favoritos pessoais e biblioteca usam cards visuais com capa, titulo e dados relevantes. Favoritos Steam usam a capa horizontal oficial `header.jpg`, igual aos cards da biblioteca, e exibem plataforma, horas jogadas e percentual de conquistas; favoritos do catalogo exibem a capa e o menor preco conhecido. O bloco de Biblioteca tem o comando **Ver biblioteca** no canto superior direito e abre a aba completa, que permite busca, ordenacao e favoritar jogos Steam mesmo quando eles nao existem no catalogo.
 
 Os dropdowns de tamanho e fundo devem seguir o mesmo padrao visual do filtro de ordenacao do catalogo, nao usar `select` nativo. Links personalizados usam uma linha por item no formato `Nome - endereco.com` ou `Nome - https://url`; enderecos sem protocolo recebem `https://` automaticamente e devem abrir como links reais. No perfil publico, cada link renderiza como um card empilhado (nao mais uma pill inline), com o nome a esquerda e um icone de link externo a direita.
 
@@ -393,7 +393,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Pagina admin de coleta protegida por UID.
 - Editor de perfil persistido com blocos (favoritos, biblioteca, atividade, texto, links, imagem), upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`, validado em desktop. O enquadramento de imagens de bloco aceita zoom por scroll/pinca e reposicionamento por arrasto direto na previa, em mouse ou toque.
 - Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada.
-- Favoritos pessoais com ordenacao manual (arrastar e soltar, persistida) e limite de exibicao configuravel por bloco. Colecoes de favoritos ainda nao implementadas.
+- Favoritos pessoais com ordenacao manual (arrastar e soltar, persistida) dentro do modo Organizar da aba. Colecoes de favoritos ainda nao implementadas.
 - PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle usa o novo banco, executa o scheduler e expoe a API por Caddy/HTTPS. O frontend publicado na Vercel usa o mesmo projeto Supabase. O Render esta desligado; o Supabase antigo permanece somente como rollback temporario.
 - Validacao pos-migracao concluida: login Google/Discord, catalogo, perfil, avatares, blocos e scheduler confirmados funcionando na Oracle com o Supabase novo.
 
@@ -403,7 +403,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 
 ### Planejado
 
-1. Evoluir favoritos pessoais com colecoes (ordenacao manual e limite de exibicao ja implementados).
+1. Evoluir favoritos pessoais com colecoes/grupos e filtro por grupo (ordenacao manual ja implementada). Filtro por ano de lancamento depende de uma coluna nova em `games` com backfill via ITAD/Steam; hoje o catalogo nao guarda data de lancamento nem genero.
 2. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
 3. Implementar Xbox somente com um caminho oficial suportado (pausado ate acesso ao Azure).
 4. Integrar Eneba depois de aprovar afiliacao; Instant Gaming aguarda aprovacao.

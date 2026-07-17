@@ -147,6 +147,8 @@
 .panel-heading h2 { margin: 0; }
 .panel-heading span { color: var(--text-muted); font-size: 12px; }
 .panel-link { border: 0; background: transparent; color: var(--color-purple); cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; }
+.favorites-heading-actions { display: flex; align-items: center; gap: 16px; }
+.favorites-heading-actions .panel-link.editing { padding: 5px 12px; border-radius: 999px; background: var(--color-purple); color: #fff; }
 .profile-favorite-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .profile-favorite-list.compact { grid-template-columns: 1fr; }
 .profile-favorite-item { display: flex; min-width: 0; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
