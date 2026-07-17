@@ -148,7 +148,19 @@
 .panel-heading span { color: var(--text-muted); font-size: 12px; }
 .panel-link { border: 0; background: transparent; color: var(--color-purple); cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; }
 .favorites-heading-actions { display: flex; align-items: center; gap: 16px; }
-.favorites-heading-actions .panel-link.editing { padding: 5px 12px; border-radius: 999px; background: var(--color-purple); color: #fff; }
+.favorites-heading-actions .panel-link.editing, .collections-panel .panel-heading .panel-link.editing { padding: 5px 12px; border-radius: 999px; background: var(--color-purple); color: #fff; }
+.panel-link.danger { color: #ec5a91; }
+.collection-create { display: flex; gap: 8px; margin-bottom: 18px; }
+.collection-create input { flex: 1; min-width: 0; height: 38px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); color: var(--text-primary); font: inherit; font-size: 13px; }
+.collection-create .save-btn { padding: 0 18px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.collection-list { display: flex; flex-direction: column; gap: 26px; }
+.collection-heading { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.collection-heading h3 { margin: 0; font-size: 17px; }
+.collection-heading input { min-width: 220px; height: 34px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font: inherit; font-size: 13px; }
+.collection-heading .save-btn, .collection-heading .ghost-btn { padding: 7px 12px; border-radius: 6px; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.collection-count { color: var(--text-muted); font-size: 12px; }
+.collection-actions { display: flex; gap: 12px; margin-left: auto; }
+.collection-empty { color: var(--text-muted); font-size: 13px; }
 .profile-favorite-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .profile-favorite-list.compact { grid-template-columns: 1fr; }
 .profile-favorite-item { display: flex; min-width: 0; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }

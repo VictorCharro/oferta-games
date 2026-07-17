@@ -3,7 +3,8 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth';
-import { PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
+import { ColecaoPerfil, PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
+import { ColecoesPerfilService } from '../../services/colecoes-perfil';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { supabase } from '../../services/supabase';
 
@@ -17,7 +18,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   profile: PerfilPublico | null = null;
   missing = false;
   loading = true;
-  activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' = 'resumo';
+  activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' | 'colecoes' = 'resumo';
   readonly capasSteamIndisponiveis = new Set<number>();
   isOwner = false;
   ownerAvatar = '';
@@ -31,6 +32,11 @@ export class PublicProfile implements OnInit, OnDestroy {
   editingLayout = false;
   savingLayout = false;
   editingFavorites = false;
+  editingCollections = false;
+  novaColecaoNome = '';
+  criandoColecao = false;
+  renomeandoColecaoId: number | null = null;
+  renomearColecaoNome = '';
   layoutDraft: PerfilBloco[] = [];
   avatarZoom = 1;
   avatarPositionX = 50;
@@ -95,6 +101,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private perfis: PerfisService,
     private profileFavorites: ProfileFavoritesService,
+    private colecoes: ColecoesPerfilService,
     public auth: AuthService,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -118,6 +125,9 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.ownerAvatar = '';
     this.editingBio = false;
     this.editingFavorites = false;
+    this.editingCollections = false;
+    this.renomeandoColecaoId = null;
+    this.novaColecaoNome = '';
     this.message = '';
     this.librarySearch = '';
     this.libraryOrder = 'tempo';
@@ -128,6 +138,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       const profile = await this.perfis.publico(handle);
       if (request !== this.profileRequest) return;
       profile.favoritos ??= [];
+      profile.colecoes ??= [];
       profile.atividades ??= [];
       profile.plataformasConectadas ??= [];
       profile.blocos = profile.blocos?.length
@@ -235,6 +246,67 @@ export class PublicProfile implements OnInit, OnDestroy {
   toggleFavoritesEdit() {
     this.editingFavorites = !this.editingFavorites;
     this.message = '';
+  }
+
+  toggleCollectionsEdit() {
+    this.editingCollections = !this.editingCollections;
+    this.renomeandoColecaoId = null;
+    this.novaColecaoNome = '';
+    this.message = '';
+  }
+
+  async criarColecao() {
+    const nome = this.novaColecaoNome.trim();
+    if (!this.isOwner || !nome || this.criandoColecao) return;
+    this.criandoColecao = true;
+    try {
+      await this.colecoes.criar(nome);
+      await this.recarregarColecoes();
+      this.novaColecaoNome = '';
+    } catch {
+      this.message = 'Nao foi possivel criar a colecao.';
+    }
+    this.criandoColecao = false;
+    this.cdr.detectChanges();
+  }
+
+  iniciarRenomearColecao(colecao: ColecaoPerfil) {
+    this.renomeandoColecaoId = colecao.id;
+    this.renomearColecaoNome = colecao.nome;
+  }
+
+  cancelarRenomearColecao() {
+    this.renomeandoColecaoId = null;
+    this.renomearColecaoNome = '';
+  }
+
+  async salvarRenomearColecao(colecao: ColecaoPerfil) {
+    const nome = this.renomearColecaoNome.trim();
+    if (!this.isOwner || !nome) return;
+    try {
+      await this.colecoes.renomear(colecao.id, nome);
+      await this.recarregarColecoes();
+      this.cancelarRenomearColecao();
+    } catch {
+      this.message = 'Nao foi possivel renomear a colecao.';
+    }
+    this.cdr.detectChanges();
+  }
+
+  async excluirColecao(colecao: ColecaoPerfil) {
+    if (!this.isOwner) return;
+    try {
+      await this.colecoes.excluir(colecao.id);
+      await this.recarregarColecoes();
+    } catch {
+      this.message = 'Nao foi possivel excluir a colecao.';
+    }
+    this.cdr.detectChanges();
+  }
+
+  private async recarregarColecoes() {
+    if (!this.profile) return;
+    this.profile.colecoes = await this.colecoes.listar();
   }
 
   async dropFavorite(event: CdkDragDrop<unknown>) {
@@ -806,6 +878,7 @@ export class PublicProfile implements OnInit, OnDestroy {
           mostrarBiblioteca: own.mostrarBiblioteca,
           mostrarFavoritos: own.mostrarFavoritos,
           mostrarAtividades: own.mostrarAtividades,
+          mostrarColecoes: own.mostrarColecoes,
         });
 
         this.profile.bio = bio;

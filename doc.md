@@ -157,6 +157,7 @@ profiles
   show_favorite_games, show_recent_activity
   avatar_zoom, avatar_position_x, avatar_position_y
   banner_url, banner_zoom, banner_position_x, banner_position_y
+  show_collections
 
 steam_connections
   user_id, steam_id, persona_name, avatar_url
@@ -175,6 +176,15 @@ profile_steam_favorites
   user_id, app_id, created_at, position
   -- usado para jogos da biblioteca Steam ausentes do catalogo
   -- position: sequencia manual unica por usuario, combinando as duas tabelas
+
+profile_collections
+  id, user_id, name, position, created_at
+  -- "Minhas Listas": grupos nomeados de jogos, independentes dos favoritos
+
+profile_collection_items
+  id, collection_id, user_id, game_id, app_id, position, created_at
+  -- game_id (catalogo) OU app_id (biblioteca Steam), nunca os dois (CHECK)
+  -- N:N: o mesmo jogo pode estar em varias colecoes
 
 profile_activities
   user_id, type, game_id, detail, created_at
@@ -206,8 +216,9 @@ Arquivos em `backend-java/sql/`:
 14. `20260713_cor_texto_blocos_perfil.sql`
 15. `20260716_banner_perfil.sql`
 16. `20260716_ordem_favoritos_perfil.sql`
+17. `20260717_colecoes_perfil.sql`
 
-Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna.
+Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500.
 
 O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos e seus fundos. Cada usuario so pode gravar na propria pasta. As politicas RLS de `SELECT`, `INSERT`, `UPDATE` e `DELETE` foram aplicadas ao projeto novo em 15/07/2026; sem elas o Storage retorna HTTP 400 nos uploads. Limite de upload de imagem no frontend: 2 MB, JPG/PNG/WebP. Blocos de imagem e fundos tambem aceitam URL externa `http(s)`.
 
@@ -252,6 +263,16 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 - `PUT /api/profile-favorites/ordem`
   - recebe `{ itens: [{ slug?, steamAppId? }] }` na ordem desejada e grava `position` 0,1,2... Novos favoritos entram no fim da fila.
 
+### Colecoes ("Minhas Listas")
+
+- `GET|POST /api/profile-collections`
+- `PUT|DELETE /api/profile-collections/{id}`
+- `POST /api/profile-collections/{id}/itens` — `{ slug? , steamAppId? }`, exatamente um dos dois
+- `DELETE /api/profile-collections/{id}/itens/jogo/{slug}`
+- `DELETE /api/profile-collections/{id}/itens/steam/{appId}`
+
+Toda rota exige token e valida que a colecao e do usuario autenticado; colecao de outro usuario responde 404, nunca 403, para nao revelar a existencia dela. Limites: nome de 1 a 40 caracteres, 20 colecoes por usuario e 200 jogos por colecao.
+
 ### Steam e administracao
 
 - `POST /api/conexoes/steam/iniciar`
@@ -292,7 +313,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 | **Login** | Autenticar por Supabase Auth. | Nao usa sidebar nem topbar. Depois do login, a navegacao volta ao fluxo normal do aplicativo. |
 | **Configuracoes** (`/configuracoes`) | Centralizar opcoes da conta. | Abas separadas: Conta, Conexoes, Preferencias e Privacidade. Nao misturar assuntos entre abas. Preferencias afetam home/catalogo; Privacidade afeta o perfil publico; Conexoes concentra Steam e futura Xbox. |
 | **Perfil proprio** (`/perfil` -> `/:handle`) | Personalizar e visualizar o perfil do usuario. | `/perfil` redireciona para o handle canonico. O dono pode editar bio, foto, layout, blocos e pedir atualizacao Steam. A pagina canonica e a mesma que visitantes veem, com controles extras apenas para o dono. |
-| **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra uma faixa fixa com biblioteca, horas, conquistas desbloqueadas e icones das plataformas conectadas; abaixo, mostra Resumo, Jogos favoritos e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
+| **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra uma faixa fixa com biblioteca, horas, conquistas desbloqueadas e icones das plataformas conectadas; abaixo, mostra Resumo, Jogos favoritos, Colecoes e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
 | **Administracao de coleta** (`/admin/coleta`) | Acompanhar e disparar jobs internos. | Exclusiva do UID administrador. Exibe status das filas de preco/Steam e permite disparar coleta manual em segundo plano; nao substitui o scheduler. |
 
 ### Componentes globais
@@ -307,13 +328,14 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - A home mantem conteudo geral misturado. Se houver plataforma preferida, cria uma secao adicional **Jogos da sua plataforma favorita** abaixo de Jogos Monitorados, sem esconder o restante.
 - Preferencias de plataforma, ocultar DLC, desconto minimo e preco maximo preenchem inicialmente os filtros do catalogo; o usuario ainda pode altera-los.
 - Cards e detalhe usam o icone `jogos-monitorados.png` para monitoramento de preco. Nunca usar o icone de favorito pessoal nesse fluxo.
+- **Colecoes ("Minhas Listas")** sao uma feature separada dos favoritos, na aba **Colecoes** do perfil: grupos nomeados criados pelo dono, com um jogo podendo estar em varias colecoes (N:N). Diferente dos favoritos, aceitam jogos do catalogo que o usuario **nao possui** (ex: "Quero jogar em 2027") alem de jogos da biblioteca Steam. Visibilidade pelo toggle proprio **Mostrar colecoes** em Configuracoes > Privacidade. O dono usa o modo **Organizar** da aba para criar, renomear e excluir; fora dele a aba so exibe as listas.
 - Favoritos pessoais sao outra funcionalidade, mostrada no perfil e biblioteca Steam. Na aba **Jogos favoritos**, o dono entra no modo **Organizar** (botao no cabecalho da aba) para reordenar por arrastar e soltar e remover itens; fora desse modo os controles ficam escondidos e os cards navegam normalmente. A ordem e salva automaticamente via `PUT /api/profile-favorites/ordem`; visitantes so visualizam. A ordem manual e unica por usuario e vale para favoritos de catalogo e Steam juntos.
 
 ### Perfil publico e privado
 
 - Perfis novos sao publicos por padrao. O dono pode tornar o perfil privado em Configuracoes > Privacidade.
 - E-mail, UUID, Jogos Monitorados e dados de autenticacao nunca sao publicos.
-- O dono escolhe a exposicao de horas, conquistas, biblioteca, favoritos pessoais e atividade recente. O backend filtra a resposta publica.
+- O dono escolhe a exposicao de horas, conquistas, biblioteca, favoritos pessoais, colecoes e atividade recente. O backend filtra a resposta publica.
 - O dono na propria URL canonica ve controles de avatar, banner, bio, atualizacao e modo de edicao; visitantes nao veem esses comandos.
 - O avatar e o banner do topo do perfil sao salvos no Storage com zoom e posicao persistidos para todos verem o mesmo enquadramento. O ajuste usa o mesmo editor em modal dos blocos de imagem: arrastar com mouse/touch para posicionar e scroll/pinca para zoom, com folga minima de 115% para sempre permitir arrastar em qualquer direcao, calculado em pixels reais (imagem x quadro) tanto no modal quanto na exibicao final. Os botoes "Trocar foto" e "Trocar banner" só aparecem no modo de edicao do perfil.
 - A primeira sincronizacao Steam gera somente os resumos. Nas posteriores, novos jogos e conquistas viram atividades individuais.
@@ -357,6 +379,7 @@ backend-java/
     descontos/           home e melhores descontos
     favoritos/           Jogos Monitorados
     favoritosperfil/     favoritos pessoais
+    colecoesperfil/      colecoes ("Minhas Listas") de jogos
     jogos/               catalogo, busca, detalhe e refresh
     notificacoes/        alertas de preco
     perfis/              perfil publico, avatar e blocos
@@ -393,7 +416,8 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Pagina admin de coleta protegida por UID.
 - Editor de perfil persistido com blocos (favoritos, biblioteca, atividade, texto, links, imagem), upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`, validado em desktop. O enquadramento de imagens de bloco aceita zoom por scroll/pinca e reposicionamento por arrasto direto na previa, em mouse ou toque.
 - Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada.
-- Favoritos pessoais com ordenacao manual (arrastar e soltar, persistida) dentro do modo Organizar da aba. Colecoes de favoritos ainda nao implementadas.
+- Favoritos pessoais com ordenacao manual (arrastar e soltar, persistida) dentro do modo Organizar da aba.
+- Colecoes ("Minhas Listas"): modelo N:N, CRUD completo, aba propria no perfil e toggle de privacidade. Falta o modal para adicionar jogos (biblioteca + catalogo) e o menu de listas na pagina do jogo.
 - PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle usa o novo banco, executa o scheduler e expoe a API por Caddy/HTTPS. O frontend publicado na Vercel usa o mesmo projeto Supabase. O Render esta desligado; o Supabase antigo permanece somente como rollback temporario.
 - Validacao pos-migracao concluida: login Google/Discord, catalogo, perfil, avatares, blocos e scheduler confirmados funcionando na Oracle com o Supabase novo.
 
@@ -403,7 +427,8 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 
 ### Planejado
 
-1. Evoluir favoritos pessoais com colecoes/grupos e filtro por grupo (ordenacao manual ja implementada). Filtro por ano de lancamento depende de uma coluna nova em `games` com backfill via ITAD/Steam; hoje o catalogo nao guarda data de lancamento nem genero.
+1. Concluir colecoes: modal "Gerenciar jogos" (biblioteca completa + busca no catalogo) e menu de listas na pagina do jogo. O CRUD de colecoes e a exibicao ja estao prontos; falta o caminho para adicionar jogos.
+   - Filtro por ano de lancamento/genero segue inviavel: `games` nao guarda esses campos. Dependeria de coluna nova + backfill via ITAD/Steam.
 2. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
 3. Implementar Xbox somente com um caminho oficial suportado (pausado ate acesso ao Azure).
 4. Integrar Eneba depois de aprovar afiliacao; Instant Gaming aguarda aprovacao.

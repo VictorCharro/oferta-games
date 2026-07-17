@@ -3,6 +3,8 @@ package com.ofertagames.backend.perfis;
 import com.ofertagames.backend.conexoes.ServicoConexoesSteam;
 import com.ofertagames.backend.atividadesperfil.AtividadePerfil;
 import com.ofertagames.backend.atividadesperfil.RepositorioAtividadesPerfil;
+import com.ofertagames.backend.colecoesperfil.ColecaoPerfil;
+import com.ofertagames.backend.colecoesperfil.RepositorioColecoesPerfil;
 import com.ofertagames.backend.favoritosperfil.FavoritoPerfilJogo;
 import com.ofertagames.backend.favoritosperfil.RepositorioFavoritosPerfil;
 import java.util.List;
@@ -21,10 +23,11 @@ class ServicoPerfis {
   private final RepositorioPerfis perfis;
   private final ServicoConexoesSteam steam;
   private final RepositorioFavoritosPerfil favoritosPerfil;
+  private final RepositorioColecoesPerfil colecoesPerfil;
   private final RepositorioAtividadesPerfil atividades;
   private final RepositorioBlocosPerfil blocos;
 
-  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam, RepositorioFavoritosPerfil favoritosPerfil, RepositorioAtividadesPerfil atividades, RepositorioBlocosPerfil blocos) { this.perfis = perfis; this.steam = steam; this.favoritosPerfil = favoritosPerfil; this.atividades = atividades; this.blocos = blocos; }
+  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam, RepositorioFavoritosPerfil favoritosPerfil, RepositorioColecoesPerfil colecoesPerfil, RepositorioAtividadesPerfil atividades, RepositorioBlocosPerfil blocos) { this.perfis = perfis; this.steam = steam; this.favoritosPerfil = favoritosPerfil; this.colecoesPerfil = colecoesPerfil; this.atividades = atividades; this.blocos = blocos; }
 
   RepositorioPerfis.Perfil proprio(String usuarioId) { return perfis.buscarPorUsuario(usuarioId).orElse(null); }
 
@@ -32,7 +35,7 @@ class ServicoPerfis {
     String handle = normalizarHandle(entrada.handle());
     if (entrada.publico() && handle == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Defina a URL do perfil antes de torna-lo publico");
     String avatarUrl = perfis.buscarPorUsuario(usuarioId).map(RepositorioPerfis.Perfil::avatarUrl).orElse(null);
-    try { perfis.salvar(usuarioId, new RepositorioPerfis.DadosPerfil(handle, limitar(entrada.nomeExibicao(), 60), limitar(entrada.bio(), 180), avatarUrl, entrada.publico(), entrada.mostrarHoras(), entrada.mostrarConquistas(), entrada.mostrarBiblioteca(), entrada.mostrarFavoritos(), entrada.mostrarAtividades())); }
+    try { perfis.salvar(usuarioId, new RepositorioPerfis.DadosPerfil(handle, limitar(entrada.nomeExibicao(), 60), limitar(entrada.bio(), 180), avatarUrl, entrada.publico(), entrada.mostrarHoras(), entrada.mostrarConquistas(), entrada.mostrarBiblioteca(), entrada.mostrarFavoritos(), entrada.mostrarAtividades(), entrada.mostrarColecoes())); }
     catch (RuntimeException erro) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta URL de perfil ja esta em uso"); }
   }
 
@@ -76,6 +79,7 @@ class ServicoPerfis {
     boolean dono = perfil.usuarioId().equals(visitanteId);
     List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = dono || perfil.mostrarBiblioteca() ? steam.biblioteca(perfil.usuarioId()) : List.of();
     List<FavoritoPerfilJogo> favoritos = dono || perfil.mostrarFavoritos() ? favoritosPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
+    List<ColecaoPerfil> colecoes = dono || perfil.mostrarColecoes() ? colecoesPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
     List<AtividadePerfil> atividadeRecente = mostrarAtividades ? carregarAtividades(perfil.usuarioId()) : List.of();
     return new PerfilPublico(perfil.handle(), perfil.nomeExibicao(), perfil.bio(), perfil.avatarUrl(), perfil.avatarZoom(), perfil.avatarPosicaoX(), perfil.avatarPosicaoY(),
@@ -87,6 +91,7 @@ class ServicoPerfis {
         status.conectada() && (dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca()) ? List.of("steam") : List.of(),
         jogos,
         favoritos,
+        colecoes,
         atividadeRecente,
         perfil.mostrarAtividades(), blocosPublicos(perfil, dono));
   }
@@ -123,11 +128,11 @@ class ServicoPerfis {
         .toList();
   }
 
-  record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades) {}
+  record EntradaPerfil(String handle, String nomeExibicao, String bio, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades, boolean mostrarColecoes) {}
   record EntradaAvatar(String avatarUrl, double zoom, int posicaoX, int posicaoY) {}
   record EntradaBanner(String bannerUrl, double zoom, int posicaoX, int posicaoY) {}
   record ResultadoAtualizacao(String status, String usuarioId) {}
   record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY,
       String bannerUrl, double bannerZoom, int bannerPosicaoX, int bannerPosicaoY,
-      Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos) {}
+      Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<ColecaoPerfil> colecoes, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos) {}
 }

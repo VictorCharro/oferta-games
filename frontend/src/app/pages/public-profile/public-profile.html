@@ -166,6 +166,14 @@
     </button>
     <button
       type="button"
+      [class.active]="activeTab === 'colecoes'"
+      (click)="activeTab = 'colecoes'"
+      [disabled]="editingLayout"
+    >
+      Coleções
+    </button>
+    <button
+      type="button"
       [class.active]="activeTab === 'biblioteca'"
       (click)="activeTab = 'biblioteca'"
       [disabled]="editingLayout"
@@ -404,6 +412,72 @@
         <h3>Nenhum jogo favorito ainda</h3>
         <p *ngIf="isOwner">Abra um jogo para adiciona-lo aos favoritos pessoais.</p>
         <p *ngIf="!isOwner">Este perfil ainda nao possui jogos favoritos.</p>
+      </div></ng-template
+    >
+  </section>
+
+  <section class="panel collections-panel" *ngIf="activeTab === 'colecoes'">
+    <div class="panel-heading">
+      <h2>Coleções</h2>
+      <button *ngIf="isOwner" type="button" class="panel-link" [class.editing]="editingCollections" (click)="toggleCollectionsEdit()">
+        {{ editingCollections ? 'Concluir' : 'Organizar' }}
+      </button>
+    </div>
+
+    <div *ngIf="isOwner && editingCollections" class="collection-create">
+      <input
+        [(ngModel)]="novaColecaoNome"
+        maxlength="40"
+        placeholder="Nome da nova coleção (ex: Quero jogar em 2027)"
+        aria-label="Nome da nova coleção"
+        (keyup.enter)="criarColecao()"
+      />
+      <button type="button" class="save-btn" (click)="criarColecao()" [disabled]="!novaColecaoNome.trim() || criandoColecao">
+        {{ criandoColecao ? 'Criando...' : 'Criar coleção' }}
+      </button>
+    </div>
+
+    <div *ngIf="profile.colecoes.length; else semColecoes" class="collection-list">
+      <article *ngFor="let colecao of profile.colecoes" class="collection-item">
+        <div class="collection-heading">
+          <ng-container *ngIf="renomeandoColecaoId === colecao.id; else tituloColecao">
+            <input
+              [(ngModel)]="renomearColecaoNome"
+              maxlength="40"
+              aria-label="Novo nome da coleção"
+              (keyup.enter)="salvarRenomearColecao(colecao)"
+              (keyup.escape)="cancelarRenomearColecao()"
+            />
+            <button type="button" class="save-btn" (click)="salvarRenomearColecao(colecao)" [disabled]="!renomearColecaoNome.trim()">Salvar</button>
+            <button type="button" class="ghost-btn" (click)="cancelarRenomearColecao()">Cancelar</button>
+          </ng-container>
+          <ng-template #tituloColecao>
+            <h3>{{ colecao.nome }}</h3>
+            <span class="collection-count">{{ colecao.jogos.length }} {{ colecao.jogos.length === 1 ? 'jogo' : 'jogos' }}</span>
+            <div *ngIf="isOwner && editingCollections" class="collection-actions">
+              <button type="button" class="panel-link" (click)="iniciarRenomearColecao(colecao)">Renomear</button>
+              <button type="button" class="panel-link danger" (click)="excluirColecao(colecao)">Excluir</button>
+            </div>
+          </ng-template>
+        </div>
+
+        <div *ngIf="colecao.jogos.length; else colecaoVazia" class="profile-game-grid grid-completo">
+          <article *ngFor="let game of colecao.jogos" class="profile-game-card">
+            <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else colecaoCatalogDetail"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #colecaoCatalogDetail><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template></div></a>
+          </article>
+        </div>
+        <ng-template #colecaoVazia>
+          <p class="collection-empty">Nenhum jogo nesta coleção ainda.</p>
+        </ng-template>
+      </article>
+    </div>
+
+    <ng-template #semColecoes
+      ><div class="empty-panel">
+        <img src="jogos-favoritos.png" alt="" />
+        <h3>Nenhuma coleção ainda</h3>
+        <p *ngIf="isOwner">Use o botão Organizar para criar sua primeira lista de jogos.</p>
+        <p *ngIf="!isOwner">Este perfil ainda nao possui coleções.</p>
       </div></ng-template
     >
   </section>
