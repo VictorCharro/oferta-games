@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { firstValueFrom, Observable } from 'rxjs';
 import { URL_API } from '../configuracao/url-api';
+import { supabase } from './supabase';
 
 export interface GameSummary {
   slug: string;
@@ -54,11 +55,21 @@ export interface GameDetails {
   requisitosRecomendados: string | null;
 }
 
-export interface GameAchievement {
+export interface ConquistaComProgresso {
   nome: string;
   descricao: string | null;
   iconeUrl: string | null;
   percentualGlobal: number | null;
+  desbloqueada: boolean;
+  desbloqueadaEm: string | null;
+}
+
+export interface RespostaConquistas {
+  total: number;
+  desbloqueadas: number;
+  percentualConcluido: number;
+  proxima: ConquistaComProgresso | null;
+  conquistas: ConquistaComProgresso[];
 }
 
 export interface TopDeal {
@@ -112,7 +123,13 @@ export class GameService {
     return this.http.get<GameDetails>(`${this.api}/games/${slug}/detalhes`);
   }
 
-  getGameAchievements(slug: string): Observable<GameAchievement[]> {
-    return this.http.get<GameAchievement[]>(`${this.api}/games/${slug}/conquistas`);
+  async getGameAchievements(slug: string): Promise<RespostaConquistas> {
+    const headers = await this.authHeadersOpcional();
+    return firstValueFrom(this.http.get<RespostaConquistas>(`${this.api}/games/${slug}/conquistas`, { headers }));
+  }
+
+  private async authHeadersOpcional(): Promise<{ Authorization: string } | undefined> {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : undefined;
   }
 }

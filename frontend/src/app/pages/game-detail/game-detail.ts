@@ -2,11 +2,12 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, Subscription } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
-import { GameService, GameDetail as GameDetailModel, GameSummary, Offer, GameDetails, GameAchievement } from '../../services/game';
+import { GameService, GameDetail as GameDetailModel, GameSummary, Offer, GameDetails, RespostaConquistas } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
 import { ColecaoPerfil } from '../../services/perfis';
+import { GameReviewsService, RespostaAvaliacoes } from '../../services/game-reviews';
 import { AuthService } from '../../services/auth';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 
@@ -23,13 +24,20 @@ export class GameDetail implements OnInit, OnDestroy {
   refreshMsg = '';
   activeTab: 'precos' | 'sobre' | 'review' | 'conquistas' = 'precos';
   detalhes: GameDetails | null = null;
-  conquistas: GameAchievement[] = [];
+  conquistas: RespostaConquistas | null = null;
   midiaAtiva = 0;
   menuColecoesAberto = false;
   colecoes: ColecaoPerfil[] = [];
   carregandoColecoes = false;
   novaListaNome = '';
   criandoLista = false;
+  subTabReview: 'steam' | 'ofertagames' = 'steam';
+  avaliacoes: RespostaAvaliacoes | null = null;
+  minhaNota = 0;
+  estrelaEmFoco = 0;
+  meuComentario = '';
+  editandoAvaliacao = false;
+  enviandoAvaliacao = false;
   private routeSub?: Subscription;
   private favoriteSub?: Subscription;
   private profileFavoriteSub?: Subscription;
@@ -41,6 +49,7 @@ export class GameDetail implements OnInit, OnDestroy {
     private favoritesService: FavoritesService,
     private profileFavoritesService: ProfileFavoritesService,
     private colecoesService: ColecoesPerfilService,
+    private reviewsService: GameReviewsService,
     private auth: AuthService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -56,14 +65,17 @@ export class GameDetail implements OnInit, OnDestroy {
       tap(slug => {
         this.game = null;
         this.detalhes = null;
-        this.conquistas = [];
+        this.conquistas = null;
+        this.avaliacoes = null;
         this.loading = true;
         this.refreshing = false;
         this.refreshMsg = '';
         this.activeTab = 'precos';
+        this.subTabReview = 'steam';
         this.midiaAtiva = 0;
+        this.cancelarEdicaoAvaliacao();
         this.cdr.detectChanges();
-        this.carregarDetalhesEConquistas(slug);
+        this.carregarDetalhesEConquistasEReviews(slug);
       }),
       switchMap(slug => this.gameService.getGame(slug).pipe(catchError(() => of(null))))
     ).subscribe(data => {
@@ -79,15 +91,19 @@ export class GameDetail implements OnInit, OnDestroy {
     this.profileFavoriteSub?.unsubscribe();
   }
 
-  private carregarDetalhesEConquistas(slug: string) {
+  private carregarDetalhesEConquistasEReviews(slug: string) {
     this.gameService.getGameDetails(slug).pipe(catchError(() => of(null))).subscribe(detalhes => {
       this.detalhes = detalhes;
       this.cdr.detectChanges();
     });
-    this.gameService.getGameAchievements(slug).pipe(catchError(() => of([]))).subscribe(conquistas => {
+    this.gameService.getGameAchievements(slug).then(conquistas => {
       this.conquistas = conquistas;
       this.cdr.detectChanges();
-    });
+    }).catch(() => {});
+    this.reviewsService.listar(slug).then(avaliacoes => {
+      this.avaliacoes = avaliacoes;
+      this.cdr.detectChanges();
+    }).catch(() => {});
   }
 
   // So mostra a aba quando ha conteudo real (destaques ou trailer): descricao/screenshots sozinhos
@@ -97,13 +113,17 @@ export class GameDetail implements OnInit, OnDestroy {
     return !!d && ((d.destaques?.length ?? 0) > 0 || !!d.trailerUrl);
   }
 
+  // Aparece se a Steam tiver reviews (como antes) OU se ja tivermos reviews nossas,
+  // mesmo que a Steam nao tenha nenhuma pra esse jogo.
   get temReview(): boolean {
     const d = this.detalhes;
-    return !!d && ((d.reviewsPositivas ?? 0) + (d.reviewsNegativas ?? 0)) > 0;
+    const temSteam = !!d && ((d.reviewsPositivas ?? 0) + (d.reviewsNegativas ?? 0)) > 0;
+    const temNossa = (this.avaliacoes?.resumo?.total ?? 0) > 0;
+    return temSteam || temNossa;
   }
 
   get temConquistas(): boolean {
-    return this.conquistas.length > 0;
+    return (this.conquistas?.total ?? 0) > 0;
   }
 
   get midias(): { tipo: 'trailer' | 'imagem'; url: string; thumb: string }[] {
@@ -138,6 +158,66 @@ export class GameDetail implements OnInit, OnDestroy {
     if (!d) return null;
     const total = (d.reviewsPositivas ?? 0) + (d.reviewsNegativas ?? 0);
     return total > 0 ? Math.round(((d.reviewsPositivas ?? 0) / total) * 100) : null;
+  }
+
+  trocarSubTabReview(tab: 'steam' | 'ofertagames') {
+    this.subTabReview = tab;
+  }
+
+  readonly estrelas = [1, 2, 3, 4, 5];
+
+  distribuicaoPercentual(nota: number): number {
+    const resumo = this.avaliacoes?.resumo;
+    if (!resumo || !resumo.total) return 0;
+    return Math.round(((resumo.distribuicao[nota] ?? 0) / resumo.total) * 100);
+  }
+
+  iniciarAvaliacao() {
+    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
+    const minha = this.avaliacoes?.minha;
+    this.minhaNota = minha?.nota ?? 0;
+    this.meuComentario = minha?.comentario ?? '';
+    this.editandoAvaliacao = true;
+  }
+
+  cancelarEdicaoAvaliacao() {
+    this.editandoAvaliacao = false;
+    this.minhaNota = 0;
+    this.estrelaEmFoco = 0;
+    this.meuComentario = '';
+  }
+
+  async enviarAvaliacao() {
+    if (!this.game || !this.minhaNota || this.enviandoAvaliacao) return;
+    this.enviandoAvaliacao = true;
+    this.cdr.detectChanges();
+    try {
+      await this.reviewsService.avaliar(this.game.slug, this.minhaNota, this.meuComentario.trim());
+      this.avaliacoes = await this.reviewsService.listar(this.game.slug);
+      this.cancelarEdicaoAvaliacao();
+    } catch { /* silencioso: formulario permanece pro usuario tentar de novo */ }
+    this.enviandoAvaliacao = false;
+    this.cdr.detectChanges();
+  }
+
+  async excluirAvaliacao() {
+    if (!this.game) return;
+    try {
+      await this.reviewsService.remover(this.game.slug);
+      this.avaliacoes = await this.reviewsService.listar(this.game.slug);
+      this.cancelarEdicaoAvaliacao();
+    } catch { /* silencioso */ }
+    this.cdr.detectChanges();
+  }
+
+  async votarUtil(reviewId: number, util: boolean) {
+    if (!this.game) return;
+    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
+    try {
+      await this.reviewsService.votar(this.game.slug, reviewId, util);
+      this.avaliacoes = await this.reviewsService.listar(this.game.slug);
+      this.cdr.detectChanges();
+    } catch { /* silencioso */ }
   }
 
   get monitoring(): boolean {

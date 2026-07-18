@@ -186,25 +186,129 @@
     </div>
   </div>
 
-  <div class="review-section" *ngIf="activeTab === 'review' && detalhes">
-    <div class="review-score">
-      <strong>{{ reviewPositividade() }}%</strong>
-      <span>{{ detalhes.notaReviews }}</span>
+  <div class="review-section" *ngIf="activeTab === 'review'">
+    <div class="review-subtabs">
+      <button type="button" [class.active]="subTabReview === 'steam'" (click)="trocarSubTabReview('steam')">Steam</button>
+      <button type="button" [class.active]="subTabReview === 'ofertagames'" (click)="trocarSubTabReview('ofertagames')">Oferta Games</button>
     </div>
-    <div class="review-counts">
-      <div class="review-count positive"><strong>{{ detalhes.reviewsPositivas }}</strong><span>Positivas</span></div>
-      <div class="review-count negative"><strong>{{ detalhes.reviewsNegativas }}</strong><span>Negativas</span></div>
+
+    <div class="review-steam" *ngIf="subTabReview === 'steam' && detalhes">
+      <div class="review-score">
+        <strong>{{ reviewPositividade() }}%</strong>
+        <span>{{ detalhes.notaReviews }}</span>
+      </div>
+      <div class="review-counts">
+        <div class="review-count positive"><strong>{{ detalhes.reviewsPositivas }}</strong><span>Positivas</span></div>
+        <div class="review-count negative"><strong>{{ detalhes.reviewsNegativas }}</strong><span>Negativas</span></div>
+      </div>
+    </div>
+    <p class="review-empty" *ngIf="subTabReview === 'steam' && !detalhes">Sem dados de review da Steam pra esse jogo.</p>
+
+    <div class="review-ofertagames" *ngIf="subTabReview === 'ofertagames' && avaliacoes">
+      <div class="review-summary">
+        <div class="review-summary-media">
+          <strong>{{ avaliacoes.resumo.media ? (avaliacoes.resumo.media | number: '1.1-1') : '—' }}</strong>
+          <span>de 5 · {{ avaliacoes.resumo.total }} avaliações</span>
+        </div>
+        <div class="review-summary-bars">
+          <div class="review-bar-row" *ngFor="let nota of [5, 4, 3, 2, 1]">
+            <span>{{ nota }}★</span>
+            <div class="review-bar-track"><div class="review-bar-fill" [style.width.%]="distribuicaoPercentual(nota)"></div></div>
+            <span>{{ distribuicaoPercentual(nota) }}%</span>
+          </div>
+        </div>
+        <div class="review-summary-recomenda" *ngIf="avaliacoes.resumo.percentualRecomenda != null">
+          <strong>{{ avaliacoes.resumo.percentualRecomenda }}%</strong>
+          <span>recomendam este jogo</span>
+        </div>
+      </div>
+
+      <div class="review-form">
+        <ng-container *ngIf="!editandoAvaliacao">
+          <button type="button" class="save-btn" (click)="iniciarAvaliacao()">
+            {{ avaliacoes.minha ? 'Editar minha avaliação' : 'Avaliar este jogo' }}
+          </button>
+        </ng-container>
+        <ng-container *ngIf="editandoAvaliacao">
+          <div class="review-form-estrelas">
+            <button
+              type="button"
+              *ngFor="let estrela of estrelas"
+              class="review-star"
+              [class.active]="(estrelaEmFoco || minhaNota) >= estrela"
+              (mouseenter)="estrelaEmFoco = estrela"
+              (mouseleave)="estrelaEmFoco = 0"
+              (click)="minhaNota = estrela"
+            >★</button>
+          </div>
+          <textarea [(ngModel)]="meuComentario" maxlength="2000" placeholder="Escreva sua avaliação..."></textarea>
+          <div class="review-form-actions">
+            <button type="button" class="save-btn" [disabled]="!minhaNota || enviandoAvaliacao" (click)="enviarAvaliacao()">
+              {{ enviandoAvaliacao ? 'Enviando...' : 'Publicar review' }}
+            </button>
+            <button type="button" class="ghost-btn" (click)="cancelarEdicaoAvaliacao()">Cancelar</button>
+            <button type="button" class="panel-link danger" *ngIf="avaliacoes.minha" (click)="excluirAvaliacao()">Excluir minha review</button>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="review-list">
+        <article class="review-item" *ngFor="let avaliacao of avaliacoes.avaliacoes">
+          <div class="review-item-header">
+            <img [src]="avaliacao.usuarioAvatarUrl || 'no-cover.svg'" alt="" class="review-avatar" />
+            <div>
+              <strong>{{ avaliacao.usuarioNome || 'Usuário' }}</strong>
+              <div class="review-item-estrelas">
+                <span *ngFor="let estrela of estrelas" [class.active]="avaliacao.nota >= estrela">★</span>
+              </div>
+            </div>
+            <span class="review-tag" [class.recomenda]="avaliacao.recomenda">{{ avaliacao.recomenda ? 'Recomenda' : 'Não recomenda' }}</span>
+          </div>
+          <p *ngIf="avaliacao.comentario">{{ avaliacao.comentario }}</p>
+          <div class="review-item-votos">
+            <button type="button" [class.active]="avaliacao.meuVoto === true" (click)="votarUtil(avaliacao.id, true)">Útil ({{ avaliacao.util }})</button>
+            <button type="button" [class.active]="avaliacao.meuVoto === false" (click)="votarUtil(avaliacao.id, false)">Não útil ({{ avaliacao.naoUtil }})</button>
+          </div>
+        </article>
+        <p class="review-empty" *ngIf="!avaliacoes.avaliacoes.length">Nenhuma avaliação ainda. Seja o primeiro a avaliar.</p>
+      </div>
     </div>
   </div>
 
-  <div class="achievements-section" *ngIf="activeTab === 'conquistas'">
-    <div class="achievement-row" *ngFor="let conquista of conquistas">
+  <div class="achievements-section" *ngIf="activeTab === 'conquistas' && conquistas">
+    <div class="achievements-progress">
+      <div class="achievements-progress-ring">
+        <strong>{{ conquistas.percentualConcluido }}%</strong>
+        <span>Concluído</span>
+      </div>
+      <div class="achievements-progress-stats">
+        <strong>{{ conquistas.desbloqueadas }} / {{ conquistas.total }}</strong>
+        <span>Conquistas desbloqueadas</span>
+      </div>
+      <div class="achievements-next" *ngIf="conquistas.proxima">
+        <span class="achievements-next-label">Próxima conquista</span>
+        <div class="achievements-next-card">
+          <img *ngIf="conquistas.proxima.iconeUrl" [src]="conquistas.proxima.iconeUrl" alt="" />
+          <div>
+            <h3>{{ conquistas.proxima.nome }}</h3>
+            <p *ngIf="conquistas.proxima.descricao">{{ conquistas.proxima.descricao }}</p>
+            <small *ngIf="conquistas.proxima.percentualGlobal != null">{{ conquistas.proxima.percentualGlobal }}% dos jogadores desbloquearam</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="achievement-row" *ngFor="let conquista of conquistas.conquistas" [class.bloqueada]="!conquista.desbloqueada">
       <img *ngIf="conquista.iconeUrl" [src]="conquista.iconeUrl" alt="" class="achievement-icon" />
       <div class="achievement-info">
         <h3>{{ conquista.nome }}</h3>
         <p *ngIf="conquista.descricao">{{ conquista.descricao }}</p>
       </div>
-      <span class="achievement-percent" *ngIf="conquista.percentualGlobal != null">{{ conquista.percentualGlobal }}%</span>
+      <span class="achievement-status" *ngIf="conquista.desbloqueada">
+        ✓ Desbloqueada
+        <small *ngIf="conquista.desbloqueadaEm">{{ conquista.desbloqueadaEm | date: 'dd/MM/yyyy' }}</small>
+      </span>
+      <span class="achievement-percent" *ngIf="!conquista.desbloqueada && conquista.percentualGlobal != null">{{ conquista.percentualGlobal }}%</span>
     </div>
   </div>
 </div>
