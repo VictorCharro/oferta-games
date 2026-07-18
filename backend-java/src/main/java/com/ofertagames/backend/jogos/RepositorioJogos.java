@@ -366,6 +366,10 @@ public class RepositorioJogos {
         .update();
   }
 
+  // Prioriza jogos rankeados (top 2000) sobre o resto do catalogo: sao um preenchimento
+  // unico (nao precisam de re-sync continuo como preco), entao vale esgotar os relevantes primeiro.
+  private static final String PRIORIDADE_RANK = "CASE WHEN g.rank IS NOT NULL AND g.rank <= 2000 THEN 0 ELSE 1 END ASC, ";
+
   public List<JogoSteamPendente> listarPendentesSteam(int limite) {
     return jdbc.sql("""
         SELECT g.id, g.title, o.url
@@ -374,9 +378,9 @@ public class RepositorioJogos {
         WHERE (g.is_dlc IS NULL OR g.cover_url IS NULL OR g.steam_app_id IS NULL)
           %s
           %s
-        ORDER BY g.last_steam_sync_at ASC NULLS FIRST, g.id ASC
+        ORDER BY %s g.last_steam_sync_at ASC NULLS FIRST, g.id ASC
         LIMIT :limite
-        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g"), PRIORIDADE_RANK))
         .param("limite", limite)
         .query((rs, linha) -> new JogoSteamPendente(
             rs.getLong("id"),
@@ -393,9 +397,9 @@ public class RepositorioJogos {
         WHERE g.steam_app_id IS NOT NULL AND gd.game_id IS NULL
           %s
           %s
-        ORDER BY g.id ASC
+        ORDER BY %s g.id ASC
         LIMIT :limite
-        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g"), PRIORIDADE_RANK))
         .param("limite", limite)
         .query((rs, linha) -> new JogoDetalhesPendente(rs.getLong("id"), rs.getInt("steam_app_id")))
         .list();
@@ -409,9 +413,9 @@ public class RepositorioJogos {
           AND NOT EXISTS (SELECT 1 FROM game_achievements ga WHERE ga.game_id = g.id)
           %s
           %s
-        ORDER BY g.id ASC
+        ORDER BY %s g.id ASC
         LIMIT :limite
-        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g"), PRIORIDADE_RANK))
         .param("limite", limite)
         .query((rs, linha) -> new JogoDetalhesPendente(rs.getLong("id"), rs.getInt("steam_app_id")))
         .list();

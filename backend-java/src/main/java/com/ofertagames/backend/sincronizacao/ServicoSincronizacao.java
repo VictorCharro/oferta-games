@@ -17,9 +17,9 @@ public class ServicoSincronizacao {
   private static final int LIMITE_RELEVANTES = 200;
   private static final int LIMITE_GERAIS = 4_800;
   private static final int TAMANHO_LOTE_PRECOS = 200;
-  private static final int LIMITE_METADADOS_STEAM = 25;
-  private static final int LIMITE_DETALHES_JOGOS = 25;
-  private static final int LIMITE_CONQUISTAS_CATALOGO = 25;
+  private static final int LIMITE_METADADOS_STEAM = 60;
+  private static final int LIMITE_DETALHES_JOGOS = 60;
+  private static final int LIMITE_CONQUISTAS_CATALOGO = 60;
   private static final Logger logger = LoggerFactory.getLogger(ServicoSincronizacao.class);
 
   private final ClienteItad itad;
