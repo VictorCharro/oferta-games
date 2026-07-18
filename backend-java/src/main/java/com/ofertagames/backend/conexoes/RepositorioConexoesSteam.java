@@ -209,6 +209,23 @@ class RepositorioConexoesSteam {
         .param("usuarioId", usuarioId).param("appId", appId).query(String.class).list());
   }
 
+  java.util.Map<String, Instant> conquistasDesbloqueadasComData(String usuarioId, int appId) {
+    List<ConquistaComData> linhas = jdbc.sql(
+        "SELECT api_name, unlocked_at FROM steam_user_achievements WHERE user_id = CAST(:usuarioId AS uuid) AND app_id = :appId")
+        .param("usuarioId", usuarioId).param("appId", appId)
+        .query((rs, linha) -> new ConquistaComData(
+            rs.getString("api_name"),
+            rs.getTimestamp("unlocked_at") == null ? null : rs.getTimestamp("unlocked_at").toInstant()))
+        .list();
+    java.util.Map<String, Instant> resultado = new java.util.LinkedHashMap<>();
+    for (ConquistaComData linha : linhas) {
+      resultado.put(linha.apiName(), linha.desbloqueadaEm());
+    }
+    return resultado;
+  }
+
+  private record ConquistaComData(String apiName, Instant desbloqueadaEm) {}
+
   void salvarConquistasDetalhadas(String usuarioId, int appId, List<ClienteSteamWeb.ConquistaSteam> conquistas) {
     for (ClienteSteamWeb.ConquistaSteam conquista : conquistas) {
       jdbc.sql("""

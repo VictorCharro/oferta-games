@@ -506,7 +506,7 @@ public class RepositorioJogos {
 
   public List<ConquistaJogo> listarConquistas(long jogoId) {
     return jdbc.sql("""
-        SELECT display_name, description, icon_url, global_percent
+        SELECT api_name, display_name, description, icon_url, global_percent
         FROM game_achievements
         WHERE game_id = :jogoId
         ORDER BY position ASC
@@ -515,12 +515,22 @@ public class RepositorioJogos {
         .query((rs, linha) -> {
           BigDecimal percentual = rs.getBigDecimal("global_percent");
           return new ConquistaJogo(
+              rs.getString("api_name"),
               rs.getString("display_name"),
               rs.getString("description"),
               rs.getString("icon_url"),
               percentual == null ? null : percentual.doubleValue());
         })
         .list();
+  }
+
+  public Optional<JogoESteamAppId> buscarIdESteamAppIdPorSlug(String slug) {
+    return jdbc.sql("SELECT id, steam_app_id FROM games WHERE slug = :slug "
+        + ConteudosNaoJogos.filtroSql("games")
+        + JogosBloqueados.filtroSql("games"))
+        .param("slug", slug)
+        .query((rs, linha) -> new JogoESteamAppId(rs.getLong("id"), rs.getObject("steam_app_id", Integer.class)))
+        .optional();
   }
 
   public Optional<DetalhesJogo> buscarDetalhesJogo(long jogoId) {

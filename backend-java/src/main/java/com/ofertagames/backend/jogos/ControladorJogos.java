@@ -1,11 +1,13 @@
 package com.ofertagames.backend.jogos;
 
+import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,10 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class ControladorJogos {
   private final RepositorioJogos jogos;
   private final ServicoCatalogo catalogo;
+  private final ServicoConquistasJogo conquistasJogo;
+  private final ServicoAutenticacao autenticacao;
 
-  ControladorJogos(RepositorioJogos jogos, ServicoCatalogo catalogo) {
+  ControladorJogos(RepositorioJogos jogos, ServicoCatalogo catalogo, ServicoConquistasJogo conquistasJogo, ServicoAutenticacao autenticacao) {
     this.jogos = jogos;
     this.catalogo = catalogo;
+    this.conquistasJogo = conquistasJogo;
+    this.autenticacao = autenticacao;
   }
 
   @GetMapping
@@ -64,10 +70,14 @@ public class ControladorJogos {
   }
 
   @GetMapping("/{slug}/conquistas")
-  List<ConquistaJogo> conquistas(@PathVariable String slug) {
-    return jogos.buscarIdPorSlug(slug)
-        .map(jogos::listarConquistas)
-        .orElseGet(List::of);
+  ResponseEntity<RespostaConquistas> conquistas(
+      @PathVariable String slug,
+      @RequestHeader(value = "Authorization", required = false) String autorizacao
+  ) {
+    String visitanteId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao).orElse(null);
+    return conquistasJogo.buscar(slug, visitanteId)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.ok(new RespostaConquistas(0, 0, 0, null, List.of())));
   }
 
   @PostMapping("/{slug}/refresh")

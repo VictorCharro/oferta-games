@@ -127,6 +127,12 @@ public class ServicoConexoesSteam {
         .toList();
   }
 
+  // Usado pela pagina do jogo pra cruzar o progresso pessoal com o catalogo global de conquistas.
+  // Devolve vazio se o usuario nao tem Steam conectada ou nunca jogou esse app id, sem lancar excecao.
+  public java.util.Map<String, java.time.Instant> conquistasDesbloqueadas(String usuarioId, int appId) {
+    return conexoes.conquistasDesbloqueadasComData(usuarioId, appId);
+  }
+
   private int sincronizarConquistasDaConta(String usuarioId, String steamId, int limite) {
     boolean primeiraSincronizacao = !conexoes.atividadesConquistasInicializadas(usuarioId);
     boolean resumoInicialRegistrado = conexoes.atividadesConquistasIniciadas(usuarioId);
