@@ -100,7 +100,24 @@ Dois jobs novos em `ServicoSincronizacao`/`AgendadorColetas`, ambos dependem de 
 - Endpoints novos, independentes de `/api/games/{slug}` (usado pela aba Precos, que nao mudou): `GET /api/games/{slug}/detalhes` (404 se ainda nao sincronizado) e `GET /api/games/{slug}/conquistas` (lista vazia se nao houver).
 - Disparo manual: `POST /api/admin/coleta/detalhes` e `POST /api/admin/coleta/conquistas-catalogo` (mesmo padrao de auth de admin dos demais tipos).
 - `game_details` tambem guarda `trailer_url`/`trailer_thumbnail` (primeiro item de `movies` no appdetails), `about_full` + `feature_highlights` (jsonb, parseado via Jsoup dos blocos `<h2 class=bb_tag>` do `about_the_game`), `categories` (badges tipo "Suporte a controle") e `requirements_min`/`requirements_rec` (texto, uma linha por item, extraido do HTML de `pc_requirements`).
-- Consumido pela pagina do jogo: abas Sobre/Review/Conquistas em `pages/game-detail/`, cada uma so aparece se houver conteudo (Sobre exige destaques ou trailer — descricao/screenshots sozinhos nao bastam, pra nao aparecer em trilhas sonoras; Review exige pelo menos 1 review; Conquistas exige pelo menos 1 conquista).
+- Consumido pela pagina do jogo: abas Sobre/Review/Conquistas em `pages/game-detail/`, cada uma so aparece se houver conteudo (Sobre exige destaques ou trailer — descricao/screenshots sozinhos nao bastam, pra nao aparecer em trilhas sonoras; Review exige pelo menos 1 review — da Steam ou nossa; Conquistas exige pelo menos 1 conquista no catalogo).
+
+### Conquistas com progresso pessoal
+
+`GET /api/games/{slug}/conquistas` aceita `Authorization` opcional. Sem login (ou sem Steam conectada, ou sem dado pra esse jogo), devolve a lista do catalogo com tudo bloqueado e 0%. Logado com progresso: cruza `game_achievements.api_name` (catalogo) com `steam_user_achievements` (por usuario e app id, ja existia pra sync de biblioteca) via `ServicoConexoesSteam.conquistasDesbloqueadas` (novo metodo publico — o repositorio de `conexoes` e package-private, entao o modulo `jogos` so acessa por esse service). Calcula `percentualConcluido` e a "proxima conquista" (a nao desbloqueada com maior `global_percent` = a que mais gente ja pegou). Sem pontuacao (decidido nao implementar por ora).
+
+### Reviews (Steam + Oferta Games)
+
+Duas fontes na aba Review, sub-abas no frontend (Steam primeiro):
+- **Steam**: os campos ja existentes em `game_details` (`notaReviews`/`reviewsPositivas`/`reviewsNegativas`), sem mudanca.
+- **Oferta Games**: sistema de review proprio, modulo `avaliacoesjogo`. Tabelas `game_reviews` (nota 1-5 + comentario, um por usuario por jogo, upsert) e `game_review_votes` (util/nao-util por review, um voto por usuario, pode trocar mas nao remover). "Recomenda" e derivado de `rating >= 4`, sem campo proprio. Nome/avatar de quem avaliou vem de `profiles` (mesma tabela do perfil publico).
+  ```
+  GET    /api/games/{slug}/reviews             auth opcional -> resumo (media, distribuicao por nota, % recomenda) + minha review + lista
+  POST   /api/games/{slug}/reviews              auth obrigatoria -> { nota, comentario } -> upsert
+  DELETE /api/games/{slug}/reviews              auth obrigatoria -> remove a propria review
+  POST   /api/games/{slug}/reviews/{id}/voto     auth obrigatoria -> { util: boolean } -> upsert do voto
+  ```
+  Fora de escopo por ora: "destaques automaticos das reviews" (analise de texto/temas).
 
 ## Fonte de Dados e Regras de Catalogo
 
@@ -155,6 +172,15 @@ game_achievements
   id, game_id (FK games), api_name, display_name, description
   icon_url, icon_gray_url, global_percent, position
   UNIQUE (game_id, api_name)
+
+game_reviews
+  id, game_id (FK games), user_id (FK auth.users), rating (1-5), comentario
+  created_at, updated_at
+  UNIQUE (game_id, user_id)
+
+game_review_votes
+  review_id (FK game_reviews), user_id (FK auth.users), util
+  PK (review_id, user_id)
 
 sync_locks
   name, locked_until
@@ -243,6 +269,7 @@ Arquivos em `backend-java/sql/`:
 17. `20260717_colecoes_perfil.sql`
 18. `20260718_detalhes_jogo.sql`
 19. `20260718_detalhes_jogo_extra.sql`
+20. `20260718_avaliacoes_jogo.sql`
 
 Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500.
 
@@ -260,7 +287,8 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 - `GET /api/games/search?q=nome`
 - `GET /api/games/{slug}`
 - `GET /api/games/{slug}/detalhes` — descricao/generos/devs/publishers/data/screenshots/review, de `game_details`. 404 se o jogo ainda nao foi sincronizado (sem oferta Steam, ou aguardando o job).
-- `GET /api/games/{slug}/conquistas` — lista de `game_achievements` (nome, descricao, icone, `globalPercent`). Lista vazia se nao houver.
+- `GET /api/games/{slug}/conquistas` — auth opcional. `{ total, desbloqueadas, percentualConcluido, proxima, conquistas[] }`; cada conquista com `desbloqueada`/`desbloqueadaEm` cruzados com o progresso do visitante logado (ver "Conquistas com progresso pessoal" acima). Sempre 200, mesmo pra jogo inexistente (fica tudo zerado).
+- `GET|POST|DELETE /api/games/{slug}/reviews`, `POST /api/games/{slug}/reviews/{id}/voto` — ver "Reviews (Steam + Oferta Games)" acima.
 - `POST /api/games/{slug}/refresh`
 - `GET /api/deals/top?size=&sort=discount|rank` — usado 2x pela Home (rank e discount); `RepositorioDescontos.listarMelhores` tambem cacheado (Caffeine, `ConfiguracaoCache.CACHE_DESCONTOS`, 10min), pois e uma query com DISTINCT ON + join na tabela `offers` inteira.
 - `POST /api/sync?page=` (legado, exige `X-Sync-Key`)
