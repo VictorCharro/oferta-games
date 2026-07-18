@@ -99,7 +99,8 @@ Dois jobs novos em `ServicoSincronizacao`/`AgendadorColetas`, ambos dependem de 
 - **Conquistas de catalogo** (`coletarConquistasCatalogo`, ~3h — schema e % global mudam devagar): `ISteamUserStats/GetSchemaForGame/v2` (precisa de `STEAM_WEB_API_KEY`) mesclado com `ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2` (publico). Grava em `game_achievements` (upsert por `api_name`). Nao tem relacao com `conexoes/AgendadorConquistasSteam`, que sincroniza as conquistas *desbloqueadas por um usuario logado* — este job novo e catalogo-wide, sem usuario.
 - Endpoints novos, independentes de `/api/games/{slug}` (usado pela aba Precos, que nao mudou): `GET /api/games/{slug}/detalhes` (404 se ainda nao sincronizado) e `GET /api/games/{slug}/conquistas` (lista vazia se nao houver).
 - Disparo manual: `POST /api/admin/coleta/detalhes` e `POST /api/admin/coleta/conquistas-catalogo` (mesmo padrao de auth de admin dos demais tipos).
-- Nenhuma tela consome esses dados ainda — infra pronta para as futuras abas Sobre/Review/Conquistas na pagina do jogo.
+- `game_details` tambem guarda `trailer_url`/`trailer_thumbnail` (primeiro item de `movies` no appdetails), `about_full` + `feature_highlights` (jsonb, parseado via Jsoup dos blocos `<h2 class=bb_tag>` do `about_the_game`), `categories` (badges tipo "Suporte a controle") e `requirements_min`/`requirements_rec` (texto, uma linha por item, extraido do HTML de `pc_requirements`).
+- Consumido pela pagina do jogo: abas Sobre/Review/Conquistas em `pages/game-detail/`, cada uma so aparece se houver conteudo (Sobre exige destaques ou trailer — descricao/screenshots sozinhos nao bastam, pra nao aparecer em trilhas sonoras; Review exige pelo menos 1 review; Conquistas exige pelo menos 1 conquista).
 
 ## Fonte de Dados e Regras de Catalogo
 
@@ -126,7 +127,7 @@ Ao adicionar uma nova loja ou excecao, garantir que ela seja filtrada em catalog
 
 - O catalogo recebe `platform=all|pc|xbox`.
 - Como a plataforma ainda nao e persistida diretamente da ITAD, o frontend infere PC/Xbox pelo nome e URL da loja. PlayStation permanece oculto ate haver ofertas confiaveis.
-- DLCs sao separados de jogos base por `games.is_dlc` e heuristicas de titulo. A Steam ajuda a preencher esse campo; enquanto nulo, a heuristica permanece como fallback.
+- DLCs sao separados de jogos base por `games.is_dlc` e heuristicas de titulo (`ClassificadorDlc`). O sinal da Steam (`type == "dlc"` no appdetails) e o fallback por titulo sao combinados com OR — a Steam classifica trilhas sonoras como `type: "music"`, entao depender so dela deixava `is_dlc = false` incorretamente pra esses itens (corrigido em 18/07/2026; jogos ja classificados errado precisaram de `UPDATE games SET is_dlc = NULL WHERE ...` manual pra reprocessar, ja que o job so revisita jogos com `is_dlc IS NULL`).
 - A home deve manter uma secao de maiores descontos de DLC separada quando houver itens elegiveis.
 
 ## Schema Relevante
@@ -146,7 +147,9 @@ offers
 game_details
   game_id (PK, FK games), short_description, genres[], developers[]
   publishers[], release_date, screenshots[]
-  review_score_desc, review_positive, review_negative, updated_at
+  review_score_desc, review_positive, review_negative
+  trailer_url, trailer_thumbnail, about_full, feature_highlights (jsonb)
+  categories[], requirements_min, requirements_rec, updated_at
 
 game_achievements
   id, game_id (FK games), api_name, display_name, description
@@ -239,6 +242,7 @@ Arquivos em `backend-java/sql/`:
 16. `20260716_ordem_favoritos_perfil.sql`
 17. `20260717_colecoes_perfil.sql`
 18. `20260718_detalhes_jogo.sql`
+19. `20260718_detalhes_jogo_extra.sql`
 
 Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500.
 
