@@ -1,9 +1,11 @@
 package com.ofertagames.backend.descontos;
 
+import com.ofertagames.backend.comum.ConfiguracaoCache;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.JogosBloqueados;
 import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.util.List;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +17,9 @@ public class RepositorioDescontos {
     this.jdbc = jdbc;
   }
 
+  // Query pesada (DISTINCT ON + join em offers inteira) chamada 2x a cada carregamento da home.
+  // TTL definido em ConfiguracaoCache (10min).
+  @Cacheable(ConfiguracaoCache.CACHE_DESCONTOS)
   public List<DescontoJogo> listarMelhores(int tamanho, String ordenacao) {
     String ordenarPor = "rank".equals(ordenacao)
         ? "rank ASC NULLS LAST, discount_pct DESC"

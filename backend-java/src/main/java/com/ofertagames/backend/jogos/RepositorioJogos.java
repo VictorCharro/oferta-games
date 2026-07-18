@@ -1,6 +1,7 @@
 package com.ofertagames.backend.jogos;
 
 import com.ofertagames.backend.comum.ClassificadorDlc;
+import com.ofertagames.backend.comum.ConfiguracaoCache;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.JogosBloqueados;
 import com.ofertagames.backend.comum.LojasBloqueadas;
@@ -30,8 +31,8 @@ public class RepositorioJogos {
     this.jdbcTemplate = jdbcTemplate;
   }
 
-  // TTL definido em ConfiguracaoCacheCatalogo (10min): evita repetir a query pesada a cada abertura do catalogo.
-  @Cacheable(ConfiguracaoCacheCatalogo.CACHE_CATALOGO)
+  // TTL definido em ConfiguracaoCache (10min): evita repetir a query pesada a cada abertura do catalogo.
+  @Cacheable(ConfiguracaoCache.CACHE_CATALOGO)
   public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, Double descontoMinimo, String busca) {
     int deslocamento = pagina * tamanho;
     String filtroTipo = switch (tipo) {

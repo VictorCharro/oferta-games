@@ -1,4 +1,4 @@
-package com.ofertagames.backend.jogos;
+package com.ofertagames.backend.comum;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
@@ -8,14 +8,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class ConfiguracaoCacheCatalogo {
+public class ConfiguracaoCache {
 
   public static final String CACHE_CATALOGO = "catalogoJogos";
+  public static final String CACHE_DESCONTOS = "descontosTop";
 
-  // TTL curto pra acompanhar a sincronizacao de precos sem martelar o banco a cada abertura do catalogo.
+  // TTL curto pra acompanhar a sincronizacao de precos sem martelar o banco a cada carregamento de catalogo/inicio.
   @Bean
   CacheManager cacheManager() {
-    CaffeineCacheManager gerenciador = new CaffeineCacheManager(CACHE_CATALOGO);
+    CaffeineCacheManager gerenciador = new CaffeineCacheManager(CACHE_CATALOGO, CACHE_DESCONTOS);
     gerenciador.setCaffeine(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(10)).maximumSize(500));
     return gerenciador;
   }

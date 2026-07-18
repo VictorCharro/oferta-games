@@ -230,11 +230,11 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
   - `sort`: `rank`, `discount`, `price_asc`, `price_desc`.
   - `type`: `all`, `game`, `dlc`.
   - Retorna a oferta minima, incluindo loja e URL quando disponiveis.
-  - `RepositorioJogos.listar` e cacheado em memoria (Caffeine, `ConfiguracaoCacheCatalogo`) por 10min por combinacao de parametros, pra nao repetir a query a cada abertura do catalogo. Expira sozinho; nao ha invalidacao manual quando a sincronizacao de precos roda.
+  - `RepositorioJogos.listar` e cacheado em memoria (Caffeine, `comum/ConfiguracaoCache`) por 10min por combinacao de parametros, pra nao repetir a query a cada abertura do catalogo. Expira sozinho; nao ha invalidacao manual quando a sincronizacao de precos roda. A pagina Mais Vendidos usa este mesmo endpoint (`getGames`), entao ja se beneficia do cache.
 - `GET /api/games/search?q=nome`
 - `GET /api/games/{slug}`
 - `POST /api/games/{slug}/refresh`
-- `GET /api/deals/top?size=&sort=discount|rank`
+- `GET /api/deals/top?size=&sort=discount|rank` — usado 2x pela Home (rank e discount); `RepositorioDescontos.listarMelhores` tambem cacheado (Caffeine, `ConfiguracaoCache.CACHE_DESCONTOS`, 10min), pois e uma query com DISTINCT ON + join na tabela `offers` inteira.
 - `POST /api/sync?page=` (legado, exige `X-Sync-Key`)
 
 ### Jogos Monitorados e notificacoes
