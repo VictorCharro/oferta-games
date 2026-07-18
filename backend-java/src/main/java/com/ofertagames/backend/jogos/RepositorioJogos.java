@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -29,6 +30,8 @@ public class RepositorioJogos {
     this.jdbcTemplate = jdbcTemplate;
   }
 
+  // TTL definido em ConfiguracaoCacheCatalogo (10min): evita repetir a query pesada a cada abertura do catalogo.
+  @Cacheable(ConfiguracaoCacheCatalogo.CACHE_CATALOGO)
   public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, Double descontoMinimo, String busca) {
     int deslocamento = pagina * tamanho;
     String filtroTipo = switch (tipo) {

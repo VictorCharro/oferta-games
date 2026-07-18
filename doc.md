@@ -230,6 +230,7 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
   - `sort`: `rank`, `discount`, `price_asc`, `price_desc`.
   - `type`: `all`, `game`, `dlc`.
   - Retorna a oferta minima, incluindo loja e URL quando disponiveis.
+  - `RepositorioJogos.listar` e cacheado em memoria (Caffeine, `ConfiguracaoCacheCatalogo`) por 10min por combinacao de parametros, pra nao repetir a query a cada abertura do catalogo. Expira sozinho; nao ha invalidacao manual quando a sincronizacao de precos roda.
 - `GET /api/games/search?q=nome`
 - `GET /api/games/{slug}`
 - `POST /api/games/{slug}/refresh`
