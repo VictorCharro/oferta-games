@@ -25,11 +25,13 @@ public class ServicoSincronizacao {
   private final ClienteItad itad;
   private final ServicoCatalogo catalogo;
   private final RepositorioJogos jogos;
+  private final ServicoAquecimentoCache aquecimentoCache;
 
-  ServicoSincronizacao(ClienteItad itad, ServicoCatalogo catalogo, RepositorioJogos jogos) {
+  ServicoSincronizacao(ClienteItad itad, ServicoCatalogo catalogo, RepositorioJogos jogos, ServicoAquecimentoCache aquecimentoCache) {
     this.itad = itad;
     this.catalogo = catalogo;
     this.jogos = jogos;
+    this.aquecimentoCache = aquecimentoCache;
   }
 
   /** Mantido para diagnostico e sincronizacao manual pontual; nao e usado pelo agendador. */
@@ -64,6 +66,14 @@ public class ServicoSincronizacao {
         ofertasAtualizadas += resultado.ofertasAtualizadas();
       } catch (RuntimeException erro) {
         logger.error("Falha definitiva ao atualizar o lote de precos {}-{}", inicio, fim - 1, erro);
+      }
+    }
+
+    if (ofertasAtualizadas > 0) {
+      try {
+        aquecimentoCache.aquecer();
+      } catch (RuntimeException erro) {
+        logger.warn("Falha ao reaquecer o cache do catalogo apos a coleta de precos", erro);
       }
     }
 
