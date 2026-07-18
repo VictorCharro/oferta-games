@@ -21,6 +21,7 @@ export class GameDetail implements OnInit, OnDestroy {
   loading = true;
   refreshing = false;
   refreshMsg = '';
+  activeTab: 'precos' = 'precos';
   menuColecoesAberto = false;
   colecoes: ColecaoPerfil[] = [];
   carregandoColecoes = false;

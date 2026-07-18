@@ -214,6 +214,42 @@
   color: var(--color-green);
 }
 
+.detail-tabs {
+  display: flex;
+  gap: 18px;
+  padding: 0 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--bg-card);
+
+  button {
+    position: relative;
+    min-height: 50px;
+    padding: 0 10px;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.active {
+      color: var(--color-purple);
+
+      &::after {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 2px;
+        background: var(--color-purple);
+        content: '';
+      }
+    }
+  }
+}
+
 .offers-section {
   h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
 }

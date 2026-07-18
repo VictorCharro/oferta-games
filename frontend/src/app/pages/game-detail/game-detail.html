@@ -76,7 +76,11 @@
     </div>
   </div>
 
-  <div class="offers-section">
+  <section class="detail-tabs">
+    <button type="button" class="active">Preços</button>
+  </section>
+
+  <div class="offers-section" *ngIf="activeTab === 'precos'">
     <h2>Comparar preços</h2>
     <div class="offers-table" *ngIf="game.offers.length; else noOffers">
       <div class="offer-header">
