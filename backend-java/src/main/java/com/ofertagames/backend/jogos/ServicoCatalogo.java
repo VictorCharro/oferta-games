@@ -237,7 +237,8 @@ public class ServicoCatalogo {
     for (JogoSteamPendente pendente : pendentes) {
       var appId = steam.resolverAppIdSteam(pendente.url());
       var detalhes = appId.flatMap(steam::buscarDetalhesAplicativo);
-      Boolean ehDlc = detalhes.map(DetalhesAplicativoSteam::ehDlc).orElseGet(() -> steam.tituloPareceDlc(pendente.titulo()));
+      boolean ehDlc = Boolean.TRUE.equals(detalhes.map(DetalhesAplicativoSteam::ehDlc).orElse(null))
+          || steam.tituloPareceDlc(pendente.titulo());
       String capa = detalhes.map(DetalhesAplicativoSteam::imagemCabecalho).orElse(null);
       Integer steamAppId = appId.map(Integer::parseInt).orElse(null);
       jogos.atualizarMetadadosSteam(pendente.id(), ehDlc, capa, steamAppId);
@@ -338,7 +339,8 @@ public class ServicoCatalogo {
     Boolean ehDlc = null;
     String capa = null;
     if (jogo.ehDlc() == null) {
-      ehDlc = detalhes.map(DetalhesAplicativoSteam::ehDlc).orElseGet(() -> steam.tituloPareceDlc(jogo.titulo()));
+      ehDlc = Boolean.TRUE.equals(detalhes.map(DetalhesAplicativoSteam::ehDlc).orElse(null))
+          || steam.tituloPareceDlc(jogo.titulo());
     }
     if (jogo.capaUrl() == null) {
       capa = detalhes.map(DetalhesAplicativoSteam::imagemCabecalho).orElse(null);
