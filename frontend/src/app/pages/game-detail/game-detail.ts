@@ -1,7 +1,8 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, Subscription } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
+import type Hls from 'hls.js';
 import { GameService, GameDetail as GameDetailModel, GameSummary, Offer, GameDetails, RespostaConquistas } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
@@ -26,6 +27,9 @@ export class GameDetail implements OnInit, OnDestroy {
   detalhes: GameDetails | null = null;
   conquistas: RespostaConquistas | null = null;
   midiaAtiva = 0;
+  trailerTocando = false;
+  @ViewChild('trailerVideo') trailerVideoRef?: ElementRef<HTMLVideoElement>;
+  private hls?: Hls;
   menuColecoesAberto = false;
   colecoes: ColecaoPerfil[] = [];
   carregandoColecoes = false;
@@ -36,8 +40,8 @@ export class GameDetail implements OnInit, OnDestroy {
   minhaNota = 0;
   estrelaEmFoco = 0;
   meuComentario = '';
-  editandoAvaliacao = false;
   enviandoAvaliacao = false;
+  filtroConquistas: 'todas' | 'desbloqueadas' | 'bloqueadas' = 'todas';
   private routeSub?: Subscription;
   private favoriteSub?: Subscription;
   private profileFavoriteSub?: Subscription;
@@ -73,7 +77,9 @@ export class GameDetail implements OnInit, OnDestroy {
         this.activeTab = 'precos';
         this.subTabReview = 'steam';
         this.midiaAtiva = 0;
-        this.cancelarEdicaoAvaliacao();
+        this.pararTrailer();
+        this.resetarFormularioAvaliacao();
+        this.filtroConquistas = 'todas';
         this.cdr.detectChanges();
         this.carregarDetalhesEConquistasEReviews(slug);
       }),
@@ -89,6 +95,7 @@ export class GameDetail implements OnInit, OnDestroy {
     this.routeSub?.unsubscribe();
     this.favoriteSub?.unsubscribe();
     this.profileFavoriteSub?.unsubscribe();
+    this.hls?.destroy();
   }
 
   private carregarDetalhesEConquistasEReviews(slug: string) {
@@ -102,6 +109,8 @@ export class GameDetail implements OnInit, OnDestroy {
     }).catch(() => {});
     this.reviewsService.listar(slug).then(avaliacoes => {
       this.avaliacoes = avaliacoes;
+      this.minhaNota = avaliacoes.minha?.nota ?? 0;
+      this.meuComentario = avaliacoes.minha?.comentario ?? '';
       this.cdr.detectChanges();
     }).catch(() => {});
   }
@@ -126,6 +135,25 @@ export class GameDetail implements OnInit, OnDestroy {
     return (this.conquistas?.total ?? 0) > 0;
   }
 
+  get conquistasFiltradas() {
+    const lista = this.conquistas?.conquistas ?? [];
+    if (this.filtroConquistas === 'desbloqueadas') return lista.filter(c => c.desbloqueada);
+    if (this.filtroConquistas === 'bloqueadas') return lista.filter(c => !c.desbloqueada);
+    return lista;
+  }
+
+  definirFiltroConquistas(filtro: 'todas' | 'desbloqueadas' | 'bloqueadas') {
+    this.filtroConquistas = filtro;
+  }
+
+  // A Steam nao classifica raridade: aproximamos pelo percentual global de quem desbloqueou.
+  raridade(percentualGlobal: number | null): string {
+    if (percentualGlobal == null) return 'Rara';
+    if (percentualGlobal >= 20) return 'Comum';
+    if (percentualGlobal >= 5) return 'Incomum';
+    return 'Rara';
+  }
+
   get midias(): { tipo: 'trailer' | 'imagem'; url: string; thumb: string }[] {
     const d = this.detalhes;
     if (!d) return [];
@@ -139,18 +167,54 @@ export class GameDetail implements OnInit, OnDestroy {
     return itens;
   }
 
+  get midiaAtual() {
+    return this.midias[this.midiaAtiva] ?? null;
+  }
+
   selecionarMidia(indice: number) {
     this.midiaAtiva = indice;
+    this.pararTrailer();
   }
 
   proximaMidia() {
     const total = this.midias.length;
     if (total) this.midiaAtiva = (this.midiaAtiva + 1) % total;
+    this.pararTrailer();
   }
 
   midiaAnterior() {
     const total = this.midias.length;
     if (total) this.midiaAtiva = (this.midiaAtiva - 1 + total) % total;
+    this.pararTrailer();
+  }
+
+  async tocarTrailer() {
+    const midia = this.midiaAtual;
+    if (!midia || midia.tipo !== 'trailer') return;
+    this.trailerTocando = true;
+    this.cdr.detectChanges();
+    const video = this.trailerVideoRef?.nativeElement;
+    if (!video) return;
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = midia.url;
+      video.play().catch(() => {});
+      return;
+    }
+
+    const { default: HlsImpl } = await import('hls.js');
+    if (!HlsImpl.isSupported()) return;
+    this.hls?.destroy();
+    this.hls = new HlsImpl();
+    this.hls.loadSource(midia.url);
+    this.hls.attachMedia(video);
+    this.hls.on(HlsImpl.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+  }
+
+  private pararTrailer() {
+    this.trailerTocando = false;
+    this.hls?.destroy();
+    this.hls = undefined;
   }
 
   reviewPositividade(): number | null {
@@ -172,29 +236,25 @@ export class GameDetail implements OnInit, OnDestroy {
     return Math.round(((resumo.distribuicao[nota] ?? 0) / resumo.total) * 100);
   }
 
-  iniciarAvaliacao() {
-    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
-    const minha = this.avaliacoes?.minha;
-    this.minhaNota = minha?.nota ?? 0;
-    this.meuComentario = minha?.comentario ?? '';
-    this.editandoAvaliacao = true;
-  }
-
-  cancelarEdicaoAvaliacao() {
-    this.editandoAvaliacao = false;
+  private resetarFormularioAvaliacao() {
     this.minhaNota = 0;
     this.estrelaEmFoco = 0;
     this.meuComentario = '';
   }
 
+  definirEstrela(nota: number) {
+    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
+    this.minhaNota = nota;
+  }
+
   async enviarAvaliacao() {
+    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
     if (!this.game || !this.minhaNota || this.enviandoAvaliacao) return;
     this.enviandoAvaliacao = true;
     this.cdr.detectChanges();
     try {
       await this.reviewsService.avaliar(this.game.slug, this.minhaNota, this.meuComentario.trim());
       this.avaliacoes = await this.reviewsService.listar(this.game.slug);
-      this.cancelarEdicaoAvaliacao();
     } catch { /* silencioso: formulario permanece pro usuario tentar de novo */ }
     this.enviandoAvaliacao = false;
     this.cdr.detectChanges();
@@ -205,9 +265,22 @@ export class GameDetail implements OnInit, OnDestroy {
     try {
       await this.reviewsService.remover(this.game.slug);
       this.avaliacoes = await this.reviewsService.listar(this.game.slug);
-      this.cancelarEdicaoAvaliacao();
+      this.resetarFormularioAvaliacao();
     } catch { /* silencioso */ }
     this.cdr.detectChanges();
+  }
+
+  relativeTime(value: string): string {
+    const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
+    const minutos = Math.floor(elapsed / 60000);
+    if (minutos < 1) return 'agora mesmo';
+    if (minutos < 60) return `há ${minutos} min`;
+    const horas = Math.floor(minutos / 60);
+    if (horas < 24) return `há ${horas} ${horas === 1 ? 'hora' : 'horas'}`;
+    const dias = Math.floor(horas / 24);
+    if (dias < 30) return `há ${dias} ${dias === 1 ? 'dia' : 'dias'}`;
+    const meses = Math.floor(dias / 30);
+    return `há ${meses} ${meses === 1 ? 'mês' : 'meses'}`;
   }
 
   async votarUtil(reviewId: number, util: boolean) {

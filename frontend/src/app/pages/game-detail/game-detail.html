@@ -121,11 +121,14 @@
   <div class="about-section" *ngIf="activeTab === 'sobre' && detalhes">
     <div class="about-media">
       <div class="about-media-main">
-        <ng-container *ngIf="midias[midiaAtiva] as midia">
-          <a *ngIf="midia.tipo === 'trailer'" class="about-media-trailer" [href]="midia.url" target="_blank" rel="noopener">
-            <img [src]="midia.thumb" alt="Trailer" />
-            <span class="about-media-play" aria-hidden="true">▶</span>
-          </a>
+        <ng-container *ngIf="midiaAtual as midia">
+          <ng-container *ngIf="midia.tipo === 'trailer'">
+            <video #trailerVideo *ngIf="trailerTocando" class="about-media-video" controls playsinline autoplay></video>
+            <button *ngIf="!trailerTocando" type="button" class="about-media-trailer" (click)="tocarTrailer()">
+              <img [src]="midia.thumb" alt="Trailer" />
+              <span class="about-media-play" aria-hidden="true">▶</span>
+            </button>
+          </ng-container>
           <img *ngIf="midia.tipo === 'imagem'" [src]="midia.url" [alt]="game.title" />
         </ng-container>
         <button type="button" class="about-media-nav prev" (click)="midiaAnterior()" *ngIf="midias.length > 1" aria-label="Mídia anterior">‹</button>
@@ -205,31 +208,69 @@
     <p class="review-empty" *ngIf="subTabReview === 'steam' && !detalhes">Sem dados de review da Steam pra esse jogo.</p>
 
     <div class="review-ofertagames" *ngIf="subTabReview === 'ofertagames' && avaliacoes">
-      <div class="review-summary">
-        <div class="review-summary-media">
-          <strong>{{ avaliacoes.resumo.media ? (avaliacoes.resumo.media | number: '1.1-1') : '—' }}</strong>
-          <span>de 5 · {{ avaliacoes.resumo.total }} avaliações</span>
-        </div>
-        <div class="review-summary-bars">
-          <div class="review-bar-row" *ngFor="let nota of [5, 4, 3, 2, 1]">
-            <span>{{ nota }}★</span>
-            <div class="review-bar-track"><div class="review-bar-fill" [style.width.%]="distribuicaoPercentual(nota)"></div></div>
-            <span>{{ distribuicaoPercentual(nota) }}%</span>
+      <div class="review-summary-row">
+        <div class="review-card review-card-avaliacao">
+          <h3>Avaliação dos jogadores</h3>
+          <div class="review-avaliacao-body">
+            <div class="review-avaliacao-nota">
+              <span class="review-avaliacao-star" aria-hidden="true">★</span>
+              <strong>{{ avaliacoes.resumo.media ? (avaliacoes.resumo.media | number: '1.1-1') : '—' }}</strong>
+              <span class="review-avaliacao-de5">/5</span>
+            </div>
+            <div class="review-summary-bars">
+              <div class="review-bar-row" *ngFor="let nota of [5, 4, 3, 2, 1]">
+                <span>{{ nota }}★</span>
+                <div class="review-bar-track"><div class="review-bar-fill" [style.width.%]="distribuicaoPercentual(nota)"></div></div>
+                <span>{{ distribuicaoPercentual(nota) }}%</span>
+              </div>
+            </div>
           </div>
+          <span class="review-card-footer">Baseado em {{ avaliacoes.resumo.total }} avaliações</span>
         </div>
-        <div class="review-summary-recomenda" *ngIf="avaliacoes.resumo.percentualRecomenda != null">
-          <strong>{{ avaliacoes.resumo.percentualRecomenda }}%</strong>
-          <span>recomendam este jogo</span>
+
+        <div class="review-card review-card-recomendacao" *ngIf="avaliacoes.resumo.percentualRecomenda != null">
+          <h3>Recomendação</h3>
+          <div class="review-recomendacao-ring">
+            <strong>{{ avaliacoes.resumo.percentualRecomenda }}%</strong>
+          </div>
+          <span class="review-card-footer">dos jogadores recomendam este jogo</span>
         </div>
       </div>
 
-      <div class="review-form">
-        <ng-container *ngIf="!editandoAvaliacao">
-          <button type="button" class="save-btn" (click)="iniciarAvaliacao()">
-            {{ avaliacoes.minha ? 'Editar minha avaliação' : 'Avaliar este jogo' }}
-          </button>
-        </ng-container>
-        <ng-container *ngIf="editandoAvaliacao">
+      <div class="review-columns">
+        <div class="review-list-col">
+          <div class="review-list-header">
+            <h3>Reviews dos jogadores</h3>
+            <select aria-label="Ordenar reviews">
+              <option>Mais recentes</option>
+            </select>
+          </div>
+
+          <div class="review-list">
+            <article class="review-item" *ngFor="let avaliacao of avaliacoes.avaliacoes">
+              <div class="review-item-header">
+                <img [src]="avaliacao.usuarioAvatarUrl || 'no-cover.svg'" alt="" class="review-avatar" />
+                <div>
+                  <strong>{{ avaliacao.usuarioNome || 'Usuário' }}</strong>
+                  <div class="review-item-estrelas">
+                    <span *ngFor="let estrela of estrelas" [class.active]="avaliacao.nota >= estrela">★</span>
+                    <small>{{ relativeTime(avaliacao.criadoEm) }}</small>
+                  </div>
+                </div>
+                <span class="review-tag" [class.recomenda]="avaliacao.recomenda">{{ avaliacao.recomenda ? 'Recomenda' : 'Não recomenda' }}</span>
+              </div>
+              <p *ngIf="avaliacao.comentario">{{ avaliacao.comentario }}</p>
+              <div class="review-item-votos">
+                <button type="button" [class.active]="avaliacao.meuVoto === true" (click)="votarUtil(avaliacao.id, true)">Útil ({{ avaliacao.util }})</button>
+                <button type="button" [class.active]="avaliacao.meuVoto === false" (click)="votarUtil(avaliacao.id, false)">Não útil ({{ avaliacao.naoUtil }})</button>
+              </div>
+            </article>
+            <p class="review-empty" *ngIf="!avaliacoes.avaliacoes.length">Nenhuma avaliação ainda. Seja o primeiro a avaliar.</p>
+          </div>
+        </div>
+
+        <div class="review-form-col">
+          <h3>Avaliar este jogo</h3>
           <div class="review-form-estrelas">
             <button
               type="button"
@@ -238,48 +279,28 @@
               [class.active]="(estrelaEmFoco || minhaNota) >= estrela"
               (mouseenter)="estrelaEmFoco = estrela"
               (mouseleave)="estrelaEmFoco = 0"
-              (click)="minhaNota = estrela"
+              (click)="definirEstrela(estrela)"
             >★</button>
           </div>
           <textarea [(ngModel)]="meuComentario" maxlength="2000" placeholder="Escreva sua avaliação..."></textarea>
           <div class="review-form-actions">
-            <button type="button" class="save-btn" [disabled]="!minhaNota || enviandoAvaliacao" (click)="enviarAvaliacao()">
+            <button type="button" class="btn-primary" [disabled]="!minhaNota || enviandoAvaliacao" (click)="enviarAvaliacao()">
               {{ enviandoAvaliacao ? 'Enviando...' : 'Publicar review' }}
             </button>
-            <button type="button" class="ghost-btn" (click)="cancelarEdicaoAvaliacao()">Cancelar</button>
-            <button type="button" class="panel-link danger" *ngIf="avaliacoes.minha" (click)="excluirAvaliacao()">Excluir minha review</button>
+            <button type="button" class="btn-outline" *ngIf="avaliacoes.minha" (click)="excluirAvaliacao()">Excluir minha review</button>
           </div>
-        </ng-container>
-      </div>
-
-      <div class="review-list">
-        <article class="review-item" *ngFor="let avaliacao of avaliacoes.avaliacoes">
-          <div class="review-item-header">
-            <img [src]="avaliacao.usuarioAvatarUrl || 'no-cover.svg'" alt="" class="review-avatar" />
-            <div>
-              <strong>{{ avaliacao.usuarioNome || 'Usuário' }}</strong>
-              <div class="review-item-estrelas">
-                <span *ngFor="let estrela of estrelas" [class.active]="avaliacao.nota >= estrela">★</span>
-              </div>
-            </div>
-            <span class="review-tag" [class.recomenda]="avaliacao.recomenda">{{ avaliacao.recomenda ? 'Recomenda' : 'Não recomenda' }}</span>
-          </div>
-          <p *ngIf="avaliacao.comentario">{{ avaliacao.comentario }}</p>
-          <div class="review-item-votos">
-            <button type="button" [class.active]="avaliacao.meuVoto === true" (click)="votarUtil(avaliacao.id, true)">Útil ({{ avaliacao.util }})</button>
-            <button type="button" [class.active]="avaliacao.meuVoto === false" (click)="votarUtil(avaliacao.id, false)">Não útil ({{ avaliacao.naoUtil }})</button>
-          </div>
-        </article>
-        <p class="review-empty" *ngIf="!avaliacoes.avaliacoes.length">Nenhuma avaliação ainda. Seja o primeiro a avaliar.</p>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="achievements-section" *ngIf="activeTab === 'conquistas' && conquistas">
     <div class="achievements-progress">
-      <div class="achievements-progress-ring">
-        <strong>{{ conquistas.percentualConcluido }}%</strong>
-        <span>Concluído</span>
+      <div class="achievements-progress-ring" [style.background]="'conic-gradient(var(--color-green) ' + (conquistas.percentualConcluido * 3.6) + 'deg, var(--bg-card-hover) 0)'">
+        <div class="achievements-progress-ring-inner">
+          <strong>{{ conquistas.percentualConcluido }}%</strong>
+          <span>Concluído</span>
+        </div>
       </div>
       <div class="achievements-progress-stats">
         <strong>{{ conquistas.desbloqueadas }} / {{ conquistas.total }}</strong>
@@ -298,17 +319,33 @@
       </div>
     </div>
 
-    <div class="achievement-row" *ngFor="let conquista of conquistas.conquistas" [class.bloqueada]="!conquista.desbloqueada">
-      <img *ngIf="conquista.iconeUrl" [src]="conquista.iconeUrl" alt="" class="achievement-icon" />
-      <div class="achievement-info">
-        <h3>{{ conquista.nome }}</h3>
-        <p *ngIf="conquista.descricao">{{ conquista.descricao }}</p>
+    <div class="achievements-toolbar">
+      <div class="achievements-filtros">
+        <button type="button" [class.active]="filtroConquistas === 'todas'" (click)="definirFiltroConquistas('todas')">Todas</button>
+        <button type="button" [class.active]="filtroConquistas === 'desbloqueadas'" (click)="definirFiltroConquistas('desbloqueadas')">Desbloqueadas</button>
+        <button type="button" [class.active]="filtroConquistas === 'bloqueadas'" (click)="definirFiltroConquistas('bloqueadas')">Bloqueadas</button>
       </div>
-      <span class="achievement-status" *ngIf="conquista.desbloqueada">
-        ✓ Desbloqueada
-        <small *ngIf="conquista.desbloqueadaEm">{{ conquista.desbloqueadaEm | date: 'dd/MM/yyyy' }}</small>
-      </span>
-      <span class="achievement-percent" *ngIf="!conquista.desbloqueada && conquista.percentualGlobal != null">{{ conquista.percentualGlobal }}%</span>
+      <select aria-label="Ordenar conquistas">
+        <option>Ordem padrão</option>
+      </select>
+    </div>
+
+    <div class="achievements-grid">
+      <div class="achievement-row" *ngFor="let conquista of conquistasFiltradas" [class.bloqueada]="!conquista.desbloqueada">
+        <div class="achievement-icon-wrap">
+          <img *ngIf="conquista.iconeUrl" [src]="conquista.iconeUrl" alt="" class="achievement-icon" />
+          <span *ngIf="!conquista.desbloqueada" class="achievement-lock" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0v3H9V7zm3 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>
+          </span>
+        </div>
+        <div class="achievement-info">
+          <h3>{{ conquista.nome }}</h3>
+          <p *ngIf="conquista.descricao">{{ conquista.descricao }}</p>
+          <small class="achievement-data" *ngIf="conquista.desbloqueada && conquista.desbloqueadaEm">Desbloqueada em {{ conquista.desbloqueadaEm | date: 'dd/MM/yyyy' }}</small>
+        </div>
+        <span class="achievement-raridade" [class]="raridade(conquista.percentualGlobal) | lowercase">{{ raridade(conquista.percentualGlobal) }}</span>
+      </div>
+      <p class="review-empty" *ngIf="!conquistasFiltradas.length">Nenhuma conquista nesse filtro.</p>
     </div>
   </div>
 </div>
