@@ -796,6 +796,12 @@ export class PublicProfile implements OnInit, OnDestroy {
     return { pequeno: 1, medio: 4, largo: 6, completo: 8 }[size];
   }
 
+  // Itens de atividade sao linhas de texto compactas, nao cards em grade:
+  // o limite de cards deixaria o bloco pequeno quase vazio.
+  activityPreviewLimit(size: PerfilBloco['tamanho']): number {
+    return { pequeno: 4, medio: 6, largo: 8, completo: 10 }[size];
+  }
+
   maxTitleLength(block: PerfilBloco): number {
     return { pequeno: 42, medio: 64, largo: 88, completo: 120 }[block.tamanho];
   }
@@ -813,7 +819,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   activityPreview(block: PerfilBloco) {
-    return this.profile?.atividades.slice(0, this.previewLimit(block.tamanho)) || [];
+    return this.profile?.atividades.slice(0, this.activityPreviewLimit(block.tamanho)) || [];
   }
 
   steamCover(game: PerfilPublico['biblioteca'][number]): string {
