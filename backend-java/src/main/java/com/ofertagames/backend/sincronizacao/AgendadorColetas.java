@@ -28,4 +28,18 @@ class AgendadorColetas {
   void coletarMetadadosSteam() {
     execucao.executar("steam", sincronizacao::sincronizarRodadaSteam);
   }
+
+  @Scheduled(
+      fixedDelayString = "${app.sync.scheduler.detalhes-delay-ms:900000}",
+      initialDelayString = "${app.sync.scheduler.detalhes-initial-delay-ms:420000}")
+  void coletarDetalhesJogos() {
+    execucao.executar("detalhes", sincronizacao::sincronizarRodadaDetalhes);
+  }
+
+  @Scheduled(
+      fixedDelayString = "${app.sync.scheduler.conquistas-catalogo-delay-ms:10800000}",
+      initialDelayString = "${app.sync.scheduler.conquistas-catalogo-initial-delay-ms:540000}")
+  void coletarConquistasCatalogo() {
+    execucao.executar("conquistas-catalogo", sincronizacao::sincronizarRodadaConquistasCatalogo);
+  }
 }

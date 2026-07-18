@@ -346,16 +346,18 @@ public class RepositorioJogos {
         .optional();
   }
 
-  public void atualizarMetadadosSteam(long jogoId, Boolean ehDlc, String capaSteam) {
+  public void atualizarMetadadosSteam(long jogoId, Boolean ehDlc, String capaSteam, Integer steamAppId) {
     jdbc.sql("""
         UPDATE games
         SET is_dlc = COALESCE(:ehDlc, is_dlc),
             cover_url = COALESCE(cover_url, :capaSteam),
+            steam_app_id = COALESCE(steam_app_id, :steamAppId),
             last_steam_sync_at = now()
         WHERE id = :jogoId
         """)
         .param("ehDlc", ehDlc)
         .param("capaSteam", capaSteam)
+        .param("steamAppId", steamAppId)
         .param("jogoId", jogoId)
         .update();
   }
@@ -365,7 +367,7 @@ public class RepositorioJogos {
         SELECT g.id, g.title, o.url
         FROM games g
         JOIN offers o ON o.game_id = g.id AND o.store_name = 'Steam'
-        WHERE (g.is_dlc IS NULL OR g.cover_url IS NULL)
+        WHERE (g.is_dlc IS NULL OR g.cover_url IS NULL OR g.steam_app_id IS NULL)
           %s
           %s
         ORDER BY g.last_steam_sync_at ASC NULLS FIRST, g.id ASC
@@ -377,6 +379,150 @@ public class RepositorioJogos {
             rs.getString("title"),
             rs.getString("url")))
         .list();
+  }
+
+  public List<JogoDetalhesPendente> listarPendentesDetalhes(int limite) {
+    return jdbc.sql("""
+        SELECT g.id, g.steam_app_id
+        FROM games g
+        LEFT JOIN game_details gd ON gd.game_id = g.id
+        WHERE g.steam_app_id IS NOT NULL AND gd.game_id IS NULL
+          %s
+          %s
+        ORDER BY g.id ASC
+        LIMIT :limite
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .param("limite", limite)
+        .query((rs, linha) -> new JogoDetalhesPendente(rs.getLong("id"), rs.getInt("steam_app_id")))
+        .list();
+  }
+
+  public List<JogoDetalhesPendente> listarPendentesConquistas(int limite) {
+    return jdbc.sql("""
+        SELECT g.id, g.steam_app_id
+        FROM games g
+        WHERE g.steam_app_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM game_achievements ga WHERE ga.game_id = g.id)
+          %s
+          %s
+        ORDER BY g.id ASC
+        LIMIT :limite
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .param("limite", limite)
+        .query((rs, linha) -> new JogoDetalhesPendente(rs.getLong("id"), rs.getInt("steam_app_id")))
+        .list();
+  }
+
+  public void salvarDetalhesJogo(long jogoId, String descricaoCurta, List<String> generos, List<String> desenvolvedores,
+      List<String> publicadoras, String dataLancamento, List<String> screenshots, String notaReviews,
+      Integer reviewsPositivas, Integer reviewsNegativas) {
+    jdbc.sql("""
+        INSERT INTO game_details (
+          game_id, short_description, genres, developers, publishers, release_date, screenshots,
+          review_score_desc, review_positive, review_negative, updated_at)
+        VALUES (:jogoId, :descricao, :generos, :desenvolvedores, :publicadoras, :dataLancamento, :screenshots,
+          :notaReviews, :reviewsPositivas, :reviewsNegativas, now())
+        ON CONFLICT (game_id) DO UPDATE
+          SET short_description = EXCLUDED.short_description,
+              genres = EXCLUDED.genres,
+              developers = EXCLUDED.developers,
+              publishers = EXCLUDED.publishers,
+              release_date = EXCLUDED.release_date,
+              screenshots = EXCLUDED.screenshots,
+              review_score_desc = EXCLUDED.review_score_desc,
+              review_positive = EXCLUDED.review_positive,
+              review_negative = EXCLUDED.review_negative,
+              updated_at = now()
+        """)
+        .param("jogoId", jogoId)
+        .param("descricao", descricaoCurta)
+        .param("generos", generos == null ? null : generos.toArray(new String[0]))
+        .param("desenvolvedores", desenvolvedores == null ? null : desenvolvedores.toArray(new String[0]))
+        .param("publicadoras", publicadoras == null ? null : publicadoras.toArray(new String[0]))
+        .param("dataLancamento", dataLancamento)
+        .param("screenshots", screenshots == null ? null : screenshots.toArray(new String[0]))
+        .param("notaReviews", notaReviews)
+        .param("reviewsPositivas", reviewsPositivas)
+        .param("reviewsNegativas", reviewsNegativas)
+        .update();
+  }
+
+  @Transactional
+  public void salvarConquistas(long jogoId, List<ConquistaParaSalvar> conquistas) {
+    if (conquistas.isEmpty()) {
+      return;
+    }
+    for (int i = 0; i < conquistas.size(); i++) {
+      ConquistaParaSalvar conquista = conquistas.get(i);
+      jdbc.sql("""
+          INSERT INTO game_achievements (
+            game_id, api_name, display_name, description, icon_url, icon_gray_url, global_percent, position)
+          VALUES (:jogoId, :apiName, :displayName, :descricao, :iconeUrl, :iconeCinzaUrl, :percentualGlobal, :posicao)
+          ON CONFLICT (game_id, api_name) DO UPDATE
+            SET display_name = EXCLUDED.display_name,
+                description = EXCLUDED.description,
+                icon_url = EXCLUDED.icon_url,
+                icon_gray_url = EXCLUDED.icon_gray_url,
+                global_percent = EXCLUDED.global_percent,
+                position = EXCLUDED.position
+          """)
+          .param("jogoId", jogoId)
+          .param("apiName", conquista.apiName())
+          .param("displayName", conquista.displayName())
+          .param("descricao", conquista.descricao())
+          .param("iconeUrl", conquista.iconeUrl())
+          .param("iconeCinzaUrl", conquista.iconeCinzaUrl())
+          .param("percentualGlobal", conquista.percentualGlobal())
+          .param("posicao", i)
+          .update();
+    }
+  }
+
+  public List<ConquistaJogo> listarConquistas(long jogoId) {
+    return jdbc.sql("""
+        SELECT display_name, description, icon_url, global_percent
+        FROM game_achievements
+        WHERE game_id = :jogoId
+        ORDER BY position ASC
+        """)
+        .param("jogoId", jogoId)
+        .query((rs, linha) -> new ConquistaJogo(
+            rs.getString("display_name"),
+            rs.getString("description"),
+            rs.getString("icon_url"),
+            rs.getObject("global_percent", Double.class)))
+        .list();
+  }
+
+  public Optional<DetalhesJogo> buscarDetalhesJogo(long jogoId) {
+    return jdbc.sql("""
+        SELECT short_description, genres, developers, publishers, release_date, screenshots,
+               review_score_desc, review_positive, review_negative
+        FROM game_details
+        WHERE game_id = :jogoId
+        """)
+        .param("jogoId", jogoId)
+        .query((rs, linha) -> new DetalhesJogo(
+            rs.getString("short_description"),
+            listaDeArray(rs.getArray("genres")),
+            listaDeArray(rs.getArray("developers")),
+            listaDeArray(rs.getArray("publishers")),
+            rs.getString("release_date"),
+            listaDeArray(rs.getArray("screenshots")),
+            rs.getString("review_score_desc"),
+            rs.getObject("review_positive", Integer.class),
+            rs.getObject("review_negative", Integer.class)))
+        .optional();
+  }
+
+  private static List<String> listaDeArray(java.sql.Array array) throws SQLException {
+    if (array == null) return List.of();
+    Object[] valores = (Object[]) array.getArray();
+    List<String> resultado = new java.util.ArrayList<>();
+    for (Object valor : valores) {
+      if (valor != null) resultado.add(valor.toString());
+    }
+    return resultado;
   }
 
   private List<OfertaJogo> listarOfertas(long jogoId) {

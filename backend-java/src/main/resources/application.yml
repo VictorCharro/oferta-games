@@ -18,6 +18,10 @@ app:
       steam-initial-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_INITIAL_DELAY_MS:300000}
       steam-achievements-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_ACHIEVEMENTS_DELAY_MS:1800000}
       steam-achievements-initial-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_ACHIEVEMENTS_INITIAL_DELAY_MS:600000}
+      detalhes-delay-ms: ${APP_SYNC_SCHEDULER_DETALHES_DELAY_MS:900000}
+      detalhes-initial-delay-ms: ${APP_SYNC_SCHEDULER_DETALHES_INITIAL_DELAY_MS:420000}
+      conquistas-catalogo-delay-ms: ${APP_SYNC_SCHEDULER_CONQUISTAS_CATALOGO_DELAY_MS:10800000}
+      conquistas-catalogo-initial-delay-ms: ${APP_SYNC_SCHEDULER_CONQUISTAS_CATALOGO_INITIAL_DELAY_MS:540000}
   itad:
     api-key: ${ITAD_API_KEY:}
   steam:

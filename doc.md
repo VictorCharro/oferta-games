@@ -87,8 +87,19 @@ Job separado, em geral a cada 15 minutos:
 
 - Completa capa oficial quando ela esta ausente.
 - Ajuda a identificar DLCs quando existe uma oferta Steam correspondente.
+- Resolve e persiste `games.steam_app_id` (antes era resolvido a cada execucao e descartado).
 - Processa um lote pequeno de jogos pendentes com `games.last_steam_sync_at`.
 - Compartilha a mesma trava da coleta de preco.
+
+### Detalhes e conquistas de catalogo (Sobre/Review/Conquistas)
+
+Dois jobs novos em `ServicoSincronizacao`/`AgendadorColetas`, ambos dependem de `games.steam_app_id` ja preenchido pelo job de metadados Steam acima. So processam jogos com oferta Steam; os demais ficam sem esses dados (mesma limitacao pre-existente de capa/DLC).
+
+- **Detalhes** (`coletarDetalhesJogos`, ~15min): reaproveita a mesma chamada `appdetails` do job de metadados Steam, so que agora extrai tambem descricao curta, generos, desenvolvedores, publicadoras, data de lancamento e screenshots; complementa com `store.steampowered.com/appreviews/{appid}` (nota, positivas, negativas). Grava em `game_details` (1 linha por jogo, upsert).
+- **Conquistas de catalogo** (`coletarConquistasCatalogo`, ~3h — schema e % global mudam devagar): `ISteamUserStats/GetSchemaForGame/v2` (precisa de `STEAM_WEB_API_KEY`) mesclado com `ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2` (publico). Grava em `game_achievements` (upsert por `api_name`). Nao tem relacao com `conexoes/AgendadorConquistasSteam`, que sincroniza as conquistas *desbloqueadas por um usuario logado* — este job novo e catalogo-wide, sem usuario.
+- Endpoints novos, independentes de `/api/games/{slug}` (usado pela aba Precos, que nao mudou): `GET /api/games/{slug}/detalhes` (404 se ainda nao sincronizado) e `GET /api/games/{slug}/conquistas` (lista vazia se nao houver).
+- Disparo manual: `POST /api/admin/coleta/detalhes` e `POST /api/admin/coleta/conquistas-catalogo` (mesmo padrao de auth de admin dos demais tipos).
+- Nenhuma tela consome esses dados ainda — infra pronta para as futuras abas Sobre/Review/Conquistas na pagina do jogo.
 
 ## Fonte de Dados e Regras de Catalogo
 
@@ -124,13 +135,23 @@ Ao adicionar uma nova loja ou excecao, garantir que ela seja filtrada em catalog
 
 ```text
 games
-  id, itad_id, title, slug, cover_url, rank, is_dlc
+  id, itad_id, title, slug, cover_url, rank, is_dlc, steam_app_id
   last_price_sync_at, last_steam_sync_at, created_at
 
 offers
   id, game_id, source, store_name, price, regular_price
   currency, url, updated_at
   UNIQUE (game_id, source, store_name)
+
+game_details
+  game_id (PK, FK games), short_description, genres[], developers[]
+  publishers[], release_date, screenshots[]
+  review_score_desc, review_positive, review_negative, updated_at
+
+game_achievements
+  id, game_id (FK games), api_name, display_name, description
+  icon_url, icon_gray_url, global_percent, position
+  UNIQUE (game_id, api_name)
 
 sync_locks
   name, locked_until
@@ -217,6 +238,7 @@ Arquivos em `backend-java/sql/`:
 15. `20260716_banner_perfil.sql`
 16. `20260716_ordem_favoritos_perfil.sql`
 17. `20260717_colecoes_perfil.sql`
+18. `20260718_detalhes_jogo.sql`
 
 Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500.
 
@@ -233,6 +255,8 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
   - `RepositorioJogos.listar` e cacheado em memoria (Caffeine, `comum/ConfiguracaoCache`) por 10min por combinacao de parametros, pra nao repetir a query a cada abertura do catalogo. Expira sozinho; nao ha invalidacao manual quando a sincronizacao de precos roda. A pagina Mais Vendidos usa este mesmo endpoint (`getGames`), entao ja se beneficia do cache.
 - `GET /api/games/search?q=nome`
 - `GET /api/games/{slug}`
+- `GET /api/games/{slug}/detalhes` — descricao/generos/devs/publishers/data/screenshots/review, de `game_details`. 404 se o jogo ainda nao foi sincronizado (sem oferta Steam, ou aguardando o job).
+- `GET /api/games/{slug}/conquistas` — lista de `game_achievements` (nome, descricao, icone, `globalPercent`). Lista vazia se nao houver.
 - `POST /api/games/{slug}/refresh`
 - `GET /api/deals/top?size=&sort=discount|rank` — usado 2x pela Home (rank e discount); `RepositorioDescontos.listarMelhores` tambem cacheado (Caffeine, `ConfiguracaoCache.CACHE_DESCONTOS`, 10min), pois e uma query com DISTINCT ON + join na tabela `offers` inteira.
 - `POST /api/sync?page=` (legado, exige `X-Sync-Key`)

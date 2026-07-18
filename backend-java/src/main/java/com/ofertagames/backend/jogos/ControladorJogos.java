@@ -55,6 +55,21 @@ public class ControladorJogos {
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
+  @GetMapping("/{slug}/detalhes")
+  ResponseEntity<DetalhesJogo> detalhes(@PathVariable String slug) {
+    return jogos.buscarIdPorSlug(slug)
+        .flatMap(jogos::buscarDetalhesJogo)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  @GetMapping("/{slug}/conquistas")
+  List<ConquistaJogo> conquistas(@PathVariable String slug) {
+    return jogos.buscarIdPorSlug(slug)
+        .map(jogos::listarConquistas)
+        .orElseGet(List::of);
+  }
+
   @PostMapping("/{slug}/refresh")
   ResponseEntity<?> atualizarPrecos(@PathVariable String slug) {
     try {

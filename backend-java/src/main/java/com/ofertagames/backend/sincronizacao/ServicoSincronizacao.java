@@ -18,6 +18,8 @@ public class ServicoSincronizacao {
   private static final int LIMITE_GERAIS = 4_800;
   private static final int TAMANHO_LOTE_PRECOS = 200;
   private static final int LIMITE_METADADOS_STEAM = 25;
+  private static final int LIMITE_DETALHES_JOGOS = 25;
+  private static final int LIMITE_CONQUISTAS_CATALOGO = 25;
   private static final Logger logger = LoggerFactory.getLogger(ServicoSincronizacao.class);
 
   private final ClienteItad itad;
@@ -75,6 +77,18 @@ public class ServicoSincronizacao {
   public ResultadoRodadaColeta sincronizarRodadaSteam() {
     int atualizados = catalogo.preencherMetadadosSteam(LIMITE_METADADOS_STEAM);
     logger.info("Coleta agendada de metadados Steam concluida: {} jogos atualizados", atualizados);
+    return new ResultadoRodadaColeta(atualizados, 0);
+  }
+
+  public ResultadoRodadaColeta sincronizarRodadaDetalhes() {
+    int atualizados = catalogo.preencherDetalhesJogos(LIMITE_DETALHES_JOGOS);
+    logger.info("Coleta agendada de detalhes (sobre/reviews) concluida: {} jogos atualizados", atualizados);
+    return new ResultadoRodadaColeta(atualizados, 0);
+  }
+
+  public ResultadoRodadaColeta sincronizarRodadaConquistasCatalogo() {
+    int atualizados = catalogo.preencherConquistas(LIMITE_CONQUISTAS_CATALOGO);
+    logger.info("Coleta agendada de conquistas do catalogo concluida: {} jogos atualizados", atualizados);
     return new ResultadoRodadaColeta(atualizados, 0);
   }
 

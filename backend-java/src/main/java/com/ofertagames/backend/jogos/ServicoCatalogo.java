@@ -9,6 +9,7 @@ import com.ofertagames.backend.itad.ResultadoPrecoItad;
 import com.ofertagames.backend.notificacoes.RepositorioNotificacoes;
 import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
+import com.ofertagames.backend.steam.ServicoSteam.ReviewsSteam;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -238,7 +239,68 @@ public class ServicoCatalogo {
       var detalhes = appId.flatMap(steam::buscarDetalhesAplicativo);
       Boolean ehDlc = detalhes.map(DetalhesAplicativoSteam::ehDlc).orElseGet(() -> steam.tituloPareceDlc(pendente.titulo()));
       String capa = detalhes.map(DetalhesAplicativoSteam::imagemCabecalho).orElse(null);
-      jogos.atualizarMetadadosSteam(pendente.id(), ehDlc, capa);
+      Integer steamAppId = appId.map(Integer::parseInt).orElse(null);
+      jogos.atualizarMetadadosSteam(pendente.id(), ehDlc, capa, steamAppId);
+      atualizados++;
+    }
+
+    return atualizados;
+  }
+
+  // Descricao/generos/reviews vem da mesma chamada appdetails ja usada acima; so persistimos mais campos dela.
+  public int preencherDetalhesJogos(int limite) {
+    List<JogoDetalhesPendente> pendentes = jogos.listarPendentesDetalhes(limite);
+    int atualizados = 0;
+
+    for (JogoDetalhesPendente pendente : pendentes) {
+      String appId = String.valueOf(pendente.steamAppId());
+      var detalhes = steam.buscarDetalhesAplicativo(appId);
+      var reviews = steam.buscarReviews(appId);
+      if (detalhes.isEmpty() && reviews.isEmpty()) {
+        continue;
+      }
+
+      jogos.salvarDetalhesJogo(
+          pendente.id(),
+          detalhes.map(DetalhesAplicativoSteam::descricaoCurta).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::generos).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::desenvolvedores).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::publicadoras).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::dataLancamento).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::screenshots).orElse(null),
+          reviews.map(ReviewsSteam::descricaoNota).orElse(null),
+          reviews.map(ReviewsSteam::positivas).orElse(null),
+          reviews.map(ReviewsSteam::negativas).orElse(null));
+      atualizados++;
+    }
+
+    return atualizados;
+  }
+
+  // Schema (nomes/descricoes/icones) muda raramente; percentual global e' mesclado na mesma passada.
+  public int preencherConquistas(int limite) {
+    List<JogoDetalhesPendente> pendentes = jogos.listarPendentesConquistas(limite);
+    int atualizados = 0;
+
+    for (JogoDetalhesPendente pendente : pendentes) {
+      String appId = String.valueOf(pendente.steamAppId());
+      var esquema = steam.buscarEsquemaConquistas(appId);
+      if (esquema.isEmpty()) {
+        continue;
+      }
+      var percentuais = steam.buscarPercentuaisGlobais(appId);
+
+      List<ConquistaParaSalvar> conquistas = esquema.stream()
+          .map(conquista -> new ConquistaParaSalvar(
+              conquista.nome(),
+              conquista.tituloExibicao(),
+              conquista.descricao(),
+              conquista.iconeUrl(),
+              conquista.iconeCinzaUrl(),
+              percentuais.get(conquista.nome())))
+          .toList();
+
+      jogos.salvarConquistas(pendente.id(), conquistas);
       atualizados++;
     }
 
@@ -270,8 +332,9 @@ public class ServicoCatalogo {
       capa = detalhes.map(DetalhesAplicativoSteam::imagemCabecalho).orElse(null);
     }
 
-    if (ehDlc != null || capa != null) {
-      jogos.atualizarMetadadosSteam(jogo.id(), ehDlc, capa);
+    Integer steamAppId = appId.map(Integer::parseInt).orElse(null);
+    if (ehDlc != null || capa != null || steamAppId != null) {
+      jogos.atualizarMetadadosSteam(jogo.id(), ehDlc, capa, steamAppId);
     }
   }
 

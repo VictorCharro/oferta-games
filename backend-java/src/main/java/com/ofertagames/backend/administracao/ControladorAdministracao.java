@@ -61,6 +61,8 @@ public class ControladorAdministracao {
     Runnable tarefa = switch (tipo) {
       case "precos" -> () -> execucao.executar("precos", sincronizacao::sincronizarRodadaPrecos);
       case "steam" -> () -> execucao.executar("steam", sincronizacao::sincronizarRodadaSteam);
+      case "detalhes" -> () -> execucao.executar("detalhes", sincronizacao::sincronizarRodadaDetalhes);
+      case "conquistas-catalogo" -> () -> execucao.executar("conquistas-catalogo", sincronizacao::sincronizarRodadaConquistasCatalogo);
       default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de coleta invalido");
     };
     executorManual.execute(tarefa);
