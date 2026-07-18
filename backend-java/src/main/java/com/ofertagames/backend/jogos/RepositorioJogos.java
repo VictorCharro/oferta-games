@@ -486,11 +486,14 @@ public class RepositorioJogos {
         ORDER BY position ASC
         """)
         .param("jogoId", jogoId)
-        .query((rs, linha) -> new ConquistaJogo(
-            rs.getString("display_name"),
-            rs.getString("description"),
-            rs.getString("icon_url"),
-            rs.getObject("global_percent", Double.class)))
+        .query((rs, linha) -> {
+          BigDecimal percentual = rs.getBigDecimal("global_percent");
+          return new ConquistaJogo(
+              rs.getString("display_name"),
+              rs.getString("description"),
+              rs.getString("icon_url"),
+              percentual == null ? null : percentual.doubleValue());
+        })
         .list();
   }
 
