@@ -38,7 +38,8 @@ class RepositorioAvaliacoesJogo {
           for (int nota = 1; nota <= 5; nota++) {
             distribuicao.put(nota, rs.getInt("n" + nota));
           }
-          Double media = rs.getObject("media", Double.class);
+          java.math.BigDecimal mediaDecimal = rs.getBigDecimal("media");
+          Double media = mediaDecimal == null ? null : mediaDecimal.doubleValue();
           Integer percentualRecomenda = total == 0 ? null : Math.round(rs.getInt("recomenda") * 100f / total);
           return new ResumoAvaliacoes(total, media, distribuicao, percentualRecomenda);
         })
