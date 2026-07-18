@@ -1,11 +1,11 @@
 .game-hero {
   border-radius: var(--border-radius);
-  overflow: hidden;
   background-size: cover;
   background-position: center;
   margin-bottom: 32px;
 
   .hero-overlay {
+    border-radius: var(--border-radius);
     background: linear-gradient(90deg, rgba(8,13,24,0.97) 40%, rgba(8,13,24,0.4) 100%);
     padding: 48px;
   }
