@@ -90,6 +90,10 @@ export interface AvaliacaoSteam {
 export interface RespostaAvaliacoesSteam {
   steamAppId: string | null;
   avaliacoes: AvaliacaoSteam[];
+  proximoCursor: string | null;
+  temMais: boolean;
+  idiomaConsulta: 'brazilian' | 'all';
+  ordenacao: 'recent' | 'all' | 'updated';
 }
 
 export interface TopDeal {
@@ -143,8 +147,22 @@ export class GameService {
     return this.http.get<GameDetails>(`${this.api}/games/${slug}/detalhes`);
   }
 
-  getSteamReviews(slug: string): Observable<RespostaAvaliacoesSteam> {
-    return this.http.get<RespostaAvaliacoesSteam>(`${this.api}/games/${slug}/avaliacoes/steam`);
+  getSteamReviews(
+    slug: string,
+    options: {
+      cursor?: string | null;
+      ordenacao?: 'recent' | 'all' | 'updated';
+      idioma?: 'brazilian' | 'all';
+    } = {}
+  ): Observable<RespostaAvaliacoesSteam> {
+    const params = new URLSearchParams({
+      ordenacao: options.ordenacao ?? 'recent',
+      idioma: options.idioma ?? 'brazilian',
+    });
+    if (options.cursor) params.set('cursor', options.cursor);
+    return this.http.get<RespostaAvaliacoesSteam>(
+      `${this.api}/games/${slug}/avaliacoes/steam?${params}`
+    );
   }
 
   async getGameAchievements(slug: string): Promise<RespostaConquistas> {

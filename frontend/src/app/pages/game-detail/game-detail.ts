@@ -47,6 +47,8 @@ export class GameDetail implements OnInit, OnDestroy {
   avaliacoes: RespostaAvaliacoes | null = null;
   avaliacoesSteam: RespostaAvaliacoesSteam | null = null;
   carregandoAvaliacoesSteam = false;
+  carregandoMaisAvaliacoesSteam = false;
+  ordenacaoAvaliacoesSteam: 'recent' | 'all' | 'updated' = 'recent';
   minhaNota = 0;
   estrelaEmFoco = 0;
   meuComentario = '';
@@ -83,6 +85,8 @@ export class GameDetail implements OnInit, OnDestroy {
         this.avaliacoes = null;
         this.avaliacoesSteam = null;
         this.carregandoAvaliacoesSteam = true;
+        this.carregandoMaisAvaliacoesSteam = false;
+        this.ordenacaoAvaliacoesSteam = 'recent';
         this.loading = true;
         this.refreshing = false;
         this.refreshMsg = '';
@@ -125,13 +129,7 @@ export class GameDetail implements OnInit, OnDestroy {
       this.meuComentario = avaliacoes.minha?.comentario ?? '';
       this.cdr.detectChanges();
     }).catch(() => {});
-    this.gameService.getSteamReviews(slug).pipe(
-      catchError(() => of({ steamAppId: null, avaliacoes: [] }))
-    ).subscribe(avaliacoes => {
-      this.avaliacoesSteam = avaliacoes;
-      this.carregandoAvaliacoesSteam = false;
-      this.cdr.detectChanges();
-    });
+    this.carregarAvaliacoesSteam(slug);
   }
 
   // So mostra a aba quando ha conteudo real (destaques ou trailer): descricao/screenshots sozinhos
@@ -252,6 +250,64 @@ export class GameDetail implements OnInit, OnDestroy {
 
   perfilAutorSteam(steamId: string | null): string | null {
     return steamId ? `https://steamcommunity.com/profiles/${steamId}` : null;
+  }
+
+  get temMaisAvaliacoesSteam(): boolean {
+    return !!this.avaliacoesSteam?.temMais && !!this.avaliacoesSteam.proximoCursor;
+  }
+
+  mostrarMaisAvaliacoesSteam() {
+    const slug = this.game?.slug;
+    const cursor = this.avaliacoesSteam?.proximoCursor;
+    if (!slug || !cursor || this.carregandoMaisAvaliacoesSteam) return;
+
+    this.carregandoMaisAvaliacoesSteam = true;
+    this.gameService.getSteamReviews(slug, {
+      cursor,
+      ordenacao: this.ordenacaoAvaliacoesSteam,
+      idioma: this.avaliacoesSteam?.idiomaConsulta ?? 'all',
+    }).pipe(
+      catchError(() => of(null))
+    ).subscribe(proximaPagina => {
+      if (proximaPagina && this.avaliacoesSteam) {
+        const existentes = new Set(this.avaliacoesSteam.avaliacoes.map(item => item.id));
+        const novas = proximaPagina.avaliacoes.filter(item => !existentes.has(item.id));
+        this.avaliacoesSteam = {
+          ...proximaPagina,
+          avaliacoes: [...this.avaliacoesSteam.avaliacoes, ...novas],
+        };
+      }
+      this.carregandoMaisAvaliacoesSteam = false;
+      this.cdr.detectChanges();
+    });
+  }
+
+  alterarOrdenacaoAvaliacoesSteam() {
+    const slug = this.game?.slug;
+    if (!slug) return;
+    this.carregandoAvaliacoesSteam = true;
+    this.avaliacoesSteam = null;
+    this.carregarAvaliacoesSteam(slug);
+  }
+
+  private carregarAvaliacoesSteam(slug: string) {
+    this.gameService.getSteamReviews(slug, {
+      ordenacao: this.ordenacaoAvaliacoesSteam,
+      idioma: 'brazilian',
+    }).pipe(
+      catchError(() => of({
+        steamAppId: null,
+        avaliacoes: [],
+        proximoCursor: null,
+        temMais: false,
+        idiomaConsulta: 'brazilian' as const,
+        ordenacao: this.ordenacaoAvaliacoesSteam,
+      }))
+    ).subscribe(avaliacoes => {
+      this.avaliacoesSteam = avaliacoes;
+      this.carregandoAvaliacoesSteam = false;
+      this.cdr.detectChanges();
+    });
   }
 
   reviewDescricaoSteam(): string {

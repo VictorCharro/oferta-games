@@ -198,8 +198,9 @@
     <div class="review-steam-layout" *ngIf="subTabReview === 'steam' && detalhes && reviewPositividade() !== null">
       <div class="review-steam-summary">
         <section class="review-card review-steam-overview">
-          <h3>Avaliações dos jogadores na Steam</h3>
+          <h3>Avaliação dos jogadores</h3>
           <div class="review-steam-overview-body">
+            <span class="review-steam-score-icon" aria-hidden="true">✓</span>
             <div class="review-score">
               <strong>{{ reviewPositividade() }}%</strong>
               <span>{{ reviewDescricaoSteam() }}</span>
@@ -220,74 +221,128 @@
 
         <section class="review-card review-card-recomendacao">
           <h3>Recomendação</h3>
-          <div
-            class="review-recomendacao-ring review-recomendacao-ring-steam"
-            [style.background]="'conic-gradient(var(--color-green) ' + ((reviewPositividade() || 0) * 3.6) + 'deg, var(--bg-card-hover) 0)'"
-          >
-            <span><strong>{{ reviewPositividade() }}%</strong></span>
+          <div class="review-steam-recomendacao-body">
+            <div
+              class="review-recomendacao-ring review-recomendacao-ring-steam"
+              [style.background]="'conic-gradient(var(--color-green) ' + ((reviewPositividade() || 0) * 3.6) + 'deg, var(--bg-card-hover) 0)'"
+            >
+              <span aria-hidden="true">✓</span>
+            </div>
+            <div class="review-steam-recomendacao-copy">
+              <strong>{{ reviewPositividade() }}%</strong>
+              <span>dos jogadores recomendam este jogo</span>
+            </div>
           </div>
-          <span class="review-card-footer">dos jogadores recomendam este jogo</span>
         </section>
       </div>
 
-      <section class="review-list-col review-steam-list">
-        <div class="review-list-header">
-          <div>
-            <h3>Avaliações recentes na Steam</h3>
-            <span>Priorizamos avaliações em português quando disponíveis.</span>
+      <div class="review-steam-content">
+        <section class="review-list-col review-steam-list">
+          <div class="review-list-header">
+            <div>
+              <h3>Reviews dos jogadores</h3>
+              <span>Priorizamos avaliações em português quando disponíveis.</span>
+            </div>
+            <div class="review-steam-list-actions">
+              <label class="review-steam-order">
+                <span class="sr-only">Ordenar avaliações</span>
+                <select
+                  [(ngModel)]="ordenacaoAvaliacoesSteam"
+                  (ngModelChange)="alterarOrdenacaoAvaliacoesSteam()"
+                  [disabled]="carregandoAvaliacoesSteam"
+                >
+                  <option value="recent">Mais recentes</option>
+                  <option value="all">Mais úteis</option>
+                  <option value="updated">Atualizadas</option>
+                </select>
+                <span class="review-steam-order-chevron" aria-hidden="true">⌄</span>
+              </label>
+            </div>
           </div>
-          <a
-            *ngIf="avaliacoesSteam?.steamAppId"
-            class="review-steam-store-link"
-            [href]="'https://store.steampowered.com/app/' + avaliacoesSteam?.steamAppId"
-            target="_blank"
-            rel="noopener noreferrer"
-          >Ver na Steam</a>
-        </div>
 
-        <div class="review-list" *ngIf="avaliacoesSteam?.avaliacoes?.length">
-          <article class="review-item review-steam-item" *ngFor="let avaliacao of avaliacoesSteam?.avaliacoes">
-            <div class="review-item-header">
-              <img
-                [src]="avaliacao.autorAvatarUrl || 'steam-modo-escuro.png'"
-                alt=""
-                class="review-avatar review-steam-avatar"
-              />
-              <div>
-                <a
-                  *ngIf="perfilAutorSteam(avaliacao.autorSteamId) as perfilUrl; else autorSemLink"
-                  [href]="perfilUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="review-steam-author"
-                >{{ avaliacao.autorNome }}</a>
-                <ng-template #autorSemLink><strong>{{ avaliacao.autorNome }}</strong></ng-template>
-                <div class="review-steam-meta">
-                  <span>{{ horasReviewSteam(avaliacao.minutosJogados) }}</span>
-                  <span *ngIf="avaliacao.criadaEm">{{ relativeTime(avaliacao.criadaEm) }}</span>
+          <div class="review-list" *ngIf="avaliacoesSteam?.avaliacoes?.length">
+            <article class="review-item review-steam-item" *ngFor="let avaliacao of avaliacoesSteam?.avaliacoes">
+              <div class="review-steam-profile">
+                <img
+                  [src]="avaliacao.autorAvatarUrl || 'steam-modo-escuro.png'"
+                  alt=""
+                  class="review-avatar review-steam-avatar"
+                />
+                <div class="review-steam-author-info">
+                  <a
+                    *ngIf="perfilAutorSteam(avaliacao.autorSteamId) as perfilUrl; else autorSemLink"
+                    [href]="perfilUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="review-steam-author"
+                  >{{ avaliacao.autorNome }}</a>
+                  <ng-template #autorSemLink><strong>{{ avaliacao.autorNome }}</strong></ng-template>
+                  <span class="review-steam-profile-recommendation" [class.negative]="!avaliacao.recomenda">
+                    {{ avaliacao.recomenda ? 'Recomenda' : 'Não recomenda' }}
+                  </span>
+                  <span class="review-steam-date" *ngIf="avaliacao.criadaEm">{{ relativeTime(avaliacao.criadaEm) }}</span>
                 </div>
               </div>
+              <div class="review-steam-review-copy">
+                <p *ngIf="avaliacao.texto">{{ avaliacao.texto }}</p>
+                <span class="review-steam-playtime">{{ horasReviewSteam(avaliacao.minutosJogados) }}</span>
+              </div>
               <span
-                class="review-tag"
+                class="review-tag review-steam-tag"
                 [class.recomenda]="avaliacao.recomenda"
                 [class.nao-recomenda]="!avaliacao.recomenda"
               >
                 {{ avaliacao.recomenda ? 'Recomenda' : 'Não recomenda' }}
               </span>
-            </div>
-            <p *ngIf="avaliacao.texto">{{ avaliacao.texto }}</p>
-            <div class="review-steam-feedback">
-              <span>Útil para {{ avaliacao.votosUteis || 0 }} pessoa(s)</span>
-              <span *ngIf="avaliacao.comentarios">{{ avaliacao.comentarios }} comentário(s)</span>
-            </div>
-          </article>
-        </div>
+            </article>
 
-        <p class="review-empty" *ngIf="!carregandoAvaliacoesSteam && !avaliacoesSteam?.avaliacoes?.length">
-          A Steam não retornou avaliações recentes para este jogo.
-        </p>
-        <p class="review-empty" *ngIf="carregandoAvaliacoesSteam">Carregando avaliações da Steam...</p>
-      </section>
+            <button
+              type="button"
+              class="review-steam-more"
+              *ngIf="temMaisAvaliacoesSteam"
+              [disabled]="carregandoMaisAvaliacoesSteam"
+              (click)="mostrarMaisAvaliacoesSteam()"
+            >{{ carregandoMaisAvaliacoesSteam ? 'Carregando...' : 'Ver mais' }}</button>
+          </div>
+
+          <p class="review-empty" *ngIf="!carregandoAvaliacoesSteam && !avaliacoesSteam?.avaliacoes?.length">
+            A Steam não retornou avaliações recentes para este jogo.
+          </p>
+          <p class="review-empty" *ngIf="carregandoAvaliacoesSteam">Carregando avaliações da Steam...</p>
+        </section>
+
+        <aside class="review-card review-steam-highlights">
+          <h3>Destaques das reviews</h3>
+          <div class="review-steam-highlight positive">
+            <span class="review-steam-highlight-icon" aria-hidden="true">✓</span>
+            <div>
+              <strong>{{ reviewPositividade() }}% recomendam</strong>
+              <span>avaliação geral dos jogadores</span>
+            </div>
+          </div>
+          <div class="review-steam-highlight positive">
+            <span class="review-steam-highlight-icon" aria-hidden="true">+</span>
+            <div>
+              <strong>{{ detalhes.reviewsPositivas | number: '1.0-0' }} positivas</strong>
+              <span>avaliações favoráveis na Steam</span>
+            </div>
+          </div>
+          <div class="review-steam-highlight negative">
+            <span class="review-steam-highlight-icon" aria-hidden="true">−</span>
+            <div>
+              <strong>{{ detalhes.reviewsNegativas | number: '1.0-0' }} negativas</strong>
+              <span>avaliações desfavoráveis na Steam</span>
+            </div>
+          </div>
+          <div class="review-steam-highlight neutral">
+            <span class="review-steam-highlight-icon" aria-hidden="true">⌁</span>
+            <div>
+              <strong>{{ avaliacoesSteam?.avaliacoes?.length || 0 }} recentes</strong>
+              <span>reviews disponíveis nesta consulta</span>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
     <p class="review-empty" *ngIf="subTabReview === 'steam' && (!detalhes || reviewPositividade() === null)">
       Sem dados de avaliação da Steam para este jogo.

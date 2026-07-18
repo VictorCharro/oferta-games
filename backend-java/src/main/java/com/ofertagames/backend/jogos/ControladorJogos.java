@@ -79,12 +79,22 @@ public class ControladorJogos {
   }
 
   @GetMapping("/{slug}/avaliacoes/steam")
-  ResponseEntity<RespostaAvaliacoesSteam> avaliacoesSteam(@PathVariable String slug) {
+  ResponseEntity<RespostaAvaliacoesSteam> avaliacoesSteam(
+      @PathVariable String slug,
+      @RequestParam(defaultValue = "") String cursor,
+      @RequestParam(defaultValue = "recent") String ordenacao,
+      @RequestParam(defaultValue = "brazilian") String idioma
+  ) {
     return jogos.buscarIdESteamAppIdPorSlug(slug)
         .filter(jogo -> jogo.steamAppId() != null)
-        .map(jogo -> steam.buscarAvaliacoesRecentes(String.valueOf(jogo.steamAppId())))
+        .map(jogo -> steam.buscarAvaliacoes(
+            String.valueOf(jogo.steamAppId()),
+            cursor,
+            ordenacao,
+            idioma))
         .map(ResponseEntity::ok)
-        .orElseGet(() -> ResponseEntity.ok(new RespostaAvaliacoesSteam(null, List.of())));
+        .orElseGet(() -> ResponseEntity.ok(
+            new RespostaAvaliacoesSteam(null, List.of(), null, false, idioma, ordenacao)));
   }
 
   @GetMapping("/{slug}/conquistas")

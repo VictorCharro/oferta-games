@@ -121,22 +121,51 @@ public class ServicoSteam {
     }
   }
 
-  @Cacheable(cacheNames = ConfiguracaoCache.CACHE_AVALIACOES_STEAM, key = "#appId")
-  public RespostaAvaliacoesSteam buscarAvaliacoesRecentes(String appId) {
-    List<Map<?, ?>> entradas = new ArrayList<>(buscarAvaliacoesPorIdioma(appId, "brazilian"));
-    if (entradas.size() < 8) {
-      Map<String, Map<?, ?>> unicas = new LinkedHashMap<>();
-      for (Map<?, ?> entrada : entradas) {
-        unicas.put(comoTexto(entrada.get("recommendationid")), entrada);
+  @Cacheable(
+      cacheNames = ConfiguracaoCache.CACHE_AVALIACOES_STEAM,
+      key = "#appId + ':' + #cursor + ':' + #ordenacao + ':' + #idioma")
+  public RespostaAvaliacoesSteam buscarAvaliacoes(
+      String appId,
+      String cursor,
+      String ordenacao,
+      String idioma
+  ) {
+    String filtro = normalizarOrdenacao(ordenacao);
+    String idiomaConsulta = normalizarIdioma(idioma);
+    PaginaAvaliacoes pagina;
+
+    if ((cursor == null || cursor.isBlank()) && "brazilian".equals(idiomaConsulta)) {
+      PaginaAvaliacoes brasileiras = buscarPaginaAvaliacoes(appId, "brazilian", filtro, "*", 10);
+      if (brasileiras.avaliacoes().size() >= 10) {
+        pagina = brasileiras;
+      } else {
+        int faltantes = 10 - brasileiras.avaliacoes().size();
+        PaginaAvaliacoes outras = buscarPaginaAvaliacoes(appId, "all", filtro, "*", faltantes);
+        Map<String, Map<?, ?>> unicas = new LinkedHashMap<>();
+        brasileiras.avaliacoes().forEach(item ->
+            unicas.put(comoTexto(item.get("recommendationid")), item));
+        outras.avaliacoes().forEach(item ->
+            unicas.putIfAbsent(comoTexto(item.get("recommendationid")), item));
+        pagina = new PaginaAvaliacoes(new ArrayList<>(unicas.values()), outras.proximoCursor());
+        idiomaConsulta = "all";
       }
-      for (Map<?, ?> entrada : buscarAvaliacoesPorIdioma(appId, "all")) {
-        unicas.putIfAbsent(comoTexto(entrada.get("recommendationid")), entrada);
-        if (unicas.size() >= 12) break;
+    } else {
+      pagina = buscarPaginaAvaliacoes(
+          appId,
+          idiomaConsulta,
+          filtro,
+          cursor == null || cursor.isBlank() ? "*" : cursor,
+          10);
+      if (pagina.avaliacoes().isEmpty()
+          && "brazilian".equals(idiomaConsulta)
+          && cursor != null
+          && !cursor.isBlank()) {
+        pagina = buscarPaginaAvaliacoes(appId, "all", filtro, "*", 10);
+        idiomaConsulta = "all";
       }
-      entradas = new ArrayList<>(unicas.values());
     }
 
-    List<String> autoresIds = entradas.stream()
+    List<String> autoresIds = pagina.avaliacoes().stream()
         .map(entrada -> comoMapa(entrada.get("author")))
         .map(autor -> autor == null ? null : comoTexto(autor.get("steamid")))
         .filter(id -> id != null && !id.isBlank())
@@ -145,7 +174,7 @@ public class ServicoSteam {
     Map<String, PerfilAutorSteam> autores = buscarAutores(autoresIds);
 
     List<AvaliacaoSteam> avaliacoes = new ArrayList<>();
-    for (Map<?, ?> entrada : entradas.stream().limit(12).toList()) {
+    for (Map<?, ?> entrada : pagina.avaliacoes()) {
       Map<?, ?> autor = comoMapa(entrada.get("author"));
       String autorId = autor == null ? null : comoTexto(autor.get("steamid"));
       PerfilAutorSteam perfil = autores.get(autorId);
@@ -164,21 +193,40 @@ public class ServicoSteam {
           criadaEm == null ? null : Instant.ofEpochSecond(criadaEm.longValue()).toString(),
           comoTexto(entrada.get("language"))));
     }
-    return new RespostaAvaliacoesSteam(appId, avaliacoes);
+    String proximoCursor = pagina.proximoCursor();
+    boolean temMais = !avaliacoes.isEmpty()
+        && proximoCursor != null
+        && !proximoCursor.isBlank()
+        && !proximoCursor.equals(cursor);
+    return new RespostaAvaliacoesSteam(
+        appId,
+        avaliacoes,
+        proximoCursor,
+        temMais,
+        idiomaConsulta,
+        filtro);
   }
 
-  private List<Map<?, ?>> buscarAvaliacoesPorIdioma(String appId, String idioma) {
+  private PaginaAvaliacoes buscarPaginaAvaliacoes(
+      String appId,
+      String idioma,
+      String filtro,
+      String cursor,
+      int quantidade
+  ) {
     try {
       Map<String, Object> resposta = restClient.get()
           .uri(uri -> uri
               .scheme("https").host("store.steampowered.com")
               .path("/appreviews/{appId}")
               .queryParam("json", 1)
-              .queryParam("filter", "recent")
+              .queryParam("filter", filtro)
               .queryParam("language", idioma)
               .queryParam("review_type", "all")
               .queryParam("purchase_type", "all")
-              .queryParam("num_per_page", 12)
+              .queryParam("day_range", 365)
+              .queryParam("cursor", cursor)
+              .queryParam("num_per_page", quantidade)
               .build(appId))
           .retrieve()
           .body(new ParameterizedTypeReference<Map<String, Object>>() {});
@@ -187,10 +235,21 @@ public class ServicoSteam {
         Map<?, ?> avaliacao = comoMapa(item);
         if (avaliacao != null) resultado.add(avaliacao);
       }
-      return resultado;
+      return new PaginaAvaliacoes(resultado, comoTexto(resposta == null ? null : resposta.get("cursor")));
     } catch (RuntimeException ignorado) {
-      return List.of();
+      return new PaginaAvaliacoes(List.of(), null);
     }
+  }
+
+  private String normalizarOrdenacao(String ordenacao) {
+    return switch (ordenacao == null ? "" : ordenacao.toLowerCase()) {
+      case "all", "updated" -> ordenacao.toLowerCase();
+      default -> "recent";
+    };
+  }
+
+  private String normalizarIdioma(String idioma) {
+    return "all".equalsIgnoreCase(idioma) ? "all" : "brazilian";
   }
 
   private Map<String, PerfilAutorSteam> buscarAutores(List<String> autoresIds) {
@@ -417,5 +476,7 @@ public class ServicoSteam {
   public record ReviewsSteam(String descricaoNota, Integer positivas, Integer negativas) {}
   public record ConquistaEsquemaSteam(String nome, String tituloExibicao, String descricao, String iconeUrl, String iconeCinzaUrl) {}
   private record PerfilAutorSteam(String nome, String avatarUrl) {}
+
+  private record PaginaAvaliacoes(List<Map<?, ?>> avaliacoes, String proximoCursor) {}
   private record SobreParseado(String texto, List<DetalhesAplicativoSteam.DestaqueSteam> destaques) {}
 }
