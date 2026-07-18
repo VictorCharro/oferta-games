@@ -1,11 +1,14 @@
 package com.ofertagames.backend.steam;
 
 import com.ofertagames.backend.comum.ClassificadorDlc;
+import com.ofertagames.backend.comum.ConfiguracaoCache;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,6 +19,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -54,7 +58,7 @@ public class ServicoSteam {
     try {
       @SuppressWarnings("unchecked")
       Map<String, Object> resposta = restClient.get()
-          .uri("https://store.steampowered.com/api/appdetails?appids={appId}&l=portuguese", appId)
+          .uri("https://store.steampowered.com/api/appdetails?appids={appId}&l=brazilian&cc=br", appId)
           .retrieve()
           .body(Map.class);
       if (resposta == null) {
@@ -114,6 +118,108 @@ public class ServicoSteam {
           comoInteiro(sumario.get("total_negative"))));
     } catch (RuntimeException ignored) {
       return Optional.empty();
+    }
+  }
+
+  @Cacheable(cacheNames = ConfiguracaoCache.CACHE_AVALIACOES_STEAM, key = "#appId")
+  public RespostaAvaliacoesSteam buscarAvaliacoesRecentes(String appId) {
+    List<Map<?, ?>> entradas = new ArrayList<>(buscarAvaliacoesPorIdioma(appId, "brazilian"));
+    if (entradas.size() < 8) {
+      Map<String, Map<?, ?>> unicas = new LinkedHashMap<>();
+      for (Map<?, ?> entrada : entradas) {
+        unicas.put(comoTexto(entrada.get("recommendationid")), entrada);
+      }
+      for (Map<?, ?> entrada : buscarAvaliacoesPorIdioma(appId, "all")) {
+        unicas.putIfAbsent(comoTexto(entrada.get("recommendationid")), entrada);
+        if (unicas.size() >= 12) break;
+      }
+      entradas = new ArrayList<>(unicas.values());
+    }
+
+    List<String> autoresIds = entradas.stream()
+        .map(entrada -> comoMapa(entrada.get("author")))
+        .map(autor -> autor == null ? null : comoTexto(autor.get("steamid")))
+        .filter(id -> id != null && !id.isBlank())
+        .distinct()
+        .toList();
+    Map<String, PerfilAutorSteam> autores = buscarAutores(autoresIds);
+
+    List<AvaliacaoSteam> avaliacoes = new ArrayList<>();
+    for (Map<?, ?> entrada : entradas.stream().limit(12).toList()) {
+      Map<?, ?> autor = comoMapa(entrada.get("author"));
+      String autorId = autor == null ? null : comoTexto(autor.get("steamid"));
+      PerfilAutorSteam perfil = autores.get(autorId);
+      Integer criadaEm = comoInteiro(entrada.get("timestamp_created"));
+      avaliacoes.add(new AvaliacaoSteam(
+          comoTexto(entrada.get("recommendationid")),
+          autorId,
+          perfil == null ? "Jogador Steam" : perfil.nome(),
+          perfil == null ? null : perfil.avatarUrl(),
+          comoTexto(entrada.get("review")),
+          Boolean.TRUE.equals(entrada.get("voted_up")),
+          comoInteiro(entrada.get("votes_up")),
+          comoInteiro(entrada.get("votes_funny")),
+          comoInteiro(entrada.get("comment_count")),
+          autor == null ? null : comoInteiro(autor.get("playtime_forever")),
+          criadaEm == null ? null : Instant.ofEpochSecond(criadaEm.longValue()).toString(),
+          comoTexto(entrada.get("language"))));
+    }
+    return new RespostaAvaliacoesSteam(appId, avaliacoes);
+  }
+
+  private List<Map<?, ?>> buscarAvaliacoesPorIdioma(String appId, String idioma) {
+    try {
+      Map<String, Object> resposta = restClient.get()
+          .uri(uri -> uri
+              .scheme("https").host("store.steampowered.com")
+              .path("/appreviews/{appId}")
+              .queryParam("json", 1)
+              .queryParam("filter", "recent")
+              .queryParam("language", idioma)
+              .queryParam("review_type", "all")
+              .queryParam("purchase_type", "all")
+              .queryParam("num_per_page", 12)
+              .build(appId))
+          .retrieve()
+          .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+      List<Map<?, ?>> resultado = new ArrayList<>();
+      for (Object item : resposta == null ? List.of() : comoLista(resposta.get("reviews"))) {
+        Map<?, ?> avaliacao = comoMapa(item);
+        if (avaliacao != null) resultado.add(avaliacao);
+      }
+      return resultado;
+    } catch (RuntimeException ignorado) {
+      return List.of();
+    }
+  }
+
+  private Map<String, PerfilAutorSteam> buscarAutores(List<String> autoresIds) {
+    if (chaveApi == null || chaveApi.isBlank() || autoresIds.isEmpty()) return Map.of();
+    try {
+      Map<String, Object> resposta = restClient.get()
+          .uri(uri -> uri
+              .scheme("https").host("api.steampowered.com")
+              .path("/ISteamUser/GetPlayerSummaries/v2/")
+              .queryParam("key", chaveApi)
+              .queryParam("steamids", String.join(",", autoresIds))
+              .build())
+          .retrieve()
+          .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+      Map<?, ?> corpo = resposta == null ? null : comoMapa(resposta.get("response"));
+      Map<String, PerfilAutorSteam> autores = new LinkedHashMap<>();
+      for (Object item : corpo == null ? List.of() : comoLista(corpo.get("players"))) {
+        Map<?, ?> jogador = comoMapa(item);
+        if (jogador == null) continue;
+        String id = comoTexto(jogador.get("steamid"));
+        if (id != null) {
+          autores.put(id, new PerfilAutorSteam(
+              comoTexto(jogador.get("personaname")),
+              comoTexto(jogador.get("avatarfull"))));
+        }
+      }
+      return autores;
+    } catch (RuntimeException ignorado) {
+      return Map.of();
     }
   }
 
@@ -310,5 +416,6 @@ public class ServicoSteam {
 
   public record ReviewsSteam(String descricaoNota, Integer positivas, Integer negativas) {}
   public record ConquistaEsquemaSteam(String nome, String tituloExibicao, String descricao, String iconeUrl, String iconeCinzaUrl) {}
+  private record PerfilAutorSteam(String nome, String avatarUrl) {}
   private record SobreParseado(String texto, List<DetalhesAplicativoSteam.DestaqueSteam> destaques) {}
 }

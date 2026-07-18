@@ -3,7 +3,15 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { of, Subscription } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 import type Hls from 'hls.js';
-import { GameService, GameDetail as GameDetailModel, GameSummary, Offer, GameDetails, RespostaConquistas } from '../../services/game';
+import {
+  GameService,
+  GameDetail as GameDetailModel,
+  GameSummary,
+  Offer,
+  GameDetails,
+  RespostaAvaliacoesSteam,
+  RespostaConquistas
+} from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
@@ -35,8 +43,10 @@ export class GameDetail implements OnInit, OnDestroy {
   carregandoColecoes = false;
   novaListaNome = '';
   criandoLista = false;
-  subTabReview: 'steam' | 'ofertagames' = 'steam';
+  subTabReview: 'steam' | 'ofertagames' = 'ofertagames';
   avaliacoes: RespostaAvaliacoes | null = null;
+  avaliacoesSteam: RespostaAvaliacoesSteam | null = null;
+  carregandoAvaliacoesSteam = false;
   minhaNota = 0;
   estrelaEmFoco = 0;
   meuComentario = '';
@@ -71,11 +81,13 @@ export class GameDetail implements OnInit, OnDestroy {
         this.detalhes = null;
         this.conquistas = null;
         this.avaliacoes = null;
+        this.avaliacoesSteam = null;
+        this.carregandoAvaliacoesSteam = true;
         this.loading = true;
         this.refreshing = false;
         this.refreshMsg = '';
         this.activeTab = 'precos';
-        this.subTabReview = 'steam';
+        this.subTabReview = 'ofertagames';
         this.midiaAtiva = 0;
         this.pararTrailer();
         this.resetarFormularioAvaliacao();
@@ -113,6 +125,13 @@ export class GameDetail implements OnInit, OnDestroy {
       this.meuComentario = avaliacoes.minha?.comentario ?? '';
       this.cdr.detectChanges();
     }).catch(() => {});
+    this.gameService.getSteamReviews(slug).pipe(
+      catchError(() => of({ steamAppId: null, avaliacoes: [] }))
+    ).subscribe(avaliacoes => {
+      this.avaliacoesSteam = avaliacoes;
+      this.carregandoAvaliacoesSteam = false;
+      this.cdr.detectChanges();
+    });
   }
 
   // So mostra a aba quando ha conteudo real (destaques ou trailer): descricao/screenshots sozinhos
@@ -122,13 +141,9 @@ export class GameDetail implements OnInit, OnDestroy {
     return !!d && ((d.destaques?.length ?? 0) > 0 || !!d.trailerUrl);
   }
 
-  // Aparece se a Steam tiver reviews (como antes) OU se ja tivermos reviews nossas,
-  // mesmo que a Steam nao tenha nenhuma pra esse jogo.
+  // A aba precisa existir mesmo sem avaliacoes para que alguem possa publicar a primeira.
   get temReview(): boolean {
-    const d = this.detalhes;
-    const temSteam = !!d && ((d.reviewsPositivas ?? 0) + (d.reviewsNegativas ?? 0)) > 0;
-    const temNossa = (this.avaliacoes?.resumo?.total ?? 0) > 0;
-    return temSteam || temNossa;
+    return !!this.game;
   }
 
   get temConquistas(): boolean {
@@ -222,6 +237,37 @@ export class GameDetail implements OnInit, OnDestroy {
     if (!d) return null;
     const total = (d.reviewsPositivas ?? 0) + (d.reviewsNegativas ?? 0);
     return total > 0 ? Math.round(((d.reviewsPositivas ?? 0) / total) * 100) : null;
+  }
+
+  totalReviewsSteam(): number {
+    return (this.detalhes?.reviewsPositivas ?? 0) + (this.detalhes?.reviewsNegativas ?? 0);
+  }
+
+  horasReviewSteam(minutos: number | null): string {
+    if (!minutos) return 'Sem tempo de jogo público';
+    const horas = Math.floor(minutos / 60);
+    const resto = minutos % 60;
+    return resto ? `${horas}h ${resto}min jogadas` : `${horas}h jogadas`;
+  }
+
+  perfilAutorSteam(steamId: string | null): string | null {
+    return steamId ? `https://steamcommunity.com/profiles/${steamId}` : null;
+  }
+
+  reviewDescricaoSteam(): string {
+    const descricao = this.detalhes?.notaReviews?.trim().toLowerCase();
+    const traducoes: Record<string, string> = {
+      'overwhelmingly positive': 'Extremamente positivas',
+      'very positive': 'Muito positivas',
+      'mostly positive': 'Majoritariamente positivas',
+      'positive': 'Positivas',
+      'mixed': 'Neutras',
+      'mostly negative': 'Majoritariamente negativas',
+      'negative': 'Negativas',
+      'very negative': 'Muito negativas',
+      'overwhelmingly negative': 'Extremamente negativas',
+    };
+    return descricao ? (traducoes[descricao] ?? this.detalhes?.notaReviews ?? '') : '';
   }
 
   trocarSubTabReview(tab: 'steam' | 'ofertagames') {

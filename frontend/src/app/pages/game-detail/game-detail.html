@@ -195,17 +195,103 @@
       <button type="button" [class.active]="subTabReview === 'ofertagames'" (click)="trocarSubTabReview('ofertagames')">Oferta Games</button>
     </div>
 
-    <div class="review-steam" *ngIf="subTabReview === 'steam' && detalhes">
-      <div class="review-score">
-        <strong>{{ reviewPositividade() }}%</strong>
-        <span>{{ detalhes.notaReviews }}</span>
+    <div class="review-steam-layout" *ngIf="subTabReview === 'steam' && detalhes && reviewPositividade() !== null">
+      <div class="review-steam-summary">
+        <section class="review-card review-steam-overview">
+          <h3>Avaliações dos jogadores na Steam</h3>
+          <div class="review-steam-overview-body">
+            <div class="review-score">
+              <strong>{{ reviewPositividade() }}%</strong>
+              <span>{{ reviewDescricaoSteam() }}</span>
+              <small>Baseado em {{ totalReviewsSteam() | number: '1.0-0' }} avaliações</small>
+            </div>
+            <div class="review-steam-distribution">
+              <div class="review-steam-distribution-labels">
+                <span><strong>{{ detalhes.reviewsPositivas | number: '1.0-0' }}</strong> positivas</span>
+                <span><strong>{{ detalhes.reviewsNegativas | number: '1.0-0' }}</strong> negativas</span>
+              </div>
+              <div class="review-steam-distribution-track" aria-hidden="true">
+                <span class="positive" [style.width.%]="reviewPositividade()"></span>
+                <span class="negative" [style.width.%]="100 - (reviewPositividade() || 0)"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="review-card review-card-recomendacao">
+          <h3>Recomendação</h3>
+          <div
+            class="review-recomendacao-ring review-recomendacao-ring-steam"
+            [style.background]="'conic-gradient(var(--color-green) ' + ((reviewPositividade() || 0) * 3.6) + 'deg, var(--bg-card-hover) 0)'"
+          >
+            <span><strong>{{ reviewPositividade() }}%</strong></span>
+          </div>
+          <span class="review-card-footer">dos jogadores recomendam este jogo</span>
+        </section>
       </div>
-      <div class="review-counts">
-        <div class="review-count positive"><strong>{{ detalhes.reviewsPositivas }}</strong><span>Positivas</span></div>
-        <div class="review-count negative"><strong>{{ detalhes.reviewsNegativas }}</strong><span>Negativas</span></div>
-      </div>
+
+      <section class="review-list-col review-steam-list">
+        <div class="review-list-header">
+          <div>
+            <h3>Avaliações recentes na Steam</h3>
+            <span>Priorizamos avaliações em português quando disponíveis.</span>
+          </div>
+          <a
+            *ngIf="avaliacoesSteam?.steamAppId"
+            class="review-steam-store-link"
+            [href]="'https://store.steampowered.com/app/' + avaliacoesSteam?.steamAppId"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Ver na Steam</a>
+        </div>
+
+        <div class="review-list" *ngIf="avaliacoesSteam?.avaliacoes?.length">
+          <article class="review-item review-steam-item" *ngFor="let avaliacao of avaliacoesSteam?.avaliacoes">
+            <div class="review-item-header">
+              <img
+                [src]="avaliacao.autorAvatarUrl || 'steam-modo-escuro.png'"
+                alt=""
+                class="review-avatar review-steam-avatar"
+              />
+              <div>
+                <a
+                  *ngIf="perfilAutorSteam(avaliacao.autorSteamId) as perfilUrl; else autorSemLink"
+                  [href]="perfilUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="review-steam-author"
+                >{{ avaliacao.autorNome }}</a>
+                <ng-template #autorSemLink><strong>{{ avaliacao.autorNome }}</strong></ng-template>
+                <div class="review-steam-meta">
+                  <span>{{ horasReviewSteam(avaliacao.minutosJogados) }}</span>
+                  <span *ngIf="avaliacao.criadaEm">{{ relativeTime(avaliacao.criadaEm) }}</span>
+                </div>
+              </div>
+              <span
+                class="review-tag"
+                [class.recomenda]="avaliacao.recomenda"
+                [class.nao-recomenda]="!avaliacao.recomenda"
+              >
+                {{ avaliacao.recomenda ? 'Recomenda' : 'Não recomenda' }}
+              </span>
+            </div>
+            <p *ngIf="avaliacao.texto">{{ avaliacao.texto }}</p>
+            <div class="review-steam-feedback">
+              <span>Útil para {{ avaliacao.votosUteis || 0 }} pessoa(s)</span>
+              <span *ngIf="avaliacao.comentarios">{{ avaliacao.comentarios }} comentário(s)</span>
+            </div>
+          </article>
+        </div>
+
+        <p class="review-empty" *ngIf="!carregandoAvaliacoesSteam && !avaliacoesSteam?.avaliacoes?.length">
+          A Steam não retornou avaliações recentes para este jogo.
+        </p>
+        <p class="review-empty" *ngIf="carregandoAvaliacoesSteam">Carregando avaliações da Steam...</p>
+      </section>
     </div>
-    <p class="review-empty" *ngIf="subTabReview === 'steam' && !detalhes">Sem dados de review da Steam pra esse jogo.</p>
+    <p class="review-empty" *ngIf="subTabReview === 'steam' && (!detalhes || reviewPositividade() === null)">
+      Sem dados de avaliação da Steam para este jogo.
+    </p>
 
     <div class="review-ofertagames" *ngIf="subTabReview === 'ofertagames' && avaliacoes">
       <div class="review-summary-row">
@@ -228,45 +314,14 @@
           <span class="review-card-footer">Baseado em {{ avaliacoes.resumo.total }} avaliações</span>
         </div>
 
-        <div class="review-card review-card-recomendacao" *ngIf="avaliacoes.resumo.percentualRecomenda != null">
+        <div class="review-card review-card-recomendacao">
           <h3>Recomendação</h3>
           <div class="review-recomendacao-ring">
-            <strong>{{ avaliacoes.resumo.percentualRecomenda }}%</strong>
+            <strong>{{ avaliacoes.resumo.percentualRecomenda != null ? avaliacoes.resumo.percentualRecomenda + '%' : '—' }}</strong>
           </div>
-          <span class="review-card-footer">dos jogadores recomendam este jogo</span>
-        </div>
-      </div>
-
-      <div class="review-columns">
-        <div class="review-list-col">
-          <div class="review-list-header">
-            <h3>Reviews dos jogadores</h3>
-            <select aria-label="Ordenar reviews">
-              <option>Mais recentes</option>
-            </select>
-          </div>
-
-          <div class="review-list">
-            <article class="review-item" *ngFor="let avaliacao of avaliacoes.avaliacoes">
-              <div class="review-item-header">
-                <img [src]="avaliacao.usuarioAvatarUrl || 'no-cover.svg'" alt="" class="review-avatar" />
-                <div>
-                  <strong>{{ avaliacao.usuarioNome || 'Usuário' }}</strong>
-                  <div class="review-item-estrelas">
-                    <span *ngFor="let estrela of estrelas" [class.active]="avaliacao.nota >= estrela">★</span>
-                    <small>{{ relativeTime(avaliacao.criadoEm) }}</small>
-                  </div>
-                </div>
-                <span class="review-tag" [class.recomenda]="avaliacao.recomenda">{{ avaliacao.recomenda ? 'Recomenda' : 'Não recomenda' }}</span>
-              </div>
-              <p *ngIf="avaliacao.comentario">{{ avaliacao.comentario }}</p>
-              <div class="review-item-votos">
-                <button type="button" [class.active]="avaliacao.meuVoto === true" (click)="votarUtil(avaliacao.id, true)">Útil ({{ avaliacao.util }})</button>
-                <button type="button" [class.active]="avaliacao.meuVoto === false" (click)="votarUtil(avaliacao.id, false)">Não útil ({{ avaliacao.naoUtil }})</button>
-              </div>
-            </article>
-            <p class="review-empty" *ngIf="!avaliacoes.avaliacoes.length">Nenhuma avaliação ainda. Seja o primeiro a avaliar.</p>
-          </div>
+          <span class="review-card-footer">
+            {{ avaliacoes.resumo.percentualRecomenda != null ? 'dos jogadores recomendam este jogo' : 'Ainda sem recomendações' }}
+          </span>
         </div>
 
         <div class="review-form-col">
@@ -283,12 +338,44 @@
             >★</button>
           </div>
           <textarea [(ngModel)]="meuComentario" maxlength="2000" placeholder="Escreva sua avaliação..."></textarea>
+          <span class="review-comment-counter">{{ meuComentario.length }}/2000</span>
           <div class="review-form-actions">
             <button type="button" class="btn-primary" [disabled]="!minhaNota || enviandoAvaliacao" (click)="enviarAvaliacao()">
-              {{ enviandoAvaliacao ? 'Enviando...' : 'Publicar review' }}
+              {{ enviandoAvaliacao ? 'Enviando...' : 'Publicar avaliação' }}
             </button>
-            <button type="button" class="btn-outline" *ngIf="avaliacoes.minha" (click)="excluirAvaliacao()">Excluir minha review</button>
+            <button type="button" class="btn-outline" *ngIf="avaliacoes.minha" (click)="excluirAvaliacao()">Excluir minha avaliação</button>
           </div>
+        </div>
+      </div>
+
+      <div class="review-list-col">
+        <div class="review-list-header">
+          <h3>Avaliações dos jogadores</h3>
+          <select aria-label="Ordenar avaliações">
+            <option>Mais recentes</option>
+          </select>
+        </div>
+
+        <div class="review-list">
+          <article class="review-item" *ngFor="let avaliacao of avaliacoes.avaliacoes">
+            <div class="review-item-header">
+              <img [src]="avaliacao.usuarioAvatarUrl || 'no-cover.svg'" alt="" class="review-avatar" />
+              <div>
+                <strong>{{ avaliacao.usuarioNome || 'Usuário' }}</strong>
+                <div class="review-item-estrelas">
+                  <span *ngFor="let estrela of estrelas" [class.active]="avaliacao.nota >= estrela">★</span>
+                  <small>{{ relativeTime(avaliacao.criadoEm) }}</small>
+                </div>
+              </div>
+              <span class="review-tag" [class.recomenda]="avaliacao.recomenda">{{ avaliacao.recomenda ? 'Recomenda' : 'Não recomenda' }}</span>
+            </div>
+            <p *ngIf="avaliacao.comentario">{{ avaliacao.comentario }}</p>
+            <div class="review-item-votos">
+              <button type="button" [class.active]="avaliacao.meuVoto === true" (click)="votarUtil(avaliacao.id, true)">Útil ({{ avaliacao.util }})</button>
+              <button type="button" [class.active]="avaliacao.meuVoto === false" (click)="votarUtil(avaliacao.id, false)">Não útil ({{ avaliacao.naoUtil }})</button>
+            </div>
+          </article>
+          <p class="review-empty" *ngIf="!avaliacoes.avaliacoes.length">Nenhuma avaliação ainda. Seja o primeiro a avaliar.</p>
         </div>
       </div>
     </div>

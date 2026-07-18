@@ -1,6 +1,8 @@
 package com.ofertagames.backend.jogos;
 
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
+import com.ofertagames.backend.steam.RespostaAvaliacoesSteam;
+import com.ofertagames.backend.steam.ServicoSteam;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +21,19 @@ public class ControladorJogos {
   private final ServicoCatalogo catalogo;
   private final ServicoConquistasJogo conquistasJogo;
   private final ServicoAutenticacao autenticacao;
+  private final ServicoSteam steam;
 
-  ControladorJogos(RepositorioJogos jogos, ServicoCatalogo catalogo, ServicoConquistasJogo conquistasJogo, ServicoAutenticacao autenticacao) {
+  ControladorJogos(
+      RepositorioJogos jogos,
+      ServicoCatalogo catalogo,
+      ServicoConquistasJogo conquistasJogo,
+      ServicoAutenticacao autenticacao,
+      ServicoSteam steam) {
     this.jogos = jogos;
     this.catalogo = catalogo;
     this.conquistasJogo = conquistasJogo;
     this.autenticacao = autenticacao;
+    this.steam = steam;
   }
 
   @GetMapping
@@ -67,6 +76,15 @@ public class ControladorJogos {
         .flatMap(jogos::buscarDetalhesJogo)
         .map(ResponseEntity::ok)
         .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  @GetMapping("/{slug}/avaliacoes/steam")
+  ResponseEntity<RespostaAvaliacoesSteam> avaliacoesSteam(@PathVariable String slug) {
+    return jogos.buscarIdESteamAppIdPorSlug(slug)
+        .filter(jogo -> jogo.steamAppId() != null)
+        .map(jogo -> steam.buscarAvaliacoesRecentes(String.valueOf(jogo.steamAppId())))
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.ok(new RespostaAvaliacoesSteam(null, List.of())));
   }
 
   @GetMapping("/{slug}/conquistas")

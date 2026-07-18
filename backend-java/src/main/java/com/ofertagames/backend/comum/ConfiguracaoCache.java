@@ -12,11 +12,13 @@ public class ConfiguracaoCache {
 
   public static final String CACHE_CATALOGO = "catalogoJogos";
   public static final String CACHE_DESCONTOS = "descontosTop";
+  public static final String CACHE_AVALIACOES_STEAM = "avaliacoesSteam";
 
   // TTL curto pra acompanhar a sincronizacao de precos sem martelar o banco a cada carregamento de catalogo/inicio.
   @Bean
   CacheManager cacheManager() {
-    CaffeineCacheManager gerenciador = new CaffeineCacheManager(CACHE_CATALOGO, CACHE_DESCONTOS);
+    CaffeineCacheManager gerenciador = new CaffeineCacheManager(
+        CACHE_CATALOGO, CACHE_DESCONTOS, CACHE_AVALIACOES_STEAM);
     gerenciador.setCaffeine(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(10)).maximumSize(500));
     return gerenciador;
   }

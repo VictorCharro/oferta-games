@@ -95,12 +95,12 @@ Job separado, em geral a cada 15 minutos:
 
 Dois jobs novos em `ServicoSincronizacao`/`AgendadorColetas`, ambos dependem de `games.steam_app_id` ja preenchido pelo job de metadados Steam acima. So processam jogos com oferta Steam; os demais ficam sem esses dados (mesma limitacao pre-existente de capa/DLC).
 
-- **Detalhes** (`coletarDetalhesJogos`, ~15min): reaproveita a mesma chamada `appdetails` do job de metadados Steam, so que agora extrai tambem descricao curta, generos, desenvolvedores, publicadoras, data de lancamento e screenshots; complementa com `store.steampowered.com/appreviews/{appid}` (nota, positivas, negativas). Grava em `game_details` (1 linha por jogo, upsert).
+- **Detalhes** (`coletarDetalhesJogos`, ~15min): reaproveita a mesma chamada `appdetails` do job de metadados Steam, solicitando `l=brazilian&cc=br`, e extrai descricao curta, generos, desenvolvedores, publicadoras, data de lancamento e screenshots; complementa com `store.steampowered.com/appreviews/{appid}` (nota, positivas, negativas). Grava em `game_details` (1 linha por jogo, upsert). Jogos sem detalhes entram imediatamente na fila; dados existentes com mais de 30 dias sao atualizados novamente.
 - **Conquistas de catalogo** (`coletarConquistasCatalogo`, ~3h — schema e % global mudam devagar): `ISteamUserStats/GetSchemaForGame/v2` (precisa de `STEAM_WEB_API_KEY`) mesclado com `ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2` (publico). Grava em `game_achievements` (upsert por `api_name`). Nao tem relacao com `conexoes/AgendadorConquistasSteam`, que sincroniza as conquistas *desbloqueadas por um usuario logado* — este job novo e catalogo-wide, sem usuario.
 - Endpoints novos, independentes de `/api/games/{slug}` (usado pela aba Precos, que nao mudou): `GET /api/games/{slug}/detalhes` (404 se ainda nao sincronizado) e `GET /api/games/{slug}/conquistas` (lista vazia se nao houver).
 - Disparo manual: `POST /api/admin/coleta/detalhes` e `POST /api/admin/coleta/conquistas-catalogo` (mesmo padrao de auth de admin dos demais tipos).
 - `game_details` tambem guarda `trailer_url`/`trailer_thumbnail` (primeiro item de `movies` no appdetails), `about_full` + `feature_highlights` (jsonb, parseado via Jsoup dos blocos `<h2 class=bb_tag>` do `about_the_game`), `categories` (badges tipo "Suporte a controle") e `requirements_min`/`requirements_rec` (texto, uma linha por item, extraido do HTML de `pc_requirements`).
-- Consumido pela pagina do jogo: abas Sobre/Review/Conquistas em `pages/game-detail/`, cada uma so aparece se houver conteudo (Sobre exige destaques ou trailer — descricao/screenshots sozinhos nao bastam, pra nao aparecer em trilhas sonoras; Review exige pelo menos 1 review — da Steam ou nossa; Conquistas exige pelo menos 1 conquista no catalogo).
+- Consumido pela pagina do jogo: abas Sobre/Review/Conquistas em `pages/game-detail/`. Sobre exige destaques ou trailer — descricao/screenshots sozinhos nao bastam, para nao aparecer em trilhas sonoras; Review fica disponivel em todo jogo para permitir a primeira avaliacao; Conquistas exige pelo menos 1 conquista no catalogo.
 
 ### Conquistas com progresso pessoal
 
@@ -108,8 +108,8 @@ Dois jobs novos em `ServicoSincronizacao`/`AgendadorColetas`, ambos dependem de 
 
 ### Reviews (Steam + Oferta Games)
 
-Duas fontes na aba Review, sub-abas no frontend (Steam primeiro):
-- **Steam**: os campos ja existentes em `game_details` (`notaReviews`/`reviewsPositivas`/`reviewsNegativas`), sem mudanca.
+Duas fontes na aba Review, sub-abas no frontend (Oferta Games primeiro):
+- **Steam**: o resumo global continua vindo de `game_details` (`notaReviews`/`reviewsPositivas`/`reviewsNegativas`). A pagina tambem consulta `GET /api/games/{slug}/avaliacoes/steam`, que usa a API publica de reviews da Steam, prioriza textos em portugues brasileiro, completa a lista com outros idiomas quando necessario e enriquece autor/avatar pela Steam Web API. O resultado fica em cache por 10 minutos. A interface mostra a proporcao real de recomendacoes positivas/negativas e reviews recentes; nao inventa distribuicao de estrelas nem oferece formulario nessa sub-aba.
 - **Oferta Games**: sistema de review proprio, modulo `avaliacoesjogo`. Tabelas `game_reviews` (nota 1-5 + comentario, um por usuario por jogo, upsert) e `game_review_votes` (util/nao-util por review, um voto por usuario, pode trocar mas nao remover). "Recomenda" e derivado de `rating >= 4`, sem campo proprio. Nome/avatar de quem avaliou vem de `profiles` (mesma tabela do perfil publico).
   ```
   GET    /api/games/{slug}/reviews             auth opcional -> resumo (media, distribuicao por nota, % recomenda) + minha review + lista
@@ -270,8 +270,9 @@ Arquivos em `backend-java/sql/`:
 18. `20260718_detalhes_jogo.sql`
 19. `20260718_detalhes_jogo_extra.sql`
 20. `20260718_avaliacoes_jogo.sql`
+21. `20260718_reprocessar_detalhes_pt_br.sql`
 
-Essas migrations ja foram aplicadas ao projeto Supabase de producao. Em outro ambiente, executa-las em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500.
+As migrations 1 a 21 ja foram aplicadas ao projeto Supabase de producao. A migration 21 marcou 408 detalhes existentes como antigos em 18/07/2026 para a fila substitui-los gradualmente pelo conteudo pt-BR, sem apagar o texto atual durante o processamento. Em outro ambiente, executar as migrations estruturais em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500.
 
 O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos e seus fundos. Cada usuario so pode gravar na propria pasta. As politicas RLS de `SELECT`, `INSERT`, `UPDATE` e `DELETE` foram aplicadas ao projeto novo em 15/07/2026; sem elas o Storage retorna HTTP 400 nos uploads. Limite de upload de imagem no frontend: 2 MB, JPG/PNG/WebP. Blocos de imagem e fundos tambem aceitam URL externa `http(s)`.
 
@@ -286,6 +287,7 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
   - `RepositorioJogos.listar` e cacheado em memoria (Caffeine, `comum/ConfiguracaoCache`) por 10min por combinacao de parametros, pra nao repetir a query a cada abertura do catalogo. Expira sozinho; nao ha invalidacao manual quando a sincronizacao de precos roda. A pagina Mais Vendidos usa este mesmo endpoint (`getGames`), entao ja se beneficia do cache.
 - `GET /api/games/search?q=nome`
 - `GET /api/games/{slug}`
+- `GET /api/games/{slug}/avaliacoes/steam`: ate 12 reviews recentes reais da Steam, com texto, recomendacao, tempo jogado, votos, autor e avatar quando disponiveis; resposta publica e cacheada.
 - `GET /api/games/{slug}/detalhes` — descricao/generos/devs/publishers/data/screenshots/review, de `game_details`. 404 se o jogo ainda nao foi sincronizado (sem oferta Steam, ou aguardando o job).
 - `GET /api/games/{slug}/conquistas` — auth opcional. `{ total, desbloqueadas, percentualConcluido, proxima, conquistas[] }`; cada conquista com `desbloqueada`/`desbloqueadaEm` cruzados com o progresso do visitante logado (ver "Conquistas com progresso pessoal" acima). Sempre 200, mesmo pra jogo inexistente (fica tudo zerado).
 - `GET|POST|DELETE /api/games/{slug}/reviews`, `POST /api/games/{slug}/reviews/{id}/voto` — ver "Reviews (Steam + Oferta Games)" acima.
@@ -362,7 +364,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 |---|---|---|
 | **Inicio** (`/`) | Apresentar ofertas de interesse imediato. | Banner de melhor oferta, carrosseis de Jogos Monitorados, plataforma favorita quando definida, descontos em jogos, descontos em DLCs, mais vendidos e gratuitos. O conteudo geral nunca deve desaparecer ao selecionar uma plataforma favorita. |
 | **Catalogo** (`/catalogo`) | Explorar todo o catalogo. | Scroll infinito; filtros de tipo, plataforma, desconto minimo e faixa de preco; ordenacao por dropdown customizado. As preferencias preenchem os filtros iniciais, mas o usuario pode mudar tudo manualmente. |
-| **Detalhe do jogo** (`/jogo/:slug`) | Comparar todas as lojas de um jogo. | Hero com capa, melhor preco, botao `Atualizar precos`, acao de Jogos Monitorados e tabela de ofertas. A tabela mostra loja, plataforma, desconto, preco regular, preco atual e link externo. |
+| **Detalhe do jogo** (`/jogo/:slug`) | Comparar lojas e reunir informacoes do jogo. | Hero com capa, melhor preco, botao `Atualizar precos`, acoes pessoais, tabela de ofertas e abas Precos/Sobre/Review/Conquistas quando ha dados. Review separa o resumo e as avaliacoes recentes reais da Steam do sistema proprio do Oferta Games. |
 | **Busca** | Encontrar jogos, lojas e categorias pela topbar. | Sugestoes devem navegar diretamente para o jogo escolhido; a mudanca de URL precisa recarregar o detalhe mesmo quando o usuario ja esta em outro detalhe. |
 | **Jogos Monitorados** (`/monitorados`) | Listar jogos acompanhados por preco. | Usa a tabela `favorites` e os endpoints `/api/favorites`. E diferente de favoritos pessoais do perfil. A rota antiga `/favoritos` somente redireciona para aqui. |
 | **Mais vendidos** | Mostrar jogos relevantes/populares. | Usa rank ITAD e deve respeitar as mesmas regras de filtro de conteudo nao-jogo, DLC e lojas bloqueadas. |

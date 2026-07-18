@@ -72,6 +72,26 @@ export interface RespostaConquistas {
   conquistas: ConquistaComProgresso[];
 }
 
+export interface AvaliacaoSteam {
+  id: string;
+  autorSteamId: string | null;
+  autorNome: string;
+  autorAvatarUrl: string | null;
+  texto: string | null;
+  recomenda: boolean;
+  votosUteis: number | null;
+  votosEngracados: number | null;
+  comentarios: number | null;
+  minutosJogados: number | null;
+  criadaEm: string | null;
+  idioma: string | null;
+}
+
+export interface RespostaAvaliacoesSteam {
+  steamAppId: string | null;
+  avaliacoes: AvaliacaoSteam[];
+}
+
 export interface TopDeal {
   slug: string;
   title: string;
@@ -121,6 +141,10 @@ export class GameService {
 
   getGameDetails(slug: string): Observable<GameDetails> {
     return this.http.get<GameDetails>(`${this.api}/games/${slug}/detalhes`);
+  }
+
+  getSteamReviews(slug: string): Observable<RespostaAvaliacoesSteam> {
+    return this.http.get<RespostaAvaliacoesSteam>(`${this.api}/games/${slug}/avaliacoes/steam`);
   }
 
   async getGameAchievements(slug: string): Promise<RespostaConquistas> {

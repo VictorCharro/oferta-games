@@ -394,7 +394,8 @@ public class RepositorioJogos {
         SELECT g.id, g.steam_app_id
         FROM games g
         LEFT JOIN game_details gd ON gd.game_id = g.id
-        WHERE g.steam_app_id IS NOT NULL AND gd.game_id IS NULL
+        WHERE g.steam_app_id IS NOT NULL
+          AND (gd.game_id IS NULL OR gd.updated_at < now() - interval '30 days')
           %s
           %s
         ORDER BY %s g.id ASC
