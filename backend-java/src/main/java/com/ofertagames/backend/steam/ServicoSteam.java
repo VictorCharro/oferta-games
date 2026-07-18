@@ -10,6 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
@@ -73,9 +78,21 @@ public class ServicoSteam {
       List<String> desenvolvedores = comoListaDeTexto(dados.get("developers"));
       List<String> publicadoras = comoListaDeTexto(dados.get("publishers"));
       List<String> screenshots = comoListaDeCampo(dados.get("screenshots"), "path_full");
+      List<String> categorias = comoListaDeCampo(dados.get("categories"), "description");
+
+      Map<?, ?> trailer = primeiroTrailer(dados.get("movies"));
+      String trailerUrl = trailer == null ? null : comoUrlTrailer(trailer);
+      String trailerThumbnail = trailer == null ? null : comoTexto(trailer.get("thumbnail"));
+
+      SobreParseado sobre = parsearSobre(comoTexto(dados.get("about_the_game")));
+
+      Map<?, ?> requisitos = comoMapa(dados.get("pc_requirements"));
+      String requisitosMinimos = requisitos == null ? null : comoRequisitos(requisitos.get("minimum"));
+      String requisitosRecomendados = requisitos == null ? null : comoRequisitos(requisitos.get("recommended"));
 
       return Optional.of(new DetalhesAplicativoSteam(
-          ehDlc, imagemCabecalho, descricaoCurta, generos, desenvolvedores, publicadoras, dataLancamento, screenshots));
+          ehDlc, imagemCabecalho, descricaoCurta, generos, desenvolvedores, publicadoras, dataLancamento, screenshots,
+          trailerUrl, trailerThumbnail, sobre.texto(), sobre.destaques(), categorias, requisitosMinimos, requisitosRecomendados));
     } catch (RuntimeException ignored) {
       return Optional.empty();
     }
@@ -166,6 +183,79 @@ public class ServicoSteam {
     return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
   }
 
+  private static Map<?, ?> primeiroTrailer(Object valor) {
+    List<?> filmes = comoLista(valor);
+    return filmes.isEmpty() ? null : comoMapa(filmes.get(0));
+  }
+
+  private static String comoUrlTrailer(Map<?, ?> trailer) {
+    String url = comoTexto(trailer.get("hls_h264"));
+    return url != null ? url : comoTexto(trailer.get("dash_h264"));
+  }
+
+  // A Steam manda a descricao longa em HTML com blocos "<h2 class=bb_tag>Titulo</h2>texto...":
+  // o texto antes do primeiro titulo vira a descricao completa, cada bloco depois vira um destaque.
+  private static SobreParseado parsearSobre(String html) {
+    if (html == null || html.isBlank()) {
+      return new SobreParseado(null, List.of());
+    }
+    Document doc = Jsoup.parseBodyFragment(html);
+    List<DetalhesAplicativoSteam.DestaqueSteam> destaques = new ArrayList<>();
+    StringBuilder intro = new StringBuilder();
+    StringBuilder atual = new StringBuilder();
+    String tituloAtual = null;
+
+    for (Node node : doc.body().childNodes()) {
+      if (node instanceof Element el && "h2".equals(el.tagName()) && el.hasClass("bb_tag")) {
+        fecharSecao(tituloAtual, atual, intro, destaques);
+        tituloAtual = el.text().trim();
+        atual = new StringBuilder();
+      } else {
+        atual.append(textoDoNode(node)).append(' ');
+      }
+    }
+    fecharSecao(tituloAtual, atual, intro, destaques);
+
+    String texto = limparEspacos(intro.toString());
+    return new SobreParseado(texto.isBlank() ? null : texto, destaques);
+  }
+
+  private static void fecharSecao(
+      String titulo, StringBuilder buffer, StringBuilder intro, List<DetalhesAplicativoSteam.DestaqueSteam> destaques) {
+    String texto = limparEspacos(buffer.toString());
+    if (titulo == null) {
+      intro.append(texto).append(' ');
+    } else if (!texto.isBlank()) {
+      destaques.add(new DetalhesAplicativoSteam.DestaqueSteam(titulo, texto));
+    }
+  }
+
+  private static String textoDoNode(Node node) {
+    if (node instanceof TextNode texto) return texto.text();
+    if (node instanceof Element el) return el.text();
+    return "";
+  }
+
+  private static String limparEspacos(String texto) {
+    return texto.replaceAll("\\s+", " ").trim();
+  }
+
+  private static String comoRequisitos(Object valor) {
+    String html = comoTexto(valor);
+    if (html == null || html.isBlank()) return null;
+    Document doc = Jsoup.parseBodyFragment(html);
+    List<String> linhas = new ArrayList<>();
+    for (Element li : doc.select("li")) {
+      String texto = limparEspacos(li.text());
+      if (!texto.isBlank()) linhas.add(texto);
+    }
+    if (!linhas.isEmpty()) {
+      return String.join("\n", linhas);
+    }
+    String textoSimples = limparEspacos(doc.text());
+    return textoSimples.isBlank() ? null : textoSimples;
+  }
+
   private static String comoDataLancamento(Object valor) {
     Map<?, ?> mapa = comoMapa(valor);
     return mapa == null ? null : comoTexto(mapa.get("date"));
@@ -220,4 +310,5 @@ public class ServicoSteam {
 
   public record ReviewsSteam(String descricaoNota, Integer positivas, Integer negativas) {}
   public record ConquistaEsquemaSteam(String nome, String tituloExibicao, String descricao, String iconeUrl, String iconeCinzaUrl) {}
+  private record SobreParseado(String texto, List<DetalhesAplicativoSteam.DestaqueSteam> destaques) {}
 }

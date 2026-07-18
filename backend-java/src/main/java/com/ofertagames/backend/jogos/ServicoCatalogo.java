@@ -260,7 +260,12 @@ public class ServicoCatalogo {
         continue;
       }
 
-      jogos.salvarDetalhesJogo(
+      List<DetalhesJogo.DestaqueJogo> destaques = detalhes.map(DetalhesAplicativoSteam::destaques).stream()
+          .flatMap(List::stream)
+          .map(destaque -> new DetalhesJogo.DestaqueJogo(destaque.titulo(), destaque.texto()))
+          .toList();
+
+      jogos.salvarDetalhesJogo(new DetalhesParaSalvar(
           pendente.id(),
           detalhes.map(DetalhesAplicativoSteam::descricaoCurta).orElse(null),
           detalhes.map(DetalhesAplicativoSteam::generos).orElse(null),
@@ -270,7 +275,14 @@ public class ServicoCatalogo {
           detalhes.map(DetalhesAplicativoSteam::screenshots).orElse(null),
           reviews.map(ReviewsSteam::descricaoNota).orElse(null),
           reviews.map(ReviewsSteam::positivas).orElse(null),
-          reviews.map(ReviewsSteam::negativas).orElse(null));
+          reviews.map(ReviewsSteam::negativas).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::trailerUrl).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::trailerThumbnail).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::sobreCompleto).orElse(null),
+          destaques,
+          detalhes.map(DetalhesAplicativoSteam::categorias).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::requisitosMinimos).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::requisitosRecomendados).orElse(null)));
       atualizados++;
     }
 

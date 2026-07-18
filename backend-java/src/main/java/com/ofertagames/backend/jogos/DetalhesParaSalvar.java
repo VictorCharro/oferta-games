@@ -2,8 +2,9 @@ package com.ofertagames.backend.jogos;
 
 import java.util.List;
 
-public record DetalhesJogo(
-    String descricao,
+public record DetalhesParaSalvar(
+    long jogoId,
+    String descricaoCurta,
     List<String> generos,
     List<String> desenvolvedores,
     List<String> publicadoras,
@@ -15,10 +16,7 @@ public record DetalhesJogo(
     String trailerUrl,
     String trailerThumbnail,
     String sobreCompleto,
-    List<DestaqueJogo> destaques,
+    List<DetalhesJogo.DestaqueJogo> destaques,
     List<String> categorias,
     String requisitosMinimos,
-    String requisitosRecomendados) {
-
-  public record DestaqueJogo(String titulo, String texto) {}
-}
+    String requisitosRecomendados) {}

@@ -1,5 +1,7 @@
 package com.ofertagames.backend.jogos;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofertagames.backend.comum.ClassificadorDlc;
 import com.ofertagames.backend.comum.ConfiguracaoCache;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
@@ -25,10 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class RepositorioJogos {
   private final JdbcClient jdbc;
   private final JdbcTemplate jdbcTemplate;
+  private final ObjectMapper objectMapper;
 
-  RepositorioJogos(JdbcClient jdbc, JdbcTemplate jdbcTemplate) {
+  RepositorioJogos(JdbcClient jdbc, JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.jdbcTemplate = jdbcTemplate;
+    this.objectMapper = objectMapper;
   }
 
   // TTL definido em ConfiguracaoCache (10min): evita repetir a query pesada a cada abertura do catalogo.
@@ -413,15 +417,23 @@ public class RepositorioJogos {
         .list();
   }
 
-  public void salvarDetalhesJogo(long jogoId, String descricaoCurta, List<String> generos, List<String> desenvolvedores,
-      List<String> publicadoras, String dataLancamento, List<String> screenshots, String notaReviews,
-      Integer reviewsPositivas, Integer reviewsNegativas) {
+  public void salvarDetalhesJogo(DetalhesParaSalvar dados) {
+    String destaquesJson;
+    try {
+      destaquesJson = dados.destaques() == null ? null : objectMapper.writeValueAsString(dados.destaques());
+    } catch (com.fasterxml.jackson.core.JsonProcessingException erro) {
+      destaquesJson = null;
+    }
     jdbc.sql("""
         INSERT INTO game_details (
           game_id, short_description, genres, developers, publishers, release_date, screenshots,
-          review_score_desc, review_positive, review_negative, updated_at)
+          review_score_desc, review_positive, review_negative,
+          trailer_url, trailer_thumbnail, about_full, feature_highlights, categories,
+          requirements_min, requirements_rec, updated_at)
         VALUES (:jogoId, :descricao, :generos, :desenvolvedores, :publicadoras, :dataLancamento, :screenshots,
-          :notaReviews, :reviewsPositivas, :reviewsNegativas, now())
+          :notaReviews, :reviewsPositivas, :reviewsNegativas,
+          :trailerUrl, :trailerThumbnail, :sobreCompleto, CAST(:destaques AS jsonb), :categorias,
+          :requisitosMinimos, :requisitosRecomendados, now())
         ON CONFLICT (game_id) DO UPDATE
           SET short_description = EXCLUDED.short_description,
               genres = EXCLUDED.genres,
@@ -432,18 +444,32 @@ public class RepositorioJogos {
               review_score_desc = EXCLUDED.review_score_desc,
               review_positive = EXCLUDED.review_positive,
               review_negative = EXCLUDED.review_negative,
+              trailer_url = EXCLUDED.trailer_url,
+              trailer_thumbnail = EXCLUDED.trailer_thumbnail,
+              about_full = EXCLUDED.about_full,
+              feature_highlights = EXCLUDED.feature_highlights,
+              categories = EXCLUDED.categories,
+              requirements_min = EXCLUDED.requirements_min,
+              requirements_rec = EXCLUDED.requirements_rec,
               updated_at = now()
         """)
-        .param("jogoId", jogoId)
-        .param("descricao", descricaoCurta)
-        .param("generos", generos == null ? null : generos.toArray(new String[0]))
-        .param("desenvolvedores", desenvolvedores == null ? null : desenvolvedores.toArray(new String[0]))
-        .param("publicadoras", publicadoras == null ? null : publicadoras.toArray(new String[0]))
-        .param("dataLancamento", dataLancamento)
-        .param("screenshots", screenshots == null ? null : screenshots.toArray(new String[0]))
-        .param("notaReviews", notaReviews)
-        .param("reviewsPositivas", reviewsPositivas)
-        .param("reviewsNegativas", reviewsNegativas)
+        .param("jogoId", dados.jogoId())
+        .param("descricao", dados.descricaoCurta())
+        .param("generos", dados.generos() == null ? null : dados.generos().toArray(new String[0]))
+        .param("desenvolvedores", dados.desenvolvedores() == null ? null : dados.desenvolvedores().toArray(new String[0]))
+        .param("publicadoras", dados.publicadoras() == null ? null : dados.publicadoras().toArray(new String[0]))
+        .param("dataLancamento", dados.dataLancamento())
+        .param("screenshots", dados.screenshots() == null ? null : dados.screenshots().toArray(new String[0]))
+        .param("notaReviews", dados.notaReviews())
+        .param("reviewsPositivas", dados.reviewsPositivas())
+        .param("reviewsNegativas", dados.reviewsNegativas())
+        .param("trailerUrl", dados.trailerUrl())
+        .param("trailerThumbnail", dados.trailerThumbnail())
+        .param("sobreCompleto", dados.sobreCompleto())
+        .param("destaques", destaquesJson)
+        .param("categorias", dados.categorias() == null ? null : dados.categorias().toArray(new String[0]))
+        .param("requisitosMinimos", dados.requisitosMinimos())
+        .param("requisitosRecomendados", dados.requisitosRecomendados())
         .update();
   }
 
@@ -500,7 +526,9 @@ public class RepositorioJogos {
   public Optional<DetalhesJogo> buscarDetalhesJogo(long jogoId) {
     return jdbc.sql("""
         SELECT short_description, genres, developers, publishers, release_date, screenshots,
-               review_score_desc, review_positive, review_negative
+               review_score_desc, review_positive, review_negative,
+               trailer_url, trailer_thumbnail, about_full, feature_highlights, categories,
+               requirements_min, requirements_rec
         FROM game_details
         WHERE game_id = :jogoId
         """)
@@ -514,8 +542,24 @@ public class RepositorioJogos {
             listaDeArray(rs.getArray("screenshots")),
             rs.getString("review_score_desc"),
             rs.getObject("review_positive", Integer.class),
-            rs.getObject("review_negative", Integer.class)))
+            rs.getObject("review_negative", Integer.class),
+            rs.getString("trailer_url"),
+            rs.getString("trailer_thumbnail"),
+            rs.getString("about_full"),
+            listaDeDestaques(rs.getString("feature_highlights")),
+            listaDeArray(rs.getArray("categories")),
+            rs.getString("requirements_min"),
+            rs.getString("requirements_rec")))
         .optional();
+  }
+
+  private List<DetalhesJogo.DestaqueJogo> listaDeDestaques(String json) {
+    if (json == null || json.isBlank()) return List.of();
+    try {
+      return objectMapper.readValue(json, new TypeReference<List<DetalhesJogo.DestaqueJogo>>() {});
+    } catch (com.fasterxml.jackson.core.JsonProcessingException erro) {
+      return List.of();
+    }
   }
 
   private static List<String> listaDeArray(java.sql.Array array) throws SQLException {

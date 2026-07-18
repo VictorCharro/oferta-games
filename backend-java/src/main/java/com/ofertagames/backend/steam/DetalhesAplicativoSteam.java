@@ -10,4 +10,14 @@ public record DetalhesAplicativoSteam(
     List<String> desenvolvedores,
     List<String> publicadoras,
     String dataLancamento,
-    List<String> screenshots) {}
+    List<String> screenshots,
+    String trailerUrl,
+    String trailerThumbnail,
+    String sobreCompleto,
+    List<DestaqueSteam> destaques,
+    List<String> categorias,
+    String requisitosMinimos,
+    String requisitosRecomendados) {
+
+  public record DestaqueSteam(String titulo, String texto) {}
+}
