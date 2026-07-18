@@ -812,6 +812,10 @@ export class PublicProfile implements OnInit, OnDestroy {
     return this.libraryGames.slice(0, this.previewLimit(block.tamanho));
   }
 
+  activityPreview(block: PerfilBloco) {
+    return this.profile?.atividades.slice(0, this.previewLimit(block.tamanho)) || [];
+  }
+
   steamCover(game: PerfilPublico['biblioteca'][number]): string {
     return `https://cdn.akamai.steamstatic.com/steam/apps/${game.appId}/header.jpg`;
   }

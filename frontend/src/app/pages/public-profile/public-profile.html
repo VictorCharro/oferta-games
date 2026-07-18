@@ -348,7 +348,7 @@
         ><ng-container *ngSwitchCase="'atividade'"
           ><h2>Atividade recente</h2>
           <div class="activity-list">
-            <div *ngFor="let activity of profile.atividades.slice(0, 5)" class="activity-item">
+            <div *ngFor="let activity of activityPreview(block)" class="activity-item">
               <img [src]="activityIcon(activity.tipo)" /><span>{{
                 activityTitle(activity.tipo, activity.tituloJogo, activity.detalhe)
               }}</span
