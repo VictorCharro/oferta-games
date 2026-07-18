@@ -799,7 +799,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   // Itens de atividade sao linhas de texto compactas, nao cards em grade:
   // o limite de cards deixaria o bloco pequeno quase vazio.
   activityPreviewLimit(size: PerfilBloco['tamanho']): number {
-    return { pequeno: 4, medio: 6, largo: 8, completo: 10 }[size];
+    return { pequeno: 6, medio: 10, largo: 14, completo: 20 }[size];
   }
 
   maxTitleLength(block: PerfilBloco): number {

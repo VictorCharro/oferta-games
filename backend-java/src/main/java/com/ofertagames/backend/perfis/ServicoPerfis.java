@@ -114,7 +114,7 @@ class ServicoPerfis {
   // A atividade e complementar: uma migration pendente nao pode tornar o perfil indisponivel.
   private List<AtividadePerfil> carregarAtividades(String usuarioId) {
     try {
-      return atividades.listarPorUsuario(usuarioId, 8);
+      return atividades.listarPorUsuario(usuarioId, 20);
     } catch (DataAccessException erro) {
       return List.of();
     }
