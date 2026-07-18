@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, Subscription } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
-import { GameService, GameDetail as GameDetailModel, GameSummary, Offer } from '../../services/game';
+import { GameService, GameDetail as GameDetailModel, GameSummary, Offer, GameDetails, GameAchievement } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
@@ -21,7 +21,10 @@ export class GameDetail implements OnInit, OnDestroy {
   loading = true;
   refreshing = false;
   refreshMsg = '';
-  activeTab: 'precos' = 'precos';
+  activeTab: 'precos' | 'sobre' | 'review' | 'conquistas' = 'precos';
+  detalhes: GameDetails | null = null;
+  conquistas: GameAchievement[] = [];
+  midiaAtiva = 0;
   menuColecoesAberto = false;
   colecoes: ColecaoPerfil[] = [];
   carregandoColecoes = false;
@@ -50,12 +53,17 @@ export class GameDetail implements OnInit, OnDestroy {
       map(params => params.get('slug')),
       filter((slug): slug is string => !!slug),
       distinctUntilChanged(),
-      tap(() => {
+      tap(slug => {
         this.game = null;
+        this.detalhes = null;
+        this.conquistas = [];
         this.loading = true;
         this.refreshing = false;
         this.refreshMsg = '';
+        this.activeTab = 'precos';
+        this.midiaAtiva = 0;
         this.cdr.detectChanges();
+        this.carregarDetalhesEConquistas(slug);
       }),
       switchMap(slug => this.gameService.getGame(slug).pipe(catchError(() => of(null))))
     ).subscribe(data => {
@@ -69,6 +77,67 @@ export class GameDetail implements OnInit, OnDestroy {
     this.routeSub?.unsubscribe();
     this.favoriteSub?.unsubscribe();
     this.profileFavoriteSub?.unsubscribe();
+  }
+
+  private carregarDetalhesEConquistas(slug: string) {
+    this.gameService.getGameDetails(slug).pipe(catchError(() => of(null))).subscribe(detalhes => {
+      this.detalhes = detalhes;
+      this.cdr.detectChanges();
+    });
+    this.gameService.getGameAchievements(slug).pipe(catchError(() => of([]))).subscribe(conquistas => {
+      this.conquistas = conquistas;
+      this.cdr.detectChanges();
+    });
+  }
+
+  // So mostra a aba quando ha conteudo real (destaques ou trailer): descricao/screenshots sozinhos
+  // tambem existem pra trilhas sonoras e outros itens que nao sao jogo de fato.
+  get temSobre(): boolean {
+    const d = this.detalhes;
+    return !!d && ((d.destaques?.length ?? 0) > 0 || !!d.trailerUrl);
+  }
+
+  get temReview(): boolean {
+    const d = this.detalhes;
+    return !!d && ((d.reviewsPositivas ?? 0) + (d.reviewsNegativas ?? 0)) > 0;
+  }
+
+  get temConquistas(): boolean {
+    return this.conquistas.length > 0;
+  }
+
+  get midias(): { tipo: 'trailer' | 'imagem'; url: string; thumb: string }[] {
+    const d = this.detalhes;
+    if (!d) return [];
+    const itens: { tipo: 'trailer' | 'imagem'; url: string; thumb: string }[] = [];
+    if (d.trailerUrl) {
+      itens.push({ tipo: 'trailer', url: d.trailerUrl, thumb: d.trailerThumbnail || d.screenshots[0] || '' });
+    }
+    for (const url of d.screenshots) {
+      itens.push({ tipo: 'imagem', url, thumb: url });
+    }
+    return itens;
+  }
+
+  selecionarMidia(indice: number) {
+    this.midiaAtiva = indice;
+  }
+
+  proximaMidia() {
+    const total = this.midias.length;
+    if (total) this.midiaAtiva = (this.midiaAtiva + 1) % total;
+  }
+
+  midiaAnterior() {
+    const total = this.midias.length;
+    if (total) this.midiaAtiva = (this.midiaAtiva - 1 + total) % total;
+  }
+
+  reviewPositividade(): number | null {
+    const d = this.detalhes;
+    if (!d) return null;
+    const total = (d.reviewsPositivas ?? 0) + (d.reviewsNegativas ?? 0);
+    return total > 0 ? Math.round(((d.reviewsPositivas ?? 0) / total) * 100) : null;
   }
 
   get monitoring(): boolean {

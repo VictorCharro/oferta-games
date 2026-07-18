@@ -77,7 +77,10 @@
   </div>
 
   <section class="detail-tabs">
-    <button type="button" class="active">Preços</button>
+    <button type="button" [class.active]="activeTab === 'precos'" (click)="activeTab = 'precos'">Preços</button>
+    <button type="button" *ngIf="temSobre" [class.active]="activeTab === 'sobre'" (click)="activeTab = 'sobre'">Sobre</button>
+    <button type="button" *ngIf="temReview" [class.active]="activeTab === 'review'" (click)="activeTab = 'review'">Review</button>
+    <button type="button" *ngIf="temConquistas" [class.active]="activeTab === 'conquistas'" (click)="activeTab = 'conquistas'">Conquistas</button>
   </section>
 
   <div class="offers-section" *ngIf="activeTab === 'precos'">
@@ -113,6 +116,96 @@
         <p>Nenhuma oferta encontrada. Clique em "Atualizar preços" para buscar.</p>
       </div>
     </ng-template>
+  </div>
+
+  <div class="about-section" *ngIf="activeTab === 'sobre' && detalhes">
+    <div class="about-media">
+      <div class="about-media-main">
+        <ng-container *ngIf="midias[midiaAtiva] as midia">
+          <a *ngIf="midia.tipo === 'trailer'" class="about-media-trailer" [href]="midia.url" target="_blank" rel="noopener">
+            <img [src]="midia.thumb" alt="Trailer" />
+            <span class="about-media-play" aria-hidden="true">▶</span>
+          </a>
+          <img *ngIf="midia.tipo === 'imagem'" [src]="midia.url" [alt]="game.title" />
+        </ng-container>
+        <button type="button" class="about-media-nav prev" (click)="midiaAnterior()" *ngIf="midias.length > 1" aria-label="Mídia anterior">‹</button>
+        <button type="button" class="about-media-nav next" (click)="proximaMidia()" *ngIf="midias.length > 1" aria-label="Próxima mídia">›</button>
+      </div>
+      <div class="about-media-thumbs" *ngIf="midias.length > 1">
+        <button
+          *ngFor="let midia of midias; let i = index"
+          type="button"
+          class="about-media-thumb"
+          [class.active]="i === midiaAtiva"
+          (click)="selecionarMidia(i)"
+        >
+          <img [src]="midia.thumb" alt="" />
+          <span *ngIf="midia.tipo === 'trailer'" class="about-media-play small" aria-hidden="true">▶</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="about-info">
+      <h2>Sobre o jogo</h2>
+      <p class="about-text">{{ detalhes.sobreCompleto || detalhes.descricao }}</p>
+
+      <div class="about-highlights" *ngIf="detalhes.destaques.length">
+        <div class="about-highlight" *ngFor="let destaque of detalhes.destaques">
+          <span class="about-highlight-icon" aria-hidden="true">◆</span>
+          <div>
+            <h3>{{ destaque.titulo }}</h3>
+            <p>{{ destaque.texto }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-badges" *ngIf="detalhes.categorias.length">
+        <span class="about-badge" *ngFor="let categoria of detalhes.categorias">{{ categoria }}</span>
+      </div>
+
+      <div class="about-meta">
+        <div *ngIf="detalhes.generos.length"><strong>Gêneros</strong><span>{{ detalhes.generos.join(', ') }}</span></div>
+        <div *ngIf="detalhes.desenvolvedores.length"><strong>Desenvolvedora</strong><span>{{ detalhes.desenvolvedores.join(', ') }}</span></div>
+        <div *ngIf="detalhes.publicadoras.length"><strong>Publicadora</strong><span>{{ detalhes.publicadoras.join(', ') }}</span></div>
+        <div *ngIf="detalhes.dataLancamento"><strong>Lançamento</strong><span>{{ detalhes.dataLancamento }}</span></div>
+      </div>
+
+      <div class="about-requirements" *ngIf="detalhes.requisitosMinimos || detalhes.requisitosRecomendados">
+        <h3>Requisitos de sistema</h3>
+        <div class="about-requirements-grid">
+          <div *ngIf="detalhes.requisitosMinimos">
+            <strong>Mínimo</strong>
+            <p *ngFor="let linha of detalhes.requisitosMinimos.split('\n')">{{ linha }}</p>
+          </div>
+          <div *ngIf="detalhes.requisitosRecomendados">
+            <strong>Recomendado</strong>
+            <p *ngFor="let linha of detalhes.requisitosRecomendados.split('\n')">{{ linha }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="review-section" *ngIf="activeTab === 'review' && detalhes">
+    <div class="review-score">
+      <strong>{{ reviewPositividade() }}%</strong>
+      <span>{{ detalhes.notaReviews }}</span>
+    </div>
+    <div class="review-counts">
+      <div class="review-count positive"><strong>{{ detalhes.reviewsPositivas }}</strong><span>Positivas</span></div>
+      <div class="review-count negative"><strong>{{ detalhes.reviewsNegativas }}</strong><span>Negativas</span></div>
+    </div>
+  </div>
+
+  <div class="achievements-section" *ngIf="activeTab === 'conquistas'">
+    <div class="achievement-row" *ngFor="let conquista of conquistas">
+      <img *ngIf="conquista.iconeUrl" [src]="conquista.iconeUrl" alt="" class="achievement-icon" />
+      <div class="achievement-info">
+        <h3>{{ conquista.nome }}</h3>
+        <p *ngIf="conquista.descricao">{{ conquista.descricao }}</p>
+      </div>
+      <span class="achievement-percent" *ngIf="conquista.percentualGlobal != null">{{ conquista.percentualGlobal }}%</span>
+    </div>
   </div>
 </div>
 

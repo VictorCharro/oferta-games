@@ -30,6 +30,37 @@ export interface GameDetail {
   offers: Offer[];
 }
 
+export interface GameHighlight {
+  titulo: string;
+  texto: string;
+}
+
+export interface GameDetails {
+  descricao: string | null;
+  generos: string[];
+  desenvolvedores: string[];
+  publicadoras: string[];
+  dataLancamento: string | null;
+  screenshots: string[];
+  notaReviews: string | null;
+  reviewsPositivas: number | null;
+  reviewsNegativas: number | null;
+  trailerUrl: string | null;
+  trailerThumbnail: string | null;
+  sobreCompleto: string | null;
+  destaques: GameHighlight[];
+  categorias: string[];
+  requisitosMinimos: string | null;
+  requisitosRecomendados: string | null;
+}
+
+export interface GameAchievement {
+  nome: string;
+  descricao: string | null;
+  iconeUrl: string | null;
+  percentualGlobal: number | null;
+}
+
 export interface TopDeal {
   slug: string;
   title: string;
@@ -75,5 +106,13 @@ export class GameService {
 
   getTopDeals(size = 20, sort: 'discount' | 'rank' = 'discount'): Observable<TopDeal[]> {
     return this.http.get<TopDeal[]>(`${this.api}/deals/top?size=${size}&sort=${sort}`);
+  }
+
+  getGameDetails(slug: string): Observable<GameDetails> {
+    return this.http.get<GameDetails>(`${this.api}/games/${slug}/detalhes`);
+  }
+
+  getGameAchievements(slug: string): Observable<GameAchievement[]> {
+    return this.http.get<GameAchievement[]>(`${this.api}/games/${slug}/conquistas`);
   }
 }
