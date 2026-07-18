@@ -123,7 +123,8 @@ app-public-profile .profile-block.size-completo .custom-image { max-height: 460p
 /* Galerias dos blocos do perfil: a quantidade de jogos acompanha o tamanho escolhido. */
 app-public-profile .profile-stat-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* auto-fit acomoda 4 ou 5 itens: platinados so aparece quando o perfil tem algum. */
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   margin: 0 0 20px;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
@@ -180,6 +181,8 @@ app-public-profile .gallery-favorite { width: 28px; height: 28px; border-color: 
 app-public-profile .gallery-favorite img { width: 17px; height: 17px; }
 app-public-profile .favorites-gallery, app-public-profile .library-gallery { margin-top: 4px; }
 app-public-profile .favorites-reorder-hint { margin: -4px 0 12px; color: var(--text-muted); font-size: 12px; }
+/* Sem icone proprio de platina ainda: a medalha de conquistas vira prateada para diferenciar. */
+app-public-profile .platinum-icon { filter: grayscale(1) brightness(1.4); }
 /* Ao organizar, o card nao navega: so o handle e o Remover respondem. */
 app-public-profile .favorites-gallery.organizando .profile-game-card > a { pointer-events: none; }
 app-public-profile .favorites-gallery.organizando .profile-game-card { border-color: rgba(41, 168, 224, .45); }

@@ -15,6 +15,7 @@ export interface StatusSteam {
   totalMinutos: number;
   conquistasDesbloqueadas: number;
   conquistasTotal: number;
+  jogosPlatinados: number;
 }
 
 export interface JogoBibliotecaSteam { appId: number; titulo: string; minutosJogadas: number; iconeHash: string | null; }

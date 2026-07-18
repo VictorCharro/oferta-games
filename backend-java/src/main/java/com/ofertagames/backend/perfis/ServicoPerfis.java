@@ -87,6 +87,7 @@ class ServicoPerfis {
         dono || perfil.mostrarHoras() ? status.totalMinutos() : null,
         dono || perfil.mostrarConquistas() ? status.conquistasDesbloqueadas() : null,
         dono || perfil.mostrarConquistas() ? status.conquistasTotal() : null,
+        dono || perfil.mostrarConquistas() ? status.jogosPlatinados() : null,
         dono || perfil.mostrarBiblioteca() ? status.totalJogos() : null,
         status.conectada() && (dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca()) ? List.of("steam") : List.of(),
         jogos,
@@ -134,5 +135,5 @@ class ServicoPerfis {
   record ResultadoAtualizacao(String status, String usuarioId) {}
   record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY,
       String bannerUrl, double bannerZoom, int bannerPosicaoX, int bannerPosicaoY,
-      Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<ColecaoPerfil> colecoes, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos) {}
+      Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long jogosPlatinados, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<ColecaoPerfil> colecoes, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos) {}
 }

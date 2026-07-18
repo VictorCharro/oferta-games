@@ -278,7 +278,7 @@ Toda rota exige token e valida que a colecao e do usuario autenticado; colecao d
 - `POST /api/conexoes/steam/iniciar`
 - `GET /api/conexoes/steam/retorno`
 - `GET|DELETE /api/conexoes/steam`
-- `GET /api/conexoes/steam/biblioteca`
+- `GET /api/conexoes/steam/biblioteca` (endpoint do dono; retorna a biblioteca inteira, ate 2000 jogos, para montar colecoes. A previa do perfil publico segue limitada a 100)
 - `POST /api/conexoes/steam/sincronizar`
 - `GET /api/admin/coleta`
 - `POST /api/admin/coleta/precos`
@@ -313,7 +313,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 | **Login** | Autenticar por Supabase Auth. | Nao usa sidebar nem topbar. Depois do login, a navegacao volta ao fluxo normal do aplicativo. |
 | **Configuracoes** (`/configuracoes`) | Centralizar opcoes da conta. | Abas separadas: Conta, Conexoes, Preferencias e Privacidade. Nao misturar assuntos entre abas. Preferencias afetam home/catalogo; Privacidade afeta o perfil publico; Conexoes concentra Steam e futura Xbox. |
 | **Perfil proprio** (`/perfil` -> `/:handle`) | Personalizar e visualizar o perfil do usuario. | `/perfil` redireciona para o handle canonico. O dono pode editar bio, foto, layout, blocos e pedir atualizacao Steam. A pagina canonica e a mesma que visitantes veem, com controles extras apenas para o dono. |
-| **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra uma faixa fixa com biblioteca, horas, conquistas desbloqueadas e icones das plataformas conectadas; abaixo, mostra Resumo, Jogos favoritos, Colecoes e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
+| **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra uma faixa fixa com biblioteca, horas, conquistas desbloqueadas, jogos platinados (so quando ha algum) e icones das plataformas conectadas; abaixo, mostra Resumo, Jogos favoritos, Colecoes e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
 | **Administracao de coleta** (`/admin/coleta`) | Acompanhar e disparar jobs internos. | Exclusiva do UID administrador. Exibe status das filas de preco/Steam e permite disparar coleta manual em segundo plano; nao substitui o scheduler. |
 
 ### Componentes globais
@@ -417,7 +417,8 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Editor de perfil persistido com blocos (favoritos, biblioteca, atividade, texto, links, imagem), upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`, validado em desktop. O enquadramento de imagens de bloco aceita zoom por scroll/pinca e reposicionamento por arrasto direto na previa, em mouse ou toque.
 - Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada.
 - Favoritos pessoais com ordenacao manual (arrastar e soltar, persistida) dentro do modo Organizar da aba.
-- Colecoes ("Minhas Listas"): modelo N:N, CRUD completo, aba propria no perfil e toggle de privacidade. Falta o modal para adicionar jogos (biblioteca + catalogo) e o menu de listas na pagina do jogo.
+- Colecoes ("Minhas Listas"): modelo N:N, CRUD completo, aba propria no perfil e toggle de privacidade. Jogos sao adicionados por dois caminhos: o modal "Gerenciar jogos" na aba (biblioteca Steam completa + busca no catalogo) e o menu de listas na pagina do jogo (com "Criar nova lista" no topo).
+- Jogos platinados na faixa de estatisticas: contagem de jogos com 100% de conquistas, exibida so quando ha pelo menos um; respeita o toggle de conquistas. Ainda sem icone proprio (reusa `conquistas.png` em prateado).
 - PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle usa o novo banco, executa o scheduler e expoe a API por Caddy/HTTPS. O frontend publicado na Vercel usa o mesmo projeto Supabase. O Render esta desligado; o Supabase antigo permanece somente como rollback temporario.
 - Validacao pos-migracao concluida: login Google/Discord, catalogo, perfil, avatares, blocos e scheduler confirmados funcionando na Oracle com o Supabase novo.
 
@@ -427,7 +428,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 
 ### Planejado
 
-1. Concluir colecoes: modal "Gerenciar jogos" (biblioteca completa + busca no catalogo) e menu de listas na pagina do jogo. O CRUD de colecoes e a exibicao ja estao prontos; falta o caminho para adicionar jogos.
+1. Colecoes concluidas (CRUD, exibicao, modal de adicionar jogos e menu na pagina do jogo). Evolucao futura opcional: reordenar jogos dentro da colecao e reordenar as proprias colecoes.
    - Filtro por ano de lancamento/genero segue inviavel: `games` nao guarda esses campos. Dependeria de coluna nova + backfill via ITAD/Steam.
 2. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
 3. Implementar Xbox somente com um caminho oficial suportado (pausado ate acesso ao Azure).

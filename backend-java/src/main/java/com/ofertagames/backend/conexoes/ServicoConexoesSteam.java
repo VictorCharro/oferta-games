@@ -115,8 +115,14 @@ public class ServicoConexoesSteam {
     return conexoes.reservarAtualizacaoPublica(usuarioId);
   }
 
+  // Limite padrao do perfil publico: segura o tamanho da resposta.
   public java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId) {
-    return conexoes.listarBiblioteca(usuarioId, 100).stream()
+    return biblioteca(usuarioId, 100);
+  }
+
+  // Usado pelo endpoint autenticado do dono, onde a biblioteca inteira e necessaria.
+  public java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId, int limite) {
+    return conexoes.listarBiblioteca(usuarioId, limite).stream()
         .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash(), jogo.conquistasDesbloqueadas(), jogo.conquistasTotal()))
         .toList();
   }
@@ -171,7 +177,8 @@ public class ServicoConexoesSteam {
         resumo.totalJogos(),
         resumo.totalMinutos(),
         resumo.conquistasDesbloqueadas(),
-        resumo.conquistasTotal());
+        resumo.conquistasTotal(),
+        resumo.jogosPlatinados());
   }
 
   void remover(String usuarioId) {
@@ -246,10 +253,11 @@ public class ServicoConexoesSteam {
       long totalJogos,
       long totalMinutos,
       long conquistasDesbloqueadas,
-      long conquistasTotal
+      long conquistasTotal,
+      long jogosPlatinados
   ) {
     static StatusConexaoSteam desconectada() {
-      return new StatusConexaoSteam(false, null, null, null, null, null, 0, 0, 0, 0);
+      return new StatusConexaoSteam(false, null, null, null, null, null, 0, 0, 0, 0, 0);
     }
   }
 

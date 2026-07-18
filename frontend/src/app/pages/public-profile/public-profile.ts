@@ -1,10 +1,12 @@
 import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth';
 import { ColecaoPerfil, PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
+import { ConexoesSteamService, JogoBibliotecaSteam } from '../../services/conexoes-steam';
+import { GameService, GameSummary } from '../../services/game';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { supabase } from '../../services/supabase';
 
@@ -37,6 +39,14 @@ export class PublicProfile implements OnInit, OnDestroy {
   criandoColecao = false;
   renomeandoColecaoId: number | null = null;
   renomearColecaoNome = '';
+  gerenciandoColecao: ColecaoPerfil | null = null;
+  fonteGerenciar: 'biblioteca' | 'catalogo' = 'biblioteca';
+  buscaGerenciar = '';
+  bibliotecaCompleta: JogoBibliotecaSteam[] = [];
+  carregandoBiblioteca = false;
+  resultadosCatalogo: GameSummary[] = [];
+  buscandoCatalogo = false;
+  private buscaCatalogoTimer?: ReturnType<typeof setTimeout>;
   layoutDraft: PerfilBloco[] = [];
   avatarZoom = 1;
   avatarPositionX = 50;
@@ -102,6 +112,8 @@ export class PublicProfile implements OnInit, OnDestroy {
     private perfis: PerfisService,
     private profileFavorites: ProfileFavoritesService,
     private colecoes: ColecoesPerfilService,
+    private conexoesSteam: ConexoesSteamService,
+    private games: GameService,
     public auth: AuthService,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -114,6 +126,7 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
+    clearTimeout(this.buscaCatalogoTimer);
   }
 
   private async loadProfile(handle: string) {
@@ -128,6 +141,8 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.editingCollections = false;
     this.renomeandoColecaoId = null;
     this.novaColecaoNome = '';
+    this.gerenciandoColecao = null;
+    this.bibliotecaCompleta = [];
     this.message = '';
     this.librarySearch = '';
     this.libraryOrder = 'tempo';
@@ -306,7 +321,114 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   private async recarregarColecoes() {
     if (!this.profile) return;
-    this.profile.colecoes = await this.colecoes.listar();
+    const listas = await this.colecoes.listar();
+    this.profile.colecoes = listas;
+    // Mantem o modal apontando para a versao recem-carregada da colecao aberta.
+    if (this.gerenciandoColecao) {
+      this.gerenciandoColecao = listas.find(lista => lista.id === this.gerenciandoColecao?.id) ?? null;
+    }
+  }
+
+  async abrirGerenciarJogos(colecao: ColecaoPerfil) {
+    if (!this.isOwner) return;
+    this.gerenciandoColecao = colecao;
+    this.fonteGerenciar = 'biblioteca';
+    this.buscaGerenciar = '';
+    this.resultadosCatalogo = [];
+    this.cdr.detectChanges();
+    if (!this.bibliotecaCompleta.length) await this.carregarBibliotecaCompleta();
+  }
+
+  fecharGerenciarJogos() {
+    this.gerenciandoColecao = null;
+    this.buscaGerenciar = '';
+    this.resultadosCatalogo = [];
+  }
+
+  trocarFonteGerenciar(fonte: 'biblioteca' | 'catalogo') {
+    this.fonteGerenciar = fonte;
+    this.buscaGerenciar = '';
+    this.resultadosCatalogo = [];
+  }
+
+  private async carregarBibliotecaCompleta() {
+    this.carregandoBiblioteca = true;
+    this.cdr.detectChanges();
+    try {
+      this.bibliotecaCompleta = await this.conexoesSteam.biblioteca();
+    } catch {
+      this.bibliotecaCompleta = [];
+      this.message = 'Nao foi possivel carregar sua biblioteca Steam.';
+    }
+    this.carregandoBiblioteca = false;
+    this.cdr.detectChanges();
+  }
+
+  get bibliotecaFiltrada(): JogoBibliotecaSteam[] {
+    const busca = this.buscaGerenciar.trim().toLocaleLowerCase('pt-BR');
+    if (!busca) return this.bibliotecaCompleta;
+    return this.bibliotecaCompleta.filter(jogo => jogo.titulo.toLocaleLowerCase('pt-BR').includes(busca));
+  }
+
+  // A busca do catalogo bate na API: espera o usuario parar de digitar.
+  onBuscaCatalogoChange() {
+    clearTimeout(this.buscaCatalogoTimer);
+    const termo = this.buscaGerenciar.trim();
+    if (termo.length < 2) {
+      this.resultadosCatalogo = [];
+      this.buscandoCatalogo = false;
+      return;
+    }
+    this.buscandoCatalogo = true;
+    this.buscaCatalogoTimer = setTimeout(() => void this.buscarNoCatalogo(termo), 350);
+  }
+
+  private async buscarNoCatalogo(termo: string) {
+    try {
+      this.resultadosCatalogo = await firstValueFrom(this.games.searchGames(termo));
+    } catch {
+      this.resultadosCatalogo = [];
+    }
+    this.buscandoCatalogo = false;
+    this.cdr.detectChanges();
+  }
+
+  colecaoTemSteam(appId: number): boolean {
+    return this.gerenciandoColecao?.jogos.some(jogo => jogo.steamAppId === appId) ?? false;
+  }
+
+  colecaoTemJogo(slug: string): boolean {
+    return this.gerenciandoColecao?.jogos.some(jogo => jogo.slug === slug) ?? false;
+  }
+
+  async alternarSteamNaColecao(jogo: JogoBibliotecaSteam) {
+    const colecao = this.gerenciandoColecao;
+    if (!colecao || !this.isOwner) return;
+    try {
+      if (this.colecaoTemSteam(jogo.appId)) await this.colecoes.removerSteam(colecao.id, jogo.appId);
+      else await this.colecoes.adicionarItem(colecao.id, { steamAppId: jogo.appId });
+      await this.recarregarColecoes();
+    } catch {
+      this.message = 'Nao foi possivel atualizar a colecao.';
+    }
+    this.cdr.detectChanges();
+  }
+
+  async alternarCatalogoNaColecao(jogo: GameSummary) {
+    const colecao = this.gerenciandoColecao;
+    if (!colecao || !this.isOwner) return;
+    try {
+      if (this.colecaoTemJogo(jogo.slug)) await this.colecoes.removerJogo(colecao.id, jogo.slug);
+      else await this.colecoes.adicionarItem(colecao.id, { slug: jogo.slug });
+      await this.recarregarColecoes();
+    } catch {
+      this.message = 'Nao foi possivel atualizar a colecao.';
+    }
+    this.cdr.detectChanges();
+  }
+
+  steamCapaHorizontal(appId: number): string {
+    return `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
   }
 
   async dropFavorite(event: CdkDragDrop<unknown>) {

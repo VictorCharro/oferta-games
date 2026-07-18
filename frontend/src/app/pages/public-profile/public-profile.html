@@ -143,6 +143,9 @@
     <div class="profile-strip-item">
       <img src="conquistas.png" alt="" /><div><strong>{{ profile.conquistasDesbloqueadas ?? '--' }}</strong><span>Conquistas desbloqueadas</span></div>
     </div>
+    <div class="profile-strip-item" *ngIf="profile.jogosPlatinados">
+      <img src="conquistas.png" alt="" class="platinum-icon" /><div><strong>{{ profile.jogosPlatinados }}</strong><span>{{ profile.jogosPlatinados === 1 ? 'Jogo platinado' : 'Jogos platinados' }}</span></div>
+    </div>
     <div class="profile-strip-item platforms-strip">
       <span>Plataformas conectadas</span>
       <div *ngIf="profile.plataformasConectadas.length; else noPlatforms" class="platform-icons">
@@ -455,6 +458,7 @@
             <h3>{{ colecao.nome }}</h3>
             <span class="collection-count">{{ colecao.jogos.length }} {{ colecao.jogos.length === 1 ? 'jogo' : 'jogos' }}</span>
             <div *ngIf="isOwner && editingCollections" class="collection-actions">
+              <button type="button" class="panel-link" (click)="abrirGerenciarJogos(colecao)">Gerenciar jogos</button>
               <button type="button" class="panel-link" (click)="iniciarRenomearColecao(colecao)">Renomear</button>
               <button type="button" class="panel-link danger" (click)="excluirColecao(colecao)">Excluir</button>
             </div>
@@ -480,6 +484,64 @@
         <p *ngIf="!isOwner">Este perfil ainda nao possui coleções.</p>
       </div></ng-template
     >
+
+    <div *ngIf="gerenciandoColecao" class="block-image-crop-backdrop" (click)="fecharGerenciarJogos()">
+      <div class="collection-manage-modal" (click)="$event.stopPropagation()">
+        <div class="collection-manage-header">
+          <h3>Gerenciar jogos — {{ gerenciandoColecao.nome }}</h3>
+          <button type="button" class="ghost-btn" (click)="fecharGerenciarJogos()">Fechar</button>
+        </div>
+
+        <div class="collection-manage-tabs">
+          <button type="button" [class.active]="fonteGerenciar === 'biblioteca'" (click)="trocarFonteGerenciar('biblioteca')">Minha biblioteca</button>
+          <button type="button" [class.active]="fonteGerenciar === 'catalogo'" (click)="trocarFonteGerenciar('catalogo')">Buscar no catálogo</button>
+        </div>
+
+        <input
+          class="collection-manage-search"
+          type="search"
+          [(ngModel)]="buscaGerenciar"
+          (ngModelChange)="fonteGerenciar === 'catalogo' && onBuscaCatalogoChange()"
+          [placeholder]="fonteGerenciar === 'biblioteca' ? 'Buscar na sua biblioteca' : 'Buscar jogos no catálogo'"
+          aria-label="Buscar jogos"
+        />
+
+        <div class="collection-manage-list">
+          <ng-container *ngIf="fonteGerenciar === 'biblioteca'">
+            <p *ngIf="carregandoBiblioteca" class="collection-manage-hint">Carregando sua biblioteca...</p>
+            <p *ngIf="!carregandoBiblioteca && !bibliotecaCompleta.length" class="collection-manage-hint">Conecte a Steam para ver sua biblioteca aqui.</p>
+            <button
+              *ngFor="let jogo of bibliotecaFiltrada"
+              type="button"
+              class="collection-manage-row"
+              [class.selecionado]="colecaoTemSteam(jogo.appId)"
+              (click)="alternarSteamNaColecao(jogo)"
+            >
+              <img [src]="steamCapaHorizontal(jogo.appId)" [alt]="jogo.titulo" loading="lazy" />
+              <span class="collection-manage-title">{{ jogo.titulo }}</span>
+              <span class="collection-manage-toggle">{{ colecaoTemSteam(jogo.appId) ? '✓ Na lista' : '+ Adicionar' }}</span>
+            </button>
+          </ng-container>
+
+          <ng-container *ngIf="fonteGerenciar === 'catalogo'">
+            <p *ngIf="buscaGerenciar.trim().length < 2" class="collection-manage-hint">Digite ao menos 2 letras para buscar.</p>
+            <p *ngIf="buscandoCatalogo" class="collection-manage-hint">Buscando...</p>
+            <p *ngIf="!buscandoCatalogo && buscaGerenciar.trim().length >= 2 && !resultadosCatalogo.length" class="collection-manage-hint">Nenhum jogo encontrado.</p>
+            <button
+              *ngFor="let jogo of resultadosCatalogo"
+              type="button"
+              class="collection-manage-row"
+              [class.selecionado]="colecaoTemJogo(jogo.slug)"
+              (click)="alternarCatalogoNaColecao(jogo)"
+            >
+              <img [src]="jogo.coverUrl || 'jogos-favoritos.png'" [alt]="jogo.title" loading="lazy" />
+              <span class="collection-manage-title">{{ jogo.title }}</span>
+              <span class="collection-manage-toggle">{{ colecaoTemJogo(jogo.slug) ? '✓ Na lista' : '+ Adicionar' }}</span>
+            </button>
+          </ng-container>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="panel library-list-panel" *ngIf="activeTab === 'biblioteca'">

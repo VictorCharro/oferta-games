@@ -33,6 +33,42 @@
             >
               <img src="jogos-favoritos.png" alt="" />
             </button>
+            <div class="detail-collections">
+              <button
+                class="detail-collections-btn"
+                type="button"
+                (click)="toggleMenuColecoes($event)"
+                [class.active]="menuColecoesAberto"
+                title="Adicionar a uma lista"
+                aria-label="Adicionar a uma lista"
+              >
+                <span aria-hidden="true">≡</span>+
+              </button>
+              <div class="detail-collections-menu" *ngIf="menuColecoesAberto" (click)="$event.stopPropagation()">
+                <div class="detail-collections-create">
+                  <input
+                    [(ngModel)]="novaListaNome"
+                    maxlength="40"
+                    placeholder="Criar nova lista"
+                    aria-label="Nome da nova lista"
+                    (keyup.enter)="criarListaComJogo()"
+                  />
+                  <button type="button" (click)="criarListaComJogo()" [disabled]="!novaListaNome.trim() || criandoLista">+</button>
+                </div>
+                <p *ngIf="carregandoColecoes" class="detail-collections-hint">Carregando...</p>
+                <p *ngIf="!carregandoColecoes && !colecoes.length" class="detail-collections-hint">Você ainda não tem listas.</p>
+                <button
+                  *ngFor="let colecao of colecoes"
+                  type="button"
+                  class="detail-collections-item"
+                  [class.selecionado]="jogoNaColecao(colecao)"
+                  (click)="alternarColecao(colecao)"
+                >
+                  <span class="detail-collections-check">{{ jogoNaColecao(colecao) ? '✓' : '' }}</span>
+                  <span class="detail-collections-name">{{ colecao.nome }}</span>
+                </button>
+              </div>
+            </div>
           </div>
           <span class="refresh-msg" *ngIf="refreshMsg">{{ refreshMsg }}</span>
         </div>

@@ -57,10 +57,11 @@ public class ControladorConexoesSteam {
     return steam.status(usuario(autorizacao));
   }
 
+  // O dono precisa da biblioteca inteira (ex: montar colecoes), nao so da previa do perfil publico.
   @GetMapping("/biblioteca")
   java.util.List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca(
       @RequestHeader(value = "Authorization", required = false) String autorizacao) {
-    return steam.biblioteca(usuario(autorizacao));
+    return steam.biblioteca(usuario(autorizacao), 2000);
   }
 
   @PostMapping("/sincronizar")

@@ -264,7 +264,8 @@ class RepositorioConexoesSteam {
           COUNT(b.app_id) AS total_jogos,
           COALESCE(SUM(b.playtime_minutes), 0) AS total_minutos,
           COALESCE(SUM(a.unlocked_count), 0) AS conquistas_desbloqueadas,
-          COALESCE(SUM(a.total_count), 0) AS conquistas_total
+          COALESCE(SUM(a.total_count), 0) AS conquistas_total,
+          COUNT(*) FILTER (WHERE a.total_count > 0 AND a.unlocked_count >= a.total_count) AS jogos_platinados
         FROM steam_connections c
         LEFT JOIN steam_library_games b ON b.user_id = c.user_id
         LEFT JOIN steam_game_achievements a ON a.user_id = b.user_id AND a.app_id = b.app_id
@@ -275,7 +276,8 @@ class RepositorioConexoesSteam {
             rs.getLong("total_jogos"),
             rs.getLong("total_minutos"),
             rs.getLong("conquistas_desbloqueadas"),
-            rs.getLong("conquistas_total")))
+            rs.getLong("conquistas_total"),
+            rs.getLong("jogos_platinados")))
         .single();
   }
 
@@ -286,5 +288,6 @@ class RepositorioConexoesSteam {
       this(appId, titulo, minutosJogadas, iconeHash, 0, 0);
     }
   }
-  record ResumoSteam(long totalJogos, long totalMinutos, long conquistasDesbloqueadas, long conquistasTotal) {}
+  // jogosPlatinados: jogos com 100% das conquistas desbloqueadas.
+  record ResumoSteam(long totalJogos, long totalMinutos, long conquistasDesbloqueadas, long conquistasTotal, long jogosPlatinados) {}
 }
