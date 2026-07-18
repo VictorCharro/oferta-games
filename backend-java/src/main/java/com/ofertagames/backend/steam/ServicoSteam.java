@@ -151,9 +151,9 @@ public class ServicoSteam {
         Map<?, ?> conquista = comoMapa(item);
         if (conquista == null) continue;
         String nome = comoTexto(conquista.get("name"));
-        Object percentual = conquista.get("percent");
-        if (nome == null || !(percentual instanceof Number numero)) continue;
-        percentuais.put(nome, numero.doubleValue());
+        Double percentual = comoDouble(conquista.get("percent"));
+        if (nome == null || percentual == null) continue;
+        percentuais.put(nome, percentual);
       }
       return percentuais;
     } catch (RuntimeException ignored) {
@@ -203,6 +203,19 @@ public class ServicoSteam {
 
   private static Integer comoInteiro(Object valor) {
     return valor instanceof Number numero ? numero.intValue() : null;
+  }
+
+  // A Steam retorna "percent" como string (ex: "83.3"), nao como numero.
+  private static Double comoDouble(Object valor) {
+    if (valor instanceof Number numero) return numero.doubleValue();
+    if (valor instanceof String texto) {
+      try {
+        return Double.parseDouble(texto);
+      } catch (NumberFormatException ignorado) {
+        return null;
+      }
+    }
+    return null;
   }
 
   public record ReviewsSteam(String descricaoNota, Integer positivas, Integer negativas) {}
