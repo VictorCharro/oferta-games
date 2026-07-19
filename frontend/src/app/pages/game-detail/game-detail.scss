@@ -1194,7 +1194,8 @@
   place-items: center;
   border-radius: 50%;
   background: rgba(240, 180, 41, 0.12);
-  font-size: 17px;
+
+  img { width: 20px; height: 20px; object-fit: contain; }
 }
 
 .achievements-next-card {
