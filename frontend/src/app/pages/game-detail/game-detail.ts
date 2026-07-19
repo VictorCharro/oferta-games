@@ -161,10 +161,10 @@ export class GameDetail implements OnInit, OnDestroy {
 
   // A Steam nao classifica raridade: aproximamos pelo percentual global de quem desbloqueou.
   raridade(percentualGlobal: number | null): string {
-    if (percentualGlobal == null) return 'Rara';
+    if (percentualGlobal == null) return 'Raro';
     if (percentualGlobal >= 20) return 'Comum';
     if (percentualGlobal >= 5) return 'Incomum';
-    return 'Rara';
+    return 'Raro';
   }
 
   get midias(): { tipo: 'trailer' | 'imagem'; url: string; thumb: string }[] {

@@ -413,35 +413,54 @@
   </div>
 
   <div class="achievements-section" *ngIf="activeTab === 'conquistas' && conquistas">
-    <div class="achievements-progress">
-      <div class="achievements-progress-ring" [style.background]="'conic-gradient(var(--color-green) ' + (conquistas.percentualConcluido * 3.6) + 'deg, var(--bg-card-hover) 0)'">
-        <div class="achievements-progress-ring-inner">
-          <strong>{{ conquistas.percentualConcluido }}%</strong>
-          <span>Concluído</span>
+    <div class="achievements-summary">
+      <section class="review-card achievements-progress-card">
+        <h3>Progresso de conquistas</h3>
+        <div class="achievements-progress-body">
+          <div class="achievements-progress-ring" [style.background]="'conic-gradient(var(--color-green) ' + (conquistas.percentualConcluido * 3.6) + 'deg, var(--bg-card-hover) 0)'">
+            <div class="achievements-progress-ring-inner">
+              <strong>{{ conquistas.percentualConcluido }}%</strong>
+              <span>Concluído</span>
+            </div>
+          </div>
+          <div class="achievements-progress-stat">
+            <span class="achievements-progress-stat-icon" aria-hidden="true">🏆</span>
+            <div>
+              <span>Conquistas desbloqueadas</span>
+              <strong>{{ conquistas.desbloqueadas }} / {{ conquistas.total }}</strong>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="achievements-progress-stats">
-        <strong>{{ conquistas.desbloqueadas }} / {{ conquistas.total }}</strong>
-        <span>Conquistas desbloqueadas</span>
-      </div>
-      <div class="achievements-next" *ngIf="conquistas.proxima">
-        <span class="achievements-next-label">Próxima conquista</span>
-        <div class="achievements-next-card">
+      </section>
+
+      <section class="review-card achievements-next-card" *ngIf="conquistas.proxima">
+        <h3>Próxima conquista</h3>
+        <div class="achievements-next-body">
           <img *ngIf="conquistas.proxima.iconeUrl" [src]="conquistas.proxima.iconeUrl" alt="" />
           <div>
-            <h3>{{ conquistas.proxima.nome }}</h3>
+            <h4>{{ conquistas.proxima.nome }}</h4>
             <p *ngIf="conquistas.proxima.descricao">{{ conquistas.proxima.descricao }}</p>
             <small *ngIf="conquistas.proxima.percentualGlobal != null">{{ conquistas.proxima.percentualGlobal }}% dos jogadores desbloquearam</small>
           </div>
         </div>
-      </div>
+      </section>
     </div>
 
     <div class="achievements-toolbar">
+      <h3 class="achievements-heading">Todas as conquistas</h3>
       <div class="achievements-filtros">
-        <button type="button" [class.active]="filtroConquistas === 'todas'" (click)="definirFiltroConquistas('todas')">Todas</button>
-        <button type="button" [class.active]="filtroConquistas === 'desbloqueadas'" (click)="definirFiltroConquistas('desbloqueadas')">Desbloqueadas</button>
-        <button type="button" [class.active]="filtroConquistas === 'bloqueadas'" (click)="definirFiltroConquistas('bloqueadas')">Bloqueadas</button>
+        <button type="button" [class.active]="filtroConquistas === 'todas'" (click)="definirFiltroConquistas('todas')">
+          <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M12 5c-6.5 0-10 6.5-10 6.5s3.5 6.5 10 6.5 10-6.5 10-6.5-3.5-6.5-10-6.5zm0 11a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg>
+          <span>Todas</span>
+        </button>
+        <button type="button" [class.active]="filtroConquistas === 'desbloqueadas'" (click)="definirFiltroConquistas('desbloqueadas')">
+          <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M17 8V6a5 5 0 0 0-9.9-1h2.1a3 3 0 0 1 5.8 1v2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1zm-5 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+          <span>Desbloqueadas</span>
+        </button>
+        <button type="button" [class.active]="filtroConquistas === 'bloqueadas'" (click)="definirFiltroConquistas('bloqueadas')">
+          <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0v3H9V7zm3 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>
+          <span>Bloqueadas</span>
+        </button>
       </div>
       <select aria-label="Ordenar conquistas">
         <option>Ordem padrão</option>
@@ -459,9 +478,11 @@
         <div class="achievement-info">
           <h3>{{ conquista.nome }}</h3>
           <p *ngIf="conquista.descricao">{{ conquista.descricao }}</p>
-          <small class="achievement-data" *ngIf="conquista.desbloqueada && conquista.desbloqueadaEm">Desbloqueada em {{ conquista.desbloqueadaEm | date: 'dd/MM/yyyy' }}</small>
+          <small class="achievement-data" *ngIf="conquista.desbloqueada && conquista.desbloqueadaEm">Desbloqueada em {{ conquista.desbloqueadaEm | date: 'dd/MM/yyyy HH:mm' }}</small>
         </div>
-        <span class="achievement-raridade" [class]="raridade(conquista.percentualGlobal) | lowercase">{{ raridade(conquista.percentualGlobal) }}</span>
+        <span class="achievement-raridade" [class]="raridade(conquista.percentualGlobal) | lowercase">
+          <span class="achievement-raridade-dot" aria-hidden="true"></span>{{ raridade(conquista.percentualGlobal) }}
+        </span>
       </div>
       <p class="review-empty" *ngIf="!conquistasFiltradas.length">Nenhuma conquista nesse filtro.</p>
     </div>
