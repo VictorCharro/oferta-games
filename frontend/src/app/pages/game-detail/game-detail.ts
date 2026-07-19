@@ -43,7 +43,7 @@ export class GameDetail implements OnInit, OnDestroy {
   carregandoColecoes = false;
   novaListaNome = '';
   criandoLista = false;
-  subTabReview: 'steam' | 'ofertagames' = 'ofertagames';
+  subTabReview: 'steam' | 'ofertagames' = 'steam';
   avaliacoes: RespostaAvaliacoes | null = null;
   avaliacoesSteam: RespostaAvaliacoesSteam | null = null;
   carregandoAvaliacoesSteam = false;
@@ -91,7 +91,7 @@ export class GameDetail implements OnInit, OnDestroy {
         this.refreshing = false;
         this.refreshMsg = '';
         this.activeTab = 'precos';
-        this.subTabReview = 'ofertagames';
+        this.subTabReview = 'steam';
         this.midiaAtiva = 0;
         this.pararTrailer();
         this.resetarFormularioAvaliacao();

@@ -469,16 +469,18 @@
 }
 
 .review-steam-layout {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(230px, 0.72fr);
+  grid-template-areas:
+    "overview highlights"
+    "list highlights";
+  align-items: start;
   gap: 16px;
 }
 
-.review-steam-summary {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(230px, 0.72fr);
-  gap: 16px;
-}
+.review-steam-overview { grid-area: overview; }
+.review-steam-highlights { grid-area: highlights; }
+.review-steam-list { grid-area: list; }
 
 .review-steam-overview-body {
   display: flex;
@@ -536,63 +538,6 @@
   span { display: block; height: 100%; }
   .positive { background: var(--color-green); }
   .negative { background: #67758d; }
-}
-
-.review-recomendacao-ring-steam {
-  flex: 0 0 82px;
-  width: 82px;
-  height: 82px;
-  padding: 6px;
-  border: 0;
-
-  > span {
-    display: grid;
-    place-items: center;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: var(--bg-card);
-    color: var(--color-green);
-    font-size: 28px;
-    font-weight: 900;
-  }
-}
-
-.review-steam-recomendacao-body {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-}
-
-.review-steam-recomendacao-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-
-  strong {
-    color: var(--text-primary);
-    font-size: 30px;
-    line-height: 1.1;
-  }
-
-  span {
-    max-width: 160px;
-    margin-top: 6px;
-    color: var(--text-secondary);
-    font-size: 12px;
-    line-height: 1.45;
-  }
-}
-
-.review-steam-content {
-  display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(260px, 0.85fr);
-  gap: 16px;
-  align-items: start;
 }
 
 .review-steam-list {
@@ -659,15 +604,10 @@
 }
 
 .review-item.review-steam-item {
-  display: grid;
-  grid-template-columns: minmax(170px, 0.48fr) minmax(0, 1.52fr) auto;
-  gap: 20px;
-  align-items: start;
-  min-height: 116px;
   background: var(--bg-input);
 
   p {
-    margin: 0;
+    margin-top: 10px;
     white-space: pre-line;
     overflow-wrap: anywhere;
     color: var(--text-secondary);
@@ -677,24 +617,16 @@
 }
 
 .review-steam-avatar {
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--color-purple);
   background: var(--bg-card-hover);
-}
-
-.review-steam-profile {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  gap: 11px;
 }
 
 .review-steam-author-info {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  align-items: flex-start;
   gap: 4px;
 }
 
@@ -711,34 +643,16 @@
   &:hover { color: var(--color-purple); }
 }
 
-.review-steam-profile-recommendation {
-  color: var(--color-green);
-  font-size: 11px;
-  font-weight: 700;
-
-  &::before {
-    content: "✓";
-    margin-right: 4px;
-  }
-
-  &.negative {
-    color: #ef6b73;
-
-    &::before { content: "×"; }
-  }
+.review-steam-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .review-steam-date,
 .review-steam-playtime {
   color: var(--text-muted);
   font-size: 11px;
-}
-
-.review-steam-review-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .review-steam-playtime {
@@ -840,8 +754,12 @@
 }
 
 @media (max-width: 1080px) {
-  .review-steam-content {
+  .review-steam-layout {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "overview"
+      "highlights"
+      "list";
   }
 
   .review-steam-highlights {
@@ -855,10 +773,6 @@
 }
 
 @media (max-width: 840px) {
-  .review-steam-summary {
-    grid-template-columns: 1fr;
-  }
-
   .review-steam-overview-body {
     align-items: flex-start;
     flex-direction: column;
@@ -870,14 +784,6 @@
     min-width: 0;
   }
 
-  .review-item.review-steam-item {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .review-steam-tag {
-    justify-self: start;
-  }
 }
 
 @media (max-width: 600px) {
