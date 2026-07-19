@@ -197,6 +197,33 @@
         ><button type="button" (click)="addBlock('links')">Links</button>
       </div>
       <div class="editor-heading-actions">
+        <div class="editor-custom-select global-color-select" [class.open]="globalColorMenuOpen">
+          <button
+            type="button"
+            class="editor-select-trigger palette-trigger"
+            (click)="toggleGlobalColorMenu($event)"
+            [attr.aria-expanded]="globalColorMenuOpen"
+            title="Cores globais dos blocos"
+            aria-label="Cores globais dos blocos"
+          ><span aria-hidden="true">🎨</span></button>
+          <div *ngIf="globalColorMenuOpen" class="editor-select-menu global-color-menu" role="group" aria-label="Cores globais dos blocos">
+            <div class="global-color-row">
+              <span>Fundo de todos os blocos</span>
+              <div class="color-control">
+                <input type="color" [ngModel]="globalBackgroundColor" (ngModelChange)="applyGlobalBackground($event)" aria-label="Selecionar cor de fundo de todos os blocos" />
+              </div>
+            </div>
+            <button type="button" class="reset-text-color" (click)="resetGlobalBackground()">Fundo padrão em todos</button>
+            <div class="editor-menu-divider"></div>
+            <div class="global-color-row">
+              <span>Texto de todos os blocos</span>
+              <div class="color-control">
+                <input type="color" [ngModel]="globalTextColor" (ngModelChange)="applyGlobalTextColor($event)" aria-label="Selecionar cor do texto de todos os blocos" />
+              </div>
+            </div>
+            <button type="button" class="reset-text-color" (click)="resetGlobalTextColor()">Texto padrão em todos</button>
+          </div>
+        </div>
         <button type="button" class="ghost-btn" (click)="cancelLayoutEdit()">Cancelar</button>
         <button type="button" class="save-btn" (click)="saveLayout()" [disabled]="savingLayout">
           {{ savingLayout ? 'Salvando...' : 'Salvar' }}

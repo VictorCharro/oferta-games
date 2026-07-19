@@ -75,6 +75,9 @@ export class PublicProfile implements OnInit, OnDestroy {
   private bannerDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
   editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
   textColorMenuBlockId: string | null = null;
+  globalColorMenuOpen = false;
+  globalBackgroundColor = '#121a2a';
+  globalTextColor = '#f5f7fb';
   blockImageEditingId: string | null = null;
   blockImagePreview = '';
   blockImageFile: File | null = null;
@@ -200,6 +203,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (!(event.target as HTMLElement).closest('.editor-custom-select')) {
       this.editorSelectOpen = null;
       this.textColorMenuBlockId = null;
+      this.globalColorMenuOpen = false;
     }
   }
 
@@ -207,6 +211,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   closeEditorSelects() {
     this.editorSelectOpen = null;
     this.textColorMenuBlockId = null;
+    this.globalColorMenuOpen = false;
   }
 
   isEditorSelectOpen(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
@@ -249,9 +254,37 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (!this.profile || !this.isOwner || this.activeTab !== 'resumo') return;
     this.layoutDraft = structuredClone(this.profile.blocos?.length ? this.profile.blocos : this.defaultBlocks());
     this.editingLayout = true;
+    this.globalColorMenuOpen = false;
   }
 
-  cancelLayoutEdit() { this.editingLayout = false; this.layoutDraft = []; }
+  cancelLayoutEdit() { this.editingLayout = false; this.layoutDraft = []; this.globalColorMenuOpen = false; }
+
+  toggleGlobalColorMenu(event: MouseEvent) {
+    event.stopPropagation();
+    this.globalColorMenuOpen = !this.globalColorMenuOpen;
+    this.editorSelectOpen = null;
+    this.textColorMenuBlockId = null;
+  }
+
+  // Aplica de uma vez em todos os blocos do rascunho; nao fica salvo como preferencia global,
+  // e so um atalho pra nao configurar bloco por bloco (o ajuste por bloco continua disponivel depois).
+  applyGlobalBackground(color: string) {
+    this.globalBackgroundColor = color;
+    this.layoutDraft.forEach(block => { block.tipoFundo = 'cor'; block.valorFundo = color; });
+  }
+
+  resetGlobalBackground() {
+    this.layoutDraft.forEach(block => { block.tipoFundo = 'padrao'; block.valorFundo = null; });
+  }
+
+  applyGlobalTextColor(color: string) {
+    this.globalTextColor = color;
+    this.layoutDraft.forEach(block => block.corTexto = color || null);
+  }
+
+  resetGlobalTextColor() {
+    this.layoutDraft.forEach(block => block.corTexto = null);
+  }
 
   dropBlock(event: CdkDragDrop<PerfilBloco[]>) {
     moveItemInArray(this.layoutDraft, event.previousIndex, event.currentIndex);
