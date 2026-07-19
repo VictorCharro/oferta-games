@@ -1205,12 +1205,12 @@
 .achievements-next-body {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 
-  img { width: 52px; height: 52px; border-radius: 8px; flex: 0 0 auto; }
-  h4 { font-size: 13px; font-weight: 700; }
-  p { color: var(--text-secondary); font-size: 11px; margin-top: 2px; }
-  small { display: block; margin-top: 4px; color: var(--color-purple); font-size: 11px; font-weight: 700; }
+  img { width: 72px; height: 72px; border-radius: 10px; flex: 0 0 auto; }
+  h4 { font-size: 16px; font-weight: 700; }
+  p { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+  small { display: block; margin-top: 6px; color: var(--color-purple); font-size: 12px; font-weight: 700; }
 }
 
 .achievements-heading {
