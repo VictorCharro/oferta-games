@@ -293,6 +293,7 @@ public class ServicoSteam {
               .path("/ISteamUserStats/GetSchemaForGame/v2/")
               .queryParam("key", chaveApi)
               .queryParam("appid", appId)
+              .queryParam("l", "brazilian")
               .build())
           .retrieve()
           .body(new ParameterizedTypeReference<Map<String, Object>>() {});
