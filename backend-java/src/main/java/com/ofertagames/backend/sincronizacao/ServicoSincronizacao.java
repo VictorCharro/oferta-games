@@ -19,7 +19,9 @@ public class ServicoSincronizacao {
   private static final int TAMANHO_LOTE_PRECOS = 200;
   private static final int LIMITE_METADADOS_STEAM = 60;
   private static final int LIMITE_DETALHES_JOGOS = 60;
-  private static final int LIMITE_CONQUISTAS_CATALOGO = 60;
+  // Valor alto temporario pra zerar o backlog de conquistas do catalogo rapido; volta pro
+  // ritmo baixo de manutencao (so pegar jogos novos) assim que o backlog estiver zerado.
+  private static final int LIMITE_CONQUISTAS_CATALOGO = 250;
   private static final Logger logger = LoggerFactory.getLogger(ServicoSincronizacao.class);
 
   private final ClienteItad itad;
