@@ -181,6 +181,31 @@ public class RepositorioJogos {
         .list();
   }
 
+  // Usado pra oferecer "Ver no catalogo" nos cards da biblioteca Steam do perfil, quando o app
+  // tiver uma entrada correspondente no nosso catalogo.
+  public Map<Integer, String> buscarSlugsPorSteamAppIds(List<Integer> appIds) {
+    if (appIds.isEmpty()) {
+      return Map.of();
+    }
+    List<SlugPorAppId> linhas = jdbc.sql("""
+        SELECT steam_app_id, slug
+        FROM games
+        WHERE steam_app_id IN (:appIds)
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("games"), JogosBloqueados.filtroSql("games")))
+        .param("appIds", appIds)
+        .query((rs, linha) -> new SlugPorAppId(rs.getInt("steam_app_id"), rs.getString("slug")))
+        .list();
+    Map<Integer, String> resultado = new HashMap<>();
+    for (SlugPorAppId linha : linhas) {
+      resultado.put(linha.steamAppId(), linha.slug());
+    }
+    return resultado;
+  }
+
+  private record SlugPorAppId(int steamAppId, String slug) {}
+
   public void salvarOferta(OfertaParaSalvar oferta) {
     if (lojaBloqueada(oferta.loja())) {
       return;

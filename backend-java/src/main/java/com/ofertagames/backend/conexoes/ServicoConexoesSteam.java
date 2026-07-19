@@ -128,7 +128,7 @@ public class ServicoConexoesSteam {
   // Usado pelo endpoint autenticado do dono, onde a biblioteca inteira e necessaria.
   public java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId, int limite) {
     return conexoes.listarBiblioteca(usuarioId, limite).stream()
-        .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash(), jogo.conquistasDesbloqueadas(), jogo.conquistasTotal(), jogo.capaUrl()))
+        .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash(), jogo.conquistasDesbloqueadas(), jogo.conquistasTotal(), jogo.capaUrl(), null))
         .toList();
   }
 
@@ -287,7 +287,11 @@ public class ServicoConexoesSteam {
     }
   }
 
-  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl) {}
+  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl, String catalogSlug) {
+    public JogoBibliotecaSteam comCatalogSlug(String catalogSlug) {
+      return new JogoBibliotecaSteam(appId, titulo, minutosJogadas, iconeHash, conquistasDesbloqueadas, conquistasTotal, capaUrl, catalogSlug);
+    }
+  }
 
   static class ConexaoSteamNaoEncontradaException extends RuntimeException {}
   static class UrlBackendNaoConfiguradaException extends RuntimeException {}

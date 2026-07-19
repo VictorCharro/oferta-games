@@ -179,6 +179,13 @@ app-public-profile .gallery-remove, app-public-profile .gallery-favorite { posit
 app-public-profile .gallery-remove { padding: 5px 7px; border-radius: 6px; background: rgba(8, 13, 24, .9); }
 app-public-profile .gallery-favorite { width: 28px; height: 28px; border-color: rgba(255, 255, 255, .28); border-radius: 6px; background: rgba(8, 13, 24, .9); }
 app-public-profile .gallery-favorite img { width: 17px; height: 17px; }
+app-public-profile .library-game-card:hover > a > img { filter: blur(2px) brightness(.72); }
+app-public-profile .library-hover-actions { position: absolute; inset: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 12px; opacity: 0; transition: opacity .18s ease; pointer-events: none; }
+app-public-profile .library-game-card:hover .library-hover-actions { opacity: 1; }
+app-public-profile .library-hover-btn { pointer-events: auto; padding: 7px 12px; border: 1px solid rgba(255, 255, 255, .32); border-radius: 999px; background: rgba(8, 13, 24, .82); color: #fff; font-size: 11px; font-weight: 700; text-align: center; text-decoration: none; white-space: nowrap; }
+app-public-profile .library-hover-btn:hover { border-color: var(--color-purple); background: rgba(41, 168, 224, .3); }
+app-public-profile .library-hover-btn.primary { border-color: var(--color-purple); background: var(--color-purple); }
+app-public-profile .library-hover-btn.primary:hover { filter: brightness(1.1); }
 app-public-profile .favorites-gallery, app-public-profile .library-gallery { margin-top: 4px; }
 app-public-profile .favorites-reorder-hint { margin: -4px 0 12px; color: var(--text-muted); font-size: 12px; }
 /* Sem icone proprio de platina ainda: a medalha de conquistas vira prateada para diferenciar. */

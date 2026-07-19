@@ -7,8 +7,10 @@ import com.ofertagames.backend.colecoesperfil.ColecaoPerfil;
 import com.ofertagames.backend.colecoesperfil.RepositorioColecoesPerfil;
 import com.ofertagames.backend.favoritosperfil.FavoritoPerfilJogo;
 import com.ofertagames.backend.favoritosperfil.RepositorioFavoritosPerfil;
+import com.ofertagames.backend.jogos.RepositorioJogos;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -26,8 +28,9 @@ class ServicoPerfis {
   private final RepositorioColecoesPerfil colecoesPerfil;
   private final RepositorioAtividadesPerfil atividades;
   private final RepositorioBlocosPerfil blocos;
+  private final RepositorioJogos jogos;
 
-  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam, RepositorioFavoritosPerfil favoritosPerfil, RepositorioColecoesPerfil colecoesPerfil, RepositorioAtividadesPerfil atividades, RepositorioBlocosPerfil blocos) { this.perfis = perfis; this.steam = steam; this.favoritosPerfil = favoritosPerfil; this.colecoesPerfil = colecoesPerfil; this.atividades = atividades; this.blocos = blocos; }
+  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam, RepositorioFavoritosPerfil favoritosPerfil, RepositorioColecoesPerfil colecoesPerfil, RepositorioAtividadesPerfil atividades, RepositorioBlocosPerfil blocos, RepositorioJogos jogos) { this.perfis = perfis; this.steam = steam; this.favoritosPerfil = favoritosPerfil; this.colecoesPerfil = colecoesPerfil; this.atividades = atividades; this.blocos = blocos; this.jogos = jogos; }
 
   RepositorioPerfis.Perfil proprio(String usuarioId) { return perfis.buscarPorUsuario(usuarioId).orElse(null); }
 
@@ -77,7 +80,7 @@ class ServicoPerfis {
     if (!perfil.publico() && !perfil.usuarioId().equals(visitanteId)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     ServicoConexoesSteam.StatusConexaoSteam status = steam.status(perfil.usuarioId());
     boolean dono = perfil.usuarioId().equals(visitanteId);
-    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = dono || perfil.mostrarBiblioteca() ? steam.biblioteca(perfil.usuarioId()) : List.of();
+    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = dono || perfil.mostrarBiblioteca() ? enriquecerComCatalogSlug(steam.biblioteca(perfil.usuarioId())) : List.of();
     List<FavoritoPerfilJogo> favoritos = dono || perfil.mostrarFavoritos() ? favoritosPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
     List<ColecaoPerfil> colecoes = dono || perfil.mostrarColecoes() ? colecoesPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
@@ -110,6 +113,15 @@ class ServicoPerfis {
   private static String normalizarHandle(String valor) { if (valor == null || valor.isBlank()) return null; return normalizarHandleObrigatorio(valor); }
   private static String normalizarHandleObrigatorio(String valor) { String handle = valor.trim().toLowerCase(Locale.ROOT); if (!handle.matches("^[a-z0-9][a-z0-9-]{2,29}$")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use de 3 a 30 caracteres: letras minusculas, numeros e hifen"); if (IDENTIFICADORES_RESERVADOS.contains(handle)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta URL e reservada pelo sistema"); return handle; }
   private static String limitar(String valor, int maximo) { String resultado = valor == null ? "" : valor.trim(); return resultado.length() > maximo ? resultado.substring(0, maximo) : resultado; }
+
+  // Cruza os jogos da biblioteca Steam com o catalogo (por steam_app_id) pra oferecer
+  // "Ver no catalogo" nos cards do perfil, quando existir uma entrada correspondente.
+  private List<ServicoConexoesSteam.JogoBibliotecaSteam> enriquecerComCatalogSlug(List<ServicoConexoesSteam.JogoBibliotecaSteam> lista) {
+    if (lista.isEmpty()) return lista;
+    Map<Integer, String> slugs = jogos.buscarSlugsPorSteamAppIds(lista.stream().map(ServicoConexoesSteam.JogoBibliotecaSteam::appId).toList());
+    if (slugs.isEmpty()) return lista;
+    return lista.stream().map(jogo -> jogo.comCatalogSlug(slugs.get(jogo.appId()))).toList();
+  }
 
   // A atividade e complementar: uma migration pendente nao pode tornar o perfil indisponivel.
   private List<AtividadePerfil> carregarAtividades(String usuarioId) {
