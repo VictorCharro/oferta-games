@@ -823,7 +823,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   steamCover(game: PerfilPublico['biblioteca'][number]): string {
-    return `https://cdn.akamai.steamstatic.com/steam/apps/${game.appId}/header.jpg`;
+    return game.capaUrl || `https://cdn.akamai.steamstatic.com/steam/apps/${game.appId}/header.jpg`;
   }
 
   tentarCapaSteamAlternativa(evento: Event, jogo: PerfilPublico['biblioteca'][number]) {

@@ -1,6 +1,8 @@
 package com.ofertagames.backend.conexoes;
 
 import com.ofertagames.backend.atividadesperfil.RepositorioAtividadesPerfil;
+import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
+import com.ofertagames.backend.steam.ServicoSteam;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -22,6 +24,7 @@ public class ServicoConexoesSteam {
 
   private final RepositorioConexoesSteam conexoes;
   private final ClienteSteamWeb steam;
+  private final ServicoSteam steamLoja;
   private final RepositorioAtividadesPerfil atividades;
   private final RestClient restClient;
   private final String urlFrontend;
@@ -30,6 +33,7 @@ public class ServicoConexoesSteam {
   ServicoConexoesSteam(
       RepositorioConexoesSteam conexoes,
       ClienteSteamWeb steam,
+      ServicoSteam steamLoja,
       RepositorioAtividadesPerfil atividades,
       RestClient.Builder restClientBuilder,
       @Value("${app.steam.frontend-url}") String urlFrontend,
@@ -37,6 +41,7 @@ public class ServicoConexoesSteam {
   ) {
     this.conexoes = conexoes;
     this.steam = steam;
+    this.steamLoja = steamLoja;
     this.atividades = atividades;
     this.restClient = restClientBuilder.build();
     this.urlFrontend = removerBarraFinal(urlFrontend);
@@ -123,8 +128,23 @@ public class ServicoConexoesSteam {
   // Usado pelo endpoint autenticado do dono, onde a biblioteca inteira e necessaria.
   public java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId, int limite) {
     return conexoes.listarBiblioteca(usuarioId, limite).stream()
-        .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash(), jogo.conquistasDesbloqueadas(), jogo.conquistasTotal()))
+        .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash(), jogo.conquistasDesbloqueadas(), jogo.conquistasTotal(), jogo.capaUrl()))
         .toList();
+  }
+
+  // Preenche a capa real dos jogos da biblioteca via appdetails da Steam: o padrao antigo de URL
+  // (cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg) nao existe mais pra jogos recentes,
+  // cujas imagens vivem num caminho com hash imprevisivel; so a API da Steam sabe a URL certa.
+  public int preencherCapasBiblioteca(int limite) {
+    int atualizadas = 0;
+    for (RepositorioConexoesSteam.JogoParaCapa jogo : conexoes.listarSemCapa(limite)) {
+      String capa = steamLoja.buscarDetalhesAplicativo(String.valueOf(jogo.appId()))
+          .map(DetalhesAplicativoSteam::imagemCabecalho)
+          .orElse(null);
+      conexoes.salvarCapa(jogo.usuarioId(), jogo.appId(), capa);
+      atualizadas++;
+    }
+    return atualizadas;
   }
 
   // Usado pela pagina do jogo pra cruzar o progresso pessoal com o catalogo global de conquistas.
@@ -267,7 +287,7 @@ public class ServicoConexoesSteam {
     }
   }
 
-  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal) {}
+  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl) {}
 
   static class ConexaoSteamNaoEncontradaException extends RuntimeException {}
   static class UrlBackendNaoConfiguradaException extends RuntimeException {}

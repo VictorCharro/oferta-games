@@ -1,8 +1,10 @@
 package com.ofertagames.backend.conexoes;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -130,19 +132,21 @@ class RepositorioConexoesSteam {
 
   List<JogoBibliotecaSteam> substituirBiblioteca(String usuarioId, List<JogoBibliotecaSteam> jogos, boolean identificarNovos) {
     Set<Integer> idsAnteriores = identificarNovos ? idsBiblioteca(usuarioId) : Set.of();
+    Map<Integer, String> capasExistentes = capasBiblioteca(usuarioId);
     jdbc.sql("DELETE FROM steam_library_games WHERE user_id = CAST(:usuarioId AS uuid)")
         .param("usuarioId", usuarioId)
         .update();
     for (JogoBibliotecaSteam jogo : jogos) {
       jdbc.sql("""
-          INSERT INTO steam_library_games (user_id, app_id, title, playtime_minutes, icon_hash, last_synced_at)
-          VALUES (CAST(:usuarioId AS uuid), :appId, :titulo, :minutos, :icone, now())
+          INSERT INTO steam_library_games (user_id, app_id, title, playtime_minutes, icon_hash, cover_url, last_synced_at)
+          VALUES (CAST(:usuarioId AS uuid), :appId, :titulo, :minutos, :icone, :capa, now())
           """)
           .param("usuarioId", usuarioId)
           .param("appId", jogo.appId())
           .param("titulo", jogo.titulo())
           .param("minutos", jogo.minutosJogadas())
           .param("icone", jogo.iconeHash())
+          .param("capa", capasExistentes.get(jogo.appId()))
           .update();
     }
     jdbc.sql("UPDATE steam_connections SET last_library_sync_at = now(), last_error = NULL WHERE user_id = CAST(:usuarioId AS uuid)")
@@ -154,6 +158,49 @@ class RepositorioConexoesSteam {
   private Set<Integer> idsBiblioteca(String usuarioId) {
     return new HashSet<>(jdbc.sql("SELECT app_id FROM steam_library_games WHERE user_id = CAST(:usuarioId AS uuid)")
         .param("usuarioId", usuarioId).query(Integer.class).list());
+  }
+
+  // Preserva as capas ja resolvidas ao ressincronizar a biblioteca (a sincronizacao de playtime
+  // apaga e reinsere todas as linhas, entao sem isso a capa buscada via appdetails se perderia a cada sync).
+  private Map<Integer, String> capasBiblioteca(String usuarioId) {
+    List<CapaExistente> linhas = jdbc.sql(
+        "SELECT app_id, cover_url FROM steam_library_games WHERE user_id = CAST(:usuarioId AS uuid) AND cover_url IS NOT NULL")
+        .param("usuarioId", usuarioId)
+        .query((rs, linha) -> new CapaExistente(rs.getInt("app_id"), rs.getString("cover_url")))
+        .list();
+    Map<Integer, String> capas = new HashMap<>();
+    for (CapaExistente linha : linhas) {
+      capas.put(linha.appId(), linha.capaUrl());
+    }
+    return capas;
+  }
+
+  private record CapaExistente(int appId, String capaUrl) {}
+
+  // Jogos da biblioteca ainda sem capa resolvida, pra fila do job que busca via appdetails da Steam.
+  List<JogoParaCapa> listarSemCapa(int limite) {
+    return jdbc.sql("""
+        SELECT user_id::text, app_id
+        FROM steam_library_games
+        WHERE cover_url IS NULL
+        ORDER BY cover_synced_at ASC NULLS FIRST
+        LIMIT :limite
+        """)
+        .param("limite", limite)
+        .query((rs, linha) -> new JogoParaCapa(rs.getString("user_id"), rs.getInt("app_id")))
+        .list();
+  }
+
+  void salvarCapa(String usuarioId, int appId, String capaUrl) {
+    jdbc.sql("""
+        UPDATE steam_library_games
+        SET cover_url = :capa, cover_synced_at = now()
+        WHERE user_id = CAST(:usuarioId AS uuid) AND app_id = :appId
+        """)
+        .param("capa", capaUrl)
+        .param("usuarioId", usuarioId)
+        .param("appId", appId)
+        .update();
   }
 
   List<JogoBibliotecaSteam> listarParaConquistas(String usuarioId, int limite) {
@@ -188,7 +235,7 @@ class RepositorioConexoesSteam {
 
   List<JogoBibliotecaSteam> listarBiblioteca(String usuarioId, int limite) {
     return jdbc.sql("""
-        SELECT b.app_id, b.title, b.playtime_minutes, b.icon_hash,
+        SELECT b.app_id, b.title, b.playtime_minutes, b.icon_hash, b.cover_url,
                COALESCE(a.unlocked_count, 0) AS unlocked_count,
                COALESCE(a.total_count, 0) AS total_count
         FROM steam_library_games b
@@ -200,7 +247,8 @@ class RepositorioConexoesSteam {
         .param("usuarioId", usuarioId)
         .param("limite", limite)
         .query((rs, linha) -> new JogoBibliotecaSteam(rs.getInt("app_id"), rs.getString("title"),
-            rs.getInt("playtime_minutes"), rs.getString("icon_hash"), rs.getInt("unlocked_count"), rs.getInt("total_count")))
+            rs.getInt("playtime_minutes"), rs.getString("icon_hash"), rs.getInt("unlocked_count"), rs.getInt("total_count"),
+            rs.getString("cover_url")))
         .list();
   }
 
@@ -300,9 +348,10 @@ class RepositorioConexoesSteam {
 
   record ConexaoSteam(String steamId, String nome, String avatarUrl, String conectadoEm, String bibliotecaSincronizadaEm, String conquistasSincronizadasEm, String ultimoErro) {}
   record ConexaoUsuarioSteam(String usuarioId, String steamId) {}
-  record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal) {
+  record JogoParaCapa(String usuarioId, int appId) {}
+  record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl) {
     JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash) {
-      this(appId, titulo, minutosJogadas, iconeHash, 0, 0);
+      this(appId, titulo, minutosJogadas, iconeHash, 0, 0, null);
     }
   }
   // jogosPlatinados: jogos com 100% das conquistas desbloqueadas.
