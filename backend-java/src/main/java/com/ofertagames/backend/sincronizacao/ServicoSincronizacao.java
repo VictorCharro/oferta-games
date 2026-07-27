@@ -23,11 +23,16 @@ public class ServicoSincronizacao {
   // Valor alto temporario pra zerar o backlog de conquistas do catalogo rapido; volta pro
   // ritmo baixo de manutencao (so pegar jogos novos) assim que o backlog estiver zerado.
   private static final int LIMITE_CONQUISTAS_CATALOGO = 250;
-  // Lotes pequenos: cada item da varredura/precos faz uma requisicao HTTP com pausa educada
-  // (ver ServicoInstantGaming), entao o lote precisa ser curto pra nao segurar o lock global
-  // de coleta por muito tempo e atrasar os outros jobs (precos ITAD, Steam etc).
-  private static final int LIMITE_INSTANT_GAMING_ESCANEAMENTO = 30;
+  // Valor alto temporario pra varrer o catalogo inteiro da Instant Gaming rapido: a varredura e
+  // cega por id sequencial (sem relacao com popularidade), entao so depois de cobrir o catalogo
+  // quase todo e que o casamento (que ja prioriza rank) consegue pegar os jogos populares de
+  // uma vez. Volta pro ritmo baixo de manutencao (so pegar produtos novos) quando a descoberta
+  // parar de crescer significativamente.
+  private static final int LIMITE_INSTANT_GAMING_ESCANEAMENTO = 300;
   private static final int LIMITE_INSTANT_GAMING_CASAMENTO = 200;
+  // Lote pequeno: cada item faz uma requisicao HTTP com pausa educada (ver ServicoInstantGaming),
+  // entao o lote precisa ser curto pra nao segurar o lock global de coleta por muito tempo e
+  // atrasar os outros jobs (precos ITAD, Steam etc).
   private static final int LIMITE_INSTANT_GAMING_PRECOS = 30;
   private static final Logger logger = LoggerFactory.getLogger(ServicoSincronizacao.class);
 
