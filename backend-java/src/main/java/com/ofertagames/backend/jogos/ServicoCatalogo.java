@@ -67,10 +67,6 @@ public class ServicoCatalogo {
   public ResultadoAtualizacaoJogo atualizarPrecos(String slug) {
     JogoParaAtualizar jogo = jogos.buscarParaAtualizar(slug).orElseThrow(JogoNaoEncontradoException::new);
     boolean temItad = jogo.itadId() != null && !jogo.itadId().isBlank();
-    boolean temInstantGaming = jogo.instantGamingUrl() != null;
-    if (!temItad && !temInstantGaming) {
-      throw new JogoSemItadException();
-    }
 
     int atualizadas = 0;
     if (temItad) {
@@ -95,10 +91,14 @@ public class ServicoCatalogo {
         atualizarMetadadosSteamSeNecessario(jogo, resultado.deals());
       }
     }
-    if (temInstantGaming && instantGaming.atualizarPrecoImediato(jogo.id())) {
+    boolean instantGamingAtualizado = instantGaming.atualizarPrecoImediato(jogo.id(), jogo.titulo());
+    if (instantGamingAtualizado) {
       atualizadas++;
     }
 
+    if (!temItad && !instantGamingAtualizado) {
+      throw new JogoSemItadException();
+    }
     return new ResultadoAtualizacaoJogo(true, atualizadas);
   }
 

@@ -63,9 +63,17 @@ public class ServicoInstantGaming {
   }
 
   // Usado pelo refresh manual ("Atualizar precos") na pagina do jogo: uma unica requisicao,
-  // barata o suficiente pra rodar em linha com o refresh da ITAD.
-  public boolean atualizarPrecoImediato(long jogoId) {
+  // barata o suficiente pra rodar em linha com o refresh da ITAD. Se o jogo ainda nao tiver
+  // casamento, tenta casar na hora com o que ja foi descoberto ate agora (so consulta o banco,
+  // nao busca na Instant Gaming) em vez de esperar o proximo ciclo do job de casamento.
+  public boolean atualizarPrecoImediato(long jogoId, String titulo) {
     Optional<String> url = repositorio.buscarInstantGamingUrl(jogoId);
+    if (url.isEmpty()) {
+      url = repositorio.buscarUrlUnica(GeradorSlug.porTitulo(titulo));
+      if (url.isPresent()) {
+        repositorio.salvarMatch(jogoId, url.get());
+      }
+    }
     return url.isPresent() && atualizarPrecoDoJogo(jogoId, url.get());
   }
 
