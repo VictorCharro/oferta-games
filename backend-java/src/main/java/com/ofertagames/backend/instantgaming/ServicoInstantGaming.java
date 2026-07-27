@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 public class ServicoInstantGaming {
   // Pausa entre requisicoes dentro de um lote de varredura, pra nao martelar o servidor deles.
   private static final long PAUSA_ENTRE_REQUISICOES_MS = 300;
+  // Codigo de afiliado aprovado pela Instant Gaming; so entra na URL salva em offers (o link que
+  // o usuario de fato clica), nunca na URL canonica usada internamente pra buscar/casar produtos.
+  private static final String CODIGO_AFILIADO = "oferta-games";
 
   private final ClienteInstantGaming cliente;
   private final RepositorioInstantGaming repositorio;
@@ -80,10 +83,14 @@ public class ServicoInstantGaming {
   private boolean atualizarPrecoDoJogo(long jogoId, String url) {
     return cliente.buscarProdutoPorUrl(url)
         .map(produto -> {
-          repositorio.salvarPreco(jogoId, produto.preco(), produto.moeda(), produto.url());
+          repositorio.salvarPreco(jogoId, produto.preco(), produto.moeda(), comLinkAfiliado(produto.url()));
           return true;
         })
         .orElse(false);
+  }
+
+  private static String comLinkAfiliado(String url) {
+    return url + (url.contains("?") ? "&" : "?") + "igr=" + CODIGO_AFILIADO;
   }
 
   private static void aguardarEntreRequisicoes() {
