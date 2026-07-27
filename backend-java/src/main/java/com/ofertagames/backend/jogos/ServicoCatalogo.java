@@ -6,6 +6,7 @@ import com.ofertagames.backend.itad.ItemOfertaItad;
 import com.ofertagames.backend.itad.OfertaPrecoItad;
 import com.ofertagames.backend.itad.ResultadoBuscaItad;
 import com.ofertagames.backend.itad.ResultadoPrecoItad;
+import com.ofertagames.backend.instantgaming.ServicoInstantGaming;
 import com.ofertagames.backend.notificacoes.RepositorioNotificacoes;
 import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
@@ -24,12 +25,14 @@ public class ServicoCatalogo {
   private final ClienteItad itad;
   private final ServicoSteam steam;
   private final RepositorioNotificacoes notificacoes;
+  private final ServicoInstantGaming instantGaming;
 
-  ServicoCatalogo(RepositorioJogos jogos, ClienteItad itad, ServicoSteam steam, RepositorioNotificacoes notificacoes) {
+  ServicoCatalogo(RepositorioJogos jogos, ClienteItad itad, ServicoSteam steam, RepositorioNotificacoes notificacoes, ServicoInstantGaming instantGaming) {
     this.jogos = jogos;
     this.itad = itad;
     this.steam = steam;
     this.notificacoes = notificacoes;
+    this.instantGaming = instantGaming;
   }
 
   public List<ResumoJogo> buscarComFallbackItad(String busca) {
@@ -63,34 +66,39 @@ public class ServicoCatalogo {
 
   public ResultadoAtualizacaoJogo atualizarPrecos(String slug) {
     JogoParaAtualizar jogo = jogos.buscarParaAtualizar(slug).orElseThrow(JogoNaoEncontradoException::new);
-    if (jogo.itadId() == null || jogo.itadId().isBlank()) {
+    boolean temItad = jogo.itadId() != null && !jogo.itadId().isBlank();
+    boolean temInstantGaming = jogo.instantGamingUrl() != null;
+    if (!temItad && !temInstantGaming) {
       throw new JogoSemItadException();
     }
 
-    List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(itad.buscarPrecos(jogo.itadId()), List.of());
-    ResultadoPrecoItad resultado = resultados.isEmpty() ? null : resultados.get(0);
-    if (resultado == null || resultado.deals() == null || resultado.deals().isEmpty()) {
-      return new ResultadoAtualizacaoJogo(true, 0);
-    }
-
     int atualizadas = 0;
-    for (OfertaPrecoItad oferta : resultado.deals()) {
-      if (oferta.shop() == null || oferta.price() == null || oferta.url() == null) {
-        continue;
-      }
+    if (temItad) {
+      List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(itad.buscarPrecos(jogo.itadId()), List.of());
+      ResultadoPrecoItad resultado = resultados.isEmpty() ? null : resultados.get(0);
+      if (resultado != null && resultado.deals() != null) {
+        for (OfertaPrecoItad oferta : resultado.deals()) {
+          if (oferta.shop() == null || oferta.price() == null || oferta.url() == null) {
+            continue;
+          }
 
-      jogos.salvarOferta(new OfertaParaSalvar(
-          jogo.id(),
-          "itad",
-          oferta.shop().name(),
-          oferta.price().amount(),
-          oferta.regular() == null ? null : oferta.regular().amount(),
-          "BRL",
-          oferta.url()));
+          jogos.salvarOferta(new OfertaParaSalvar(
+              jogo.id(),
+              "itad",
+              oferta.shop().name(),
+              oferta.price().amount(),
+              oferta.regular() == null ? null : oferta.regular().amount(),
+              "BRL",
+              oferta.url()));
+          atualizadas++;
+        }
+        atualizarMetadadosSteamSeNecessario(jogo, resultado.deals());
+      }
+    }
+    if (temInstantGaming && instantGaming.atualizarPrecoImediato(jogo.id())) {
       atualizadas++;
     }
 
-    atualizarMetadadosSteamSeNecessario(jogo, resultado.deals());
     return new ResultadoAtualizacaoJogo(true, atualizadas);
   }
 

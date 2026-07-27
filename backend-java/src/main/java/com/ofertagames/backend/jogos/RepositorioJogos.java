@@ -359,7 +359,7 @@ public class RepositorioJogos {
 
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {
     return jdbc.sql("""
-        SELECT id, title, itad_id::text AS itad_id, cover_url, is_dlc
+        SELECT id, title, itad_id::text AS itad_id, cover_url, is_dlc, instant_gaming_url
         FROM games
         WHERE slug = :slug
           %s
@@ -371,7 +371,8 @@ public class RepositorioJogos {
             rs.getString("title"),
             rs.getString("itad_id"),
             rs.getString("cover_url"),
-            rs.getObject("is_dlc", Boolean.class)))
+            rs.getObject("is_dlc", Boolean.class),
+            rs.getString("instant_gaming_url")))
         .optional();
   }
 

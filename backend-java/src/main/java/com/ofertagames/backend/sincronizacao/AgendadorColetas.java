@@ -45,4 +45,28 @@ class AgendadorColetas {
   void coletarConquistasCatalogo() {
     execucao.executar("conquistas-catalogo", sincronizacao::sincronizarRodadaConquistasCatalogo);
   }
+
+  // Instant Gaming nao tem API: varredura por id numerico de produto (permitida pelo robots.txt
+  // deles, diferente da busca do site). Roda a cada 15min, um lote pequeno por vez, pra ficar
+  // educado com o servidor deles.
+  @Scheduled(
+      fixedDelayString = "${app.sync.scheduler.instant-gaming-scan-delay-ms:900000}",
+      initialDelayString = "${app.sync.scheduler.instant-gaming-scan-initial-delay-ms:600000}")
+  void escanearInstantGaming() {
+    execucao.executar("instant-gaming-escaneamento", sincronizacao::sincronizarRodadaInstantGamingEscaneamento);
+  }
+
+  @Scheduled(
+      fixedDelayString = "${app.sync.scheduler.instant-gaming-match-delay-ms:1200000}",
+      initialDelayString = "${app.sync.scheduler.instant-gaming-match-initial-delay-ms:660000}")
+  void casarInstantGaming() {
+    execucao.executar("instant-gaming-casamento", sincronizacao::sincronizarRodadaInstantGamingCasamento);
+  }
+
+  @Scheduled(
+      fixedDelayString = "${app.sync.scheduler.instant-gaming-price-delay-ms:3600000}",
+      initialDelayString = "${app.sync.scheduler.instant-gaming-price-initial-delay-ms:720000}")
+  void atualizarPrecosInstantGaming() {
+    execucao.executar("instant-gaming-precos", sincronizacao::sincronizarRodadaInstantGamingPrecos);
+  }
 }

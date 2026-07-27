@@ -63,6 +63,9 @@ public class ControladorAdministracao {
       case "steam" -> () -> execucao.executar("steam", sincronizacao::sincronizarRodadaSteam);
       case "detalhes" -> () -> execucao.executar("detalhes", sincronizacao::sincronizarRodadaDetalhes);
       case "conquistas-catalogo" -> () -> execucao.executar("conquistas-catalogo", sincronizacao::sincronizarRodadaConquistasCatalogo);
+      case "instant-gaming-escaneamento" -> () -> execucao.executar("instant-gaming-escaneamento", sincronizacao::sincronizarRodadaInstantGamingEscaneamento);
+      case "instant-gaming-casamento" -> () -> execucao.executar("instant-gaming-casamento", sincronizacao::sincronizarRodadaInstantGamingCasamento);
+      case "instant-gaming-precos" -> () -> execucao.executar("instant-gaming-precos", sincronizacao::sincronizarRodadaInstantGamingPrecos);
       default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de coleta invalido");
     };
     executorManual.execute(tarefa);

@@ -115,7 +115,7 @@ public class ControladorJogos {
     } catch (ServicoCatalogo.JogoNaoEncontradoException erro) {
       return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
     } catch (ServicoCatalogo.JogoSemItadException erro) {
-      return ResponseEntity.badRequest().body(Map.of("error", "Jogo sem id da ITAD"));
+      return ResponseEntity.badRequest().body(Map.of("error", "Jogo sem fonte de precos para atualizar"));
     }
   }
 }

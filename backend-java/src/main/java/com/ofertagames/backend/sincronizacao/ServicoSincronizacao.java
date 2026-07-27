@@ -1,5 +1,6 @@
 package com.ofertagames.backend.sincronizacao;
 
+import com.ofertagames.backend.instantgaming.ServicoInstantGaming;
 import com.ofertagames.backend.itad.ClienteItad;
 import com.ofertagames.backend.itad.ItemOfertaItad;
 import com.ofertagames.backend.itad.RespostaOfertasItad;
@@ -22,18 +23,26 @@ public class ServicoSincronizacao {
   // Valor alto temporario pra zerar o backlog de conquistas do catalogo rapido; volta pro
   // ritmo baixo de manutencao (so pegar jogos novos) assim que o backlog estiver zerado.
   private static final int LIMITE_CONQUISTAS_CATALOGO = 250;
+  // Lotes pequenos: cada item da varredura/precos faz uma requisicao HTTP com pausa educada
+  // (ver ServicoInstantGaming), entao o lote precisa ser curto pra nao segurar o lock global
+  // de coleta por muito tempo e atrasar os outros jobs (precos ITAD, Steam etc).
+  private static final int LIMITE_INSTANT_GAMING_ESCANEAMENTO = 30;
+  private static final int LIMITE_INSTANT_GAMING_CASAMENTO = 200;
+  private static final int LIMITE_INSTANT_GAMING_PRECOS = 30;
   private static final Logger logger = LoggerFactory.getLogger(ServicoSincronizacao.class);
 
   private final ClienteItad itad;
   private final ServicoCatalogo catalogo;
   private final RepositorioJogos jogos;
   private final ServicoAquecimentoCache aquecimentoCache;
+  private final ServicoInstantGaming instantGaming;
 
-  ServicoSincronizacao(ClienteItad itad, ServicoCatalogo catalogo, RepositorioJogos jogos, ServicoAquecimentoCache aquecimentoCache) {
+  ServicoSincronizacao(ClienteItad itad, ServicoCatalogo catalogo, RepositorioJogos jogos, ServicoAquecimentoCache aquecimentoCache, ServicoInstantGaming instantGaming) {
     this.itad = itad;
     this.catalogo = catalogo;
     this.jogos = jogos;
     this.aquecimentoCache = aquecimentoCache;
+    this.instantGaming = instantGaming;
   }
 
   /** Mantido para diagnostico e sincronizacao manual pontual; nao e usado pelo agendador. */
@@ -102,6 +111,24 @@ public class ServicoSincronizacao {
     int atualizados = catalogo.preencherConquistas(LIMITE_CONQUISTAS_CATALOGO);
     logger.info("Coleta agendada de conquistas do catalogo concluida: {} jogos atualizados", atualizados);
     return new ResultadoRodadaColeta(atualizados, 0);
+  }
+
+  public ResultadoRodadaColeta sincronizarRodadaInstantGamingEscaneamento() {
+    int encontrados = instantGaming.escanearCatalogo(LIMITE_INSTANT_GAMING_ESCANEAMENTO);
+    logger.info("Varredura agendada do catalogo Instant Gaming concluida: {} produtos novos", encontrados);
+    return new ResultadoRodadaColeta(encontrados, 0);
+  }
+
+  public ResultadoRodadaColeta sincronizarRodadaInstantGamingCasamento() {
+    int casados = instantGaming.casarComCatalogo(LIMITE_INSTANT_GAMING_CASAMENTO);
+    logger.info("Casamento agendado com o catalogo Instant Gaming concluido: {} jogos casados", casados);
+    return new ResultadoRodadaColeta(casados, 0);
+  }
+
+  public ResultadoRodadaColeta sincronizarRodadaInstantGamingPrecos() {
+    int atualizados = instantGaming.atualizarPrecos(LIMITE_INSTANT_GAMING_PRECOS);
+    logger.info("Coleta agendada de precos Instant Gaming concluida: {} jogos atualizados", atualizados);
+    return new ResultadoRodadaColeta(0, atualizados);
   }
 
   private ServicoCatalogo.ResultadoAtualizacaoLote atualizarLoteComTentativas(

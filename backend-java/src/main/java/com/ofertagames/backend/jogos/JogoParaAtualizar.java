@@ -5,5 +5,6 @@ public record JogoParaAtualizar(
     String titulo,
     String itadId,
     String capaUrl,
-    Boolean ehDlc
+    Boolean ehDlc,
+    String instantGamingUrl
 ) {}

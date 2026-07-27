@@ -91,6 +91,18 @@ Job separado, em geral a cada 15 minutos:
 - Processa um lote pequeno de jogos pendentes com `games.last_steam_sync_at`.
 - Compartilha a mesma trava da coleta de preco.
 
+### Instant Gaming (preco extra por scraping)
+
+A Instant Gaming nao tem API publica nem esta no ITAD (`isthereanydeal.com/shops/`; contato oficial pedindo API/parceria foi feito e negado). Preco vem por scraping das paginas de produto deles, modulo `instantgaming` (`ClienteInstantGaming`, `ServicoInstantGaming`, `RepositorioInstantGaming`), com tres jobs separados em `ServicoSincronizacao`/`AgendadorColetas`:
+
+- **Varredura** (`escanearInstantGaming`, ~15min, lote de 30): descoberta por **id numerico sequencial de produto** (`instant-gaming.com/en/{id}-x/`, sempre redireciona pra URL canonica). O robots.txt deles bloqueia as paginas de busca (`/en/search/`, `/br/pesquisar/`, etc.) mas nao bloqueia paginas de produto individuais nem categoria — por isso a descoberta nunca usa busca, so varre ids em sequencia. Nao ha protecao anti-bot (Cloudflare/challenge) nas paginas de produto testadas, entao um `RestClient` comum com Jsoup basta, sem browser headless. Preco e nome vem de meta tags schema.org (`itemprop="name"/"price"/"priceCurrency"` dentro de `#product-app`), mais estavel que depender de classes CSS visuais. Grava titulo + titulo normalizado (mesma normalizacao do `GeradorSlug`) + URL em `instant_gaming_catalog`, avancando o cursor em `instant_gaming_scan_cursor` (uma linha so). Pausa de 300ms entre requisicoes dentro do lote pra ser educado com o servidor deles.
+- **Casamento** (`casarInstantGaming`, ~20min, lote de 200): pra jogos com `games.instant_gaming_url IS NULL`, prioriza top-2000 por rank (mesmo padrao dos outros jobs), busca o titulo normalizado em `instant_gaming_catalog`. So grava o match quando existe **exatamente um** produto com aquele titulo normalizado — ambiguidade (edicoes/remakes com nome parecido) fica sem match em vez de arriscar linkar o jogo errado.
+- **Precos** (`atualizarPrecosInstantGaming`, ~1h, lote de 30): pra jogos ja casados, busca a pagina do produto de novo (pela URL canonica salva) e grava em `offers` com `source = 'instant_gaming'`, `store_name = 'Instant Gaming'`, `regular_price = NULL` (a pagina deles nao expoe preco cheio/desconto de forma confiavel ainda). Preco minimo (`MIN(o.price)`) ja pega isso automaticamente sem mudanca nenhuma no restante do catalogo.
+- **Refresh manual**: `POST /api/games/{slug}/refresh` agora atualiza ITAD e Instant Gaming juntos quando o jogo tiver `instant_gaming_url` — uma unica requisicao extra, barata o suficiente pra rodar em linha (sincrono) com o clique do usuario. So falha com `JogoSemItadException` quando o jogo nao tem NENHUMA das duas fontes.
+- Disparo manual admin: `POST /api/admin/coleta/instant-gaming-escaneamento`, `instant-gaming-casamento` e `instant-gaming-precos`.
+- `RepositorioInstantGaming` nao depende do pacote `jogos` (grava direto em `offers`/`games` via SQL propria) pra evitar dependencia circular, ja que `ServicoCatalogo` (em `jogos`) chama `ServicoInstantGaming` no refresh manual.
+- Frontend: `store-brand.ts` reconhece `/instant.?gaming/i` e usa `store-logos/instant-gaming.svg` (monograma "IG" na cor da marca deles, nao e o logo oficial redistribuido).
+
 ### Detalhes e conquistas de catalogo (Sobre/Review/Conquistas)
 
 Dois jobs novos em `ServicoSincronizacao`/`AgendadorColetas`, ambos dependem de `games.steam_app_id` ja preenchido pelo job de metadados Steam acima. So processam jogos com oferta Steam; os demais ficam sem esses dados (mesma limitacao pre-existente de capa/DLC).
@@ -273,8 +285,9 @@ Arquivos em `backend-java/sql/`:
 20. `20260718_avaliacoes_jogo.sql`
 21. `20260718_reprocessar_detalhes_pt_br.sql`
 22. `20260718_biblioteca_steam_capas.sql`
+23. `20260719_instant_gaming.sql`
 
-As migrations 1 a 21 ja foram aplicadas ao projeto Supabase de producao. A migration 21 marcou 408 detalhes existentes como antigos em 18/07/2026 para a fila substitui-los gradualmente pelo conteudo pt-BR, sem apagar o texto atual durante o processamento. Em outro ambiente, executar as migrations estruturais em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500. A migration 22 adiciona `cover_url`/`cover_synced_at` a `steam_library_games` para guardar a capa real de cada jogo (resolvida via appdetails, ja que a Steam mudou o CDN das capas pra um caminho com hash imprevisivel em `shared.akamai.steamstatic.com`); precisa ser aplicada antes do deploy do backend que preenche/le essas colunas.
+As migrations 1 a 23 ja foram aplicadas ao projeto Supabase de producao. A migration 21 marcou 408 detalhes existentes como antigos em 18/07/2026 para a fila substitui-los gradualmente pelo conteudo pt-BR, sem apagar o texto atual durante o processamento. Em outro ambiente, executar as migrations estruturais em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500. A migration 22 adiciona `cover_url`/`cover_synced_at` a `steam_library_games` para guardar a capa real de cada jogo (resolvida via appdetails, ja que a Steam mudou o CDN das capas pra um caminho com hash imprevisivel em `shared.akamai.steamstatic.com`); precisa ser aplicada antes do deploy do backend que preenche/le essas colunas. A migration 23 adiciona `instant_gaming_url`/`last_instant_gaming_sync_at` a `games` e cria `instant_gaming_catalog`/`instant_gaming_scan_cursor` (ver secao "Instant Gaming" acima); precisa ser aplicada antes do deploy do backend que usa essas tabelas/colunas.
 
 O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos e seus fundos. Cada usuario so pode gravar na propria pasta. As politicas RLS de `SELECT`, `INSERT`, `UPDATE` e `DELETE` foram aplicadas ao projeto novo em 15/07/2026; sem elas o Storage retorna HTTP 400 nos uploads. Limite de upload de imagem no frontend: 2 MB, JPG/PNG/WebP. Blocos de imagem e fundos tambem aceitam URL externa `http(s)`.
 
@@ -493,7 +506,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
    - Filtro por ano de lancamento/genero segue inviavel: `games` nao guarda esses campos. Dependeria de coluna nova + backfill via ITAD/Steam.
 2. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
 3. Implementar Xbox somente com um caminho oficial suportado (pausado ate acesso ao Azure).
-4. Integrar Eneba depois de aprovar afiliacao; Instant Gaming aguarda aprovacao.
+4. Integrar Eneba depois de aprovar afiliacao. Instant Gaming ja implementada por scraping (ver secao propria) — melhorar cobertura da varredura (o catalogo pode ter jogos com id acima do que ja foi varrido) e considerar guardar `regular_price` se a pagina deles passar a expor desconto de forma confiavel.
 5. Melhorar observabilidade operacional da Oracle: uso de memoria, erros do scheduler e status da API.
 6. Depois de alguns dias de estabilidade, exportar um ultimo backup e excluir o projeto Supabase antigo.
 
@@ -509,7 +522,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 
 ## Regras de Seguranca e Produto
 
-- Sem scraping de lojas ou plataformas.
+- Sem scraping de lojas ou plataformas, com uma excecao explicita: **Instant Gaming** (ver secao propria acima), porque nao tem API nem esta no ITAD e o contato oficial pedindo acesso foi negado. Qualquer nova excecao dessas deve ser decidida caso a caso, nao vira regra geral.
 - Sem multi-moeda funcional por enquanto.
 - Sem exibir dados privados de perfil na rota publica.
 - Nao reintroduzir sincronizacao recorrente pelo GitHub Actions.
