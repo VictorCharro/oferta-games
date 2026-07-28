@@ -30,10 +30,11 @@ public class ServicoSincronizacao {
   // parar de crescer significativamente.
   private static final int LIMITE_INSTANT_GAMING_ESCANEAMENTO = 300;
   private static final int LIMITE_INSTANT_GAMING_CASAMENTO = 200;
-  // Lote pequeno: cada item faz uma requisicao HTTP com pausa educada (ver ServicoInstantGaming),
-  // entao o lote precisa ser curto pra nao segurar o lock global de coleta por muito tempo e
-  // atrasar os outros jobs (precos ITAD, Steam etc).
-  private static final int LIMITE_INSTANT_GAMING_PRECOS = 30;
+  // Comecou em 30/1h, mas com o casamento ja em ~100 jogos poucas horas apos a varredura
+  // acelerada, esse ritmo nao dava conta de manter os precos atualizados com frequencia
+  // razoavel. Ajustado pra 100 a cada 30min (ver delay em AgendadorColetas); reavaliar se o
+  // total de jogos casados continuar crescendo bem alem disso.
+  private static final int LIMITE_INSTANT_GAMING_PRECOS = 100;
   private static final Logger logger = LoggerFactory.getLogger(ServicoSincronizacao.class);
 
   private final ClienteItad itad;

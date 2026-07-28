@@ -65,7 +65,7 @@ class AgendadorColetas {
   }
 
   @Scheduled(
-      fixedDelayString = "${app.sync.scheduler.instant-gaming-price-delay-ms:3600000}",
+      fixedDelayString = "${app.sync.scheduler.instant-gaming-price-delay-ms:1800000}",
       initialDelayString = "${app.sync.scheduler.instant-gaming-price-initial-delay-ms:720000}")
   void atualizarPrecosInstantGaming() {
     execucao.executar("instant-gaming-precos", sincronizacao::sincronizarRodadaInstantGamingPrecos);
