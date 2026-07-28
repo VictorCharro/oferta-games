@@ -34,7 +34,7 @@ const BRANDS: Array<{ pattern: RegExp; brand: StoreBrand }> = [
   { pattern: /gamers.?gate/i, brand: { name: 'GamersGate', logo: 'store-logos/gamersgate.svg' } },
   { pattern: /indie.?gala/i, brand: { name: 'IndieGala', logo: 'store-logos/indiegala.svg' } },
   { pattern: /2game/i, brand: { name: '2Game', logo: 'store-logos/twogame.svg' } },
-  { pattern: /instant.?gaming/i, brand: { name: 'Instant Gaming', logo: 'store-logos/instant-gaming.svg' } },
+  { pattern: /instant.?gaming/i, brand: { name: 'Instant Gaming', logo: 'store-logos/instant-gaming.webp' } },
 ];
 
 export function storeBrand(storeName?: string | null): StoreBrand {
