@@ -20,9 +20,7 @@ public class ServicoSincronizacao {
   private static final int TAMANHO_LOTE_PRECOS = 200;
   private static final int LIMITE_METADADOS_STEAM = 60;
   private static final int LIMITE_DETALHES_JOGOS = 60;
-  // Valor alto temporario pra zerar o backlog de conquistas do catalogo rapido; volta pro
-  // ritmo baixo de manutencao (so pegar jogos novos) assim que o backlog estiver zerado.
-  private static final int LIMITE_CONQUISTAS_CATALOGO = 250;
+  private static final int LIMITE_CONQUISTAS_CATALOGO = 15;
   // Valor alto temporario pra varrer o catalogo inteiro da Instant Gaming rapido: a varredura e
   // cega por id sequencial (sem relacao com popularidade), entao so depois de cobrir o catalogo
   // quase todo e que o casamento (que ja prioriza rank) consegue pegar os jogos populares de
