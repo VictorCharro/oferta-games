@@ -11,6 +11,7 @@ import com.ofertagames.backend.notificacoes.RepositorioNotificacoes;
 import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
 import com.ofertagames.backend.steam.ServicoSteam.ReviewsSteam;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -74,7 +75,8 @@ public class ServicoCatalogo {
       ResultadoPrecoItad resultado = resultados.isEmpty() ? null : resultados.get(0);
       if (resultado != null && resultado.deals() != null) {
         for (OfertaPrecoItad oferta : resultado.deals()) {
-          if (oferta.shop() == null || oferta.price() == null || oferta.url() == null) {
+          if (oferta.shop() == null || oferta.price() == null || oferta.url() == null
+              || !precoConfiavel(oferta.price().amount(), oferta.regular() == null ? null : oferta.regular().amount())) {
             continue;
           }
 
@@ -141,7 +143,8 @@ public class ServicoCatalogo {
               || oferta.shop() == null
               || oferta.shop().name() == null || oferta.shop().name().isBlank()
               || oferta.price() == null || oferta.price().amount() == null
-              || oferta.url() == null || oferta.url().isBlank()) {
+              || oferta.url() == null || oferta.url().isBlank()
+              || !precoConfiavel(oferta.price().amount(), oferta.regular() == null ? null : oferta.regular().amount())) {
             continue;
           }
           ofertasAtuais.add(new OfertaParaSalvar(
@@ -219,7 +222,8 @@ public class ServicoCatalogo {
               || oferta.shop() == null
               || oferta.shop().name() == null || oferta.shop().name().isBlank()
               || oferta.price() == null || oferta.price().amount() == null
-              || oferta.url() == null || oferta.url().isBlank()) {
+              || oferta.url() == null || oferta.url().isBlank()
+              || !precoConfiavel(oferta.price().amount(), oferta.regular() == null ? null : oferta.regular().amount())) {
             continue;
           }
           ofertasAtuais.add(new OfertaParaSalvar(
@@ -358,6 +362,14 @@ public class ServicoCatalogo {
     if (ehDlc != null || capa != null || steamAppId != null) {
       jogos.atualizarMetadadosSteam(jogo.id(), ehDlc, capa, steamAppId);
     }
+  }
+
+  // A ITAD as vezes retorna preco 0 e preco normal 0 juntos pra listagens sem dado real
+  // (delistada, placeholder), nao uma promocao de verdade. Uma promocao real de "100% off" tem
+  // preco normal > 0 com preco atual 0 — so nesse caso o preco zero e confiavel o suficiente pra
+  // aparecer como melhor preco/nos Gratuitos.
+  private static boolean precoConfiavel(BigDecimal preco, BigDecimal precoNormal) {
+    return preco.signum() > 0 || (precoNormal != null && precoNormal.signum() > 0);
   }
 
   public static class BuscaCurtaException extends RuntimeException {}

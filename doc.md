@@ -144,6 +144,7 @@ ITAD e a fonte principal de catalogo e ofertas. O sistema trabalha somente com B
 - `rank` vem da ITAD: menor rank significa jogo mais relevante.
 - A busca consulta o banco primeiro; se nao encontrar, consulta ITAD e persiste os resultados.
 - A pagina de detalhe pode atualizar um jogo individualmente via ITAD.
+- **Preco zero suspeito (29/07/2026)**: a ITAD as vezes retorna uma oferta com `price = 0` **e** `regular = 0` juntos pra listagens sem dado real (delistada, placeholder) — nao e promocao de verdade, e como o `MIN(price)` sempre pega o menor valor, esse zero espurio virava "melhor preco" de jogos pagos. Uma promocao real de "100% off" tem `regular > 0` com `price = 0`; so nesse padrao o preco zero e confiavel (continua contando como melhor preco e aparecendo nos Gratuitos, que ja exige `regular_price > 0` em `RepositorioDescontos.listarMelhores`). `ServicoCatalogo.precoConfiavel` filtra isso nos tres pontos onde ofertas da ITAD sao salvas (`atualizarPrecos`, `atualizarPrecosEmLote`, `salvarOfertasDoSync`); 100 ofertas ja quebradas foram removidas em producao.
 
 ### Lojas e conteudos bloqueados
 
