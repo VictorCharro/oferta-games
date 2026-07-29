@@ -19,6 +19,9 @@ public class RepositorioDescontos {
 
   // Query pesada (DISTINCT ON + join em offers inteira) chamada 2x a cada carregamento da home.
   // TTL definido em ConfiguracaoCache (10min).
+  // price=0 entra sempre como 100% off (mesmo com regular_price nulo/0): jogos permanentemente
+  // gratis nao tem "preco normal" pra calcular desconto a partir dele, mas ainda sao gratuitos
+  // de verdade (ex: giveaway numa loja com o jogo ainda pago em outra).
   @Cacheable(ConfiguracaoCache.CACHE_DESCONTOS)
   public List<DescontoJogo> listarMelhores(int tamanho, String ordenacao) {
     String ordenarPor = "rank".equals(ordenacao)
@@ -37,13 +40,13 @@ public class RepositorioDescontos {
             o.price,
             o.regular_price,
             o.url,
-            ROUND((1 - o.price / o.regular_price) * 100)::integer AS discount_pct
+            CASE WHEN o.price = 0 THEN 100 ELSE ROUND((1 - o.price / o.regular_price) * 100)::integer END AS discount_pct
           FROM offers o
           JOIN games g ON g.id = o.game_id
-          WHERE o.regular_price IS NOT NULL
-            AND o.regular_price > 0
-            AND o.price < o.regular_price
-            AND o.price < o.regular_price * 0.99
+          WHERE (
+              o.price = 0
+              OR (o.regular_price IS NOT NULL AND o.regular_price > 0 AND o.price < o.regular_price * 0.99)
+            )
             %s
             %s
             %s
