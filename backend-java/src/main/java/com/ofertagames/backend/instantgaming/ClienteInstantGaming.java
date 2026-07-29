@@ -61,8 +61,15 @@ class ClienteInstantGaming {
     Element nomeEl = container.selectFirst("meta[itemprop=name]");
     Element precoEl = container.selectFirst("meta[itemprop=price]");
     Element moedaEl = container.selectFirst("meta[itemprop=priceCurrency]");
+    Element disponibilidadeEl = container.selectFirst("meta[itemprop=availability]");
     Element canonicalEl = documento.selectFirst("link[rel=canonical]");
     if (nomeEl == null || precoEl == null || canonicalEl == null) {
+      return Optional.empty();
+    }
+
+    // Fora de estoque: a pagina mantem o preco como "0.00" em vez de omitir o campo, o que sem
+    // essa checagem parecia o menor preco do catalogo (produto de graca que nem da pra comprar).
+    if (disponibilidadeEl != null && disponibilidadeEl.attr("content").toLowerCase(java.util.Locale.ROOT).contains("outofstock")) {
       return Optional.empty();
     }
 
@@ -76,6 +83,9 @@ class ClienteInstantGaming {
     try {
       preco = new BigDecimal(precoEl.attr("content").trim());
     } catch (NumberFormatException erro) {
+      return Optional.empty();
+    }
+    if (preco.signum() <= 0) {
       return Optional.empty();
     }
 

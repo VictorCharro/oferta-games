@@ -111,6 +111,17 @@ class RepositorioInstantGaming {
         .update();
   }
 
+  // Produto ficou fora de estoque (ou parou de existir): remove a oferta antiga, senao ela fica
+  // parecendo disponivel pra sempre com o ultimo preco conhecido.
+  void removerOferta(long jogoId) {
+    jdbc.sql("DELETE FROM offers WHERE game_id = :jogoId AND source = 'instant_gaming'")
+        .param("jogoId", jogoId)
+        .update();
+    jdbc.sql("UPDATE games SET last_instant_gaming_sync_at = now() WHERE id = :id")
+        .param("id", jogoId)
+        .update();
+  }
+
   Optional<String> buscarInstantGamingUrl(long jogoId) {
     return jdbc.sql("SELECT instant_gaming_url FROM games WHERE id = :id")
         .param("id", jogoId)

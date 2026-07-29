@@ -81,12 +81,15 @@ public class ServicoInstantGaming {
   }
 
   private boolean atualizarPrecoDoJogo(long jogoId, String url) {
-    return cliente.buscarProdutoPorUrl(url)
-        .map(produto -> {
-          repositorio.salvarPreco(jogoId, produto.preco(), produto.moeda(), comLinkAfiliado(produto.url()));
-          return true;
-        })
-        .orElse(false);
+    Optional<ClienteInstantGaming.ProdutoInstantGaming> produto = cliente.buscarProdutoPorUrl(url);
+    if (produto.isEmpty()) {
+      // Fora de estoque ou removido: tira a oferta antiga em vez de deixar um preco desatualizado
+      // parecendo disponivel.
+      repositorio.removerOferta(jogoId);
+      return false;
+    }
+    repositorio.salvarPreco(jogoId, produto.get().preco(), produto.get().moeda(), comLinkAfiliado(produto.get().url()));
+    return true;
   }
 
   private static String comLinkAfiliado(String url) {
