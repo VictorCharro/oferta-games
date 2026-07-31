@@ -44,11 +44,10 @@ class AgendadorColetas {
   }
 
   // Instant Gaming nao tem API: varredura por id numerico de produto (permitida pelo robots.txt
-  // deles, diferente da busca do site). Delay baixo temporario (3 min) pra cobrir o catalogo
-  // inteiro rapido; volta pra 900000 (15min) assim que a descoberta parar de crescer, ja que dai
-  // e so acompanhar produtos novos entrando no catalogo deles.
+  // deles, diferente da busca do site). Ritmo de manutencao (15min): a descoberta ja cobriu o
+  // catalogo quase todo, entao agora e so acompanhar produtos novos entrando no catalogo deles.
   @Scheduled(
-      fixedDelayString = "${app.sync.scheduler.instant-gaming-scan-delay-ms:180000}",
+      fixedDelayString = "${app.sync.scheduler.instant-gaming-scan-delay-ms:900000}",
       initialDelayString = "${app.sync.scheduler.instant-gaming-scan-initial-delay-ms:600000}")
   void escanearInstantGaming() {
     execucao.executar("instant-gaming-escaneamento", sincronizacao::sincronizarRodadaInstantGamingEscaneamento);

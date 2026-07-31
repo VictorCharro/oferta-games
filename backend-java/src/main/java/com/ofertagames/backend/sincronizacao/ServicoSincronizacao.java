@@ -21,12 +21,10 @@ public class ServicoSincronizacao {
   private static final int LIMITE_METADADOS_STEAM = 60;
   private static final int LIMITE_DETALHES_JOGOS = 60;
   private static final int LIMITE_CONQUISTAS_CATALOGO = 15;
-  // Valor alto temporario pra varrer o catalogo inteiro da Instant Gaming rapido: a varredura e
-  // cega por id sequencial (sem relacao com popularidade), entao so depois de cobrir o catalogo
-  // quase todo e que o casamento (que ja prioriza rank) consegue pegar os jogos populares de
-  // uma vez. Volta pro ritmo baixo de manutencao (so pegar produtos novos) quando a descoberta
-  // parar de crescer significativamente.
-  private static final int LIMITE_INSTANT_GAMING_ESCANEAMENTO = 300;
+  // Ritmo de manutencao: a varredura ja cobriu o catalogo da Instant Gaming quase por completo
+  // (crescimento estagnado), entao agora e so acompanhar produtos novos entrando no catalogo
+  // deles.
+  private static final int LIMITE_INSTANT_GAMING_ESCANEAMENTO = 30;
   private static final int LIMITE_INSTANT_GAMING_CASAMENTO = 200;
   // Comecou em 30/1h, mas com o casamento ja em ~100 jogos poucas horas apos a varredura
   // acelerada, esse ritmo nao dava conta de manter os precos atualizados com frequencia
