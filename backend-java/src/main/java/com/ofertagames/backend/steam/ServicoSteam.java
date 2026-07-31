@@ -26,7 +26,10 @@ import org.springframework.web.client.RestClient;
 
 @Service
 public class ServicoSteam {
-  private static final Pattern APP_ID = Pattern.compile("store\\.steampowered\\.com/app/(\\d+)");
+  // Jogos com aviso de conteudo (violencia/nudez) redirecionam para /agecheck/app/<id>/ em vez de
+  // /app/<id>/ direto; sem o grupo opcional o appId nunca era extraido e o jogo ficava sem
+  // steam_app_id pra sempre, bloqueando reviews/detalhes/conquistas.
+  private static final Pattern APP_ID = Pattern.compile("store\\.steampowered\\.com/(?:agecheck/)?app/(\\d+)");
 
   private final RestClient restClient;
   private final HttpClient clienteHttp;
