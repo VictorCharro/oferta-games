@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -55,6 +55,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   avatarEditing = false;
   readonly avatarMinZoom = 1.15;
   @ViewChild('avatarCropFrame') avatarCropFrame?: ElementRef<HTMLDivElement>;
+  @ViewChild('avatarCropImg') avatarCropImgRef?: ElementRef<HTMLImageElement>;
   private avatarNaturalWidth = 0;
   private avatarNaturalHeight = 0;
   private avatarDisplayNaturalWidth = 0;
@@ -67,6 +68,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   bannerEditing = false;
   readonly bannerMinZoom = 1.15;
   @ViewChild('bannerCropFrame') bannerCropFrame?: ElementRef<HTMLDivElement>;
+  @ViewChild('bannerCropImg') bannerCropImgRef?: ElementRef<HTMLImageElement>;
   private bannerFile: File | null = null;
   private bannerNaturalWidth = 0;
   private bannerNaturalHeight = 0;
@@ -119,6 +121,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     private games: GameService,
     public auth: AuthService,
     private cdr: ChangeDetectorRef,
+    private zone: NgZone,
   ) {}
 
   ngOnInit() {
@@ -130,6 +133,8 @@ export class PublicProfile implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
     clearTimeout(this.buscaCatalogoTimer);
+    this.detachAvatarDragListeners();
+    this.detachBannerDragListeners();
   }
 
   private async loadProfile(handle: string) {
@@ -1106,6 +1111,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   cancelAvatarEdit() {
+    this.detachAvatarDragListeners();
     if (this.avatarPreview) URL.revokeObjectURL(this.avatarPreview);
     this.avatarPreview = '';
     this.avatarFile = null;
@@ -1151,11 +1157,20 @@ export class PublicProfile implements OnInit, OnDestroy {
       startPosX: this.avatarPositionX,
       startPosY: this.avatarPositionY,
     };
+    // Move/up ficam fora da zone do Angular: como sao listeners no document, qualquer
+    // mousemove na pagina inteira dispara change detection se registrados via @HostListener,
+    // o que reprocessa a arvore de componentes inteira a cada pixel arrastado e "pisca" o
+    // fundo desfocado atras do modal. Aqui atualizamos o transform direto no DOM e so
+    // voltamos pra zone (uma unica vez) quando o arraste termina.
+    this.zone.runOutsideAngular(() => {
+      document.addEventListener('mousemove', this.onAvatarDragMove);
+      document.addEventListener('touchmove', this.onAvatarDragMove, { passive: false });
+      document.addEventListener('mouseup', this.onAvatarDragEnd);
+      document.addEventListener('touchend', this.onAvatarDragEnd);
+    });
   }
 
-  @HostListener('document:mousemove', ['$event'])
-  @HostListener('document:touchmove', ['$event'])
-  onAvatarDragMove(event: MouseEvent | TouchEvent) {
+  private onAvatarDragMove = (event: MouseEvent | TouchEvent) => {
     if (!this.avatarDrag) return;
     event.preventDefault();
     const point = 'touches' in event ? event.touches[0] : event;
@@ -1165,12 +1180,26 @@ export class PublicProfile implements OnInit, OnDestroy {
     const dy = point.clientY - this.avatarDrag.startY;
     this.avatarPositionX = this.clampPercent(this.avatarDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
     this.avatarPositionY = this.clampPercent(this.avatarDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
-  }
+    const img = this.avatarCropImgRef?.nativeElement;
+    if (img) {
+      const offsetX = ((this.avatarPositionX - 50) / 50) * geo.maxOffsetX;
+      const offsetY = ((this.avatarPositionY - 50) / 50) * geo.maxOffsetY;
+      img.style.transform = `translate(-50%, -50%) translate(${offsetX}px, ${offsetY}px)`;
+    }
+  };
 
-  @HostListener('document:mouseup')
-  @HostListener('document:touchend')
-  onAvatarDragEnd() {
+  private onAvatarDragEnd = () => {
+    this.detachAvatarDragListeners();
+    if (!this.avatarDrag) return;
     this.avatarDrag = null;
+    this.zone.run(() => this.cdr.detectChanges());
+  };
+
+  private detachAvatarDragListeners() {
+    document.removeEventListener('mousemove', this.onAvatarDragMove);
+    document.removeEventListener('touchmove', this.onAvatarDragMove);
+    document.removeEventListener('mouseup', this.onAvatarDragEnd);
+    document.removeEventListener('touchend', this.onAvatarDragEnd);
   }
 
   onAvatarWheel(event: WheelEvent) {
@@ -1241,6 +1270,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   cancelBannerEdit() {
+    this.detachBannerDragListeners();
     if (this.bannerPreview) URL.revokeObjectURL(this.bannerPreview);
     this.bannerPreview = '';
     this.bannerFile = null;
@@ -1288,11 +1318,17 @@ export class PublicProfile implements OnInit, OnDestroy {
       startPosX: this.bannerPositionX,
       startPosY: this.bannerPositionY,
     };
+    // Mesmo motivo do onAvatarDragStart: mantem o arraste fora da zone do Angular pra nao
+    // disparar change detection da pagina inteira a cada pixel movido.
+    this.zone.runOutsideAngular(() => {
+      document.addEventListener('mousemove', this.onBannerDragMove);
+      document.addEventListener('touchmove', this.onBannerDragMove, { passive: false });
+      document.addEventListener('mouseup', this.onBannerDragEnd);
+      document.addEventListener('touchend', this.onBannerDragEnd);
+    });
   }
 
-  @HostListener('document:mousemove', ['$event'])
-  @HostListener('document:touchmove', ['$event'])
-  onBannerDragMove(event: MouseEvent | TouchEvent) {
+  private onBannerDragMove = (event: MouseEvent | TouchEvent) => {
     if (!this.bannerDrag) return;
     event.preventDefault();
     const point = 'touches' in event ? event.touches[0] : event;
@@ -1302,12 +1338,26 @@ export class PublicProfile implements OnInit, OnDestroy {
     const dy = point.clientY - this.bannerDrag.startY;
     this.bannerPositionX = this.clampPercent(this.bannerDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
     this.bannerPositionY = this.clampPercent(this.bannerDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
-  }
+    const img = this.bannerCropImgRef?.nativeElement;
+    if (img) {
+      const offsetX = ((this.bannerPositionX - 50) / 50) * geo.maxOffsetX;
+      const offsetY = ((this.bannerPositionY - 50) / 50) * geo.maxOffsetY;
+      img.style.transform = `translate(-50%, -50%) translate(${offsetX}px, ${offsetY}px)`;
+    }
+  };
 
-  @HostListener('document:mouseup')
-  @HostListener('document:touchend')
-  onBannerDragEnd() {
+  private onBannerDragEnd = () => {
+    this.detachBannerDragListeners();
+    if (!this.bannerDrag) return;
     this.bannerDrag = null;
+    this.zone.run(() => this.cdr.detectChanges());
+  };
+
+  private detachBannerDragListeners() {
+    document.removeEventListener('mousemove', this.onBannerDragMove);
+    document.removeEventListener('touchmove', this.onBannerDragMove);
+    document.removeEventListener('mouseup', this.onBannerDragEnd);
+    document.removeEventListener('touchend', this.onBannerDragEnd);
   }
 
   onBannerWheel(event: WheelEvent) {
