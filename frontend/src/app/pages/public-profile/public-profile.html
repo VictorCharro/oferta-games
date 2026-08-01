@@ -26,8 +26,10 @@
         <div
           class="block-image-crop-preview banner-crop-preview"
           #bannerCropFrame
-          (mousedown)="onBannerDragStart($event)"
-          (touchstart)="onBannerDragStart($event)"
+          (pointerdown)="onBannerPointerStart($event)"
+          (pointermove)="onBannerPointerMove($event)"
+          (pointerup)="onBannerPointerEnd($event)"
+          (pointercancel)="onBannerPointerEnd($event)"
           (wheel)="onBannerWheel($event)"
         >
           <img [src]="bannerPreview" alt="Previa do banner" (load)="onBannerCropImageLoad($event)" [ngStyle]="bannerEditStyle()" draggable="false" />
@@ -86,8 +88,10 @@
             <div
               class="block-image-crop-preview avatar-crop-preview"
               #avatarCropFrame
-              (mousedown)="onAvatarDragStart($event)"
-              (touchstart)="onAvatarDragStart($event)"
+              (pointerdown)="onAvatarPointerStart($event)"
+              (pointermove)="onAvatarPointerMove($event)"
+              (pointerup)="onAvatarPointerEnd($event)"
+              (pointercancel)="onAvatarPointerEnd($event)"
               (wheel)="onAvatarWheel($event)"
             >
               <img [src]="avatarPreview" alt="Previa da foto" (load)="onAvatarCropImageLoad($event)" [ngStyle]="avatarEditStyle()" draggable="false" />

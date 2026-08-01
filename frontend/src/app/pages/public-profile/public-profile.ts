@@ -60,6 +60,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   private avatarDisplayNaturalWidth = 0;
   private avatarDisplayNaturalHeight = 0;
   private avatarDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
+  private avatarPointerId: number | null = null;
   bannerZoom = 1;
   bannerPositionX = 50;
   bannerPositionY = 50;
@@ -73,6 +74,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   private bannerDisplayNaturalWidth = 0;
   private bannerDisplayNaturalHeight = 0;
   private bannerDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
+  private bannerPointerId: number | null = null;
   editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
   textColorMenuBlockId: string | null = null;
   globalColorMenuOpen = false;
@@ -130,8 +132,6 @@ export class PublicProfile implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
     clearTimeout(this.buscaCatalogoTimer);
-    this.detachAvatarDragListeners();
-    this.detachBannerDragListeners();
   }
 
   private async loadProfile(handle: string) {
@@ -1113,12 +1113,12 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   cancelAvatarEdit() {
-    this.detachAvatarDragListeners();
     if (this.avatarPreview) URL.revokeObjectURL(this.avatarPreview);
     this.avatarPreview = '';
     this.avatarFile = null;
     this.avatarEditing = false;
     this.avatarDrag = null;
+    this.avatarPointerId = null;
     this.avatarZoom = this.profile?.avatarZoom || 1;
     this.avatarPositionX = this.profile?.avatarPosicaoX ?? 50;
     this.avatarPositionY = this.profile?.avatarPosicaoY ?? 50;
@@ -1143,6 +1143,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     const img = event.target as HTMLImageElement;
     this.avatarNaturalWidth = img.naturalWidth;
     this.avatarNaturalHeight = img.naturalHeight;
+    this.cdr.detectChanges();
   }
 
   avatarEditStyle(): Record<string, string> {
@@ -1150,48 +1151,40 @@ export class PublicProfile implements OnInit, OnDestroy {
     return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarNaturalWidth, this.avatarNaturalHeight, this.avatarZoom, this.avatarPositionX, this.avatarPositionY);
   }
 
-  onAvatarDragStart(event: MouseEvent | TouchEvent) {
+  // Mesmo padrao de arraste do bloco de imagem custom (onBlockImagePointer*): pointer events
+  // com setPointerCapture no proprio elemento, em vez de listeners no document. Isso evita o
+  // @HostListener('document:mousemove') que disparava change detection da pagina inteira a
+  // qualquer movimento do mouse (arrastando ou nao).
+  onAvatarPointerStart(event: PointerEvent) {
     event.preventDefault();
-    const point = 'touches' in event ? event.touches[0] : event;
+    const frame = event.currentTarget as HTMLDivElement;
+    frame.setPointerCapture(event.pointerId);
+    this.avatarPointerId = event.pointerId;
     this.avatarDrag = {
-      startX: point.clientX,
-      startY: point.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
       startPosX: this.avatarPositionX,
       startPosY: this.avatarPositionY,
     };
-    // Os listeners de move/up so existem enquanto o arraste esta ativo (em vez de um
-    // @HostListener sempre ligado no document): assim qualquer mousemove fora do arraste
-    // nao dispara change detection da pagina inteira, sem precisar sair da zone do Angular
-    // nem mexer no DOM na mao (o que da problema com o fallback do ngStyle antes do
-    // ViewChild do frame resolver).
-    document.addEventListener('mousemove', this.onAvatarDragMove);
-    document.addEventListener('touchmove', this.onAvatarDragMove, { passive: false });
-    document.addEventListener('mouseup', this.onAvatarDragEnd);
-    document.addEventListener('touchend', this.onAvatarDragEnd);
   }
 
-  private onAvatarDragMove = (event: MouseEvent | TouchEvent) => {
-    if (!this.avatarDrag) return;
+  onAvatarPointerMove(event: PointerEvent) {
+    if (!this.avatarDrag || this.avatarPointerId !== event.pointerId) return;
     event.preventDefault();
-    const point = 'touches' in event ? event.touches[0] : event;
     const frame = this.avatarCropFrame?.nativeElement;
     const geo = this.coverGeometry(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarNaturalWidth, this.avatarNaturalHeight, this.avatarZoom);
-    const dx = point.clientX - this.avatarDrag.startX;
-    const dy = point.clientY - this.avatarDrag.startY;
+    const dx = event.clientX - this.avatarDrag.startX;
+    const dy = event.clientY - this.avatarDrag.startY;
     this.avatarPositionX = this.clampPercent(this.avatarDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
     this.avatarPositionY = this.clampPercent(this.avatarDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
-  };
+  }
 
-  private onAvatarDragEnd = () => {
-    this.detachAvatarDragListeners();
+  onAvatarPointerEnd(event: PointerEvent) {
+    if (this.avatarPointerId !== event.pointerId) return;
+    const frame = event.currentTarget as HTMLDivElement;
+    if (frame.hasPointerCapture(event.pointerId)) frame.releasePointerCapture(event.pointerId);
     this.avatarDrag = null;
-  };
-
-  private detachAvatarDragListeners() {
-    document.removeEventListener('mousemove', this.onAvatarDragMove);
-    document.removeEventListener('touchmove', this.onAvatarDragMove);
-    document.removeEventListener('mouseup', this.onAvatarDragEnd);
-    document.removeEventListener('touchend', this.onAvatarDragEnd);
+    this.avatarPointerId = null;
   }
 
   onAvatarWheel(event: WheelEvent) {
@@ -1262,12 +1255,12 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   cancelBannerEdit() {
-    this.detachBannerDragListeners();
     if (this.bannerPreview) URL.revokeObjectURL(this.bannerPreview);
     this.bannerPreview = '';
     this.bannerFile = null;
     this.bannerEditing = false;
     this.bannerDrag = null;
+    this.bannerPointerId = null;
     this.bannerZoom = this.profile?.bannerZoom || 1;
     this.bannerPositionX = this.profile?.bannerPosicaoX ?? 50;
     this.bannerPositionY = this.profile?.bannerPosicaoY ?? 50;
@@ -1294,6 +1287,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     const img = event.target as HTMLImageElement;
     this.bannerNaturalWidth = img.naturalWidth;
     this.bannerNaturalHeight = img.naturalHeight;
+    this.cdr.detectChanges();
   }
 
   bannerEditStyle(): Record<string, string> {
@@ -1301,46 +1295,37 @@ export class PublicProfile implements OnInit, OnDestroy {
     return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerNaturalWidth, this.bannerNaturalHeight, this.bannerZoom, this.bannerPositionX, this.bannerPositionY);
   }
 
-  onBannerDragStart(event: MouseEvent | TouchEvent) {
+  // Mesmo padrao de arraste do bloco de imagem custom (onBlockImagePointer*).
+  onBannerPointerStart(event: PointerEvent) {
     event.preventDefault();
-    const point = 'touches' in event ? event.touches[0] : event;
+    const frame = event.currentTarget as HTMLDivElement;
+    frame.setPointerCapture(event.pointerId);
+    this.bannerPointerId = event.pointerId;
     this.bannerDrag = {
-      startX: point.clientX,
-      startY: point.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
       startPosX: this.bannerPositionX,
       startPosY: this.bannerPositionY,
     };
-    // Os listeners de move/up so existem enquanto o arraste esta ativo (em vez de um
-    // @HostListener sempre ligado no document): assim qualquer mousemove fora do arraste
-    // nao dispara change detection da pagina inteira.
-    document.addEventListener('mousemove', this.onBannerDragMove);
-    document.addEventListener('touchmove', this.onBannerDragMove, { passive: false });
-    document.addEventListener('mouseup', this.onBannerDragEnd);
-    document.addEventListener('touchend', this.onBannerDragEnd);
   }
 
-  private onBannerDragMove = (event: MouseEvent | TouchEvent) => {
-    if (!this.bannerDrag) return;
+  onBannerPointerMove(event: PointerEvent) {
+    if (!this.bannerDrag || this.bannerPointerId !== event.pointerId) return;
     event.preventDefault();
-    const point = 'touches' in event ? event.touches[0] : event;
     const frame = this.bannerCropFrame?.nativeElement;
     const geo = this.coverGeometry(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerNaturalWidth, this.bannerNaturalHeight, this.bannerZoom);
-    const dx = point.clientX - this.bannerDrag.startX;
-    const dy = point.clientY - this.bannerDrag.startY;
+    const dx = event.clientX - this.bannerDrag.startX;
+    const dy = event.clientY - this.bannerDrag.startY;
     this.bannerPositionX = this.clampPercent(this.bannerDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
     this.bannerPositionY = this.clampPercent(this.bannerDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
-  };
+  }
 
-  private onBannerDragEnd = () => {
-    this.detachBannerDragListeners();
+  onBannerPointerEnd(event: PointerEvent) {
+    if (this.bannerPointerId !== event.pointerId) return;
+    const frame = event.currentTarget as HTMLDivElement;
+    if (frame.hasPointerCapture(event.pointerId)) frame.releasePointerCapture(event.pointerId);
     this.bannerDrag = null;
-  };
-
-  private detachBannerDragListeners() {
-    document.removeEventListener('mousemove', this.onBannerDragMove);
-    document.removeEventListener('touchmove', this.onBannerDragMove);
-    document.removeEventListener('mouseup', this.onBannerDragEnd);
-    document.removeEventListener('touchend', this.onBannerDragEnd);
+    this.bannerPointerId = null;
   }
 
   onBannerWheel(event: WheelEvent) {
