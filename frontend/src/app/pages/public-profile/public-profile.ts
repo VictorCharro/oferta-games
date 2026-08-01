@@ -478,9 +478,9 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   addBlock(tipo: PerfilBloco['tipo']) {
-    if (['favoritos', 'biblioteca', 'atividade'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
+    if (['favoritos', 'biblioteca', 'atividade', 'platinados'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
     const id = `custom-${crypto.randomUUID()}`;
-    this.layoutDraft.push({ id: ['favoritos', 'biblioteca', 'atividade'].includes(tipo) ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
+    this.layoutDraft.push({ id: ['favoritos', 'biblioteca', 'atividade', 'platinados'].includes(tipo) ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
   }
 
   removeBlock(index: number) { this.layoutDraft.splice(index, 1); this.layoutDraft.forEach((block, position) => block.posicao = position); }
@@ -849,6 +849,17 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   libraryPreview(block: PerfilBloco) {
     return this.libraryGames.slice(0, this.previewLimit(block.tamanho));
+  }
+
+  get platinumGames(): PerfilPublico['biblioteca'] {
+    if (!this.profile) return [];
+    return this.profile.biblioteca
+      .filter(game => game.conquistasTotal > 0 && game.conquistasDesbloqueadas >= game.conquistasTotal)
+      .sort((a, b) => b.minutosJogadas - a.minutosJogadas);
+  }
+
+  platinumPreview(block: PerfilBloco) {
+    return this.platinumGames.slice(0, this.previewLimit(block.tamanho));
   }
 
   activityPreview(block: PerfilBloco) {
