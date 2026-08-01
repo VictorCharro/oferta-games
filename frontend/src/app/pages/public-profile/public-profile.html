@@ -302,12 +302,12 @@
             <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'fundo')">Usar URL</button>
           </div>
         </ng-container>
-        <div *ngIf="block.tipo === 'texto' || block.tipo === 'links' || block.tipo === 'imagem'" class="block-content-fields" [class.block-title-only]="block.tipo === 'imagem'">
+        <div *ngIf="block.tipo === 'texto' || block.tipo === 'links'" class="block-content-fields">
           <label>
             <span>Titulo do bloco <small>{{ (block.titulo || '').length }}/{{ maxTitleLength(block) }}</small></span>
             <input [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Titulo" />
           </label>
-          <label *ngIf="block.tipo !== 'imagem'">
+          <label>
             <span>{{ block.tipo === 'links' ? 'Links' : 'Conteudo' }} <small>{{ (block.conteudo || '').length }}/{{ maxContentLength(block) }}</small></span>
             <textarea
               [(ngModel)]="block.conteudo"
@@ -422,7 +422,10 @@
           ><h2 class="custom-block-title">{{ block.titulo || 'Texto' }}</h2>
           <p class="custom-text-content">{{ block.conteudo || 'Escreva algo sobre você.' }}</p></ng-container
         ><ng-container *ngSwitchCase="'imagem'"
-          ><h2 *ngIf="block.titulo">{{ block.titulo }}</h2>
+          ><div class="panel-heading" *ngIf="(!editingLayout && block.titulo) || editingLayout">
+            <h2 *ngIf="!editingLayout && block.titulo">{{ block.titulo }}</h2>
+            <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Titulo (opcional)" />
+          </div>
           <div *ngIf="blockImageUrl(block); else emptyImage" class="custom-image-frame" #imgFrame><img class="custom-image" [src]="blockImageUrl(block)" alt="Imagem do perfil" (load)="onCustomImageLoad($event, block)" [ngStyle]="blockImageStyle(block, imgFrame)" /></div>
           <ng-template #emptyImage><p>Adicione uma imagem no modo de edição.</p></ng-template></ng-container
         ><ng-container *ngSwitchCase="'links'"
