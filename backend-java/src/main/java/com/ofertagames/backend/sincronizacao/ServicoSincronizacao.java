@@ -20,7 +20,11 @@ public class ServicoSincronizacao {
   private static final int TAMANHO_LOTE_PRECOS = 200;
   private static final int LIMITE_METADADOS_STEAM = 60;
   private static final int LIMITE_DETALHES_JOGOS = 60;
-  private static final int LIMITE_CONQUISTAS_CATALOGO = 15;
+  // Valor alto temporario: o fix do regex de agecheck (750920/Shadow of the Tomb Raider etc)
+  // liberou o steam_app_id de centenas de jogos que antes ficavam bloqueados pra sempre,
+  // dobrando o backlog de conquistas pendentes (~769 -> ~1724). Volta pro ritmo baixo de
+  // manutencao quando o backlog zerar.
+  private static final int LIMITE_CONQUISTAS_CATALOGO = 250;
   // Ritmo de manutencao: a varredura ja cobriu o catalogo da Instant Gaming quase por completo
   // (crescimento estagnado), entao agora e so acompanhar produtos novos entrando no catalogo
   // deles.
