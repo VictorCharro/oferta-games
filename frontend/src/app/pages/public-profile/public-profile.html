@@ -302,12 +302,12 @@
             <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'fundo')">Usar URL</button>
           </div>
         </ng-container>
-        <div *ngIf="block.tipo === 'texto' || block.tipo === 'links'" class="block-content-fields">
+        <div *ngIf="block.tipo === 'texto' || block.tipo === 'links' || block.tipo === 'imagem'" class="block-content-fields" [class.block-title-only]="block.tipo === 'imagem'">
           <label>
             <span>Titulo do bloco <small>{{ (block.titulo || '').length }}/{{ maxTitleLength(block) }}</small></span>
             <input [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Titulo" />
           </label>
-          <label>
+          <label *ngIf="block.tipo !== 'imagem'">
             <span>{{ block.tipo === 'links' ? 'Links' : 'Conteudo' }} <small>{{ (block.conteudo || '').length }}/{{ maxContentLength(block) }}</small></span>
             <textarea
               [(ngModel)]="block.conteudo"
