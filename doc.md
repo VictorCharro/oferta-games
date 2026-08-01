@@ -151,7 +151,7 @@ ITAD e a fonte principal de catalogo e ofertas. O sistema trabalha somente com B
 
 As regras ficam no backend em classes de dominio, nao no frontend:
 
-- `LojasBloqueadas.java`: GreenManGaming, AllYouPay/AllYouPlay, PlanetPlay, PlayerLand, JoyBuggy, WinGameStore, MacGameStore e Humble Store/Humble Bundle, porque os links nao abriam corretamente.
+- `LojasBloqueadas.java`: GreenManGaming, AllYouPay/AllYouPlay, PlanetPlay, PlayerLand, JoyBuggy, WinGameStore, MacGameStore e Humble Store/Humble Bundle, porque os links nao abriam corretamente. GamesPlanet US/FR/DE/UK (01/08/2026), porque mostram preco em USD/EUR/GBP em vez de BRL — nao existe uma variante "GamesPlanet BR". Ofertas ja salvas dessas lojas nao sao apagadas, so ficam de fora de toda leitura via `filtroLojaBloqueada`/`LojasBloqueadas.filtroSql` (mesmo padrao das outras lojas bloqueadas).
 - `JogosBloqueados.java`: itens especificos com link quebrado, incluindo `tell-me-why-chapter-1` e a URL ITAD `019e8518-404a-709b-ae47-a4ef949552ea`.
 - `ConteudosNaoJogos.java`: cursos, bundles educacionais e musicais nao aparecem como jogos. Exemplos de termos filtrados: certification, e-learning, Kali Linux, programming bundle, cybersecurity, phonk e masterclass.
 

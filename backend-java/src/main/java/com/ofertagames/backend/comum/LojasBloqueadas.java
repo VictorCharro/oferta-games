@@ -13,10 +13,14 @@ public final class LojasBloqueadas {
       "wingamestore",
       "macgamestore",
       "humblestore",
-      "humblebundle"
+      "humblebundle",
+      "gamesplanetus",
+      "gamesplanetfr",
+      "gamesplanetde",
+      "gamesplanetuk"
   );
 
-  private static final String REGEX_SQL = "(greenmangaming|allyoupay|allyouplay|planetplay|playerland|joybuggy|wingamestore|macgamestore|humblestore|humblebundle)";
+  private static final String REGEX_SQL = "(greenmangaming|allyoupay|allyouplay|planetplay|playerland|joybuggy|wingamestore|macgamestore|humblestore|humblebundle|gamesplanetus|gamesplanetfr|gamesplanetde|gamesplanetuk)";
 
   private LojasBloqueadas() {}
 
