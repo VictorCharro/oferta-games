@@ -55,10 +55,6 @@ export class PublicProfile implements OnInit, OnDestroy {
   avatarEditing = false;
   readonly avatarMinZoom = 1.15;
   @ViewChild('avatarCropFrame') avatarCropFrame?: ElementRef<HTMLDivElement>;
-  private avatarNaturalWidth = 0;
-  private avatarNaturalHeight = 0;
-  private avatarDisplayNaturalWidth = 0;
-  private avatarDisplayNaturalHeight = 0;
   private avatarDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
   private avatarPointerId: number | null = null;
   bannerZoom = 1;
@@ -69,10 +65,6 @@ export class PublicProfile implements OnInit, OnDestroy {
   readonly bannerMinZoom = 1.15;
   @ViewChild('bannerCropFrame') bannerCropFrame?: ElementRef<HTMLDivElement>;
   private bannerFile: File | null = null;
-  private bannerNaturalWidth = 0;
-  private bannerNaturalHeight = 0;
-  private bannerDisplayNaturalWidth = 0;
-  private bannerDisplayNaturalHeight = 0;
   private bannerDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
   private bannerPointerId: number | null = null;
   editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
@@ -737,6 +729,30 @@ export class PublicProfile implements OnInit, OnDestroy {
     return Math.min(100, Math.max(0, value));
   }
 
+  // Estilo de crop do banner/avatar via object-fit + object-position nativos do CSS, em vez de
+  // calcular width/height/transform na mao a partir das dimensoes naturais da imagem e do frame
+  // (o que dependia do ViewChild do frame e do onload da imagem terem resolvido a tempo, e
+  // ocasionalmente colapsava pra um estado em branco). O object-position usa a escala invertida
+  // (100 - x) porque positionX/Y aqui sempre significaram "quanto revelar do lado esquerdo/topo",
+  // e object-position 100% revela o lado direito/inferior - precisa inverter pra manter o mesmo
+  // sentido de arraste e os valores ja salvos no banco compativeis.
+  private objectCoverStyle(zoom: number, positionX: number, positionY: number): Record<string, string> {
+    const posX = 100 - this.clampPercent(positionX);
+    const posY = 100 - this.clampPercent(positionY);
+    return {
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      objectPosition: `${posX}% ${posY}%`,
+      transform: zoom > 1 ? `scale(${zoom})` : 'none',
+      transformOrigin: `${posX}% ${posY}%`,
+    };
+  }
+
+  private dragDeltaToPercent(deltaPx: number, frameSize: number, zoom: number): number {
+    return frameSize > 0 ? (deltaPx / frameSize) * (100 / Math.max(zoom, 1)) : 0;
+  }
+
   async saveBlockImageEdit(block: PerfilBloco) {
     if (!this.auth.user) return;
     let imageUrl = this.blockImageExternalUrl || this.blockImageData(block).url;
@@ -1090,23 +1106,19 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  async onAvatarSelected(event: Event) {
+  onAvatarSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
     if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de ate 2 MB.'; return; }
     if (!this.auth.user || !this.profile) return;
 
-    const previewUrl = URL.createObjectURL(file);
-    const { width, height } = await this.loadImageSize(previewUrl);
     if (this.avatarPreview) URL.revokeObjectURL(this.avatarPreview);
-    this.avatarPreview = previewUrl;
+    this.avatarPreview = URL.createObjectURL(file);
     this.avatarFile = file;
     this.avatarZoom = this.avatarMinZoom;
     this.avatarPositionX = 50;
     this.avatarPositionY = 50;
-    this.avatarNaturalWidth = width;
-    this.avatarNaturalHeight = height;
     this.avatarEditing = true;
     input.value = '';
     this.cdr.detectChanges();
@@ -1124,31 +1136,18 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.avatarPositionY = this.profile?.avatarPosicaoY ?? 50;
   }
 
-  onAvatarDisplayLoad(event: Event) {
-    const img = event.target as HTMLImageElement;
-    this.avatarDisplayNaturalWidth = img.naturalWidth;
-    this.avatarDisplayNaturalHeight = img.naturalHeight;
-  }
-
-  avatarDisplayStyle(frame: HTMLElement): Record<string, string> {
-    // Mesmo motivo do bannerDisplayStyle: usa o zoom/posicao salvos, nao o rascunho ao vivo do
-    // crop, pra o avatar de fundo nao piscar atras do modal semi-transparente durante o ajuste.
+  avatarDisplayStyle(): Record<string, string> {
+    // Usa sempre o zoom/posicao salvos (nao o rascunho ao vivo do crop): o avatar de fundo fica
+    // visivel atras do modal semi-transparente/desfocado, entao se ele seguisse o rascunho ao
+    // vivo do crop ficaria piscando atras do modal a cada movimento do mouse durante o ajuste.
     const zoom = this.profile?.avatarZoom ?? 1;
     const posX = this.profile?.avatarPosicaoX ?? 50;
     const posY = this.profile?.avatarPosicaoY ?? 50;
-    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarDisplayNaturalWidth, this.avatarDisplayNaturalHeight, zoom, posX, posY);
-  }
-
-  onAvatarCropImageLoad(event: Event) {
-    const img = event.target as HTMLImageElement;
-    this.avatarNaturalWidth = img.naturalWidth;
-    this.avatarNaturalHeight = img.naturalHeight;
-    this.cdr.detectChanges();
+    return this.objectCoverStyle(zoom, posX, posY);
   }
 
   avatarEditStyle(): Record<string, string> {
-    const frame = this.avatarCropFrame?.nativeElement;
-    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarNaturalWidth, this.avatarNaturalHeight, this.avatarZoom, this.avatarPositionX, this.avatarPositionY);
+    return this.objectCoverStyle(this.avatarZoom, this.avatarPositionX, this.avatarPositionY);
   }
 
   // Mesmo padrao de arraste do bloco de imagem custom (onBlockImagePointer*): pointer events
@@ -1172,11 +1171,11 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (!this.avatarDrag || this.avatarPointerId !== event.pointerId) return;
     event.preventDefault();
     const frame = this.avatarCropFrame?.nativeElement;
-    const geo = this.coverGeometry(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarNaturalWidth, this.avatarNaturalHeight, this.avatarZoom);
+    const frameSize = frame?.clientWidth || 0;
     const dx = event.clientX - this.avatarDrag.startX;
     const dy = event.clientY - this.avatarDrag.startY;
-    this.avatarPositionX = this.clampPercent(this.avatarDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
-    this.avatarPositionY = this.clampPercent(this.avatarDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
+    this.avatarPositionX = this.clampPercent(this.avatarDrag.startPosX + this.dragDeltaToPercent(dx, frameSize, this.avatarZoom));
+    this.avatarPositionY = this.clampPercent(this.avatarDrag.startPosY + this.dragDeltaToPercent(dy, frameSize, this.avatarZoom));
   }
 
   onAvatarPointerEnd(event: PointerEvent) {
@@ -1223,35 +1222,22 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  async onBannerSelected(event: Event) {
+  onBannerSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
     if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de ate 2 MB.'; return; }
     if (!this.auth.user || !this.profile) return;
 
-    const previewUrl = URL.createObjectURL(file);
-    const { width, height } = await this.loadImageSize(previewUrl);
     if (this.bannerPreview) URL.revokeObjectURL(this.bannerPreview);
-    this.bannerPreview = previewUrl;
+    this.bannerPreview = URL.createObjectURL(file);
     this.bannerFile = file;
     this.bannerZoom = this.bannerMinZoom;
     this.bannerPositionX = 50;
     this.bannerPositionY = 50;
-    this.bannerNaturalWidth = width;
-    this.bannerNaturalHeight = height;
     this.bannerEditing = true;
     input.value = '';
     this.cdr.detectChanges();
-  }
-
-  private loadImageSize(url: string): Promise<{ width: number; height: number }> {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      img.onerror = () => resolve({ width: 0, height: 0 });
-      img.src = url;
-    });
   }
 
   cancelBannerEdit() {
@@ -1266,13 +1252,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.bannerPositionY = this.profile?.bannerPosicaoY ?? 50;
   }
 
-  onBannerDisplayLoad(event: Event) {
-    const img = event.target as HTMLImageElement;
-    this.bannerDisplayNaturalWidth = img.naturalWidth;
-    this.bannerDisplayNaturalHeight = img.naturalHeight;
-  }
-
-  bannerDisplayStyle(frame: HTMLElement): Record<string, string> {
+  bannerDisplayStyle(): Record<string, string> {
     // Usa sempre o zoom/posicao salvos (nao o rascunho ao vivo do crop): o banner de fundo
     // fica visivel atras do modal semi-transparente/desfocado, entao se ele seguisse
     // bannerZoom/bannerPositionX/Y (que o drag do crop atualiza em tempo real) ficava piscando
@@ -1280,19 +1260,11 @@ export class PublicProfile implements OnInit, OnDestroy {
     const zoom = this.profile?.bannerZoom ?? 1;
     const posX = this.profile?.bannerPosicaoX ?? 50;
     const posY = this.profile?.bannerPosicaoY ?? 50;
-    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerDisplayNaturalWidth, this.bannerDisplayNaturalHeight, zoom, posX, posY);
-  }
-
-  onBannerCropImageLoad(event: Event) {
-    const img = event.target as HTMLImageElement;
-    this.bannerNaturalWidth = img.naturalWidth;
-    this.bannerNaturalHeight = img.naturalHeight;
-    this.cdr.detectChanges();
+    return this.objectCoverStyle(zoom, posX, posY);
   }
 
   bannerEditStyle(): Record<string, string> {
-    const frame = this.bannerCropFrame?.nativeElement;
-    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerNaturalWidth, this.bannerNaturalHeight, this.bannerZoom, this.bannerPositionX, this.bannerPositionY);
+    return this.objectCoverStyle(this.bannerZoom, this.bannerPositionX, this.bannerPositionY);
   }
 
   // Mesmo padrao de arraste do bloco de imagem custom (onBlockImagePointer*).
@@ -1313,11 +1285,10 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (!this.bannerDrag || this.bannerPointerId !== event.pointerId) return;
     event.preventDefault();
     const frame = this.bannerCropFrame?.nativeElement;
-    const geo = this.coverGeometry(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerNaturalWidth, this.bannerNaturalHeight, this.bannerZoom);
     const dx = event.clientX - this.bannerDrag.startX;
     const dy = event.clientY - this.bannerDrag.startY;
-    this.bannerPositionX = this.clampPercent(this.bannerDrag.startPosX + this.pixelsToPercent(dx, geo.maxOffsetX));
-    this.bannerPositionY = this.clampPercent(this.bannerDrag.startPosY + this.pixelsToPercent(dy, geo.maxOffsetY));
+    this.bannerPositionX = this.clampPercent(this.bannerDrag.startPosX + this.dragDeltaToPercent(dx, frame?.clientWidth || 0, this.bannerZoom));
+    this.bannerPositionY = this.clampPercent(this.bannerDrag.startPosY + this.dragDeltaToPercent(dy, frame?.clientHeight || 0, this.bannerZoom));
   }
 
   onBannerPointerEnd(event: PointerEvent) {

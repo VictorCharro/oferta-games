@@ -1,7 +1,7 @@
 <div class="page-content public-profile" [class.editor-mode]="editingLayout && activeTab === 'resumo'" *ngIf="profile; else pageState">
-  <section class="public-hero" #bannerFrame>
+  <section class="public-hero">
     <div class="hero-banner" *ngIf="profile.bannerUrl">
-      <img [src]="profile.bannerUrl" alt="" (load)="onBannerDisplayLoad($event)" [ngStyle]="bannerDisplayStyle(bannerFrame)" />
+      <img [src]="profile.bannerUrl" alt="" [ngStyle]="bannerDisplayStyle()" />
     </div>
     <button
       *ngIf="isOwner && editingLayout"
@@ -32,7 +32,7 @@
           (pointercancel)="onBannerPointerEnd($event)"
           (wheel)="onBannerWheel($event)"
         >
-          <img [src]="bannerPreview" alt="Previa do banner" (load)="onBannerCropImageLoad($event)" [ngStyle]="bannerEditStyle()" draggable="false" />
+          <img [src]="bannerPreview" alt="Previa do banner" [ngStyle]="bannerEditStyle()" draggable="false" />
         </div>
         <small class="block-image-crop-hint">Arraste para posicionar e use o scroll (ou pinça) para dar zoom.</small>
         <div class="block-image-crop-actions">
@@ -62,13 +62,12 @@
     </button>
     <div class="public-main">
       <div class="avatar-editor">
-        <div class="avatar" #avatarFrame>
+        <div class="avatar">
           <img
             *ngIf="ownerAvatar || profile.avatarUrl"
             [src]="ownerAvatar || profile.avatarUrl"
             alt="Foto de perfil"
-            (load)="onAvatarDisplayLoad($event)"
-            [ngStyle]="avatarDisplayStyle(avatarFrame)"
+            [ngStyle]="avatarDisplayStyle()"
           />
           <span *ngIf="!ownerAvatar && !profile.avatarUrl">{{
             profile.nomeExibicao.charAt(0)
@@ -94,7 +93,7 @@
               (pointercancel)="onAvatarPointerEnd($event)"
               (wheel)="onAvatarWheel($event)"
             >
-              <img [src]="avatarPreview" alt="Previa da foto" (load)="onAvatarCropImageLoad($event)" [ngStyle]="avatarEditStyle()" draggable="false" />
+              <img [src]="avatarPreview" alt="Previa da foto" [ngStyle]="avatarEditStyle()" draggable="false" />
             </div>
             <small class="block-image-crop-hint">Arraste para posicionar e use o scroll (ou pinça) para dar zoom.</small>
             <div class="block-image-crop-actions">
