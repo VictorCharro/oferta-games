@@ -17,10 +17,13 @@ public final class LojasBloqueadas {
       "gamesplanetus",
       "gamesplanetfr",
       "gamesplanetde",
-      "gamesplanetuk"
+      "gamesplanetuk",
+      "gog"
   );
 
-  private static final String REGEX_SQL = "(greenmangaming|allyoupay|allyouplay|planetplay|playerland|joybuggy|wingamestore|macgamestore|humblestore|humblebundle|gamesplanetus|gamesplanetfr|gamesplanetde|gamesplanetuk)";
+  // Ancorado (^...$) pra exigir nome normalizado igual, nao so contido — "gog" sem ancora
+  // bateria em qualquer loja futura que so contivesse esse trecho no nome.
+  private static final String REGEX_SQL = "^(greenmangaming|allyoupay|allyouplay|planetplay|playerland|joybuggy|wingamestore|macgamestore|humblestore|humblebundle|gamesplanetus|gamesplanetfr|gamesplanetde|gamesplanetuk|gog)$";
 
   private LojasBloqueadas() {}
 
