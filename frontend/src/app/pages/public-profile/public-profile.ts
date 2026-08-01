@@ -843,6 +843,18 @@ export class PublicProfile implements OnInit, OnDestroy {
     return { pequeno: 180, medio: 420, largo: 800, completo: 1400 }[block.tamanho];
   }
 
+  defaultBlockTitle(block: PerfilBloco): string {
+    return {
+      favoritos: 'Jogos favoritos',
+      biblioteca: 'Biblioteca',
+      atividade: 'Atividade recente',
+      platinados: 'Platinados',
+      texto: 'Texto',
+      imagem: 'Imagem',
+      links: 'Links',
+    }[block.tipo];
+  }
+
   favoritePreview(block: PerfilBloco) {
     return this.profile?.favoritos.slice(0, this.previewLimit(block.tamanho)) || [];
   }

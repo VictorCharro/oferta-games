@@ -299,6 +299,12 @@
             <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'fundo')">Usar URL</button>
           </div>
         </ng-container>
+        <div *ngIf="['favoritos', 'biblioteca', 'atividade', 'platinados'].includes(block.tipo)" class="block-content-fields block-title-only">
+          <label>
+            <span>Titulo do bloco <small>{{ (block.titulo || '').length }}/{{ maxTitleLength(block) }}</small></span>
+            <input [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" [placeholder]="defaultBlockTitle(block)" />
+          </label>
+        </div>
         <div *ngIf="block.tipo === 'texto' || block.tipo === 'links'" class="block-content-fields">
           <label>
             <span>Titulo do bloco <small>{{ (block.titulo || '').length }}/{{ maxTitleLength(block) }}</small></span>
@@ -351,7 +357,7 @@
       <ng-container [ngSwitch]="block.tipo"
         ><ng-container *ngSwitchCase="'favoritos'"
           ><div class="panel-heading">
-            <h2>Jogos favoritos</h2>
+            <h2>{{ block.titulo || 'Jogos favoritos' }}</h2>
             <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">{{ isOwner ? 'Gerenciar' : 'Ver favoritos' }}</button>
           </div>
           <div *ngIf="profile.favoritos.length; else noFav" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
@@ -366,7 +372,7 @@
             ><div class="empty-panel"><h3>Nenhum jogo favorito ainda</h3></div></ng-template
           ></ng-container
         ><ng-container *ngSwitchCase="'biblioteca'"
-          ><div class="panel-heading"><h2>Biblioteca</h2><button *ngIf="!editingLayout" type="button" class="panel-link" (click)="openLibrary()">Ver biblioteca</button></div>
+          ><div class="panel-heading"><h2>{{ block.titulo || 'Biblioteca' }}</h2><button *ngIf="!editingLayout" type="button" class="panel-link" (click)="openLibrary()">Ver biblioteca</button></div>
           <div *ngIf="libraryPreview(block).length; else noLibraryPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
             <article *ngFor="let game of libraryPreview(block)" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">
               <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
@@ -378,7 +384,7 @@
           </div>
           <ng-template #noLibraryPreview><div class="empty-panel"><h3>Biblioteca vazia</h3><p>Nenhum jogo sincronizado para exibir.</p></div></ng-template></ng-container
         ><ng-container *ngSwitchCase="'platinados'"
-          ><h2>Platinados</h2>
+          ><h2>{{ block.titulo || 'Platinados' }}</h2>
           <div *ngIf="platinumPreview(block).length; else noPlatinumPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
             <article *ngFor="let game of platinumPreview(block)" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">
               <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small>100% conquistas</small></div></a>
@@ -390,7 +396,7 @@
           </div>
           <ng-template #noPlatinumPreview><div class="empty-panel"><h3>Nenhum jogo platinado ainda</h3></div></ng-template></ng-container
         ><ng-container *ngSwitchCase="'atividade'"
-          ><h2>Atividade recente</h2>
+          ><h2>{{ block.titulo || 'Atividade recente' }}</h2>
           <div class="activity-list">
             <div *ngFor="let activity of activityPreview(block)" class="activity-item">
               <img [src]="activityIcon(activity.tipo)" /><span>{{
