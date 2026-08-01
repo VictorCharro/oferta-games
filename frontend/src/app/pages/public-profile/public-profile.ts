@@ -1108,7 +1108,12 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   avatarDisplayStyle(frame: HTMLElement): Record<string, string> {
-    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarDisplayNaturalWidth, this.avatarDisplayNaturalHeight, this.avatarZoom, this.avatarPositionX, this.avatarPositionY);
+    // Mesmo motivo do bannerDisplayStyle: usa o zoom/posicao salvos, nao o rascunho ao vivo do
+    // crop, pra o avatar de fundo nao piscar atras do modal semi-transparente durante o ajuste.
+    const zoom = this.profile?.avatarZoom ?? 1;
+    const posX = this.profile?.avatarPosicaoX ?? 50;
+    const posY = this.profile?.avatarPosicaoY ?? 50;
+    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.avatarDisplayNaturalWidth, this.avatarDisplayNaturalHeight, zoom, posX, posY);
   }
 
   onAvatarCropImageLoad(event: Event) {
@@ -1226,7 +1231,14 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   bannerDisplayStyle(frame: HTMLElement): Record<string, string> {
-    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerDisplayNaturalWidth, this.bannerDisplayNaturalHeight, this.bannerZoom, this.bannerPositionX, this.bannerPositionY);
+    // Usa sempre o zoom/posicao salvos (nao o rascunho ao vivo do crop): o banner de fundo
+    // fica visivel atras do modal semi-transparente/desfocado, entao se ele seguisse
+    // bannerZoom/bannerPositionX/Y (que o drag do crop atualiza em tempo real) ficava piscando
+    // atras do modal a cada movimento do mouse durante o ajuste.
+    const zoom = this.profile?.bannerZoom ?? 1;
+    const posX = this.profile?.bannerPosicaoX ?? 50;
+    const posY = this.profile?.bannerPosicaoY ?? 50;
+    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, this.bannerDisplayNaturalWidth, this.bannerDisplayNaturalHeight, zoom, posX, posY);
   }
 
   onBannerCropImageLoad(event: Event) {

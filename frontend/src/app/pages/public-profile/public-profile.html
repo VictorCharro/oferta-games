@@ -22,6 +22,7 @@
     <div *ngIf="bannerEditing" class="block-image-crop-backdrop" (click)="cancelBannerEdit()">
       <div class="block-image-crop-editor" (click)="$event.stopPropagation()">
         <h3>Ajustar banner do perfil</h3>
+        <small class="block-image-crop-hint">Tamanho recomendado: 1600 × 400px (proporção larga, tipo capa de perfil).</small>
         <div
           class="block-image-crop-preview banner-crop-preview"
           #bannerCropFrame
