@@ -36,10 +36,10 @@ class AgendadorColetas {
     execucao.executar("detalhes", sincronizacao::sincronizarRodadaDetalhes);
   }
 
-  // Delay baixo temporario (2 min) pra zerar o backlog de conquistas gerado pelo fix do
-  // regex de agecheck; volta pra 10800000 (3h) assim que o backlog estiver zerado.
+  // Ritmo de manutencao (3h): o backlog gerado pelo fix do regex de agecheck estagnou no
+  // restante de jogos sem conquistas de verdade na Steam.
   @Scheduled(
-      fixedDelayString = "${app.sync.scheduler.conquistas-catalogo-delay-ms:120000}",
+      fixedDelayString = "${app.sync.scheduler.conquistas-catalogo-delay-ms:10800000}",
       initialDelayString = "${app.sync.scheduler.conquistas-catalogo-initial-delay-ms:540000}")
   void coletarConquistasCatalogo() {
     execucao.executar("conquistas-catalogo", sincronizacao::sincronizarRodadaConquistasCatalogo);
