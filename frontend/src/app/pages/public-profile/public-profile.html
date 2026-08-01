@@ -30,7 +30,7 @@
           (touchstart)="onBannerDragStart($event)"
           (wheel)="onBannerWheel($event)"
         >
-          <img #bannerCropImg [src]="bannerPreview" alt="Previa do banner" (load)="onBannerCropImageLoad($event)" [ngStyle]="bannerEditStyle()" draggable="false" />
+          <img [src]="bannerPreview" alt="Previa do banner" (load)="onBannerCropImageLoad($event)" [ngStyle]="bannerEditStyle()" draggable="false" />
         </div>
         <small class="block-image-crop-hint">Arraste para posicionar e use o scroll (ou pinça) para dar zoom.</small>
         <div class="block-image-crop-actions">
@@ -90,7 +90,7 @@
               (touchstart)="onAvatarDragStart($event)"
               (wheel)="onAvatarWheel($event)"
             >
-              <img #avatarCropImg [src]="avatarPreview" alt="Previa da foto" (load)="onAvatarCropImageLoad($event)" [ngStyle]="avatarEditStyle()" draggable="false" />
+              <img [src]="avatarPreview" alt="Previa da foto" (load)="onAvatarCropImageLoad($event)" [ngStyle]="avatarEditStyle()" draggable="false" />
             </div>
             <small class="block-image-crop-hint">Arraste para posicionar e use o scroll (ou pinça) para dar zoom.</small>
             <div class="block-image-crop-actions">
