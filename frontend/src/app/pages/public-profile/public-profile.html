@@ -395,8 +395,17 @@
             <h2 *ngIf="!editingLayout">{{ block.titulo || 'Platinados' }}</h2>
             <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Platinados" />
           </div>
-          <div *ngIf="platinumPreview(block).length; else noPlatinumPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
-            <article *ngFor="let game of platinumPreview(block)" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">
+          <div
+            *ngIf="platinumPreview(block).length; else noPlatinumPreview"
+            [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]"
+            [class.organizando]="editingLayout"
+            cdkDropList
+            cdkDropListOrientation="mixed"
+            [cdkDropListDisabled]="!isOwner || !editingLayout"
+            (cdkDropListDropped)="dropPlatinum($event)"
+          >
+            <article *ngFor="let game of platinumPreview(block)" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)" cdkDrag [cdkDragDisabled]="!isOwner || !editingLayout">
+              <span *ngIf="isOwner && editingLayout" class="favorite-drag-handle" cdkDragHandle aria-label="Arrastar para reordenar" title="Arrastar para reordenar">↕</span>
               <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small>100% conquistas</small></div></a>
               <div class="library-hover-actions">
                 <a class="library-hover-btn" [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener">Ver na Steam</a>

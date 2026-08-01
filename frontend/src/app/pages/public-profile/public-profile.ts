@@ -890,11 +890,34 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (!this.profile) return [];
     return this.profile.biblioteca
       .filter(game => game.conquistasTotal > 0 && game.conquistasDesbloqueadas >= game.conquistasTotal)
-      .sort((a, b) => b.minutosJogadas - a.minutosJogadas);
+      .sort((a, b) => {
+        if (a.platinumPosition != null && b.platinumPosition != null) return a.platinumPosition - b.platinumPosition;
+        if (a.platinumPosition != null) return -1;
+        if (b.platinumPosition != null) return 1;
+        return b.minutosJogadas - a.minutosJogadas;
+      });
   }
 
   platinumPreview(block: PerfilBloco) {
     return this.platinumGames.slice(0, this.previewLimit(block.tamanho));
+  }
+
+  async dropPlatinum(event: CdkDragDrop<unknown>) {
+    if (!this.profile || !this.isOwner || !this.editingLayout || event.previousIndex === event.currentIndex) return;
+    const ordenados = this.platinumGames;
+    moveItemInArray(ordenados, event.previousIndex, event.currentIndex);
+    ordenados.forEach((game, indice) => { game.platinumPosition = indice; });
+    this.cdr.detectChanges();
+    try {
+      await this.conexoesSteam.reordenarPlatinados(ordenados.map(game => game.appId));
+    } catch {
+      this.message = 'Nao foi possivel salvar a nova ordem dos platinados.';
+      try {
+        const atualizado = await this.perfis.publico(this.profile.handle);
+        this.profile.biblioteca = atualizado.biblioteca;
+      } catch { /* mantem o estado otimista se o reload tambem falhar */ }
+      this.cdr.detectChanges();
+    }
   }
 
   activityPreview(block: PerfilBloco) {

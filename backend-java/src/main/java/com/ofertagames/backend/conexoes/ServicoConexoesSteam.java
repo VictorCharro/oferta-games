@@ -128,8 +128,12 @@ public class ServicoConexoesSteam {
   // Usado pelo endpoint autenticado do dono, onde a biblioteca inteira e necessaria.
   public java.util.List<JogoBibliotecaSteam> biblioteca(String usuarioId, int limite) {
     return conexoes.listarBiblioteca(usuarioId, limite).stream()
-        .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash(), jogo.conquistasDesbloqueadas(), jogo.conquistasTotal(), jogo.capaUrl(), null))
+        .map(jogo -> new JogoBibliotecaSteam(jogo.appId(), jogo.titulo(), jogo.minutosJogadas(), jogo.iconeHash(), jogo.conquistasDesbloqueadas(), jogo.conquistasTotal(), jogo.capaUrl(), null, jogo.platinumPosition()))
         .toList();
+  }
+
+  public void reordenarPlatinados(String usuarioId, java.util.List<Integer> appIds) {
+    conexoes.reordenarPlatinados(usuarioId, appIds);
   }
 
   // Preenche a capa real dos jogos da biblioteca via appdetails da Steam: o padrao antigo de URL
@@ -287,9 +291,9 @@ public class ServicoConexoesSteam {
     }
   }
 
-  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl, String catalogSlug) {
+  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl, String catalogSlug, Integer platinumPosition) {
     public JogoBibliotecaSteam comCatalogSlug(String catalogSlug) {
-      return new JogoBibliotecaSteam(appId, titulo, minutosJogadas, iconeHash, conquistasDesbloqueadas, conquistasTotal, capaUrl, catalogSlug);
+      return new JogoBibliotecaSteam(appId, titulo, minutosJogadas, iconeHash, conquistasDesbloqueadas, conquistasTotal, capaUrl, catalogSlug, platinumPosition);
     }
   }
 

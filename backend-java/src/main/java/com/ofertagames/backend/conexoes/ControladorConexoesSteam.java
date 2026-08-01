@@ -13,6 +13,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,6 +64,13 @@ public class ControladorConexoesSteam {
   java.util.List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca(
       @RequestHeader(value = "Authorization", required = false) String autorizacao) {
     return steam.biblioteca(usuario(autorizacao), 2000);
+  }
+
+  @PutMapping("/platinados/ordem")
+  ResponseEntity<Void> ordenarPlatinados(@RequestHeader(value = "Authorization", required = false) String autorizacao,
+      @RequestBody(required = false) RequisicaoOrdemPlatinados requisicao) {
+    steam.reordenarPlatinados(usuario(autorizacao), requisicao == null ? java.util.List.of() : requisicao.appIds());
+    return ResponseEntity.ok().build();
   }
 
   @PostMapping("/sincronizar")

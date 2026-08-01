@@ -28,6 +28,7 @@ export class ConexoesSteamService {
   async biblioteca(): Promise<JogoBibliotecaSteam[]> { return firstValueFrom(this.http.get<JogoBibliotecaSteam[]>(`${this.api}/biblioteca`, { headers: await this.headers() })); }
   async conectar() { const resposta = await firstValueFrom(this.http.post<{ url: string }>(`${this.api}/iniciar`, {}, { headers: await this.headers() })); window.location.assign(resposta.url); }
   async sincronizar() { await firstValueFrom(this.http.post(`${this.api}/sincronizar`, {}, { headers: await this.headers() })); }
+  async reordenarPlatinados(appIds: number[]): Promise<void> { await firstValueFrom(this.http.put(`${this.api}/platinados/ordem`, { appIds }, { headers: await this.headers() })); }
   async desconectar() { await firstValueFrom(this.http.delete(this.api, { headers: await this.headers() })); }
   private async headers(): Promise<{ Authorization: string }> { const { data } = await supabase.auth.getSession(); if (!data.session?.access_token) throw new Error('Sessao nao encontrada'); return { Authorization: `Bearer ${data.session.access_token}` }; }
 }

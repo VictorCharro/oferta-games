@@ -237,19 +237,42 @@ class RepositorioConexoesSteam {
     return jdbc.sql("""
         SELECT b.app_id, b.title, b.playtime_minutes, b.icon_hash, b.cover_url,
                COALESCE(a.unlocked_count, 0) AS unlocked_count,
-               COALESCE(a.total_count, 0) AS total_count
+               COALESCE(a.total_count, 0) AS total_count,
+               p.position AS platinum_position
         FROM steam_library_games b
         LEFT JOIN steam_game_achievements a ON a.user_id = b.user_id AND a.app_id = b.app_id
+        LEFT JOIN profile_platinum_order p ON p.user_id = b.user_id AND p.app_id = b.app_id
         WHERE b.user_id = CAST(:usuarioId AS uuid)
         ORDER BY b.playtime_minutes DESC, b.title ASC
         LIMIT :limite
         """)
         .param("usuarioId", usuarioId)
         .param("limite", limite)
-        .query((rs, linha) -> new JogoBibliotecaSteam(rs.getInt("app_id"), rs.getString("title"),
-            rs.getInt("playtime_minutes"), rs.getString("icon_hash"), rs.getInt("unlocked_count"), rs.getInt("total_count"),
-            rs.getString("cover_url")))
+        .query((rs, linha) -> {
+          int posicao = rs.getInt("platinum_position");
+          return new JogoBibliotecaSteam(rs.getInt("app_id"), rs.getString("title"),
+              rs.getInt("playtime_minutes"), rs.getString("icon_hash"), rs.getInt("unlocked_count"), rs.getInt("total_count"),
+              rs.getString("cover_url"), rs.wasNull() ? null : posicao);
+        })
         .list();
+  }
+
+  void reordenarPlatinados(String usuarioId, List<Integer> appIds) {
+    if (appIds == null) return;
+    int posicao = 0;
+    for (Integer appId : appIds) {
+      if (appId == null) continue;
+      jdbc.sql("""
+          INSERT INTO profile_platinum_order (user_id, app_id, position)
+          VALUES (CAST(:usuarioId AS uuid), :appId, :posicao)
+          ON CONFLICT (user_id, app_id) DO UPDATE SET position = EXCLUDED.position
+          """)
+          .param("usuarioId", usuarioId)
+          .param("appId", appId)
+          .param("posicao", posicao)
+          .update();
+      posicao++;
+    }
   }
 
   Set<String> conquistasDesbloqueadas(String usuarioId, int appId) {
@@ -349,9 +372,9 @@ class RepositorioConexoesSteam {
   record ConexaoSteam(String steamId, String nome, String avatarUrl, String conectadoEm, String bibliotecaSincronizadaEm, String conquistasSincronizadasEm, String ultimoErro) {}
   record ConexaoUsuarioSteam(String usuarioId, String steamId) {}
   record JogoParaCapa(String usuarioId, int appId) {}
-  record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl) {
+  record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl, Integer platinumPosition) {
     JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash) {
-      this(appId, titulo, minutosJogadas, iconeHash, 0, 0, null);
+      this(appId, titulo, minutosJogadas, iconeHash, 0, 0, null, null);
     }
   }
   // jogosPlatinados: jogos com 100% das conquistas desbloqueadas.
