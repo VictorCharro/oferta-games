@@ -1090,13 +1090,16 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de ate 2 MB.'; return; }
     if (!this.auth.user || !this.profile) return;
 
-    this.avatarPreview = URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(file);
+    const { width, height } = await this.loadImageSize(previewUrl);
+    if (this.avatarPreview) URL.revokeObjectURL(this.avatarPreview);
+    this.avatarPreview = previewUrl;
     this.avatarFile = file;
     this.avatarZoom = this.avatarMinZoom;
     this.avatarPositionX = 50;
     this.avatarPositionY = 50;
-    this.avatarNaturalWidth = 0;
-    this.avatarNaturalHeight = 0;
+    this.avatarNaturalWidth = width;
+    this.avatarNaturalHeight = height;
     this.avatarEditing = true;
     input.value = '';
     this.cdr.detectChanges();
@@ -1213,16 +1216,28 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de ate 2 MB.'; return; }
     if (!this.auth.user || !this.profile) return;
 
-    this.bannerPreview = URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(file);
+    const { width, height } = await this.loadImageSize(previewUrl);
+    if (this.bannerPreview) URL.revokeObjectURL(this.bannerPreview);
+    this.bannerPreview = previewUrl;
     this.bannerFile = file;
     this.bannerZoom = this.bannerMinZoom;
     this.bannerPositionX = 50;
     this.bannerPositionY = 50;
-    this.bannerNaturalWidth = 0;
-    this.bannerNaturalHeight = 0;
+    this.bannerNaturalWidth = width;
+    this.bannerNaturalHeight = height;
     this.bannerEditing = true;
     input.value = '';
     this.cdr.detectChanges();
+  }
+
+  private loadImageSize(url: string): Promise<{ width: number; height: number }> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      img.onerror = () => resolve({ width: 0, height: 0 });
+      img.src = url;
+    });
   }
 
   cancelBannerEdit() {
