@@ -358,8 +358,17 @@
             <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Jogos favoritos" />
             <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">{{ isOwner ? 'Gerenciar' : 'Ver favoritos' }}</button>
           </div>
-          <div *ngIf="profile.favoritos.length; else noFav" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
-            <article *ngFor="let game of favoritePreview(block)" class="profile-game-card">
+          <div
+            *ngIf="profile.favoritos.length; else noFav"
+            [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]"
+            [class.organizando]="editingLayout"
+            cdkDropList
+            cdkDropListOrientation="mixed"
+            [cdkDropListDisabled]="!isOwner || !editingLayout"
+            (cdkDropListDropped)="dropFavorite($event)"
+          >
+            <article *ngFor="let game of favoritePreview(block)" class="profile-game-card" cdkDrag [cdkDragDisabled]="!isOwner || !editingLayout">
+              <span *ngIf="isOwner && editingLayout" class="favorite-drag-handle" cdkDragHandle aria-label="Arrastar para reordenar" title="Arrastar para reordenar">↕</span>
               <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener">
                 <img [src]="favoriteImage(game)" [alt]="game.titulo" />
                 <div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else favoriteCatalogInfo"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #favoriteCatalogInfo><span>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</span></ng-template></div>

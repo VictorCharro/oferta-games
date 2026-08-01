@@ -459,7 +459,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   async dropFavorite(event: CdkDragDrop<unknown>) {
-    if (!this.profile || !this.isOwner || !this.editingFavorites || event.previousIndex === event.currentIndex) return;
+    if (!this.profile || !this.isOwner || (!this.editingFavorites && !this.editingLayout) || event.previousIndex === event.currentIndex) return;
     moveItemInArray(this.profile.favoritos, event.previousIndex, event.currentIndex);
     this.cdr.detectChanges();
     try {
