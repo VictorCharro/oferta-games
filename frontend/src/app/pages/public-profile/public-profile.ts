@@ -865,7 +865,12 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   libraryPreview(block: PerfilBloco) {
-    return this.libraryGames.slice(0, this.previewLimit(block.tamanho));
+    // Nao usa a getter libraryGames aqui: ela reflete a busca/ordenacao da aba Biblioteca,
+    // e essa preview aparece no resumo (fora dessa aba), entao nao deve ser afetada por elas.
+    if (!this.profile) return [];
+    return [...this.profile.biblioteca]
+      .sort((a, b) => b.minutosJogadas - a.minutosJogadas)
+      .slice(0, this.previewLimit(block.tamanho));
   }
 
   get platinumGames(): PerfilPublico['biblioteca'] {
