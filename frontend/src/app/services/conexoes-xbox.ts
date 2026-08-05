@@ -21,7 +21,7 @@ export class ConexoesXboxService {
 
   async conectar() {
     const { appKey } = await firstValueFrom(this.http.get<{ appKey: string }>(`${this.api}/app-key`));
-    window.location.assign(`https://xbl.io/app/auth/${appKey}`);
+    window.location.assign(`https://api.xbl.io/app/auth/${appKey}`);
   }
 
   async concluir(code: string): Promise<void> { await firstValueFrom(this.http.post(`${this.api}/concluir`, { code }, { headers: await this.headers() })); }

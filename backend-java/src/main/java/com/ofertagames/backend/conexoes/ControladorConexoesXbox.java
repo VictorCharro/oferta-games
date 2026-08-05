@@ -24,7 +24,7 @@ public class ControladorConexoesXbox {
     this.xbox = xbox;
   }
 
-  // O redirect pra Microsoft acontece inteiro no navegador (xbl.io/app/auth/{app_key}), por
+  // O redirect pra Microsoft acontece inteiro no navegador (api.xbl.io/app/auth/{app_key}), por
   // isso o frontend so precisa da app_key pra montar essa URL - nao ha "state" server-side
   // porque a correlacao com o usuario acontece depois, no /concluir, via o bearer token normal
   // (o usuario continua logado no nosso site durante todo o redirect, sessao fica no localStorage).

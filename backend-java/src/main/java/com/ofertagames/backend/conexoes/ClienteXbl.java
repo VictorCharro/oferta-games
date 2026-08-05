@@ -9,11 +9,11 @@ import org.springframework.web.client.RestClient;
 
 // Fluxo "Xbox App" do OpenXBL (xbl.io): diferente da API key pessoal, esse app_key e usado
 // pra logar QUALQUER usuario com a conta Microsoft dele (nao so a nossa) - o usuario e
-// redirecionado pra https://xbl.io/app/auth/{app_key}, volta com um "code" na URL, e a gente
-// troca esse code por xuid/gamertag/token nesse endpoint /app/claim.
+// redirecionado pra https://api.xbl.io/app/auth/{app_key}, volta com um "code" na URL, e a
+// gente troca esse code por xuid/gamertag/token nesse endpoint /app/claim.
 @Service
 class ClienteXbl {
-  private static final String URL_BASE = "https://xbl.io";
+  private static final String URL_BASE = "https://api.xbl.io";
 
   private final RestClient restClient;
   private final String appKey;
