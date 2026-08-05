@@ -7,5 +7,6 @@ public record DetalheJogo(
     String slug,
     String title,
     String coverUrl,
-    List<OfertaJogo> offers
+    List<OfertaJogo> offers,
+    List<ResumoJogo> dlcs
 ) {}

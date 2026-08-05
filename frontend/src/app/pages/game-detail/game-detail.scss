@@ -1483,6 +1483,18 @@
   color: var(--text-muted);
 }
 
+.dlc-section {
+  margin-top: 32px;
+
+  h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+}
+
+.dlc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+
 .skeleton-hero {
   height: 340px;
   border-radius: var(--border-radius);

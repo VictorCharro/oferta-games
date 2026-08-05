@@ -30,6 +30,7 @@ export interface GameDetail {
   title: string;
   coverUrl: string | null;
   offers: Offer[];
+  dlcs: GameSummary[];
 }
 
 export interface GameHighlight {

@@ -109,7 +109,55 @@ public class RepositorioJogos {
             rs.getString("cover_url")))
         .optional();
 
-    return jogo.map(linha -> new DetalheJogo(linha.id(), linha.slug(), linha.title(), linha.coverUrl(), listarOfertas(linha.id())));
+    return jogo.map(linha -> new DetalheJogo(
+        linha.id(), linha.slug(), linha.title(), linha.coverUrl(), listarOfertas(linha.id()), listarDlcsDoJogo(linha.id())));
+  }
+
+  // As DLCs de um jogo vem do array "dlc" da appdetails da Steam (ver ServicoSteam), salvo em
+  // game_details.dlc_steam_app_ids quando preenchemos os detalhes do jogo base. So aparecem aqui
+  // as que ja existem no nosso catalogo (i.e., ja foram descobertas via ITAD em algum momento).
+  public List<ResumoJogo> listarDlcsDoJogo(long jogoId) {
+    List<Integer> appIds = jdbc.sql("SELECT dlc_steam_app_ids FROM game_details WHERE game_id = :jogoId")
+        .param("jogoId", jogoId)
+        .query((rs, linha) -> {
+          java.sql.Array array = rs.getArray("dlc_steam_app_ids");
+          if (array == null) {
+            return List.<Integer>of();
+          }
+          Object[] valores = (Object[]) array.getArray();
+          List<Integer> resultado = new ArrayList<>();
+          for (Object valor : valores) {
+            if (valor != null) resultado.add(((Number) valor).intValue());
+          }
+          return resultado;
+        })
+        .optional()
+        .orElse(List.of());
+    if (appIds.isEmpty()) {
+      return List.of();
+    }
+
+    return jdbc.sql("""
+        SELECT
+          g.slug,
+          g.title,
+          g.cover_url AS cover_url,
+          g.is_dlc AS is_dlc,
+          MIN(o.price) AS min_price,
+          MAX(o.regular_price) AS regular_price,
+          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
+        FROM games g
+        LEFT JOIN offers o ON o.game_id = g.id %s
+        WHERE g.steam_app_id IN (:appIds)
+          %s
+          %s
+        GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
+        ORDER BY g.title
+        """.formatted(filtroLojaBloqueada("o"), ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .param("appIds", appIds)
+        .query(RepositorioJogos::mapearResumo)
+        .list();
   }
 
   public Optional<Long> buscarIdPorSlug(String slug) {
@@ -425,7 +473,7 @@ public class RepositorioJogos {
         FROM games g
         LEFT JOIN game_details gd ON gd.game_id = g.id
         WHERE g.steam_app_id IS NOT NULL
-          AND (gd.game_id IS NULL OR gd.updated_at < now() - interval '30 days')
+          AND (gd.game_id IS NULL OR gd.dlc_steam_app_ids IS NULL OR gd.updated_at < now() - interval '30 days')
           %s
           %s
         ORDER BY %s g.id ASC
@@ -464,11 +512,11 @@ public class RepositorioJogos {
           game_id, short_description, genres, developers, publishers, release_date, screenshots,
           review_score_desc, review_positive, review_negative,
           trailer_url, trailer_thumbnail, about_full, feature_highlights, categories,
-          requirements_min, requirements_rec, updated_at)
+          requirements_min, requirements_rec, dlc_steam_app_ids, updated_at)
         VALUES (:jogoId, :descricao, :generos, :desenvolvedores, :publicadoras, :dataLancamento, :screenshots,
           :notaReviews, :reviewsPositivas, :reviewsNegativas,
           :trailerUrl, :trailerThumbnail, :sobreCompleto, CAST(:destaques AS jsonb), :categorias,
-          :requisitosMinimos, :requisitosRecomendados, now())
+          :requisitosMinimos, :requisitosRecomendados, :dlcAppIds, now())
         ON CONFLICT (game_id) DO UPDATE
           SET short_description = EXCLUDED.short_description,
               genres = EXCLUDED.genres,
@@ -486,6 +534,7 @@ public class RepositorioJogos {
               categories = EXCLUDED.categories,
               requirements_min = EXCLUDED.requirements_min,
               requirements_rec = EXCLUDED.requirements_rec,
+              dlc_steam_app_ids = EXCLUDED.dlc_steam_app_ids,
               updated_at = now()
         """)
         .param("jogoId", dados.jogoId())
@@ -505,6 +554,7 @@ public class RepositorioJogos {
         .param("categorias", dados.categorias() == null ? null : dados.categorias().toArray(new String[0]))
         .param("requisitosMinimos", dados.requisitosMinimos())
         .param("requisitosRecomendados", dados.requisitosRecomendados())
+        .param("dlcAppIds", dados.dlcAppIds() == null ? null : dados.dlcAppIds().toArray(new Integer[0]))
         .update();
   }
 

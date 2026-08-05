@@ -17,7 +17,8 @@ public record DetalhesAplicativoSteam(
     List<DestaqueSteam> destaques,
     List<String> categorias,
     String requisitosMinimos,
-    String requisitosRecomendados) {
+    String requisitosRecomendados,
+    List<Integer> dlcAppIds) {
 
   public record DestaqueSteam(String titulo, String texto) {}
 }

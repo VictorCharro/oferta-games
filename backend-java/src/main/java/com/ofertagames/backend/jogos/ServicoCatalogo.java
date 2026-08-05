@@ -294,7 +294,8 @@ public class ServicoCatalogo {
           destaques,
           detalhes.map(DetalhesAplicativoSteam::categorias).orElse(null),
           detalhes.map(DetalhesAplicativoSteam::requisitosMinimos).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::requisitosRecomendados).orElse(null)));
+          detalhes.map(DetalhesAplicativoSteam::requisitosRecomendados).orElse(null),
+          detalhes.map(DetalhesAplicativoSteam::dlcAppIds).orElse(null)));
       atualizados++;
     }
 

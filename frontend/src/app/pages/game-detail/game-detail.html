@@ -117,6 +117,13 @@
         <p>Nenhuma oferta encontrada. Clique em "Atualizar preços" para buscar.</p>
       </div>
     </ng-template>
+
+    <div class="dlc-section" *ngIf="game.dlcs.length">
+      <h2>DLCs disponíveis</h2>
+      <div class="dlc-grid">
+        <app-game-card *ngFor="let dlc of game.dlcs" [game]="dlc"></app-game-card>
+      </div>
+    </div>
   </div>
 
   <div class="about-section" *ngIf="activeTab === 'sobre' && detalhes">

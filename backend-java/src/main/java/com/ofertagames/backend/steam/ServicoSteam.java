@@ -97,9 +97,12 @@ public class ServicoSteam {
       String requisitosMinimos = requisitos == null ? null : comoRequisitos(requisitos.get("minimum"));
       String requisitosRecomendados = requisitos == null ? null : comoRequisitos(requisitos.get("recommended"));
 
+      List<Integer> dlcAppIds = comoListaDeInteiros(dados.get("dlc"));
+
       return Optional.of(new DetalhesAplicativoSteam(
           ehDlc, imagemCabecalho, descricaoCurta, generos, desenvolvedores, publicadoras, dataLancamento, screenshots,
-          trailerUrl, trailerThumbnail, sobre.texto(), sobre.destaques(), categorias, requisitosMinimos, requisitosRecomendados));
+          trailerUrl, trailerThumbnail, sobre.texto(), sobre.destaques(), categorias, requisitosMinimos, requisitosRecomendados,
+          dlcAppIds));
     } catch (RuntimeException ignored) {
       return Optional.empty();
     }
@@ -444,6 +447,15 @@ public class ServicoSteam {
     List<String> resultado = new ArrayList<>();
     for (Object item : comoLista(valor)) {
       if (item instanceof String texto && !texto.isBlank()) resultado.add(texto);
+    }
+    return resultado;
+  }
+
+  private static List<Integer> comoListaDeInteiros(Object valor) {
+    List<Integer> resultado = new ArrayList<>();
+    for (Object item : comoLista(valor)) {
+      Integer numero = comoInteiro(item);
+      if (numero != null) resultado.add(numero);
     }
     return resultado;
   }

@@ -19,4 +19,5 @@ public record DetalhesParaSalvar(
     List<DetalhesJogo.DestaqueJogo> destaques,
     List<String> categorias,
     String requisitosMinimos,
-    String requisitosRecomendados) {}
+    String requisitosRecomendados,
+    List<Integer> dlcAppIds) {}
