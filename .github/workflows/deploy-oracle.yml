@@ -19,10 +19,10 @@ jobs:
     steps:
       - name: Configurar chave SSH
         env:
-          ORACLE_SSH_PRIVATE_KEY: ${{ secrets.ORACLE_SSH_PRIVATE_KEY }}
+          ORACLE_SSH_PRIVATE_KEY_B64: ${{ secrets.ORACLE_SSH_PRIVATE_KEY_B64 }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s' "$ORACLE_SSH_PRIVATE_KEY" > ~/.ssh/id_oracle
+          printf '%s' "$ORACLE_SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/id_oracle
           chmod 600 ~/.ssh/id_oracle
 
       - name: Atualizar backend na VM
