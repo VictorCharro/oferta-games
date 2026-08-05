@@ -2,6 +2,8 @@ package com.ofertagames.backend.conexoes;
 
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,10 +20,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class ControladorConexoesXbox {
   private final ServicoAutenticacao autenticacao;
   private final ServicoConexoesXbox xbox;
+  private final TaskExecutor executor;
 
-  ControladorConexoesXbox(ServicoAutenticacao autenticacao, ServicoConexoesXbox xbox) {
+  ControladorConexoesXbox(ServicoAutenticacao autenticacao, ServicoConexoesXbox xbox,
+      @Qualifier("executorColetaManual") TaskExecutor executor) {
     this.autenticacao = autenticacao;
     this.xbox = xbox;
+    this.executor = executor;
   }
 
   // O redirect pra Microsoft acontece inteiro no navegador (api.xbl.io/app/auth/{app_key}), por
@@ -48,6 +53,13 @@ public class ControladorConexoesXbox {
   @GetMapping
   ServicoConexoesXbox.StatusConexaoXbox status(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
     return xbox.status(usuario(autorizacao));
+  }
+
+  @PostMapping("/sincronizar")
+  ResponseEntity<Void> sincronizar(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
+    String usuarioId = usuario(autorizacao);
+    executor.execute(() -> xbox.sincronizarBiblioteca(usuarioId));
+    return ResponseEntity.accepted().build();
   }
 
   @DeleteMapping

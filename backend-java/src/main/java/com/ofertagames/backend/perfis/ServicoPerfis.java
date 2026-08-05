@@ -1,6 +1,7 @@
 package com.ofertagames.backend.perfis;
 
 import com.ofertagames.backend.conexoes.ServicoConexoesSteam;
+import com.ofertagames.backend.conexoes.ServicoConexoesXbox;
 import com.ofertagames.backend.atividadesperfil.AtividadePerfil;
 import com.ofertagames.backend.atividadesperfil.RepositorioAtividadesPerfil;
 import com.ofertagames.backend.colecoesperfil.ColecaoPerfil;
@@ -24,13 +25,14 @@ class ServicoPerfis {
       "jogo", "login", "mais-vendidos", "monitorados", "perfil", "promocoes", "u");
   private final RepositorioPerfis perfis;
   private final ServicoConexoesSteam steam;
+  private final ServicoConexoesXbox xbox;
   private final RepositorioFavoritosPerfil favoritosPerfil;
   private final RepositorioColecoesPerfil colecoesPerfil;
   private final RepositorioAtividadesPerfil atividades;
   private final RepositorioBlocosPerfil blocos;
   private final RepositorioJogos jogos;
 
-  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam, RepositorioFavoritosPerfil favoritosPerfil, RepositorioColecoesPerfil colecoesPerfil, RepositorioAtividadesPerfil atividades, RepositorioBlocosPerfil blocos, RepositorioJogos jogos) { this.perfis = perfis; this.steam = steam; this.favoritosPerfil = favoritosPerfil; this.colecoesPerfil = colecoesPerfil; this.atividades = atividades; this.blocos = blocos; this.jogos = jogos; }
+  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam, ServicoConexoesXbox xbox, RepositorioFavoritosPerfil favoritosPerfil, RepositorioColecoesPerfil colecoesPerfil, RepositorioAtividadesPerfil atividades, RepositorioBlocosPerfil blocos, RepositorioJogos jogos) { this.perfis = perfis; this.steam = steam; this.xbox = xbox; this.favoritosPerfil = favoritosPerfil; this.colecoesPerfil = colecoesPerfil; this.atividades = atividades; this.blocos = blocos; this.jogos = jogos; }
 
   RepositorioPerfis.Perfil proprio(String usuarioId) { return perfis.buscarPorUsuario(usuarioId).orElse(null); }
 
@@ -79,20 +81,28 @@ class ServicoPerfis {
     RepositorioPerfis.Perfil perfil = perfis.buscarPorHandle(normalizarHandleObrigatorio(handle)).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     if (!perfil.publico() && !perfil.usuarioId().equals(visitanteId)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     ServicoConexoesSteam.StatusConexaoSteam status = steam.status(perfil.usuarioId());
+    ServicoConexoesXbox.StatusConexaoXbox statusXbox = xbox.status(perfil.usuarioId());
     boolean dono = perfil.usuarioId().equals(visitanteId);
-    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = dono || perfil.mostrarBiblioteca() ? enriquecerComCatalogSlug(steam.biblioteca(perfil.usuarioId())) : List.of();
+    boolean mostrarBiblioteca = dono || perfil.mostrarBiblioteca();
+    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogosSteam = mostrarBiblioteca ? enriquecerComCatalogSlug(steam.biblioteca(perfil.usuarioId())) : List.of();
+    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogosXbox = mostrarBiblioteca ? xbox.biblioteca(perfil.usuarioId()) : List.of();
+    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = java.util.stream.Stream.concat(jogosSteam.stream(), jogosXbox.stream()).toList();
     List<FavoritoPerfilJogo> favoritos = dono || perfil.mostrarFavoritos() ? favoritosPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
     List<ColecaoPerfil> colecoes = dono || perfil.mostrarColecoes() ? colecoesPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
     List<AtividadePerfil> atividadeRecente = mostrarAtividades ? carregarAtividades(perfil.usuarioId()) : List.of();
+    boolean mostrarPlataforma = dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca();
+    List<String> plataformasConectadas = new java.util.ArrayList<>();
+    if (status.conectada() && mostrarPlataforma) plataformasConectadas.add("steam");
+    if (statusXbox.conectada() && mostrarPlataforma) plataformasConectadas.add("xbox");
     return new PerfilPublico(perfil.handle(), perfil.nomeExibicao(), perfil.bio(), perfil.avatarUrl(), perfil.avatarZoom(), perfil.avatarPosicaoX(), perfil.avatarPosicaoY(),
         perfil.bannerUrl(), perfil.bannerZoom(), perfil.bannerPosicaoX(), perfil.bannerPosicaoY(),
         dono || perfil.mostrarHoras() ? status.totalMinutos() : null,
         dono || perfil.mostrarConquistas() ? status.conquistasDesbloqueadas() : null,
         dono || perfil.mostrarConquistas() ? status.conquistasTotal() : null,
         dono || perfil.mostrarConquistas() ? status.jogosPlatinados() : null,
-        dono || perfil.mostrarBiblioteca() ? status.totalJogos() : null,
-        status.conectada() && (dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca()) ? List.of("steam") : List.of(),
+        mostrarBiblioteca ? status.totalJogos() + jogosXbox.size() : null,
+        plataformasConectadas,
         jogos,
         favoritos,
         colecoes,

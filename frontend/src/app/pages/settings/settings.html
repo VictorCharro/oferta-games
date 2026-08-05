@@ -72,7 +72,7 @@
         <article class="connection-card">
           <img [src]="xboxStatus?.avatarUrl || 'store-logos/xbox.svg'" alt="Xbox" />
           <div><h3>Xbox</h3><p>{{ xboxStatus?.conectada ? xboxStatus?.gamertag : 'Biblioteca, horas jogadas e conquistas' }}</p><span>{{ xboxStatus?.conectada ? 'Conectada' : 'Não conectado' }}</span></div>
-          <div class="connection-actions" *ngIf="xboxStatus?.conectada; else conectarXbox"><button type="button" class="disconnect" (click)="disconnectXbox()" [disabled]="xboxLoading">Desconectar</button></div>
+          <div class="connection-actions" *ngIf="xboxStatus?.conectada; else conectarXbox"><button type="button" (click)="syncXbox()" [disabled]="xboxLoading">Sincronizar</button><button type="button" class="disconnect" (click)="disconnectXbox()" [disabled]="xboxLoading">Desconectar</button></div>
           <ng-template #conectarXbox><button type="button" (click)="connectXbox()" [disabled]="xboxLoading">{{ xboxLoading ? 'Conectando...' : 'Conectar' }}</button></ng-template>
         </article>
       </div>

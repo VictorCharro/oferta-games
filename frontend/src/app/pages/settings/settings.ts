@@ -102,6 +102,7 @@ export class Settings implements OnInit {
 
   async loadXbox() { try { this.xboxStatus = await this.xboxService.status(); } catch { this.xboxStatus = null; } this.cdr.detectChanges(); }
   async connectXbox() { this.xboxLoading = true; try { await this.xboxService.conectar(); } catch { this.error = 'Nao foi possivel iniciar a conexao com a Xbox.'; this.xboxLoading = false; this.cdr.detectChanges(); } }
+  async syncXbox() { this.xboxLoading = true; this.clearMessages(); try { await this.xboxService.sincronizar(); this.success = 'Sincronizacao da biblioteca Xbox iniciada.'; } catch { this.error = 'Nao foi possivel iniciar a sincronizacao da Xbox.'; } this.xboxLoading = false; this.cdr.detectChanges(); }
   async disconnectXbox() { this.xboxLoading = true; this.clearMessages(); try { await this.xboxService.desconectar(); this.xboxStatus = null; this.success = 'Conta Xbox desconectada.'; } catch { this.error = 'Nao foi possivel desconectar a Xbox.'; } this.xboxLoading = false; this.cdr.detectChanges(); }
 
   async loadPublicProfile() { try { const perfil = await this.perfisService.proprio(); if (perfil) { this.profileHandle = perfil.handle || ''; this.privacy = { publicProfile: perfil.publico, showGameHours: perfil.mostrarHoras, showAchievements: perfil.mostrarConquistas, showLibrary: perfil.mostrarBiblioteca, showFavoriteGames: perfil.mostrarFavoritos, showRecentActivity: perfil.mostrarAtividades, showCollections: perfil.mostrarColecoes }; } } catch {} this.cdr.detectChanges(); }

@@ -146,8 +146,10 @@
 .activity-item.muted { opacity: .72; }
 .activity-list .activity-item + .activity-item { border-top: 1px solid var(--border-color); }
 .library-list-panel { min-height: 360px; }
-.library-controls { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 10px; margin-bottom: 16px; }
-.library-controls input, .library-controls select { min-width: 0; height: 38px; box-sizing: border-box; padding: 0 11px; border: 1px solid var(--border-color); border-radius: 7px; background: var(--bg-input); color: var(--text-primary); font: inherit; font-size: 13px; }
+.library-controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.library-controls input { flex: 1 1 220px; min-width: 0; }
+.library-controls select { flex: 0 0 170px; }
+.library-controls input, .library-controls select { height: 38px; box-sizing: border-box; padding: 0 11px; border: 1px solid var(--border-color); border-radius: 7px; background: var(--bg-input); color: var(--text-primary); font: inherit; font-size: 13px; }
 .library-controls input:focus, .library-controls select:focus { outline: 0; border-color: var(--color-purple); }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .panel-heading h2 { margin: 0; }

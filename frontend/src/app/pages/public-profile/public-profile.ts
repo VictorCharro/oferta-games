@@ -31,6 +31,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   message = '';
   librarySearch = '';
   libraryOrder: 'tempo' | 'nome' | 'conquistas' = 'tempo';
+  libraryPlatformFilter: 'todos' | 'steam' | 'xbox' = 'todos';
   editingLayout = false;
   savingLayout = false;
   editingFavorites = false;
@@ -143,6 +144,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.message = '';
     this.librarySearch = '';
     this.libraryOrder = 'tempo';
+    this.libraryPlatformFilter = 'todos';
     this.activeTab = 'resumo';
     this.cdr.detectChanges();
 
@@ -909,7 +911,12 @@ export class PublicProfile implements OnInit, OnDestroy {
     ordenados.forEach((game, indice) => { game.platinumPosition = indice; });
     this.cdr.detectChanges();
     try {
-      await this.conexoesSteam.reordenarPlatinados(ordenados.map(game => game.appId));
+      // So persiste a ordem dos platinados Steam por enquanto: o endpoint de reordenar e
+      // especifico da Steam, e appId/titleId sao so numeros indistinguiveis entre plataformas -
+      // mandar titleIds do Xbox pra la gravaria posicoes erradas. Os itens do Xbox continuam
+      // reordenaveis na tela (estado otimista), so nao persistem entre sessoes ainda.
+      const idsSteam = ordenados.filter(game => game.plataforma === 'steam').map(game => game.appId);
+      await this.conexoesSteam.reordenarPlatinados(idsSteam);
     } catch {
       this.message = 'Nao foi possivel salvar a nova ordem dos platinados.';
       try {
@@ -930,7 +937,7 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   tentarCapaSteamAlternativa(evento: Event, jogo: PerfilPublico['biblioteca'][number]) {
     const imagem = evento.target as HTMLImageElement;
-    if (imagem.dataset['capaAlternativa'] !== 'true') {
+    if (jogo.plataforma === 'steam' && imagem.dataset['capaAlternativa'] !== 'true') {
       imagem.dataset['capaAlternativa'] = 'true';
       imagem.src = `https://cdn.akamai.steamstatic.com/steam/apps/${jogo.appId}/capsule_616x353.jpg`;
       return;
@@ -1043,7 +1050,10 @@ export class PublicProfile implements OnInit, OnDestroy {
   get libraryGames(): PerfilPublico['biblioteca'] {
     if (!this.profile) return [];
     const query = this.librarySearch.trim().toLocaleLowerCase('pt-BR');
-    const games = this.profile.biblioteca.filter(game => !query || game.titulo.toLocaleLowerCase('pt-BR').includes(query));
+    const games = this.profile.biblioteca.filter(game =>
+      (!query || game.titulo.toLocaleLowerCase('pt-BR').includes(query)) &&
+      (this.libraryPlatformFilter === 'todos' || game.plataforma === this.libraryPlatformFilter)
+    );
     return [...games].sort((a, b) => {
       if (this.libraryOrder === 'nome') return a.titulo.localeCompare(b.titulo, 'pt-BR');
       if (this.libraryOrder === 'conquistas') return (b.conquistasDesbloqueadas / Math.max(1, b.conquistasTotal)) - (a.conquistasDesbloqueadas / Math.max(1, a.conquistasTotal));

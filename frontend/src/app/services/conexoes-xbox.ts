@@ -25,6 +25,7 @@ export class ConexoesXboxService {
   }
 
   async concluir(code: string): Promise<void> { await firstValueFrom(this.http.post(`${this.api}/concluir`, { code }, { headers: await this.headers() })); }
+  async sincronizar() { await firstValueFrom(this.http.post(`${this.api}/sincronizar`, {}, { headers: await this.headers() })); }
   async desconectar() { await firstValueFrom(this.http.delete(this.api, { headers: await this.headers() })); }
   private async headers(): Promise<{ Authorization: string }> { const { data } = await supabase.auth.getSession(); if (!data.session?.access_token) throw new Error('Sessao nao encontrada'); return { Authorization: `Bearer ${data.session.access_token}` }; }
 }

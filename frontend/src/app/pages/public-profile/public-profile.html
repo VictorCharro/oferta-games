@@ -382,9 +382,9 @@
           ><div class="panel-heading"><h2 *ngIf="!editingLayout">{{ block.titulo || 'Biblioteca' }}</h2><input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Biblioteca" /><button *ngIf="!editingLayout" type="button" class="panel-link" (click)="openLibrary()">Ver biblioteca</button></div>
           <div *ngIf="libraryPreview(block).length; else noLibraryPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
             <article *ngFor="let game of libraryPreview(block)" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">
-              <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
-              <div class="library-hover-actions">
-                <a class="library-hover-btn" [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener">Ver na Steam</a>
+              <a [attr.href]="game.plataforma === 'steam' ? ('https://store.steampowered.com/app/' + game.appId) : null" [attr.target]="game.plataforma === 'steam' ? '_blank' : null" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img [src]="game.plataforma === 'xbox' ? 'store-logos/xbox.svg' : 'store-logos/steam.svg'" [alt]="game.plataforma" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span *ngIf="game.plataforma === 'steam'">{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
+              <div class="library-hover-actions" *ngIf="game.plataforma === 'steam' || game.catalogSlug">
+                <a *ngIf="game.plataforma === 'steam'" class="library-hover-btn" [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener">Ver na Steam</a>
                 <a *ngIf="game.catalogSlug" class="library-hover-btn primary" [href]="'/jogo/' + game.catalogSlug">Ver no catálogo</a>
               </div>
             </article>
@@ -406,9 +406,9 @@
           >
             <article *ngFor="let game of platinumPreview(block)" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)" cdkDrag [cdkDragDisabled]="!isOwner || !editingLayout">
               <span *ngIf="isOwner && editingLayout" class="favorite-drag-handle" cdkDragHandle aria-label="Arrastar para reordenar" title="Arrastar para reordenar">↕</span>
-              <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small>100% conquistas</small></div></a>
-              <div class="library-hover-actions">
-                <a class="library-hover-btn" [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener">Ver na Steam</a>
+              <a [attr.href]="game.plataforma === 'steam' ? ('https://store.steampowered.com/app/' + game.appId) : null" [attr.target]="game.plataforma === 'steam' ? '_blank' : null" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img [src]="game.plataforma === 'xbox' ? 'store-logos/xbox.svg' : 'store-logos/steam.svg'" [alt]="game.plataforma" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span *ngIf="game.plataforma === 'steam'">{{ hours(game.minutosJogadas) }} jogadas</span><small>100% conquistas</small></div></a>
+              <div class="library-hover-actions" *ngIf="game.plataforma === 'steam' || game.catalogSlug">
+                <a *ngIf="game.plataforma === 'steam'" class="library-hover-btn" [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener">Ver na Steam</a>
                 <a *ngIf="game.catalogSlug" class="library-hover-btn primary" [href]="'/jogo/' + game.catalogSlug">Ver no catálogo</a>
               </div>
             </article>
@@ -621,7 +621,7 @@
 
   <section class="panel library-list-panel" *ngIf="activeTab === 'biblioteca'">
     <div class="panel-heading">
-      <h2>Biblioteca Steam</h2>
+      <h2>Biblioteca</h2>
       <span
         >{{ libraryGames.length }} de
         {{ profile.totalJogosBiblioteca ?? profile.biblioteca.length }} jogos</span
@@ -634,6 +634,11 @@
         placeholder="Buscar na biblioteca"
         aria-label="Buscar na biblioteca"
       />
+      <select *ngIf="profile.plataformasConectadas.length > 1" [(ngModel)]="libraryPlatformFilter" aria-label="Filtrar por plataforma">
+        <option value="todos">Todas as plataformas</option>
+        <option value="steam">Steam</option>
+        <option value="xbox">Xbox</option>
+      </select>
       <select [(ngModel)]="libraryOrder" aria-label="Ordenar biblioteca">
         <option value="tempo">Mais jogados</option>
         <option value="conquistas">Mais conquistas</option>
@@ -642,13 +647,13 @@
     </div>
     <div class="profile-game-grid grid-completo library-gallery" *ngIf="libraryGames.length; else emptyLibrary">
       <article *ngFor="let game of libraryGames" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">
-        <a [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
-        <div class="library-hover-actions">
-          <a class="library-hover-btn" [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener">Ver na Steam</a>
+        <a [attr.href]="game.plataforma === 'steam' ? ('https://store.steampowered.com/app/' + game.appId) : null" [attr.target]="game.plataforma === 'steam' ? '_blank' : null" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img [src]="game.plataforma === 'xbox' ? 'store-logos/xbox.svg' : 'store-logos/steam.svg'" [alt]="game.plataforma" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span *ngIf="game.plataforma === 'steam'">{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
+        <div class="library-hover-actions" *ngIf="game.plataforma === 'steam' || game.catalogSlug">
+          <a *ngIf="game.plataforma === 'steam'" class="library-hover-btn" [href]="'https://store.steampowered.com/app/' + game.appId" target="_blank" rel="noopener">Ver na Steam</a>
           <a *ngIf="game.catalogSlug" class="library-hover-btn primary" [href]="'/jogo/' + game.catalogSlug">Ver no catálogo</a>
         </div>
         <button
-          *ngIf="isOwner"
+          *ngIf="isOwner && game.plataforma === 'steam'"
           type="button"
           class="library-favorite gallery-favorite"
           [class.active]="isSteamFavorite(game.appId)"

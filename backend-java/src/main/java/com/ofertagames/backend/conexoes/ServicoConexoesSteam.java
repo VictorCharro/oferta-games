@@ -291,9 +291,16 @@ public class ServicoConexoesSteam {
     }
   }
 
-  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl, String catalogSlug, Integer platinumPosition) {
+  // Tipo usado tambem pra biblioteca Xbox (campo "plataforma"), pra nao duplicar toda a
+  // renderizacao/agregacao de biblioteca no frontend - so o construtor de 9 args (Steam) e
+  // mantido com "steam" implicito, pra nao precisar mexer nos outros pontos que ja o usam.
+  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl, String catalogSlug, Integer platinumPosition, String plataforma) {
+    public JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl, String catalogSlug, Integer platinumPosition) {
+      this(appId, titulo, minutosJogadas, iconeHash, conquistasDesbloqueadas, conquistasTotal, capaUrl, catalogSlug, platinumPosition, "steam");
+    }
+
     public JogoBibliotecaSteam comCatalogSlug(String catalogSlug) {
-      return new JogoBibliotecaSteam(appId, titulo, minutosJogadas, iconeHash, conquistasDesbloqueadas, conquistasTotal, capaUrl, catalogSlug, platinumPosition);
+      return new JogoBibliotecaSteam(appId, titulo, minutosJogadas, iconeHash, conquistasDesbloqueadas, conquistasTotal, capaUrl, catalogSlug, platinumPosition, plataforma);
     }
   }
 
