@@ -73,7 +73,7 @@
           <img [src]="xboxStatus?.avatarUrl || 'store-logos/xbox.svg'" alt="Xbox" />
           <div><h3>Xbox</h3><p>{{ xboxStatus?.conectada ? xboxStatus?.gamertag : 'Biblioteca, horas jogadas e conquistas' }}</p><span>{{ xboxStatus?.conectada ? 'Conectada' : 'Não conectado' }}</span></div>
           <div class="connection-actions" *ngIf="xboxStatus?.conectada; else conectarXbox"><button type="button" class="disconnect" (click)="disconnectXbox()" [disabled]="xboxLoading">Desconectar</button></div>
-          <ng-template #conectarXbox><button type="button" (click)="connectXbox()" [disabled]="xboxLoading">Conectar</button></ng-template>
+          <ng-template #conectarXbox><button type="button" (click)="connectXbox()" [disabled]="xboxLoading">{{ xboxLoading ? 'Conectando...' : 'Conectar' }}</button></ng-template>
         </article>
       </div>
       <div class="info-strip">Quando uma conexão estiver disponível, os dados sincronizados aparecerão automaticamente no perfil.</div>
