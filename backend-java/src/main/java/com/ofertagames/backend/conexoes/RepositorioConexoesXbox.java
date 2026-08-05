@@ -70,11 +70,11 @@ class RepositorioConexoesXbox {
 
   // Upsert por jogo: nunca faz DELETE da biblioteca existente, so atualiza/adiciona.
   void upsertJogoBiblioteca(String usuarioId, String titleId, String titulo, String capaUrl,
-      int conquistasDesbloqueadas, int conquistasTotal, int gamerscoreDesbloqueado, int gamerscoreTotal, String ultimaJogada) {
+      int conquistasDesbloqueadas, int conquistasTotal, int gamerscoreDesbloqueado, int gamerscoreTotal, int minutosJogados, String ultimaJogada) {
     jdbc.sql("""
         INSERT INTO xbox_library_games (user_id, title_id, title, cover_url, achievements_unlocked, achievements_total,
-            gamerscore_unlocked, gamerscore_total, last_played_at, last_synced_at)
-        VALUES (CAST(:usuarioId AS uuid), :titleId, :titulo, :capa, :conqDesb, :conqTotal, :gsDesb, :gsTotal,
+            gamerscore_unlocked, gamerscore_total, minutes_played, last_played_at, last_synced_at)
+        VALUES (CAST(:usuarioId AS uuid), :titleId, :titulo, :capa, :conqDesb, :conqTotal, :gsDesb, :gsTotal, :minutos,
             CAST(:ultimaJogada AS timestamptz), now())
         ON CONFLICT (user_id, title_id) DO UPDATE
           SET title = EXCLUDED.title,
@@ -83,6 +83,7 @@ class RepositorioConexoesXbox {
               achievements_total = EXCLUDED.achievements_total,
               gamerscore_unlocked = EXCLUDED.gamerscore_unlocked,
               gamerscore_total = EXCLUDED.gamerscore_total,
+              minutes_played = EXCLUDED.minutes_played,
               last_played_at = EXCLUDED.last_played_at,
               last_synced_at = now()
         """)
@@ -94,6 +95,7 @@ class RepositorioConexoesXbox {
         .param("conqTotal", conquistasTotal)
         .param("gsDesb", gamerscoreDesbloqueado)
         .param("gsTotal", gamerscoreTotal)
+        .param("minutos", minutosJogados)
         .param("ultimaJogada", ultimaJogada)
         .update();
   }
@@ -107,7 +109,7 @@ class RepositorioConexoesXbox {
   List<JogoBibliotecaXbox> listarBiblioteca(String usuarioId) {
     return jdbc.sql("""
         SELECT title_id, title, cover_url, achievements_unlocked, achievements_total,
-               gamerscore_unlocked, gamerscore_total, last_played_at::text
+               gamerscore_unlocked, gamerscore_total, minutes_played, last_played_at::text
         FROM xbox_library_games
         WHERE user_id = CAST(:usuarioId AS uuid)
         ORDER BY last_played_at DESC NULLS LAST
@@ -121,10 +123,11 @@ class RepositorioConexoesXbox {
             rs.getInt("achievements_total"),
             rs.getInt("gamerscore_unlocked"),
             rs.getInt("gamerscore_total"),
+            rs.getInt("minutes_played"),
             rs.getString("last_played_at")))
         .list();
   }
 
   record ConexaoXbox(String xuid, String gamertag, String avatarUrl, Integer gamerscore, String conectadoEm, String bibliotecaSincronizadaEm, String ultimoErro) {}
-  record JogoBibliotecaXbox(String titleId, String titulo, String capaUrl, int conquistasDesbloqueadas, int conquistasTotal, int gamerscoreDesbloqueado, int gamerscoreTotal, String ultimaJogada) {}
+  record JogoBibliotecaXbox(String titleId, String titulo, String capaUrl, int conquistasDesbloqueadas, int conquistasTotal, int gamerscoreDesbloqueado, int gamerscoreTotal, int minutosJogados, String ultimaJogada) {}
 }

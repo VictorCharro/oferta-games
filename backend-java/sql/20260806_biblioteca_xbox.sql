@@ -14,3 +14,7 @@ CREATE TABLE IF NOT EXISTS xbox_library_games (
   last_synced_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, title_id)
 );
+
+-- Minutos jogados: nao vem no titleHistory, precisa de uma chamada separada em lote
+-- (POST /v2/player/stats, com um item {name:"MinutesPlayed", titleId} por jogo).
+ALTER TABLE xbox_library_games ADD COLUMN IF NOT EXISTS minutes_played integer NOT NULL DEFAULT 0;

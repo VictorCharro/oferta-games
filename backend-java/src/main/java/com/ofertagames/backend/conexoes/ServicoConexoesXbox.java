@@ -49,8 +49,12 @@ public class ServicoConexoesXbox {
   // So incrementa/atualiza (upsert por titleId) - nunca apaga jogos ja salvos, mesmo que a
   // OpenXBL pare de devolve-los (ex: usuario escondeu um jogo do historico dele).
   void sincronizarBiblioteca(String usuarioId) {
+    RepositorioConexoesXbox.ConexaoXbox conexao = conexoes.buscarConexao(usuarioId).orElseThrow(ConexaoXboxNaoEncontradaException::new);
     String token = conexoes.buscarToken(usuarioId).orElseThrow(ConexaoXboxNaoEncontradaException::new);
     List<ClienteXbl.TituloXbl> titulos = xbl.buscarBiblioteca(token);
+    List<String> titleIds = titulos.stream().filter(t -> t != null && t.titleId() != null).map(ClienteXbl.TituloXbl::titleId).toList();
+    // Minutos jogados vem de uma chamada separada em lote (nao existe no titleHistory).
+    java.util.Map<String, Integer> minutos = titleIds.isEmpty() ? java.util.Map.of() : xbl.buscarMinutosJogados(token, conexao.xuid(), titleIds);
     for (ClienteXbl.TituloXbl titulo : titulos) {
       if (titulo == null || titulo.titleId() == null) continue;
       ClienteXbl.AchievementXbl conquistas = titulo.achievement();
@@ -63,6 +67,7 @@ public class ServicoConexoesXbox {
           conquistas == null ? 0 : conquistas.totalGamerscore(),
           conquistas == null ? 0 : conquistas.currentGamerscore(),
           conquistas == null ? 0 : conquistas.totalGamerscore(),
+          minutos.getOrDefault(titulo.titleId(), 0),
           titulo.titleHistory() == null ? null : titulo.titleHistory().lastTimePlayed());
     }
     conexoes.marcarBibliotecaSincronizada(usuarioId);
@@ -78,7 +83,7 @@ public class ServicoConexoesXbox {
         .map(jogo -> {
           try {
             int appId = Integer.parseInt(jogo.titleId());
-            return new ServicoConexoesSteam.JogoBibliotecaSteam(appId, jogo.titulo(), 0, null, jogo.conquistasDesbloqueadas(), jogo.conquistasTotal(), jogo.capaUrl(), null, null, "xbox");
+            return new ServicoConexoesSteam.JogoBibliotecaSteam(appId, jogo.titulo(), jogo.minutosJogados(), null, jogo.conquistasDesbloqueadas(), jogo.conquistasTotal(), jogo.capaUrl(), null, null, "xbox");
           } catch (NumberFormatException erro) {
             return null;
           }
