@@ -515,7 +515,7 @@ export class GameDetail implements OnInit, OnDestroy {
     const slug = this.game.slug;
     this.gameService.refreshGame(slug).subscribe({
       next: (res) => {
-        this.refreshMsg = `${res.updated} oferta(s) atualizada(s)`;
+        this.refreshMsg = 'Ofertas atualizadas';
         this.refreshing = false;
         this.cdr.detectChanges();
         this.gameService.getGame(slug).subscribe({
