@@ -1452,6 +1452,25 @@
   &.none { color: var(--text-muted); }
 }
 
+.voucher-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(41, 168, 224, 0.18);
+  color: var(--color-purple);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  vertical-align: middle;
+}
+
+.hero-best .voucher-badge {
+  margin-left: 0;
+  width: fit-content;
+}
+
 .offer-cta {
   font-size: 13px;
   color: var(--color-purple);

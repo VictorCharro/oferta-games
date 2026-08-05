@@ -536,6 +536,10 @@ export class GameDetail implements OnInit, OnDestroy {
     return Math.min(...offers.map(o => o.price));
   }
 
+  bestOffer(offers: Offer[]): Offer | null {
+    return offers.reduce<Offer | null>((best, offer) => !best || offer.price < best.price ? offer : best, null);
+  }
+
   discount(offer: Offer): number {
     if (!offer.regularPrice) return 0;
     return Math.round((1 - offer.price / offer.regularPrice) * 100);

@@ -85,7 +85,8 @@ public class ServicoCatalogo {
               oferta.price().amount(),
               oferta.regular() == null ? null : oferta.regular().amount(),
               "BRL",
-              oferta.url()));
+              oferta.url(),
+              oferta.voucher()));
           atualizadas++;
         }
         atualizarMetadadosSteamSeNecessario(jogo, resultado.deals());
@@ -151,7 +152,8 @@ public class ServicoCatalogo {
               oferta.price().amount(),
               oferta.regular() == null ? null : oferta.regular().amount(),
               "BRL",
-              oferta.url()));
+              oferta.url(),
+              oferta.voucher()));
         }
       }
       ofertasPorJogo.put(jogoId, ofertasAtuais);
@@ -229,7 +231,8 @@ public class ServicoCatalogo {
               oferta.price().amount(),
               oferta.regular() == null ? null : oferta.regular().amount(),
               "BRL",
-              oferta.url()));
+              oferta.url(),
+              oferta.voucher()));
         }
       }
       atualizadas += jogos.substituirOfertasItad(jogoId, ofertasAtuais);

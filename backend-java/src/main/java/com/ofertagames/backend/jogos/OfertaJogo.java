@@ -7,5 +7,6 @@ public record OfertaJogo(
     BigDecimal price,
     BigDecimal regularPrice,
     String currency,
-    String url
+    String url,
+    String voucherCode
 ) {}

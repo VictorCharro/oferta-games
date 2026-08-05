@@ -21,6 +21,7 @@ export interface Offer {
   regularPrice: number;
   currency: string;
   url: string;
+  voucherCode: string | null;
 }
 
 export interface GameDetail {

@@ -53,7 +53,9 @@ public class ClienteItad {
       return List.of();
     }
     return restClient.post()
-        .uri("/games/prices/v3?country=BR")
+        // vouchers=true: inclui ofertas com cupom aplicado (o price/cut ja vem calculado com o
+        // desconto do cupom), pra mostrar o menor preco real em vez de so o preco de tabela da loja.
+        .uri("/games/prices/v3?country=BR&vouchers=true")
         .header("ITAD-API-Key", chaveApi)
         .body(idsItad)
         .retrieve()

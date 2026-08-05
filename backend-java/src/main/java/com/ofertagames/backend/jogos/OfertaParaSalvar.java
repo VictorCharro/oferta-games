@@ -9,5 +9,6 @@ public record OfertaParaSalvar(
     BigDecimal preco,
     BigDecimal precoNormal,
     String moeda,
-    String url
+    String url,
+    String cupom
 ) {}

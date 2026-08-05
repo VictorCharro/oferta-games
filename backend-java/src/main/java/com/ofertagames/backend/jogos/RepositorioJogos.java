@@ -211,13 +211,14 @@ public class RepositorioJogos {
       return;
     }
     jdbc.sql("""
-        INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
-        VALUES (:jogoId, :fonte, :loja, :preco, :precoNormal, :moeda, :url, now())
+        INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, voucher_code, updated_at)
+        VALUES (:jogoId, :fonte, :loja, :preco, :precoNormal, :moeda, :url, :cupom, now())
         ON CONFLICT (game_id, source, store_name) DO UPDATE
           SET price = EXCLUDED.price,
               regular_price = EXCLUDED.regular_price,
               currency = EXCLUDED.currency,
               url = EXCLUDED.url,
+              voucher_code = EXCLUDED.voucher_code,
               updated_at = EXCLUDED.updated_at
         """)
         .param("jogoId", oferta.jogoId())
@@ -227,6 +228,7 @@ public class RepositorioJogos {
         .param("precoNormal", oferta.precoNormal())
         .param("moeda", oferta.moeda())
         .param("url", oferta.url())
+        .param("cupom", oferta.cupom())
         .update();
   }
 
@@ -239,13 +241,14 @@ public class RepositorioJogos {
     }
 
     String sql = """
-        INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, now())
+        INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, voucher_code, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, now())
         ON CONFLICT (game_id, source, store_name) DO UPDATE
           SET price = EXCLUDED.price,
               regular_price = EXCLUDED.regular_price,
               currency = EXCLUDED.currency,
               url = EXCLUDED.url,
+              voucher_code = EXCLUDED.voucher_code,
               updated_at = EXCLUDED.updated_at
         """;
     int[][] updateCounts = jdbcTemplate.batchUpdate(sql, ofertasPermitidas, 100, (ps, o) -> {
@@ -256,6 +259,7 @@ public class RepositorioJogos {
       ps.setBigDecimal(5, o.precoNormal());
       ps.setString(6, o.moeda());
       ps.setString(7, o.url());
+      ps.setString(8, o.cupom());
     });
     return Arrays.stream(updateCounts)
         .flatMapToInt(Arrays::stream)
@@ -615,7 +619,7 @@ public class RepositorioJogos {
 
   private List<OfertaJogo> listarOfertas(long jogoId) {
     return jdbc.sql("""
-        SELECT o.store_name, o.price, o.regular_price, o.currency, o.url
+        SELECT o.store_name, o.price, o.regular_price, o.currency, o.url, o.voucher_code
         FROM offers o
         WHERE o.game_id = :jogoId
           %s
@@ -627,7 +631,8 @@ public class RepositorioJogos {
             rs.getBigDecimal("price"),
             rs.getBigDecimal("regular_price"),
             rs.getString("currency"),
-            rs.getString("url")))
+            rs.getString("url"),
+            rs.getString("voucher_code")))
         .list();
   }
 
