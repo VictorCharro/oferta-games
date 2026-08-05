@@ -62,6 +62,7 @@
 }
 
 .custom-select.open {
+  z-index: 10;
   .custom-select-trigger { border-color: var(--color-purple); box-shadow: 0 0 0 3px rgba(41, 168, 224, .12); }
   .select-chevron { transform: rotate(225deg) translate(-1px, -1px); }
 }
