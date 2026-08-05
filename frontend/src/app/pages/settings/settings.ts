@@ -102,7 +102,7 @@ export class Settings implements OnInit {
 
   async loadXbox() { try { this.xboxStatus = await this.xboxService.status(); } catch { this.xboxStatus = null; } this.cdr.detectChanges(); }
   async connectXbox() { this.xboxLoading = true; try { await this.xboxService.conectar(); } catch { this.error = 'Nao foi possivel iniciar a conexao com a Xbox.'; this.xboxLoading = false; this.cdr.detectChanges(); } }
-  async disconnectXbox() { this.xboxLoading = true; try { await this.xboxService.desconectar(); this.xboxStatus = null; } catch { this.error = 'Nao foi possivel desconectar a Xbox.'; } this.xboxLoading = false; this.cdr.detectChanges(); }
+  async disconnectXbox() { this.xboxLoading = true; this.clearMessages(); try { await this.xboxService.desconectar(); this.xboxStatus = null; this.success = 'Conta Xbox desconectada.'; } catch { this.error = 'Nao foi possivel desconectar a Xbox.'; } this.xboxLoading = false; this.cdr.detectChanges(); }
 
   async loadPublicProfile() { try { const perfil = await this.perfisService.proprio(); if (perfil) { this.profileHandle = perfil.handle || ''; this.privacy = { publicProfile: perfil.publico, showGameHours: perfil.mostrarHoras, showAchievements: perfil.mostrarConquistas, showLibrary: perfil.mostrarBiblioteca, showFavoriteGames: perfil.mostrarFavoritos, showRecentActivity: perfil.mostrarAtividades, showCollections: perfil.mostrarColecoes }; } } catch {} this.cdr.detectChanges(); }
   async salvarPrivacidade() { try { await this.salvarPerfilPublico(); this.success = 'Preferencias de privacidade salvas.'; this.error = ''; } catch { this.error = 'Defina uma URL valida e disponivel para publicar o perfil.'; } this.cdr.detectChanges(); }
