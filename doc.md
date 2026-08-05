@@ -39,6 +39,7 @@ O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de 
 | `SUPABASE_ANON_KEY` | sim | Validacao de tokens Supabase |
 | `ITAD_API_KEY` | sim | Coleta e refresh de ofertas |
 | `STEAM_WEB_API_KEY` | sim para Steam | Biblioteca, horas e conquistas Steam |
+| `XBL_APP_KEY` | sim para Xbox | "Public Key" do "Xbox App" criado no painel OpenXBL (xbl.io), usado no fluxo OAuth de login Xbox |
 | `PUBLIC_BACKEND_URL` | sim para Steam | URL publica do backend para retorno OpenID |
 | `FRONTEND_URL` | sim para Steam | URL do frontend para redirecionamentos |
 | `CORS_ALLOWED_ORIGINS` | sim | Separar por virgula; incluir Vercel e `http://localhost:4200` |
@@ -78,6 +79,7 @@ O Spring executa a coleta internamente quando `APP_SYNC_SCHEDULER_ENABLED=true`.
 - A coleta atualiza **todas as ofertas retornadas pela ITAD** para cada jogo, como o botao manual `Atualizar precos`. Ofertas ITAD antigas que nao retornam mais sao removidas.
 - Antes e depois da troca de ofertas, o backend compara o menor preco para criar notificacoes de queda para quem monitora o jogo.
 - `sync_locks` impede jobs simultaneos, inclusive em deploys com duas instancias temporarias.
+- **Cupons ITAD (05/08/2026)**: `ClienteItad.buscarPrecos` passa `vouchers=true` na chamada `/games/prices/v3` — sem esse parametro a ITAD omite ofertas com cupom aplicado por padrao. Quando existe, o `price`/`cut` da oferta ja vem calculado com o desconto do cupom (nao precisa calcular nada), e o codigo vai pra `offers.voucher_code`. O frontend mostra esse preco como o principal (ja e o menor preco real), com um selo "Cupom XYZ" do lado — no "Melhor preco" do topo e na linha da oferta especifica — indicando que precisa aplicar o codigo no carrinho da loja pra garantir o valor.
 
 O endpoint `POST /api/sync?page=0` e legado: serve para diagnostico/manual e exige `X-Sync-Key`. Nao usar GitHub Actions para processar o catalogo completo.
 
@@ -176,8 +178,10 @@ games
 
 offers
   id, game_id, source, store_name, price, regular_price
-  currency, url, updated_at
+  currency, url, voucher_code, updated_at
   UNIQUE (game_id, source, store_name)
+  -- voucher_code: preenchido quando a ITAD (com vouchers=true) devolve um preco ja calculado
+  -- com cupom aplicado; price/regular_price ja vem com o desconto do cupom embutido
 
 game_details
   game_id (PK, FK games), short_description, genres[], developers[]
@@ -216,7 +220,7 @@ price_notifications
   read_at, created_at
 ```
 
-### Perfis e Steam
+### Perfis, Steam e Xbox
 
 ```text
 profiles
@@ -236,6 +240,21 @@ steam_library_games
 
 steam_game_achievements
   user_id, app_id, unlocked_count, total_count, last_synced_at
+
+profile_platinum_order
+  user_id, app_id, position
+  -- ordem manual dos platinados Steam (arrastar no bloco do perfil); so Steam por enquanto
+
+xbox_connections
+  user_id, xuid, gamertag, avatar_url, gamerscore, access_token
+  connected_at, last_library_sync_at, last_error
+  -- access_token: token por usuario devolvido pelo /app/claim da OpenXBL, usado nas chamadas seguintes em nome dele
+
+xbox_library_games
+  user_id, title_id, title, cover_url
+  achievements_unlocked, achievements_total, gamerscore_unlocked, gamerscore_total
+  minutes_played, last_played_at, last_synced_at
+  -- upsert-only por title_id: a sincronizacao nunca faz DELETE, so atualiza/adiciona
 
 profile_favorites
   user_id, game_id, created_at, position
@@ -291,8 +310,12 @@ Arquivos em `backend-java/sql/`:
 21. `20260718_reprocessar_detalhes_pt_br.sql`
 22. `20260718_biblioteca_steam_capas.sql`
 23. `20260719_instant_gaming.sql`
+24. `20260801_ordem_platinados_perfil.sql`
+25. `20260805_voucher_code_offers.sql`
+26. `20260806_conexoes_xbox.sql`
+27. `20260806_biblioteca_xbox.sql`
 
-As migrations 1 a 23 ja foram aplicadas ao projeto Supabase de producao. A migration 21 marcou 408 detalhes existentes como antigos em 18/07/2026 para a fila substitui-los gradualmente pelo conteudo pt-BR, sem apagar o texto atual durante o processamento. Em outro ambiente, executar as migrations estruturais em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500. A migration 22 adiciona `cover_url`/`cover_synced_at` a `steam_library_games` para guardar a capa real de cada jogo (resolvida via appdetails, ja que a Steam mudou o CDN das capas pra um caminho com hash imprevisivel em `shared.akamai.steamstatic.com`); precisa ser aplicada antes do deploy do backend que preenche/le essas colunas. A migration 23 adiciona `instant_gaming_url`/`last_instant_gaming_sync_at` a `games` e cria `instant_gaming_catalog`/`instant_gaming_scan_cursor` (ver secao "Instant Gaming" acima); precisa ser aplicada antes do deploy do backend que usa essas tabelas/colunas.
+As migrations 1 a 27 ja foram aplicadas ao projeto Supabase de producao. A 24 cria `profile_platinum_order` para a ordem manual dos platinados Steam (arrastar no bloco do perfil). A 25 adiciona `offers.voucher_code`. A 26 cria `xbox_connections` (fluxo OAuth "Xbox App" da OpenXBL). A 27 cria `xbox_library_games` (upsert-only) e depois adiciona `minutes_played`; precisa ser aplicada antes do deploy do backend que sincroniza biblioteca Xbox. A migration 21 marcou 408 detalhes existentes como antigos em 18/07/2026 para a fila substitui-los gradualmente pelo conteudo pt-BR, sem apagar o texto atual durante o processamento. Em outro ambiente, executar as migrations estruturais em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500. A migration 22 adiciona `cover_url`/`cover_synced_at` a `steam_library_games` para guardar a capa real de cada jogo (resolvida via appdetails, ja que a Steam mudou o CDN das capas pra um caminho com hash imprevisivel em `shared.akamai.steamstatic.com`); precisa ser aplicada antes do deploy do backend que preenche/le essas colunas. A migration 23 adiciona `instant_gaming_url`/`last_instant_gaming_sync_at` a `games` e cria `instant_gaming_catalog`/`instant_gaming_scan_cursor` (ver secao "Instant Gaming" acima); precisa ser aplicada antes do deploy do backend que usa essas tabelas/colunas.
 
 O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos e seus fundos. Cada usuario so pode gravar na propria pasta. As politicas RLS de `SELECT`, `INSERT`, `UPDATE` e `DELETE` foram aplicadas ao projeto novo em 15/07/2026; sem elas o Storage retorna HTTP 400 nos uploads. Limite de upload de imagem no frontend: 2 MB, JPG/PNG/WebP. Blocos de imagem e fundos tambem aceitam URL externa `http(s)`.
 
@@ -352,13 +375,18 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 
 Toda rota exige token e valida que a colecao e do usuario autenticado; colecao de outro usuario responde 404, nunca 403, para nao revelar a existencia dela. Limites: nome de 1 a 40 caracteres, 20 colecoes por usuario e 200 jogos por colecao.
 
-### Steam e administracao
+### Steam, Xbox e administracao
 
 - `POST /api/conexoes/steam/iniciar`
 - `GET /api/conexoes/steam/retorno`
 - `GET|DELETE /api/conexoes/steam`
 - `GET /api/conexoes/steam/biblioteca` (endpoint do dono; retorna a biblioteca inteira, ate 2000 jogos, para montar colecoes. A previa do perfil publico segue limitada a 100)
 - `POST /api/conexoes/steam/sincronizar`
+- `PUT /api/conexoes/steam/platinados/ordem` (ordem manual dos platinados; so appIds Steam)
+- `GET /api/conexoes/xbox/app-key` (publico, sem auth — "Public Key" da OpenXBL, usada pelo frontend para montar a URL de login)
+- `POST /api/conexoes/xbox/concluir` (troca o `code` do retorno OAuth por xuid/gamertag/token, autenticado pelo bearer normal do usuario)
+- `GET|DELETE /api/conexoes/xbox`
+- `POST /api/conexoes/xbox/sincronizar`
 - `GET /api/admin/coleta`
 - `POST /api/admin/coleta/precos`
 - `POST /api/admin/coleta/steam`
@@ -390,7 +418,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 | **Mais vendidos** | Mostrar jogos relevantes/populares. | Usa rank ITAD e deve respeitar as mesmas regras de filtro de conteudo nao-jogo, DLC e lojas bloqueadas. |
 | **Gratuitos** | Mostrar ofertas com preco zero. | Itens com link invalido ou filtrados por `JogosBloqueados` nao devem aparecer. |
 | **Login** | Autenticar por Supabase Auth. | Nao usa sidebar nem topbar. Depois do login, a navegacao volta ao fluxo normal do aplicativo. |
-| **Configuracoes** (`/configuracoes`) | Centralizar opcoes da conta. | Abas separadas: Conta, Conexoes, Preferencias e Privacidade. Nao misturar assuntos entre abas. Preferencias afetam home/catalogo; Privacidade afeta o perfil publico; Conexoes concentra Steam e futura Xbox. |
+| **Configuracoes** (`/configuracoes`) | Centralizar opcoes da conta. | Abas separadas: Conta, Conexoes, Preferencias e Privacidade. Nao misturar assuntos entre abas. Preferencias afetam home/catalogo; Privacidade afeta o perfil publico; Conexoes concentra Steam e Xbox. |
 | **Perfil proprio** (`/perfil` -> `/:handle`) | Personalizar e visualizar o perfil do usuario. | `/perfil` redireciona para o handle canonico. O dono pode editar bio, foto, layout, blocos e pedir atualizacao Steam. A pagina canonica e a mesma que visitantes veem, com controles extras apenas para o dono. |
 | **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra uma faixa fixa com biblioteca, horas, conquistas desbloqueadas, jogos platinados (so quando ha algum) e icones das plataformas conectadas; abaixo, mostra Resumo, Jogos favoritos, Colecoes e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
 | **Administracao de coleta** (`/admin/coleta`) | Acompanhar e disparar jobs internos. | Exclusiva do UID administrador. Exibe status das filas de preco/Steam e permite disparar coleta manual em segundo plano; nao substitui o scheduler. |
@@ -428,7 +456,7 @@ O modo de edicao permite reorganizar blocos por arrastar e soltar, mudar tamanho
 - paineis de favoritos pessoais, biblioteca, atividade e platinados (01/08/2026);
 - blocos personalizados de texto, imagem e links.
 
-O painel **Platinados** e derivado da biblioteca (`profile.biblioteca` filtrado no frontend por `conquistasTotal > 0 && conquistasDesbloqueadas >= conquistasTotal`, ordenado por horas jogadas), sem endpoint proprio no backend. So pode existir um bloco desse tipo por perfil. Visibilidade pro visitante depende do toggle **Mostrar biblioteca** (nao existe toggle proprio), ja que os dados vem de la; `ServicoPerfis.blocosPublicos` filtra o bloco do mesmo jeito.
+O painel **Platinados** e derivado da biblioteca (`profile.biblioteca` filtrado no frontend por `conquistasTotal > 0 && conquistasDesbloqueadas >= conquistasTotal`, com prioridade pra `platinumPosition` quando definida e senao ordenado por horas jogadas). So pode existir um bloco desse tipo por perfil. Visibilidade pro visitante depende do toggle **Mostrar biblioteca** (nao existe toggle proprio), ja que os dados vem de la; `ServicoPerfis.blocosPublicos` filtra o bloco do mesmo jeito. Os blocos de **Favoritos** e **Platinados** podem ser reordenados por arrastar direto no proprio bloco (dentro do modo de edicao de layout), sem precisar entrar em "Gerenciar" — reaproveita o `cdkDropList`/`dropFavorite` da aba Gerenciar pros favoritos; pros platinados existe `PUT /api/conexoes/steam/platinados/ordem` + tabela `profile_platinum_order` dedicada (nao reaproveita coluna em `steam_library_games` porque essa tabela e substituida inteira a cada sync da Steam). A ordem dos platinados so persiste pra itens Steam; itens Xbox no mesmo bloco reordenam visualmente mas nao salvam entre sessoes.
 
 Os quatro paineis de dados (favoritos, biblioteca, atividade, platinados) tem titulo editavel (01/08/2026), igual aos blocos personalizados de texto/links: campo de titulo no editor com o mesmo limite por tamanho (`maxTitleLength`), mostrando o nome padrao (`defaultBlockTitle`) como placeholder quando vazio. Sem titulo customizado, cai no nome padrao de sempre ("Jogos favoritos", "Biblioteca", "Atividade recente", "Platinados"). Nao ha validacao especifica no backend alem do limite de tamanho generico de `salvarBlocos` (mesma regra dos demais tipos).
 
@@ -446,7 +474,16 @@ Os dropdowns de tamanho e fundo devem seguir o mesmo padrao visual do filtro de 
 - Sincroniza biblioteca, horas totais/por jogo e conquistas gradualmente via Steam Web API.
 - A aba Biblioteca busca, ordena por tempo/nome/conquistas e permite favoritar itens Steam ausentes do catalogo.
 - Wishlist Steam nao e coletada.
-- Xbox permanece planejado. Nao usar scraping nem API nao oficial: nao ha um fluxo publico equivalente ao Steam OpenID + Web API para importar a biblioteca de qualquer conta.
+- **Xbox implementado (06/08/2026)** via OpenXBL (xbl.io), usando o recurso "Xbox App" deles (nao a API key pessoal, que so serve pra consultar dados publicos de qualquer gamertag com uma chave do dono do site). O fluxo:
+  1. O usuario cria um "Xbox App" no painel do OpenXBL — isso exige registrar tambem um app no Azure AD (Application/Client ID + Client Secret, tipo de conta "Somente contas pessoais", redirect URI `https://api.xbl.io/app/callback`) e colar essas credenciais de volta no OpenXBL. So precisa ser feito uma vez; gera a `app_key` ("Public Key") usada em `XBL_APP_KEY`.
+  2. No site, o botao "Conectar" em Configuracoes > Conexoes busca a `app_key` (`GET /api/conexoes/xbox/app-key`, publico) e redireciona o navegador pra `https://api.xbl.io/app/auth/{app_key}` — o usuario loga com a conta Microsoft dele la.
+  3. A OpenXBL redireciona de volta pra `https://ofertagames.vercel.app/configuracoes?code=...`. Como o usuario continua logado no site (sessao Supabase no localStorage sobrevive ao redirect), o frontend so chama `POST /api/conexoes/xbox/concluir` com esse `code` e o bearer token normal — sem precisar de uma tabela de "state"/CSRF como o OpenID do Steam usa, porque a correlacao com o usuario acontece direto pelo bearer.
+  4. O backend troca o `code` por xuid/gamertag/avatar/gamerscore/token (`POST https://api.xbl.io/app/claim`) e salva em `xbox_connections`. O `token` devolvido e usado depois pra chamar a API da OpenXBL em nome desse usuario.
+  - **Biblioteca**: `GET https://api.xbl.io/v2/player/titleHistory` devolve a biblioteca inteira numa unica chamada, ja com progresso de conquistas por jogo (`currentGamerscore`/`totalGamerscore`, mapeados pros mesmos campos de conquistas que a Steam usa — a OpenXBL as vezes devolve `totalAchievements=0` mesmo com progresso, mas o gamerscore bate certo com o `progressPercentage` que ela mesma reporta). Isso evita bater no rate limit apertado da OpenXBL (60 req/5min no free tier), que uma chamada por jogo estouraria rapido.
+  - **Minutos jogados**: nao vem no `titleHistory` (so tem `lastTimePlayed`). Precisa de `POST https://api.xbl.io/v2/player/stats` com um item `{name: "MinutesPlayed", titleId}` por jogo — mas aceita todos em lote numa unica chamada (dividido em blocos de 200), entao ainda e barato. Esse endpoint **nao aparece na documentacao renderizada** (`api.xbl.io/docs`, um app JS que nao lista as rotas via scraping simples); foi encontrado no spec OpenAPI bruto do repositorio publico `github.com/OpenXBL/Docs`. Testado ao vivo e confere exatamente com o tempo jogado real.
+  - **Sincronizacao e sempre upsert-only**: `xbox_library_games` nunca sofre DELETE, so INSERT/UPDATE por `title_id` — diferente da Steam, que substitui a biblioteca inteira a cada sync. Isso foi uma decisao deliberada pra nunca apagar dados que o perfil do usuario ja tenha, mesmo que a OpenXBL pare de devolver algum titulo (ex: usuario escondeu do historico).
+  - **Biblioteca combinada**: `ServicoPerfis` mescla `steam.biblioteca()` + `xbox.biblioteca()` numa lista so, cada item com o campo `plataforma` ('steam'|'xbox'). `plataformasConectadas` passa a incluir `xbox` quando conectado. Os agregados do topo do perfil (total de horas, conquistas gerais) continuam vindo so da Steam — so a lista de biblioteca e o contador de jogos somam as duas plataformas. A aba Biblioteca ganha um filtro de plataforma (Steam/Xbox/Todas), visivel so quando o usuario tem mais de uma conectada.
+  - **Limitacoes conhecidas**: favoritar, o link "Ver na [loja]" e a capa alternativa em cascata continuam Steam-only (favoritar por appId colidiria com titleId do Xbox, que sao so numeros indistinguiveis entre plataformas). Reordenar platinados por arrastar tambem so persiste pra itens Steam (o endpoint de ordem e especifico da Steam); itens Xbox reordenam na tela mas nao persistem entre sessoes ainda.
 
 ## Estrutura de Codigo
 
@@ -459,7 +496,7 @@ backend-java/
     administracao/       status e disparo manual de coleta
     autenticacao/        Bearer token Supabase
     configuracao/        CORS e banco
-    conexoes/            Steam OpenID e sincronizacao
+    conexoes/            Steam OpenID + Xbox OAuth (OpenXBL) e sincronizacao
     descontos/           home e melhores descontos
     favoritos/           Jogos Monitorados
     favoritosperfil/     favoritos pessoais
@@ -507,6 +544,9 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Jogos platinados na faixa de estatisticas: contagem de jogos com 100% de conquistas, exibida so quando ha pelo menos um; respeita o toggle de conquistas. Ainda sem icone proprio (reusa `conquistas.png` em prateado).
 - PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle usa o novo banco, executa o scheduler e expoe a API por Caddy/HTTPS. O frontend publicado na Vercel usa o mesmo projeto Supabase. O Render esta desligado; o Supabase antigo permanece somente como rollback temporario.
 - Validacao pos-migracao concluida: login Google/Discord, catalogo, perfil, avatares, blocos e scheduler confirmados funcionando na Oracle com o Supabase novo.
+- Xbox conectado via OpenXBL (OAuth "Xbox App", nao API key pessoal): login, biblioteca (progresso de conquistas e minutos jogados reais via endpoint de stats em lote) e desconexao. Sincronizacao e sempre upsert-only, nunca apaga jogos ja salvos. Biblioteca combinada Steam+Xbox na mesma lista/perfil, com filtro de plataforma na aba Biblioteca quando ha mais de uma conectada — ver secao "Steam e Xbox".
+- Precos com cupom da ITAD (`vouchers=true`): quando existe, o preco com cupom vira o principal exibido, com selo indicando o codigo — ver secao "Precos ITAD".
+- Favoritos e Platinados reordenaveis por arrastar direto no bloco do perfil, sem precisar entrar em "Gerenciar" — ver "Editor de perfil".
 
 ### Em validacao
 
@@ -517,7 +557,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 1. Colecoes concluidas (CRUD, exibicao, modal de adicionar jogos e menu na pagina do jogo). Evolucao futura opcional: reordenar jogos dentro da colecao e reordenar as proprias colecoes.
    - Filtro por ano de lancamento/genero segue inviavel: `games` nao guarda esses campos. Dependeria de coluna nova + backfill via ITAD/Steam.
 2. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
-3. Implementar Xbox somente com um caminho oficial suportado (pausado ate acesso ao Azure).
+3. Xbox: reordenar platinados por arrastar ainda nao persiste pra itens Xbox (so Steam). Favoritar/link externo tambem continuam Steam-only nos cards de biblioteca.
 4. Integrar Eneba depois de aprovar afiliacao. Instant Gaming ja implementada por scraping (ver secao propria) — melhorar cobertura da varredura (o catalogo pode ter jogos com id acima do que ja foi varrido) e considerar guardar `regular_price` se a pagina deles passar a expor desconto de forma confiavel.
 5. Melhorar observabilidade operacional da Oracle: uso de memoria, erros do scheduler e status da API.
 6. Depois de alguns dias de estabilidade, exportar um ultimo backup e excluir o projeto Supabase antigo.
@@ -529,7 +569,7 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 3. Para backend: `cd backend-java; mvn -q -DskipTests package` quando Maven estiver disponivel.
 4. Conferir se uma migration nova precisa ser aplicada no Supabase antes do deploy.
 5. Conferir CORS quando uma rota `PUT`, `PATCH` ou `POST` nova for adicionada.
-6. Validar em producao: catalogo, detalhes, monitorados, perfil proprio, perfil anonimo e conexao Steam quando afetados.
+6. Validar em producao: catalogo, detalhes, monitorados, perfil proprio, perfil anonimo e conexao Steam/Xbox quando afetados.
 7. O deploy manual `scripts/deploy-oracle.ps1` valida a saude pela URL HTTPS publica do Caddy; a porta `8080` nao e exposta diretamente na VM.
 
 ## Regras de Seguranca e Produto
