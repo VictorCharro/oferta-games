@@ -70,9 +70,10 @@
           <ng-template #conectarSteam><button type="button" (click)="connectSteam()" [disabled]="steamLoading">Conectar</button></ng-template>
         </article>
         <article class="connection-card">
-          <img src="store-logos/xbox.svg" alt="Xbox" />
-          <div><h3>Xbox</h3><p>Biblioteca, horas jogadas e conquistas</p><span>Não conectado</span></div>
-          <button type="button" disabled>Em breve</button>
+          <img [src]="xboxStatus?.avatarUrl || 'store-logos/xbox.svg'" alt="Xbox" />
+          <div><h3>Xbox</h3><p>{{ xboxStatus?.conectada ? xboxStatus?.gamertag : 'Biblioteca, horas jogadas e conquistas' }}</p><span>{{ xboxStatus?.conectada ? 'Conectada' : 'Não conectado' }}</span></div>
+          <div class="connection-actions" *ngIf="xboxStatus?.conectada; else conectarXbox"><button type="button" class="disconnect" (click)="disconnectXbox()" [disabled]="xboxLoading">Desconectar</button></div>
+          <ng-template #conectarXbox><button type="button" (click)="connectXbox()" [disabled]="xboxLoading">Conectar</button></ng-template>
         </article>
       </div>
       <div class="info-strip">Quando uma conexão estiver disponível, os dados sincronizados aparecerão automaticamente no perfil.</div>

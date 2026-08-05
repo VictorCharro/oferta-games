@@ -27,6 +27,8 @@ app:
   steam:
     api-key: ${STEAM_WEB_API_KEY:}
     frontend-url: ${FRONTEND_URL:http://localhost:4200}
+  xbox:
+    app-key: ${XBL_APP_KEY:}
   public-backend-url: ${PUBLIC_BACKEND_URL:}
   supabase:
     url: ${SUPABASE_URL:}

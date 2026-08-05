@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { supabase } from '../../services/supabase';
 import {
@@ -8,6 +8,7 @@ import {
   UserPreferences,
 } from '../../services/preferences';
 import { ConexoesSteamService, StatusSteam } from '../../services/conexoes-steam';
+import { ConexoesXboxService, StatusXbox } from '../../services/conexoes-xbox';
 import { PerfisService } from '../../services/perfis';
 
 type SettingsTab = 'conta' | 'conexoes' | 'preferencias' | 'privacidade';
@@ -32,6 +33,8 @@ export class Settings implements OnInit {
   error = '';
   steamStatus: StatusSteam | null = null;
   steamLoading = false;
+  xboxStatus: StatusXbox | null = null;
+  xboxLoading = false;
   profileHandle = '';
 
   readonly tabs: Array<{ id: SettingsTab; label: string }> = [
@@ -45,8 +48,10 @@ export class Settings implements OnInit {
     public auth: AuthService,
     private preferencesService: PreferencesService,
     private steamService: ConexoesSteamService,
+    private xboxService: ConexoesXboxService,
     private perfisService: PerfisService,
     private route: ActivatedRoute,
+    private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -59,6 +64,30 @@ export class Settings implements OnInit {
     if (this.route.snapshot.queryParamMap.has('steam')) this.activeTab = 'conexoes';
     this.loadSteam();
     this.loadPublicProfile();
+    this.handleXboxCallback();
+  }
+
+  private async handleXboxCallback() {
+    const params = this.route.snapshot.queryParamMap;
+    const code = params.get('code');
+    const erro = params.get('xerr');
+    if (!code && !erro) { this.loadXbox(); return; }
+    this.activeTab = 'conexoes';
+    this.router.navigate([], { queryParams: {}, replaceUrl: true });
+    if (erro) {
+      this.error = 'Nao foi possivel conectar a conta Xbox. Verifique se ela tem um perfil Xbox Live.';
+      this.cdr.detectChanges();
+      return;
+    }
+    this.xboxLoading = true;
+    try {
+      await this.xboxService.concluir(code!);
+      this.success = 'Conta Xbox conectada com sucesso.';
+    } catch {
+      this.error = 'Nao foi possivel conectar a conta Xbox.';
+    }
+    this.xboxLoading = false;
+    await this.loadXbox();
   }
 
   selectTab(tab: SettingsTab) {
@@ -70,6 +99,10 @@ export class Settings implements OnInit {
   async connectSteam() { this.steamLoading = true; try { await this.steamService.conectar(); } catch { this.error = 'Nao foi possivel iniciar a conexao com a Steam.'; this.steamLoading = false; this.cdr.detectChanges(); } }
   async syncSteam() { this.steamLoading = true; try { await this.steamService.sincronizar(); this.success = 'Sincronizacao da biblioteca iniciada.'; } catch { this.error = 'Nao foi possivel iniciar a sincronizacao da Steam.'; } this.steamLoading = false; this.cdr.detectChanges(); }
   async disconnectSteam() { this.steamLoading = true; try { await this.steamService.desconectar(); this.steamStatus = null; } catch { this.error = 'Nao foi possivel desconectar a Steam.'; } this.steamLoading = false; this.cdr.detectChanges(); }
+
+  async loadXbox() { try { this.xboxStatus = await this.xboxService.status(); } catch { this.xboxStatus = null; } this.cdr.detectChanges(); }
+  async connectXbox() { this.xboxLoading = true; try { await this.xboxService.conectar(); } catch { this.error = 'Nao foi possivel iniciar a conexao com a Xbox.'; this.xboxLoading = false; this.cdr.detectChanges(); } }
+  async disconnectXbox() { this.xboxLoading = true; try { await this.xboxService.desconectar(); this.xboxStatus = null; } catch { this.error = 'Nao foi possivel desconectar a Xbox.'; } this.xboxLoading = false; this.cdr.detectChanges(); }
 
   async loadPublicProfile() { try { const perfil = await this.perfisService.proprio(); if (perfil) { this.profileHandle = perfil.handle || ''; this.privacy = { publicProfile: perfil.publico, showGameHours: perfil.mostrarHoras, showAchievements: perfil.mostrarConquistas, showLibrary: perfil.mostrarBiblioteca, showFavoriteGames: perfil.mostrarFavoritos, showRecentActivity: perfil.mostrarAtividades, showCollections: perfil.mostrarColecoes }; } } catch {} this.cdr.detectChanges(); }
   async salvarPrivacidade() { try { await this.salvarPerfilPublico(); this.success = 'Preferencias de privacidade salvas.'; this.error = ''; } catch { this.error = 'Defina uma URL valida e disponivel para publicar o perfil.'; } this.cdr.detectChanges(); }
