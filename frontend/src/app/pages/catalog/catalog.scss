@@ -29,12 +29,6 @@
   }
 }
 
-.sort-options {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .custom-select { position: relative; z-index: 3; }
 
 .custom-select-trigger {
@@ -103,26 +97,6 @@
 }
 
 .option-check { color: var(--color-purple); font-size: 14px; font-weight: 700; }
-
-.radio-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.15s;
-
-  input[type="radio"] { display: none; }
-
-  &:hover { background: var(--bg-card-hover); }
-  &.active {
-    background: rgba(139, 92, 246, 0.12);
-    color: var(--color-purple);
-    font-weight: 600;
-  }
-}
 
 .price-inputs {
   display: grid;

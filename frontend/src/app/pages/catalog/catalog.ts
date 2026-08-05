@@ -30,7 +30,7 @@ export class Catalog implements OnInit, OnDestroy {
   minPriceInput = '';
   maxPriceInput = '';
   minDiscountInput = '';
-  sortDropdownOpen = false;
+  openDropdown: 'sort' | 'type' | 'platform' | null = null;
 
   private querySub!: Subscription;
   private requestVersion = 0;
@@ -42,6 +42,12 @@ export class Catalog implements OnInit, OnDestroy {
     { value: 'price_desc', label: 'Maior preço' },
   ];
 
+  readonly typeOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: 'game', label: 'Jogos' },
+    { value: 'dlc', label: 'DLCs' },
+  ];
+
   readonly platformOptions = [
     { value: 'all', label: 'Todas' },
     { value: 'pc', label: 'PC' },
@@ -50,6 +56,14 @@ export class Catalog implements OnInit, OnDestroy {
 
   get selectedSortLabel(): string {
     return this.sortOptions.find(option => option.value === this.sort)?.label ?? 'Mais relevantes';
+  }
+
+  get selectedTypeLabel(): string {
+    return this.typeOptions.find(option => option.value === this.type)?.label ?? 'Todos';
+  }
+
+  get selectedPlatformLabel(): string {
+    return this.platformOptions.find(option => option.value === this.platform)?.label ?? 'Todas';
   }
 
   private scrollTicking = false;
@@ -106,22 +120,34 @@ export class Catalog implements OnInit, OnDestroy {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
     if (!(event.target as HTMLElement).closest('.custom-select')) {
-      this.sortDropdownOpen = false;
+      this.openDropdown = null;
     }
   }
 
   @HostListener('document:keydown.escape')
   closeSortDropdown() {
-    this.sortDropdownOpen = false;
+    this.openDropdown = null;
   }
 
-  toggleSortDropdown() {
-    this.sortDropdownOpen = !this.sortDropdownOpen;
+  toggleDropdown(name: 'sort' | 'type' | 'platform') {
+    this.openDropdown = this.openDropdown === name ? null : name;
   }
 
   selectSort(value: string) {
     this.sort = value;
-    this.sortDropdownOpen = false;
+    this.openDropdown = null;
+    this.applyFilters();
+  }
+
+  selectType(value: string) {
+    this.type = value;
+    this.openDropdown = null;
+    this.applyFilters();
+  }
+
+  selectPlatform(value: string) {
+    this.platform = value;
+    this.openDropdown = null;
     this.applyFilters();
   }
 

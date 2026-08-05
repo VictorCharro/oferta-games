@@ -5,13 +5,13 @@
     <aside class="filters-panel">
       <div class="filter-group">
         <h3>Ordenar por</h3>
-        <div class="custom-select" [class.open]="sortDropdownOpen">
-          <button type="button" class="custom-select-trigger" (click)="toggleSortDropdown()"
-            [attr.aria-expanded]="sortDropdownOpen" aria-haspopup="listbox">
+        <div class="custom-select" [class.open]="openDropdown === 'sort'">
+          <button type="button" class="custom-select-trigger" (click)="toggleDropdown('sort')"
+            [attr.aria-expanded]="openDropdown === 'sort'" aria-haspopup="listbox">
             <span>{{ selectedSortLabel }}</span>
             <span class="select-chevron" aria-hidden="true"></span>
           </button>
-          <div class="custom-select-menu" *ngIf="sortDropdownOpen" role="listbox" aria-label="Ordenar catálogo">
+          <div class="custom-select-menu" *ngIf="openDropdown === 'sort'" role="listbox" aria-label="Ordenar catálogo">
             <button *ngFor="let opt of sortOptions" type="button" role="option"
               [class.selected]="sort === opt.value" [attr.aria-selected]="sort === opt.value"
               (click)="selectSort(opt.value)">
@@ -24,26 +24,39 @@
 
       <div class="filter-group">
         <h3>Tipo</h3>
-        <div class="sort-options">
-          <label class="radio-option" [class.active]="type === 'all'">
-            <input type="radio" name="type" value="all" [(ngModel)]="type" (change)="applyFilters()" /> Todos
-          </label>
-          <label class="radio-option" [class.active]="type === 'game'">
-            <input type="radio" name="type" value="game" [(ngModel)]="type" (change)="applyFilters()" /> Jogos
-          </label>
-          <label class="radio-option" [class.active]="type === 'dlc'">
-            <input type="radio" name="type" value="dlc" [(ngModel)]="type" (change)="applyFilters()" /> DLCs
-          </label>
+        <div class="custom-select" [class.open]="openDropdown === 'type'">
+          <button type="button" class="custom-select-trigger" (click)="toggleDropdown('type')"
+            [attr.aria-expanded]="openDropdown === 'type'" aria-haspopup="listbox">
+            <span>{{ selectedTypeLabel }}</span>
+            <span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <div class="custom-select-menu" *ngIf="openDropdown === 'type'" role="listbox" aria-label="Tipo de item">
+            <button *ngFor="let opt of typeOptions" type="button" role="option"
+              [class.selected]="type === opt.value" [attr.aria-selected]="type === opt.value"
+              (click)="selectType(opt.value)">
+              <span>{{ opt.label }}</span>
+              <span class="option-check" *ngIf="type === opt.value" aria-hidden="true">✓</span>
+            </button>
+          </div>
         </div>
       </div>
 
       <div class="filter-group">
         <h3>Plataforma</h3>
-        <div class="sort-options">
-          <label *ngFor="let opt of platformOptions" class="radio-option" [class.active]="platform === opt.value">
-            <input type="radio" name="platform" [value]="opt.value" [(ngModel)]="platform" (change)="applyFilters()" />
-            {{ opt.label }}
-          </label>
+        <div class="custom-select" [class.open]="openDropdown === 'platform'">
+          <button type="button" class="custom-select-trigger" (click)="toggleDropdown('platform')"
+            [attr.aria-expanded]="openDropdown === 'platform'" aria-haspopup="listbox">
+            <span>{{ selectedPlatformLabel }}</span>
+            <span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <div class="custom-select-menu" *ngIf="openDropdown === 'platform'" role="listbox" aria-label="Plataforma">
+            <button *ngFor="let opt of platformOptions" type="button" role="option"
+              [class.selected]="platform === opt.value" [attr.aria-selected]="platform === opt.value"
+              (click)="selectPlatform(opt.value)">
+              <span>{{ opt.label }}</span>
+              <span class="option-check" *ngIf="platform === opt.value" aria-hidden="true">✓</span>
+            </button>
+          </div>
         </div>
       </div>
 
