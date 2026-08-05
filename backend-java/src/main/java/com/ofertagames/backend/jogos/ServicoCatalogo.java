@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -66,6 +67,25 @@ public class ServicoCatalogo {
 
   public ResultadoAtualizacaoJogo atualizarPrecos(String slug) {
     JogoParaAtualizar jogo = jogos.buscarParaAtualizar(slug).orElseThrow(JogoNaoEncontradoException::new);
+    int atualizadas = atualizarPrecosDoJogo(jogo, true);
+
+    // As DLCs sao entradas proprias do catalogo (ver "Plataformas e DLCs" em doc.md); atualizar o
+    // jogo base deve atualizar o preco delas junto, pra quem clica "Atualizar precos" nao precisar
+    // repetir a acao em cada DLC.
+    for (ResumoJogo dlc : jogos.listarDlcsDoJogo(jogo.id())) {
+      Optional<JogoParaAtualizar> jogoDlc = jogos.buscarParaAtualizar(dlc.slug());
+      if (jogoDlc.isPresent()) {
+        atualizadas += atualizarPrecosDoJogo(jogoDlc.get(), false);
+      }
+    }
+
+    return new ResultadoAtualizacaoJogo(true, atualizadas);
+  }
+
+  // obrigatorio=true lanca JogoSemItadException se nao houver nenhuma fonte de preco; usado so pro
+  // jogo principal do refresh. Pras DLCs (obrigatorio=false) simplesmente ignoramos a ausencia de
+  // fonte, sem falhar o refresh do jogo base por causa de uma DLC sem preco disponivel.
+  private int atualizarPrecosDoJogo(JogoParaAtualizar jogo, boolean obrigatorio) {
     boolean temItad = jogo.itadId() != null && !jogo.itadId().isBlank();
 
     int atualizadas = 0;
@@ -97,10 +117,10 @@ public class ServicoCatalogo {
       atualizadas++;
     }
 
-    if (!temItad && !instantGamingAtualizado) {
+    if (obrigatorio && !temItad && !instantGamingAtualizado) {
       throw new JogoSemItadException();
     }
-    return new ResultadoAtualizacaoJogo(true, atualizadas);
+    return atualizadas;
   }
 
   public ResultadoAtualizacaoLote atualizarPrecosEmLote(List<RepositorioJogos.JogoParaSincronizar> jogosParaAtualizar) {
