@@ -34,6 +34,9 @@ class ServicoAquecimentoCache {
     // Home: os dois usados em Home.ngOnInit.
     descontos.listarMelhores(100, "rank");
     descontos.listarMelhores(200, "discount");
+
+    // Gratuitos: mesmo endpoint, combinacao propria (tamanho 100, ordenacao discount).
+    descontos.listarMelhores(100, "discount");
   }
 
   private void limpar(String nomeCache) {

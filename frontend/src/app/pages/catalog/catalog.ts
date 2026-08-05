@@ -37,6 +37,7 @@ export class Catalog implements OnInit, OnDestroy {
 
   readonly sortOptions = [
     { value: 'rank', label: 'Mais relevantes' },
+    { value: 'popularity', label: 'Mais famosos' },
     { value: 'discount', label: 'Maior desconto' },
     { value: 'price_asc', label: 'Menor preço' },
     { value: 'price_desc', label: 'Maior preço' },

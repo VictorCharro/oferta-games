@@ -693,6 +693,7 @@ public class RepositorioJogos {
       case "discount" -> "ROUND((1 - MIN(o.price) / NULLIF(MAX(o.regular_price), 0)) * 100) DESC NULLS LAST, g.rank ASC NULLS LAST";
       case "price_asc" -> "MIN(o.price) ASC NULLS LAST";
       case "price_desc" -> "MIN(o.price) DESC NULLS LAST";
+      case "popularity" -> "g.rank ASC NULLS LAST, g.id ASC";
       default -> """
           CASE
             WHEN g.rank <= 200

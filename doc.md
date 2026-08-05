@@ -324,7 +324,7 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 ### Catalogo
 
 - `GET /api/games?page=&size=&sort=&type=&platform=&minPrice=&maxPrice=&minDiscount=&q=`
-  - `sort`: `rank`, `discount`, `price_asc`, `price_desc`.
+  - `sort`: `rank` (relevancia: destaques com desconto primeiro, depois rank), `popularity` (rank puro, "Mais famosos"), `discount`, `price_asc`, `price_desc`.
   - `type`: `all`, `game`, `dlc`.
   - Retorna a oferta minima, incluindo loja e URL quando disponiveis.
   - `RepositorioJogos.listar` e cacheado em memoria (Caffeine, `comum/ConfiguracaoCache`) por 10min por combinacao de parametros, pra nao repetir a query a cada abertura do catalogo. Expira sozinho; nao ha invalidacao manual quando a sincronizacao de precos roda. A pagina Mais Vendidos usa este mesmo endpoint (`getGames`), entao ja se beneficia do cache.
@@ -335,7 +335,7 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 - `GET /api/games/{slug}/conquistas` — auth opcional. `{ total, desbloqueadas, percentualConcluido, proxima, conquistas[] }`; cada conquista com `desbloqueada`/`desbloqueadaEm` cruzados com o progresso do visitante logado (ver "Conquistas com progresso pessoal" acima). Sempre 200, mesmo pra jogo inexistente (fica tudo zerado).
 - `GET|POST|DELETE /api/games/{slug}/reviews`, `POST /api/games/{slug}/reviews/{id}/voto` — ver "Reviews (Steam + Oferta Games)" acima.
 - `POST /api/games/{slug}/refresh`
-- `GET /api/deals/top?size=&sort=discount|rank` — usado 2x pela Home (rank e discount); `RepositorioDescontos.listarMelhores` tambem cacheado (Caffeine, `ConfiguracaoCache.CACHE_DESCONTOS`, 10min), pois e uma query com DISTINCT ON + join na tabela `offers` inteira.
+- `GET /api/deals/top?size=&sort=discount|rank` — usado 2x pela Home (rank e discount) e pela pagina Gratuitos (`size=100&sort=discount`, filtrando `discountPct === 100` no front); `RepositorioDescontos.listarMelhores` tambem cacheado (Caffeine, `ConfiguracaoCache.CACHE_DESCONTOS`, 10min), pois e uma query com DISTINCT ON + join na tabela `offers` inteira. `ServicoAquecimentoCache` reaquece as 3 combinacoes usadas (100/rank, 200/discount, 100/discount) logo apos cada rodada de precos, pra nenhuma delas (incluindo Gratuitos) pegar cache frio.
 - `POST /api/sync?page=` (legado, exige `X-Sync-Key`)
 
 ### Jogos Monitorados e notificacoes
