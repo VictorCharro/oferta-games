@@ -130,23 +130,30 @@ class RepositorioConexoesSteam {
         .list();
   }
 
+  // Upsert por app_id: nunca faz DELETE da biblioteca existente. Antes esse metodo apagava
+  // tudo e reinseria (por isso existia o hack de "capasBiblioteca" pra nao perder a capa
+  // resolvida a cada sync) - alem de ser desnecessariamente destrutivo, isso disparava o
+  // ON DELETE CASCADE de profile_steam_favorites (que referencia steam_library_games por
+  // user_id+app_id) e apagava os favoritos Steam do usuario a cada sincronizacao (bug real,
+  // descoberto em 06/08/2026). O upsert evita as duas coisas de uma vez: nunca perde favorito
+  // nem capa ja resolvida, e ainda assim atualiza titulo/minutos jogados/icone normalmente.
   List<JogoBibliotecaSteam> substituirBiblioteca(String usuarioId, List<JogoBibliotecaSteam> jogos, boolean identificarNovos) {
     Set<Integer> idsAnteriores = identificarNovos ? idsBiblioteca(usuarioId) : Set.of();
-    Map<Integer, String> capasExistentes = capasBiblioteca(usuarioId);
-    jdbc.sql("DELETE FROM steam_library_games WHERE user_id = CAST(:usuarioId AS uuid)")
-        .param("usuarioId", usuarioId)
-        .update();
     for (JogoBibliotecaSteam jogo : jogos) {
       jdbc.sql("""
-          INSERT INTO steam_library_games (user_id, app_id, title, playtime_minutes, icon_hash, cover_url, last_synced_at)
-          VALUES (CAST(:usuarioId AS uuid), :appId, :titulo, :minutos, :icone, :capa, now())
+          INSERT INTO steam_library_games (user_id, app_id, title, playtime_minutes, icon_hash, last_synced_at)
+          VALUES (CAST(:usuarioId AS uuid), :appId, :titulo, :minutos, :icone, now())
+          ON CONFLICT (user_id, app_id) DO UPDATE
+            SET title = EXCLUDED.title,
+                playtime_minutes = EXCLUDED.playtime_minutes,
+                icon_hash = EXCLUDED.icon_hash,
+                last_synced_at = now()
           """)
           .param("usuarioId", usuarioId)
           .param("appId", jogo.appId())
           .param("titulo", jogo.titulo())
           .param("minutos", jogo.minutosJogadas())
           .param("icone", jogo.iconeHash())
-          .param("capa", capasExistentes.get(jogo.appId()))
           .update();
     }
     jdbc.sql("UPDATE steam_connections SET last_library_sync_at = now(), last_error = NULL WHERE user_id = CAST(:usuarioId AS uuid)")
@@ -159,23 +166,6 @@ class RepositorioConexoesSteam {
     return new HashSet<>(jdbc.sql("SELECT app_id FROM steam_library_games WHERE user_id = CAST(:usuarioId AS uuid)")
         .param("usuarioId", usuarioId).query(Integer.class).list());
   }
-
-  // Preserva as capas ja resolvidas ao ressincronizar a biblioteca (a sincronizacao de playtime
-  // apaga e reinsere todas as linhas, entao sem isso a capa buscada via appdetails se perderia a cada sync).
-  private Map<Integer, String> capasBiblioteca(String usuarioId) {
-    List<CapaExistente> linhas = jdbc.sql(
-        "SELECT app_id, cover_url FROM steam_library_games WHERE user_id = CAST(:usuarioId AS uuid) AND cover_url IS NOT NULL")
-        .param("usuarioId", usuarioId)
-        .query((rs, linha) -> new CapaExistente(rs.getInt("app_id"), rs.getString("cover_url")))
-        .list();
-    Map<Integer, String> capas = new HashMap<>();
-    for (CapaExistente linha : linhas) {
-      capas.put(linha.appId(), linha.capaUrl());
-    }
-    return capas;
-  }
-
-  private record CapaExistente(int appId, String capaUrl) {}
 
   // Jogos da biblioteca ainda sem capa resolvida, pra fila do job que busca via appdetails da Steam.
   List<JogoParaCapa> listarSemCapa(int limite) {
