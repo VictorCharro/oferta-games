@@ -11,9 +11,12 @@
             <span class="voucher-badge" *ngIf="bestOffer(game.offers)?.voucherCode as codigo" [title]="'Use o cupom ' + codigo + ' no carrinho da loja pra garantir esse preço'">Cupom {{ codigo }}</span>
           </div>
           <div class="hero-actions">
-            <button class="btn-outline refresh-btn" (click)="refresh()" [disabled]="refreshing">
-              {{ refreshing ? 'Atualizando...' : 'Atualizar preços' }}
-            </button>
+            <div class="refresh-group">
+              <button class="btn-outline refresh-btn" (click)="refresh()" [disabled]="refreshing">
+                {{ refreshing ? 'Atualizando...' : 'Atualizar preços' }}
+              </button>
+              <span class="refresh-msg" *ngIf="refreshMsg">{{ refreshMsg }}</span>
+            </div>
             <button
               class="detail-monitor-btn"
               type="button"
@@ -71,7 +74,6 @@
               </div>
             </div>
           </div>
-          <span class="refresh-msg" *ngIf="refreshMsg">{{ refreshMsg }}</span>
         </div>
       </div>
     </div>

@@ -47,6 +47,13 @@
   .large { font-size: 28px; }
 }
 
+.refresh-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
 .refresh-btn {
   width: fit-content;
   color: #fff !important;
@@ -56,7 +63,7 @@
 
 .hero-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   flex-wrap: wrap;
 }
