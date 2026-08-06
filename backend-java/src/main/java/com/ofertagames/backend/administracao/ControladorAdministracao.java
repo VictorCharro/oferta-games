@@ -1,6 +1,7 @@
 package com.ofertagames.backend.administracao;
 
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
+import com.ofertagames.backend.instantgaming.ServicoInstantGaming;
 import com.ofertagames.backend.jogos.RepositorioJogos;
 import com.ofertagames.backend.sincronizacao.EstadoColeta.RegistroColeta;
 import com.ofertagames.backend.sincronizacao.ServicoExecucaoColeta;
@@ -27,6 +28,7 @@ public class ControladorAdministracao {
   private final ServicoExecucaoColeta execucao;
   private final ServicoSincronizacao sincronizacao;
   private final RepositorioJogos jogos;
+  private final ServicoInstantGaming instantGaming;
   private final TaskExecutor executorManual;
 
   ControladorAdministracao(
@@ -34,12 +36,14 @@ public class ControladorAdministracao {
       ServicoExecucaoColeta execucao,
       ServicoSincronizacao sincronizacao,
       RepositorioJogos jogos,
+      ServicoInstantGaming instantGaming,
       @Qualifier("executorColetaManual") TaskExecutor executorManual
   ) {
     this.autenticacao = autenticacao;
     this.execucao = execucao;
     this.sincronizacao = sincronizacao;
     this.jogos = jogos;
+    this.instantGaming = instantGaming;
     this.executorManual = executorManual;
   }
 
@@ -49,7 +53,15 @@ public class ControladorAdministracao {
     return new StatusAdministrativoColeta(
         mapearStatus(execucao.consultar("precos")),
         mapearStatus(execucao.consultar("steam")),
-        jogos.resumirFilaColeta());
+        mapearStatus(execucao.consultar("detalhes")),
+        mapearStatus(execucao.consultar("conquistas-catalogo")),
+        mapearStatus(execucao.consultar("instant-gaming-escaneamento")),
+        mapearStatus(execucao.consultar("instant-gaming-casamento")),
+        mapearStatus(execucao.consultar("instant-gaming-precos")),
+        jogos.resumirFilaColeta(),
+        jogos.contarPendentesDetalhes(),
+        jogos.contarPendentesConquistas(),
+        instantGaming.resumirFila());
   }
 
   @PostMapping("/coleta/{tipo}")
@@ -96,7 +108,15 @@ public class ControladorAdministracao {
   public record StatusAdministrativoColeta(
       StatusColetaAdministrativa precos,
       StatusColetaAdministrativa steam,
-      RepositorioJogos.ResumoFilaColeta fila
+      StatusColetaAdministrativa detalhes,
+      StatusColetaAdministrativa conquistasCatalogo,
+      StatusColetaAdministrativa instantGamingEscaneamento,
+      StatusColetaAdministrativa instantGamingCasamento,
+      StatusColetaAdministrativa instantGamingPrecos,
+      RepositorioJogos.ResumoFilaColeta fila,
+      long pendentesDetalhes,
+      long pendentesConquistas,
+      ServicoInstantGaming.ResumoFilaInstantGaming filaInstantGaming
   ) {}
 
   public record StatusColetaAdministrativa(

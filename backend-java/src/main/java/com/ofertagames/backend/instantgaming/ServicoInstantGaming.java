@@ -24,6 +24,20 @@ public class ServicoInstantGaming {
     this.repositorio = repositorio;
   }
 
+  public ResumoFilaInstantGaming resumirFila() {
+    return new ResumoFilaInstantGaming(
+        repositorio.buscarUltimoIdEscaneado(),
+        repositorio.contarCatalogoDescoberto(),
+        repositorio.contarCasados(),
+        repositorio.contarPendentesCasamento());
+  }
+
+  public record ResumoFilaInstantGaming(
+      int ultimoIdEscaneado,
+      long catalogoDescoberto,
+      long jogosCasados,
+      long pendentesCasamento) {}
+
   public int escanearCatalogo(int limite) {
     int idAtual = repositorio.buscarUltimoIdEscaneado();
     int encontrados = 0;

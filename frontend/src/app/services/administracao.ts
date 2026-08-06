@@ -16,15 +16,39 @@ export interface StatusColeta {
   ultimoErro: string | null;
 }
 
+export interface ResumoFilaInstantGaming {
+  ultimoIdEscaneado: number;
+  catalogoDescoberto: number;
+  jogosCasados: number;
+  pendentesCasamento: number;
+}
+
 export interface StatusAdministrativoColeta {
   precos: StatusColeta;
   steam: StatusColeta;
+  detalhes: StatusColeta;
+  conquistasCatalogo: StatusColeta;
+  instantGamingEscaneamento: StatusColeta;
+  instantGamingCasamento: StatusColeta;
+  instantGamingPrecos: StatusColeta;
   fila: {
     nuncaSincronizados: number;
     sincronizacaoMaisAntiga: string | null;
     pendentesSteam: number;
   };
+  pendentesDetalhes: number;
+  pendentesConquistas: number;
+  filaInstantGaming: ResumoFilaInstantGaming;
 }
+
+export type TipoColeta =
+  | 'precos'
+  | 'steam'
+  | 'detalhes'
+  | 'conquistas-catalogo'
+  | 'instant-gaming-escaneamento'
+  | 'instant-gaming-casamento'
+  | 'instant-gaming-precos';
 
 @Injectable({ providedIn: 'root' })
 export class AdministracaoService {
@@ -38,7 +62,7 @@ export class AdministracaoService {
     }));
   }
 
-  async dispararColeta(tipo: 'precos' | 'steam'): Promise<void> {
+  async dispararColeta(tipo: TipoColeta): Promise<void> {
     await firstValueFrom(this.http.post(`${this.api}/coleta/${tipo}`, {}, {
       headers: await this.cabecalhosAutorizacao(),
     }));

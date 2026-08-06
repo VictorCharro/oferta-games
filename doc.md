@@ -390,9 +390,8 @@ Toda rota exige token e valida que a colecao e do usuario autenticado; colecao d
 - `POST /api/conexoes/xbox/concluir` (troca o `code` do retorno OAuth por xuid/gamertag/token, autenticado pelo bearer normal do usuario)
 - `GET|DELETE /api/conexoes/xbox`
 - `POST /api/conexoes/xbox/sincronizar`
-- `GET /api/admin/coleta`
-- `POST /api/admin/coleta/precos`
-- `POST /api/admin/coleta/steam`
+- `GET /api/admin/coleta` — status de todos os 7 jobs (precos, steam, detalhes, conquistas-catalogo, instant-gaming-escaneamento/casamento/precos) e as filas correspondentes (`fila`, `pendentesDetalhes`, `pendentesConquistas`, `filaInstantGaming`).
+- `POST /api/admin/coleta/{tipo}` — dispara qualquer um dos 7 tipos manualmente, mesmo padrao de auth de admin (`precos`, `steam`, `detalhes`, `conquistas-catalogo`, `instant-gaming-escaneamento`, `instant-gaming-casamento`, `instant-gaming-precos`).
 - `GET /actuator/health`
 
 Os endpoints autenticados recebem token Bearer do Supabase. A administracao exige o UID autorizado no backend: `0a6eb06b-756e-4434-899b-33420bed8609`.
@@ -424,7 +423,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 | **Configuracoes** (`/configuracoes`) | Centralizar opcoes da conta. | Abas separadas: Conta, Conexoes, Preferencias e Privacidade. Nao misturar assuntos entre abas. Preferencias afetam home/catalogo; Privacidade afeta o perfil publico; Conexoes concentra Steam e Xbox. |
 | **Perfil proprio** (`/perfil` -> `/:handle`) | Personalizar e visualizar o perfil do usuario. | `/perfil` redireciona para o handle canonico. O dono pode editar bio, foto, layout, blocos e pedir atualizacao Steam. A pagina canonica e a mesma que visitantes veem, com controles extras apenas para o dono. |
 | **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra uma faixa fixa com biblioteca, horas, conquistas desbloqueadas, jogos platinados (so quando ha algum) e icones das plataformas conectadas; abaixo, mostra Resumo, Jogos favoritos, Colecoes e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
-| **Administracao de coleta** (`/admin/coleta`) | Acompanhar e disparar jobs internos. | Exclusiva do UID administrador. Exibe status das filas de preco/Steam e permite disparar coleta manual em segundo plano; nao substitui o scheduler. |
+| **Administracao de coleta** (`/admin/coleta`) | Acompanhar e disparar jobs internos. | Exclusiva do UID administrador. Abas horizontais agrupam os 7 jobs (Precos e Steam / Detalhes e Conquistas / Instant Gaming), cada uma com seus cards de status e sua propria fila; permite disparar coleta manual em segundo plano, mas nao substitui o scheduler. |
 
 ### Componentes globais
 

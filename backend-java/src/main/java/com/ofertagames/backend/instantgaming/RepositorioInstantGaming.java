@@ -59,6 +59,18 @@ class RepositorioInstantGaming {
     return urls.size() == 1 ? Optional.of(urls.get(0)) : Optional.empty();
   }
 
+  long contarPendentesCasamento() {
+    return jdbc.sql("""
+        SELECT COUNT(*)
+        FROM games g
+        WHERE g.instant_gaming_url IS NULL
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .query(Long.class)
+        .single();
+  }
+
   List<JogoParaCasar> listarPendentesCasamento(int limite) {
     return jdbc.sql("""
         SELECT g.id, g.title
@@ -72,6 +84,22 @@ class RepositorioInstantGaming {
         .param("limite", limite)
         .query((rs, linha) -> new JogoParaCasar(rs.getLong("id"), rs.getString("title")))
         .list();
+  }
+
+  long contarCatalogoDescoberto() {
+    return jdbc.sql("SELECT COUNT(*) FROM instant_gaming_catalog").query(Long.class).single();
+  }
+
+  long contarCasados() {
+    return jdbc.sql("""
+        SELECT COUNT(*)
+        FROM games g
+        WHERE g.instant_gaming_url IS NOT NULL
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .query(Long.class)
+        .single();
   }
 
   void salvarMatch(long jogoId, String url) {

@@ -485,6 +485,20 @@ public class RepositorioJogos {
         .list();
   }
 
+  public long contarPendentesDetalhes() {
+    return jdbc.sql("""
+        SELECT COUNT(*)
+        FROM games g
+        LEFT JOIN game_details gd ON gd.game_id = g.id
+        WHERE g.steam_app_id IS NOT NULL
+          AND (gd.game_id IS NULL OR gd.dlc_steam_app_ids IS NULL OR gd.updated_at < now() - interval '30 days')
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .query(Long.class)
+        .single();
+  }
+
   public List<JogoDetalhesPendente> listarPendentesConquistas(int limite) {
     return jdbc.sql("""
         SELECT g.id, g.steam_app_id
@@ -499,6 +513,19 @@ public class RepositorioJogos {
         .param("limite", limite)
         .query((rs, linha) -> new JogoDetalhesPendente(rs.getLong("id"), rs.getInt("steam_app_id")))
         .list();
+  }
+
+  public long contarPendentesConquistas() {
+    return jdbc.sql("""
+        SELECT COUNT(*)
+        FROM games g
+        WHERE g.steam_app_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM game_achievements ga WHERE ga.game_id = g.id)
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .query(Long.class)
+        .single();
   }
 
   public void salvarDetalhesJogo(DetalhesParaSalvar dados) {

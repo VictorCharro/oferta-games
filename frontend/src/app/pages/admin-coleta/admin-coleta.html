@@ -12,38 +12,70 @@
     <p class="message success" *ngIf="aviso">{{ aviso }}</p>
     <p class="message error" *ngIf="error">{{ error }}</p>
 
-    <section class="status-grid" *ngIf="status as dados">
-      <article class="status-card" *ngFor="let coleta of [dados.precos, dados.steam]">
-        <div class="card-top">
-          <div>
-            <p class="label">{{ coleta.tipo === 'precos' ? 'Precos ITAD' : 'Metadados Steam' }}</p>
-            <strong [class.running]="coleta.emExecucao">{{ textoStatus(coleta) }}</strong>
-          </div>
-          <button class="btn-primary" type="button" (click)="disparar(coleta.tipo === 'precos' ? 'precos' : 'steam')"
-            [disabled]="coleta.emExecucao || disparando !== null">
-            {{ disparando === coleta.tipo ? 'Solicitando...' : 'Rodar agora' }}
-          </button>
-        </div>
-        <dl>
-          <div><dt>Ultima conclusao</dt><dd>{{ formatarData(coleta.ultimaConclusao) }}</dd></div>
-          <div><dt>Duracao</dt><dd>{{ formatarDuracao(coleta.emExecucao ? coleta.duracaoAtualMs : coleta.ultimaDuracaoMs) }}</dd></div>
-          <div><dt>Jogos atualizados</dt><dd>{{ coleta.jogosAtualizados | number }}</dd></div>
-          <div><dt>Ofertas atualizadas</dt><dd>{{ coleta.ofertasAtualizadas | number }}</dd></div>
-        </dl>
-        <p class="error-detail" *ngIf="coleta.ultimoErro">{{ coleta.ultimoErro }}</p>
-      </article>
-    </section>
+    <nav class="admin-tabs">
+      <button type="button" [class.active]="abaAtiva === 'precos-steam'" (click)="selecionarAba('precos-steam')">Precos e Steam</button>
+      <button type="button" [class.active]="abaAtiva === 'detalhes-conquistas'" (click)="selecionarAba('detalhes-conquistas')">Detalhes e Conquistas</button>
+      <button type="button" [class.active]="abaAtiva === 'instant-gaming'" (click)="selecionarAba('instant-gaming')">Instant Gaming</button>
+    </nav>
 
-    <section class="queue-card" *ngIf="status as dados">
-      <div>
-        <p class="label">Fila do catalogo</p>
-        <h2>Atualizacao pendente</h2>
-      </div>
-      <div class="queue-metrics">
-        <div><span>Nunca sincronizados</span><strong>{{ dados.fila.nuncaSincronizados | number }}</strong></div>
-        <div><span>Preco mais antigo</span><strong>{{ formatarData(dados.fila.sincronizacaoMaisAntiga) }}</strong></div>
-        <div><span>Pendentes Steam</span><strong>{{ dados.fila.pendentesSteam | number }}</strong></div>
-      </div>
-    </section>
+    <ng-container *ngIf="status as dados">
+      <section class="status-grid">
+        <article class="status-card" *ngFor="let cartao of cartoesDaAba(dados)">
+          <div class="card-top">
+            <div>
+              <p class="label">{{ cartao.titulo }}</p>
+              <strong [class.running]="cartao.coleta.emExecucao">{{ textoStatus(cartao.coleta) }}</strong>
+            </div>
+            <button class="btn-primary" type="button" (click)="disparar(cartao.tipo)"
+              [disabled]="cartao.coleta.emExecucao || disparando !== null">
+              {{ disparando === cartao.tipo ? 'Solicitando...' : 'Rodar agora' }}
+            </button>
+          </div>
+          <dl>
+            <div><dt>Ultima conclusao</dt><dd>{{ formatarData(cartao.coleta.ultimaConclusao) }}</dd></div>
+            <div><dt>Duracao</dt><dd>{{ formatarDuracao(cartao.coleta.emExecucao ? cartao.coleta.duracaoAtualMs : cartao.coleta.ultimaDuracaoMs) }}</dd></div>
+            <div><dt>Jogos atualizados</dt><dd>{{ cartao.coleta.jogosAtualizados | number }}</dd></div>
+            <div><dt>Ofertas atualizadas</dt><dd>{{ cartao.coleta.ofertasAtualizadas | number }}</dd></div>
+          </dl>
+          <p class="error-detail" *ngIf="cartao.coleta.ultimoErro">{{ cartao.coleta.ultimoErro }}</p>
+        </article>
+      </section>
+
+      <section class="queue-card" *ngIf="abaAtiva === 'precos-steam'">
+        <div>
+          <p class="label">Fila do catalogo</p>
+          <h2>Atualizacao pendente</h2>
+        </div>
+        <div class="queue-metrics">
+          <div><span>Nunca sincronizados</span><strong>{{ dados.fila.nuncaSincronizados | number }}</strong></div>
+          <div><span>Preco mais antigo</span><strong>{{ formatarData(dados.fila.sincronizacaoMaisAntiga) }}</strong></div>
+          <div><span>Pendentes Steam</span><strong>{{ dados.fila.pendentesSteam | number }}</strong></div>
+        </div>
+      </section>
+
+      <section class="queue-card" *ngIf="abaAtiva === 'detalhes-conquistas'">
+        <div>
+          <p class="label">Fila de detalhes</p>
+          <h2>Atualizacao pendente</h2>
+        </div>
+        <div class="queue-metrics">
+          <div><span>Pendentes de detalhes</span><strong>{{ dados.pendentesDetalhes | number }}</strong></div>
+          <div><span>Pendentes de conquistas</span><strong>{{ dados.pendentesConquistas | number }}</strong></div>
+        </div>
+      </section>
+
+      <section class="queue-card" *ngIf="abaAtiva === 'instant-gaming'">
+        <div>
+          <p class="label">Fila do Instant Gaming</p>
+          <h2>Descoberta e casamento</h2>
+        </div>
+        <div class="queue-metrics">
+          <div><span>Ultimo id escaneado</span><strong>{{ dados.filaInstantGaming.ultimoIdEscaneado | number }}</strong></div>
+          <div><span>Catalogo descoberto</span><strong>{{ dados.filaInstantGaming.catalogoDescoberto | number }}</strong></div>
+          <div><span>Jogos casados</span><strong>{{ dados.filaInstantGaming.jogosCasados | number }}</strong></div>
+          <div><span>Pendentes de casamento</span><strong>{{ dados.filaInstantGaming.pendentesCasamento | number }}</strong></div>
+        </div>
+      </section>
+    </ng-container>
   </main>
 </div>

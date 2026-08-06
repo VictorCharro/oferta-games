@@ -1,5 +1,13 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { AdministracaoService, StatusAdministrativoColeta, StatusColeta } from '../../services/administracao';
+import { AdministracaoService, StatusAdministrativoColeta, StatusColeta, TipoColeta } from '../../services/administracao';
+
+type Aba = 'precos-steam' | 'detalhes-conquistas' | 'instant-gaming';
+
+interface CartaoColeta {
+  titulo: string;
+  tipo: TipoColeta;
+  coleta: StatusColeta;
+}
 
 @Component({
   selector: 'app-admin-coleta',
@@ -12,7 +20,8 @@ export class AdminColeta implements OnInit, OnDestroy {
   loading = true;
   error = '';
   aviso = '';
-  disparando: 'precos' | 'steam' | null = null;
+  disparando: TipoColeta | null = null;
+  abaAtiva: Aba = 'precos-steam';
   private atualizador?: ReturnType<typeof setInterval>;
 
   constructor(private administracao: AdministracaoService, private cdr: ChangeDetectorRef) {}
@@ -39,7 +48,32 @@ export class AdminColeta implements OnInit, OnDestroy {
     }
   }
 
-  async disparar(tipo: 'precos' | 'steam') {
+  selecionarAba(aba: Aba) {
+    this.abaAtiva = aba;
+  }
+
+  cartoesDaAba(dados: StatusAdministrativoColeta): CartaoColeta[] {
+    switch (this.abaAtiva) {
+      case 'detalhes-conquistas':
+        return [
+          { titulo: 'Detalhes do jogo', tipo: 'detalhes', coleta: dados.detalhes },
+          { titulo: 'Conquistas do catalogo', tipo: 'conquistas-catalogo', coleta: dados.conquistasCatalogo },
+        ];
+      case 'instant-gaming':
+        return [
+          { titulo: 'Escaneamento', tipo: 'instant-gaming-escaneamento', coleta: dados.instantGamingEscaneamento },
+          { titulo: 'Casamento', tipo: 'instant-gaming-casamento', coleta: dados.instantGamingCasamento },
+          { titulo: 'Precos', tipo: 'instant-gaming-precos', coleta: dados.instantGamingPrecos },
+        ];
+      default:
+        return [
+          { titulo: 'Precos ITAD', tipo: 'precos', coleta: dados.precos },
+          { titulo: 'Metadados Steam', tipo: 'steam', coleta: dados.steam },
+        ];
+    }
+  }
+
+  async disparar(tipo: TipoColeta) {
     this.disparando = tipo;
     this.aviso = '';
     this.error = '';
