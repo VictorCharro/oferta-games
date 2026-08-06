@@ -111,7 +111,8 @@ public class RepositorioJogos {
         .optional();
 
     return jogo.map(linha -> new DetalheJogo(
-        linha.id(), linha.slug(), linha.title(), linha.coverUrl(), listarOfertas(linha.id()), listarDlcsDoJogo(linha.id())));
+        linha.id(), linha.slug(), linha.title(), linha.coverUrl(), listarOfertas(linha.id()),
+        listarDlcsDoJogo(linha.id()), listarJogosBaseDaDlc(linha.id())));
   }
 
   // As DLCs de um jogo vem do array "dlc" da appdetails da Steam (ver ServicoSteam), salvo em
@@ -157,6 +158,43 @@ public class RepositorioJogos {
         ORDER BY g.title
         """.formatted(filtroLojaBloqueada("o"), ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
         .param("appIds", appIds)
+        .query(RepositorioJogos::mapearResumo)
+        .list();
+  }
+
+  // Caminho inverso de listarDlcsDoJogo: se este jogo e uma DLC, mostra de qual(is) jogo(s) base
+  // ela faz parte, pra dar ida e volta entre as duas paginas. Cruza o proprio steam_app_id do jogo
+  // com o dlc_steam_app_ids de todo mundo — so acha algo quando o jogo base ja foi detalhado.
+  public List<ResumoJogo> listarJogosBaseDaDlc(long jogoId) {
+    Integer steamAppId = jdbc.sql("SELECT steam_app_id FROM games WHERE id = :jogoId")
+        .param("jogoId", jogoId)
+        .query(Integer.class)
+        .optional()
+        .orElse(null);
+    if (steamAppId == null) {
+      return List.of();
+    }
+
+    return jdbc.sql("""
+        SELECT
+          g.slug,
+          g.title,
+          g.cover_url AS cover_url,
+          g.is_dlc AS is_dlc,
+          MIN(o.price) AS min_price,
+          MAX(o.regular_price) AS regular_price,
+          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
+        FROM games g
+        JOIN game_details gd ON gd.game_id = g.id
+        LEFT JOIN offers o ON o.game_id = g.id %s
+        WHERE gd.dlc_steam_app_ids @> ARRAY[:steamAppId]::integer[]
+          %s
+          %s
+        GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
+        ORDER BY g.title
+        """.formatted(filtroLojaBloqueada("o"), ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .param("steamAppId", steamAppId)
         .query(RepositorioJogos::mapearResumo)
         .list();
   }

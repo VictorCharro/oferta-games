@@ -120,6 +120,13 @@
       </div>
     </ng-template>
 
+    <div class="dlc-section" *ngIf="game.jogosBase.length">
+      <h2>Jogo base</h2>
+      <div class="dlc-grid">
+        <app-game-card *ngFor="let jogoBase of game.jogosBase" [game]="jogoBase"></app-game-card>
+      </div>
+    </div>
+
     <div class="dlc-section" *ngIf="game.dlcs.length">
       <h2>DLCs disponíveis</h2>
       <div class="dlc-grid">

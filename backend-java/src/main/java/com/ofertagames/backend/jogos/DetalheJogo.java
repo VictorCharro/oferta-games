@@ -8,5 +8,6 @@ public record DetalheJogo(
     String title,
     String coverUrl,
     List<OfertaJogo> offers,
-    List<ResumoJogo> dlcs
+    List<ResumoJogo> dlcs,
+    List<ResumoJogo> jogosBase
 ) {}

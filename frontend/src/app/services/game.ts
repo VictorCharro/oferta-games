@@ -31,6 +31,7 @@ export interface GameDetail {
   coverUrl: string | null;
   offers: Offer[];
   dlcs: GameSummary[];
+  jogosBase: GameSummary[];
 }
 
 export interface GameHighlight {
