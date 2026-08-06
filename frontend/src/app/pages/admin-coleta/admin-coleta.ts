@@ -22,17 +22,38 @@ export class AdminColeta implements OnInit, OnDestroy {
   aviso = '';
   disparando: TipoColeta | null = null;
   abaAtiva: Aba = 'precos-steam';
-  private atualizador?: ReturnType<typeof setInterval>;
+  private destruido = false;
+  private atualizador?: ReturnType<typeof setTimeout>;
 
   constructor(private administracao: AdministracaoService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
-    this.carregar();
-    this.atualizador = setInterval(() => this.carregar(false), 15000);
+    this.carregar().then(() => this.agendarProximaAtualizacao());
   }
 
   ngOnDestroy() {
-    if (this.atualizador) clearInterval(this.atualizador);
+    this.destruido = true;
+    if (this.atualizador) clearTimeout(this.atualizador);
+  }
+
+  // Enquanto algum job estiver rodando, atualiza mais rapido (5s) pra quem esta acompanhando ver o
+  // andamento quase em tempo real; parado, volta pro ritmo tranquilo de 15s.
+  private agendarProximaAtualizacao() {
+    if (this.destruido) return;
+    const atraso = this.status && this.algumEmExecucao(this.status) ? 5000 : 15000;
+    this.atualizador = setTimeout(() => this.carregar(false).then(() => this.agendarProximaAtualizacao()), atraso);
+  }
+
+  private algumEmExecucao(dados: StatusAdministrativoColeta): boolean {
+    return [
+      dados.precos,
+      dados.steam,
+      dados.detalhes,
+      dados.conquistasCatalogo,
+      dados.instantGamingEscaneamento,
+      dados.instantGamingCasamento,
+      dados.instantGamingPrecos,
+    ].some(coleta => coleta.emExecucao);
   }
 
   async carregar(exibirCarregamento = true) {

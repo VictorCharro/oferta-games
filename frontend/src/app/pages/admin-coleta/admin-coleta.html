@@ -24,11 +24,14 @@
           <div class="card-top">
             <div>
               <p class="label">{{ cartao.titulo }}</p>
-              <strong [class.running]="cartao.coleta.emExecucao">{{ textoStatus(cartao.coleta) }}</strong>
+              <strong [class.running]="cartao.coleta.emExecucao">
+                <span class="status-dot" *ngIf="cartao.coleta.emExecucao" aria-hidden="true"></span>
+                {{ textoStatus(cartao.coleta) }}
+              </strong>
             </div>
             <button class="btn-primary" type="button" (click)="disparar(cartao.tipo)"
               [disabled]="cartao.coleta.emExecucao || disparando !== null">
-              {{ disparando === cartao.tipo ? 'Solicitando...' : 'Rodar agora' }}
+              {{ cartao.coleta.emExecucao ? 'Em execucao...' : (disparando === cartao.tipo ? 'Solicitando...' : 'Rodar agora') }}
             </button>
           </div>
           <dl>
