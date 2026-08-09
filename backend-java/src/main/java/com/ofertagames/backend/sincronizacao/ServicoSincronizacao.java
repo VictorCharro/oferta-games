@@ -20,10 +20,11 @@ public class ServicoSincronizacao {
   private static final int TAMANHO_LOTE_PRECOS = 200;
   private static final int LIMITE_METADADOS_STEAM = 60;
   private static final int LIMITE_DETALHES_JOGOS = 60;
-  // Ritmo de manutencao: o backlog gerado pelo fix do regex de agecheck (750920/Shadow of the
-  // Tomb Raider etc) estagnou no restante de jogos sem conquistas de verdade na Steam, entao
-  // voltou ao ritmo baixo normal.
-  private static final int LIMITE_CONQUISTAS_CATALOGO = 15;
+  // Acelerado temporariamente em 09/08/2026: apos corrigir o bug que travava a fila em jogos sem
+  // conquistas de verdade (ver games.achievements_checked_at), o backlog real subiu pra 12k+
+  // pendentes. Reverter pro ritmo de manutencao (15) quando a fila estiver zerada ou o
+  // crescimento estagnar.
+  private static final int LIMITE_CONQUISTAS_CATALOGO = 250;
   // Ritmo de manutencao: a varredura ja cobriu o catalogo da Instant Gaming quase por completo
   // (crescimento estagnado), entao agora e so acompanhar produtos novos entrando no catalogo
   // deles.
