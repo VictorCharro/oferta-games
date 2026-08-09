@@ -331,6 +331,7 @@ public class ServicoCatalogo {
       String appId = String.valueOf(pendente.steamAppId());
       var esquema = steam.buscarEsquemaConquistas(appId);
       if (esquema.isEmpty()) {
+        jogos.marcarConquistasVerificadas(pendente.id());
         continue;
       }
       var percentuais = steam.buscarPercentuaisGlobais(appId);

@@ -542,6 +542,7 @@ public class RepositorioJogos {
         SELECT g.id, g.steam_app_id
         FROM games g
         WHERE g.steam_app_id IS NOT NULL
+          AND g.achievements_checked_at IS NULL
           AND NOT EXISTS (SELECT 1 FROM game_achievements ga WHERE ga.game_id = g.id)
           %s
           %s
@@ -558,12 +559,23 @@ public class RepositorioJogos {
         SELECT COUNT(*)
         FROM games g
         WHERE g.steam_app_id IS NOT NULL
+          AND g.achievements_checked_at IS NULL
           AND NOT EXISTS (SELECT 1 FROM game_achievements ga WHERE ga.game_id = g.id)
           %s
           %s
         """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
         .query(Long.class)
         .single();
+  }
+
+  // Marca que ja verificamos as conquistas deste jogo na Steam, mesmo quando ele nao tem nenhuma
+  // (esquema vazio): sem isso, listarPendentesConquistas reconsulta pra sempre os mesmos jogos sem
+  // conquistas de verdade (NOT EXISTS continua verdadeiro), entupindo o inicio da fila (ORDER BY
+  // id ASC) e impedindo o resto do backlog de avancar.
+  public void marcarConquistasVerificadas(long jogoId) {
+    jdbc.sql("UPDATE games SET achievements_checked_at = now() WHERE id = :jogoId")
+        .param("jogoId", jogoId)
+        .update();
   }
 
   public void salvarDetalhesJogo(DetalhesParaSalvar dados) {
