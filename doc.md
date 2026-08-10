@@ -65,6 +65,22 @@ O workflow `.github/workflows/deploy-oracle.yml` atualiza o backend na VM por SS
 
 O script conecta na VM, atualiza o `master`, recria somente o container do backend e valida o health check. A chave da VM usada para baixar o repositorio continua somente leitura.
 
+### Testes e CI (10/08/2026)
+
+Ate 10/08/2026 o projeto nao tinha testes de verdade: o backend nao tinha `src/test` nenhum, e o frontend so tinha o `app.spec.ts` padrao do `ng generate`, nunca adaptado (chegava a checar um texto — "Hello, frontend" — que nem existe mais no app, e quebrava com `NG0304` por `app-sidebar` nao estar declarado no modulo de teste).
+
+- **Backend** (`backend-java/src/test/java`, JUnit 5 + Mockito via `spring-boot-starter-test`, sem contexto Spring pra ficar rapido):
+  - `comum/ClassificadorDlcTest`, `ConteudosNaoJogosTest`, `JogosBloqueadosTest`, `LojasBloqueadasTest`, `GeradorSlugTest`: cobrem as classes de classificacao/filtro/slug usadas em quase toda query do catalogo — sao puras (sem I/O), risco alto de regressao silenciosa se alguem mexer no regex sem perceber.
+  - `jogos/ServicoCatalogoTest`: cobre `atualizarPrecos` com `RepositorioJogos`/`ClienteItad`/`ServicoInstantGaming` mockados — cooldown de 5min (bloqueia e libera), cascata de preco pras DLCs (soma corretamente, DLC sem preco nao derruba o jogo principal, cooldown so registra no jogo principal), e `JogoSemItadException` quando nao ha nenhuma fonte de preco. Essa e a logica mais nova e mais arriscada do backend (adicionada nesta mesma sessao), entao ganhou o teste mais pesado.
+  - Rodar localmente: `cd backend-java && mvn test` (ou `mvn -o test` se os plugins do Maven ja estiverem em cache local, sem precisar de rede).
+- **Frontend** (`*.spec.ts` ao lado de cada arquivo, Vitest + jsdom via `@angular/build:unit-test` — **nao e Karma/Jasmine**, entao nao precisa de Chrome/browser real nem em CI):
+  - `services/filters.spec.ts`, `services/store-brand.spec.ts`: funcoes puras de classificacao de DLC e de marca/plataforma de loja, usadas em varias paginas (catalogo, home, cards).
+  - `components/game-card/game-card.spec.ts`: calculo de desconto e formatacao de preco, instanciando a classe direto (sem `TestBed`) com stubs dos servicos injetados — evita ter que montar `HttpClient`/Supabase por tras de `FavoritesService`/`AuthService` so pra testar um calculo.
+  - `pages/game-detail/game-detail.spec.ts`: rotulo do botao de refresh durante o cooldown (`Object.create(GameDetail.prototype)` pra pular o construtor, que tem ~9 dependencias via DI, e testar so o getter `rotuloBotaoRefresh`).
+  - `app.spec.ts`: reescrito pra testar de verdade o comportamento de `App` (esconder sidebar/topbar na rota `/login`), com `NO_ERRORS_SCHEMA` pra nao precisar declarar `app-sidebar`/`app-topbar` no modulo de teste.
+  - Rodar localmente: `cd frontend && npm test -- --watch=false`.
+- **CI** (`.github/workflows/ci.yml`, novo, separado do `deploy-oracle.yml`): roda em todo push (qualquer branch) e em pull requests pra `master`. Dois jobs paralelos e independentes — `backend` (`mvn -B test` com JDK 21 via `actions/setup-java`) e `frontend` (`npm ci` + `npm test -- --watch=false` + `npm run build`, com Node 22 via `actions/setup-node`). **Nao bloqueia o deploy**: `deploy-oracle.yml` continua disparando por conta propria em todo push relevante pra `master`, independente do resultado da CI. Se quiser que o deploy espere a CI passar, isso e uma mudanca separada (ex: workflow de deploy dependendo do de CI, ou branch protection exigindo o check).
+
 ## Coletas e Atualizacao de Catalogo
 
 ### Precos ITAD

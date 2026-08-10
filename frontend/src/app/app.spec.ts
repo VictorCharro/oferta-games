@@ -1,29 +1,42 @@
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { App } from './app';
 
+// NO_ERRORS_SCHEMA: testamos a lógica de App (mostrar/esconder a shell conforme a rota), não o
+// conteúdo de app-sidebar/app-topbar, então não precisamos declará-los aqui.
 describe('App', () => {
+  let router: Router;
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [
-        RouterModule.forRoot([])
-      ],
-      declarations: [
-        App
-      ],
+      imports: [RouterModule.forRoot([{ path: '**', component: App }])],
+      declarations: [App],
+      schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
+    router = TestBed.inject(Router);
   });
 
-  it('should create the app', () => {
+  it('cria o componente', () => {
     const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
+    expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should render title', async () => {
+  it('mostra a shell (sidebar/topbar) por padrão', () => {
     const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, frontend');
+    expect(fixture.componentInstance.showShell).toBe(true);
+  });
+
+  it('esconde a shell na rota /login', async () => {
+    const fixture = TestBed.createComponent(App);
+    await router.navigateByUrl('/login');
+    expect(fixture.componentInstance.showShell).toBe(false);
+  });
+
+  it('volta a mostrar a shell fora de /login', async () => {
+    const fixture = TestBed.createComponent(App);
+    await router.navigateByUrl('/login');
+    await router.navigateByUrl('/catalogo');
+    expect(fixture.componentInstance.showShell).toBe(true);
   });
 });
