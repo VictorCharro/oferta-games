@@ -2,12 +2,10 @@ name: Deploy backend na Oracle
 
 on:
   workflow_dispatch:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [master]
-    paths:
-      - 'backend-java/**'
-      - 'deploy/oracle/**'
-      - '.github/workflows/deploy-oracle.yml'
 
 concurrency:
   group: deploy-oracle-producao
@@ -16,8 +14,29 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # workflow_dispatch e sempre manual (deploy explicito); workflow_run so segue se a CI
+    # daquele push realmente passou. Sem isso, deploy do backend quebrado quando a CI falha.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     steps:
+      - name: Checkout do commit testado pela CI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Verificar se ha mudancas relevantes pro backend
+        id: mudancas
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "relevante=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only HEAD^ HEAD | grep -qE '^(backend-java/|deploy/oracle/|\.github/workflows/deploy-oracle\.yml)'; then
+            echo "relevante=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevante=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Configurar chave SSH
+        if: steps.mudancas.outputs.relevante == 'true'
         env:
           ORACLE_SSH_PRIVATE_KEY_B64: ${{ secrets.ORACLE_SSH_PRIVATE_KEY_B64 }}
         run: |
@@ -26,6 +45,7 @@ jobs:
           chmod 600 ~/.ssh/id_oracle
 
       - name: Atualizar backend na VM
+        if: steps.mudancas.outputs.relevante == 'true'
         env:
           ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
         run: |
