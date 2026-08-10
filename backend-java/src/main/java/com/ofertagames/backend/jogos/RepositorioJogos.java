@@ -450,7 +450,7 @@ public class RepositorioJogos {
 
   public Optional<JogoParaAtualizar> buscarParaAtualizar(String slug) {
     return jdbc.sql("""
-        SELECT id, title, itad_id::text AS itad_id, cover_url, is_dlc, instant_gaming_url
+        SELECT id, title, itad_id::text AS itad_id, cover_url, is_dlc, instant_gaming_url, last_manual_refresh_at
         FROM games
         WHERE slug = :slug
           %s
@@ -463,8 +463,17 @@ public class RepositorioJogos {
             rs.getString("itad_id"),
             rs.getString("cover_url"),
             rs.getObject("is_dlc", Boolean.class),
-            rs.getString("instant_gaming_url")))
+            rs.getString("instant_gaming_url"),
+            rs.getTimestamp("last_manual_refresh_at") == null ? null : rs.getTimestamp("last_manual_refresh_at").toInstant()))
         .optional();
+  }
+
+  // Cooldown do refresh manual ("Atualizar precos"): o endpoint e publico (sem login), entao isso
+  // e o unico freio contra alguem martelando o botao pro mesmo jogo repetidas vezes.
+  public void marcarRefreshManual(long jogoId) {
+    jdbc.sql("UPDATE games SET last_manual_refresh_at = now() WHERE id = :jogoId")
+        .param("jogoId", jogoId)
+        .update();
   }
 
   public void atualizarMetadadosSteam(long jogoId, Boolean ehDlc, String capaSteam, Integer steamAppId) {

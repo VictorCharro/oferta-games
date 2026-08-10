@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, Subscription } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
@@ -523,12 +524,21 @@ export class GameDetail implements OnInit, OnDestroy {
           error: () => {}
         });
       },
-      error: () => {
-        this.refreshMsg = 'Erro ao atualizar. Tente novamente.';
+      error: (erro: HttpErrorResponse) => {
+        this.refreshMsg = erro.status === 429
+          ? `Aguarde ${this.formatarEspera(erro.error?.segundosRestantes)} para atualizar de novo`
+          : 'Erro ao atualizar. Tente novamente.';
         this.refreshing = false;
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private formatarEspera(segundos: number | undefined): string {
+    if (!segundos || segundos <= 0) return 'alguns instantes';
+    if (segundos < 60) return `${segundos}s`;
+    const minutos = Math.ceil(segundos / 60);
+    return `${minutos} min`;
   }
 
   bestPrice(offers: Offer[]): number | null {

@@ -11,6 +11,8 @@ import com.ofertagames.backend.notificacoes.RepositorioNotificacoes;
 import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
 import com.ofertagames.backend.steam.ServicoSteam.ReviewsSteam;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,6 +24,10 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ServicoCatalogo {
+  // POST /api/games/{slug}/refresh nao exige login (qualquer visitante ve o botao "Atualizar
+  // precos"); este cooldown por jogo e o unico freio contra alguem martelando o botao.
+  private static final Duration COOLDOWN_REFRESH_MANUAL = Duration.ofMinutes(5);
+
   private final RepositorioJogos jogos;
   private final ClienteItad itad;
   private final ServicoSteam steam;
@@ -67,6 +73,16 @@ public class ServicoCatalogo {
 
   public ResultadoAtualizacaoJogo atualizarPrecos(String slug) {
     JogoParaAtualizar jogo = jogos.buscarParaAtualizar(slug).orElseThrow(JogoNaoEncontradoException::new);
+
+    if (jogo.ultimoRefreshManual() != null) {
+      Duration decorrido = Duration.between(jogo.ultimoRefreshManual(), Instant.now());
+      if (decorrido.compareTo(COOLDOWN_REFRESH_MANUAL) < 0) {
+        long restanteSegundos = COOLDOWN_REFRESH_MANUAL.minus(decorrido).toSeconds() + 1;
+        throw new RefreshRecenteException(restanteSegundos);
+      }
+    }
+    jogos.marcarRefreshManual(jogo.id());
+
     int atualizadas = atualizarPrecosDoJogo(jogo, true);
 
     // As DLCs sao entradas proprias do catalogo (ver "Plataformas e DLCs" em doc.md); atualizar o
@@ -388,5 +404,17 @@ public class ServicoCatalogo {
   public static class BuscaCurtaException extends RuntimeException {}
   public static class JogoNaoEncontradoException extends RuntimeException {}
   public static class JogoSemItadException extends RuntimeException {}
+
+  public static class RefreshRecenteException extends RuntimeException {
+    private final long segundosRestantes;
+
+    RefreshRecenteException(long segundosRestantes) {
+      this.segundosRestantes = segundosRestantes;
+    }
+
+    public long segundosRestantes() {
+      return segundosRestantes;
+    }
+  }
   public record ResultadoAtualizacaoLote(int jogosAtualizados, int ofertasAtualizadas) {}
 }

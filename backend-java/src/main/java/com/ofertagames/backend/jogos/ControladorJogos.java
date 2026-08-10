@@ -116,6 +116,10 @@ public class ControladorJogos {
       return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
     } catch (ServicoCatalogo.JogoSemItadException erro) {
       return ResponseEntity.badRequest().body(Map.of("error", "Jogo sem fonte de precos para atualizar"));
+    } catch (ServicoCatalogo.RefreshRecenteException erro) {
+      return ResponseEntity.status(429)
+          .header("Retry-After", String.valueOf(erro.segundosRestantes()))
+          .body(Map.of("error", "Precos atualizados recentemente", "segundosRestantes", erro.segundosRestantes()));
     }
   }
 }
