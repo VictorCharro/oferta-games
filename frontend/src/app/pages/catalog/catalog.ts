@@ -15,6 +15,7 @@ import { PreferencesService } from '../../services/preferences';
 export class Catalog implements OnInit, OnDestroy {
   games: GameSummary[] = [];
   loading = true;
+  error = false;
   page = 0;
   hasMore = true;
   readonly pageSize = 20;
@@ -164,6 +165,7 @@ export class Catalog implements OnInit, OnDestroy {
   load(reset = false) {
     if (reset) { this.page = 0; this.games = []; }
     this.loading = true;
+    this.error = false;
     const requestVersion = ++this.requestVersion;
     this.gameService.getGames(this.page, this.pageSize, {
       sort: this.sort,
@@ -185,6 +187,7 @@ export class Catalog implements OnInit, OnDestroy {
       error: () => {
         if (requestVersion !== this.requestVersion) return;
         this.loading = false;
+        this.error = true;
         this.cdr.detectChanges();
       }
     });

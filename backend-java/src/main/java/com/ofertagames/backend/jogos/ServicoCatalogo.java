@@ -18,7 +18,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -87,12 +86,10 @@ public class ServicoCatalogo {
 
     // As DLCs sao entradas proprias do catalogo (ver "Plataformas e DLCs" em doc.md); atualizar o
     // jogo base deve atualizar o preco delas junto, pra quem clica "Atualizar precos" nao precisar
-    // repetir a acao em cada DLC.
-    for (ResumoJogo dlc : jogos.listarDlcsDoJogo(jogo.id())) {
-      Optional<JogoParaAtualizar> jogoDlc = jogos.buscarParaAtualizar(dlc.slug());
-      if (jogoDlc.isPresent()) {
-        atualizadas += atualizarPrecosDoJogo(jogoDlc.get(), false);
-      }
+    // repetir a acao em cada DLC. Busca todas de uma vez (evita 1 query por DLC).
+    List<String> slugsDlcs = jogos.listarDlcsDoJogo(jogo.id()).stream().map(ResumoJogo::slug).toList();
+    for (JogoParaAtualizar jogoDlc : jogos.buscarParaAtualizarPorSlugs(slugsDlcs)) {
+      atualizadas += atualizarPrecosDoJogo(jogoDlc, false);
     }
 
     return new ResultadoAtualizacaoJogo(true, atualizadas);
@@ -109,12 +106,13 @@ public class ServicoCatalogo {
       List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(itad.buscarPrecos(jogo.itadId()), List.of());
       ResultadoPrecoItad resultado = resultados.isEmpty() ? null : resultados.get(0);
       if (resultado != null && resultado.deals() != null) {
+        List<OfertaParaSalvar> ofertasParaSalvar = new ArrayList<>();
         for (OfertaPrecoItad oferta : resultado.deals()) {
           if (oferta.shop() == null || oferta.price() == null || oferta.url() == null) {
             continue;
           }
 
-          jogos.salvarOferta(new OfertaParaSalvar(
+          ofertasParaSalvar.add(new OfertaParaSalvar(
               jogo.id(),
               "itad",
               oferta.shop().name(),
@@ -123,8 +121,8 @@ public class ServicoCatalogo {
               "BRL",
               oferta.url(),
               oferta.voucher()));
-          atualizadas++;
         }
+        atualizadas += jogos.salvarOfertas(ofertasParaSalvar);
         atualizarMetadadosSteamSeNecessario(jogo, resultado.deals());
       }
     }

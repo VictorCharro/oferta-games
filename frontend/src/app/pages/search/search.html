@@ -1,5 +1,5 @@
 <div class="page-content">
-  <div class="search-results" *ngIf="searched && !loading">
+  <div class="search-results" *ngIf="searched && !loading && !error">
     <p class="results-count" *ngIf="results.length">{{ results.length }} resultado(s) para "{{ query }}"</p>
     <div class="games-grid" *ngIf="results.length">
       <app-game-card *ngFor="let game of results" [game]="game"></app-game-card>
@@ -9,6 +9,12 @@
       <span>Tente outro nome ou verifique a ortografia.</span>
     </div>
   </div>
+
+  <app-load-error
+    *ngIf="searched && !loading && error"
+    message="Não foi possível buscar. Tente novamente."
+    (retry)="doSearch()"
+  ></app-load-error>
 
   <div class="games-grid loading-grid" *ngIf="loading">
     <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6]"></div>

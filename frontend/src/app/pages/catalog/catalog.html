@@ -128,6 +128,12 @@
       <div class="loading-more" *ngIf="loading && games.length > 0">
         <span>Carregando...</span>
       </div>
+
+      <app-load-error
+        *ngIf="error && games.length === 0"
+        message="Não foi possível carregar o catálogo."
+        (retry)="load(true)"
+      ></app-load-error>
     </div>
 
   </div>

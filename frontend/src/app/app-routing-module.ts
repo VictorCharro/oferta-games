@@ -12,6 +12,7 @@ import { Settings } from './pages/settings/settings';
 import { Favorites } from './pages/favorites/favorites';
 import { AdminColeta } from './pages/admin-coleta/admin-coleta';
 import { PublicProfile } from './pages/public-profile/public-profile';
+import { NotFound } from './pages/not-found/not-found';
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin.guard';
 
@@ -30,7 +31,7 @@ const routes: Routes = [
   { path: 'admin/coleta', canActivate: [adminGuard], component: AdminColeta },
   { path: 'favoritos', redirectTo: 'monitorados', pathMatch: 'full' },
   { path: ':handle', component: PublicProfile },
-  { path: '**', redirectTo: '' },
+  { path: '**', component: NotFound },
 ];
 
 @NgModule({

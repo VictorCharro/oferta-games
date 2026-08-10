@@ -1,0 +1,6 @@
+<div class="empty-state load-error">
+  <div class="empty-icon" aria-hidden="true">⚠️</div>
+  <h3>Algo deu errado</h3>
+  <p>{{ message }}</p>
+  <button type="button" class="btn-primary" (click)="retry.emit()">Tentar novamente</button>
+</div>

@@ -11,17 +11,24 @@ import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-
 export class FreeGames implements OnInit {
   games: TopDeal[] = [];
   loading = true;
+  error = false;
 
   constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
+    this.load();
+  }
+
+  load() {
+    this.loading = true;
+    this.error = false;
     this.gameService.getTopDeals(100).subscribe({
       next: (deals) => {
         this.games = deals.filter(d => Number(d.discountPct) === 100);
         this.loading = false;
         this.cdr.detectChanges();
       },
-      error: () => { this.loading = false; this.cdr.detectChanges(); }
+      error: () => { this.loading = false; this.error = true; this.cdr.detectChanges(); }
     });
   }
 

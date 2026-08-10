@@ -13,6 +13,7 @@ export class Search implements OnInit {
   results: GameSummary[] = [];
   loading = false;
   searched = false;
+  error = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -35,9 +36,10 @@ export class Search implements OnInit {
     if (!this.query.trim()) return;
     this.loading = true;
     this.searched = false;
+    this.error = false;
     this.gameService.searchGames(this.query).subscribe({
       next: (data) => { this.results = data; this.loading = false; this.searched = true; this.cdr.detectChanges(); },
-      error: () => { this.loading = false; this.searched = true; this.cdr.detectChanges(); }
+      error: () => { this.loading = false; this.searched = true; this.error = true; this.cdr.detectChanges(); }
     });
   }
 

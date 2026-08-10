@@ -1,5 +1,11 @@
 <div class="page-content">
 
+  <app-load-error
+    *ngIf="error"
+    message="Não foi possível carregar os destaques da página inicial."
+    (retry)="retryDestaques()"
+  ></app-load-error>
+
   <!-- Banner principal / carrossel -->
   <div class="banner" *ngIf="featuredDeals.length">
     <button class="banner-nav prev" (click)="prevFeatured()">‹</button>

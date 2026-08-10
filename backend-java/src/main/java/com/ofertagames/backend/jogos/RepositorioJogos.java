@@ -468,6 +468,31 @@ public class RepositorioJogos {
         .optional();
   }
 
+  // Batch de buscarParaAtualizar por slug, usado pelo refresh das DLCs de um jogo: evita 1 query
+  // por DLC (N+1) quando o jogo tem varias.
+  public List<JogoParaAtualizar> buscarParaAtualizarPorSlugs(List<String> slugs) {
+    if (slugs.isEmpty()) {
+      return List.of();
+    }
+    return jdbc.sql("""
+        SELECT id, title, itad_id::text AS itad_id, cover_url, is_dlc, instant_gaming_url, last_manual_refresh_at
+        FROM games
+        WHERE slug IN (:slugs)
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("games"), JogosBloqueados.filtroSql("games")))
+        .param("slugs", slugs)
+        .query((rs, linha) -> new JogoParaAtualizar(
+            rs.getLong("id"),
+            rs.getString("title"),
+            rs.getString("itad_id"),
+            rs.getString("cover_url"),
+            rs.getObject("is_dlc", Boolean.class),
+            rs.getString("instant_gaming_url"),
+            rs.getTimestamp("last_manual_refresh_at") == null ? null : rs.getTimestamp("last_manual_refresh_at").toInstant()))
+        .list();
+  }
+
   // Cooldown do refresh manual ("Atualizar precos"): o endpoint e publico (sem login), entao isso
   // e o unico freio contra alguem martelando o botao pro mesmo jogo repetidas vezes.
   public void marcarRefreshManual(long jogoId) {

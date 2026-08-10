@@ -34,6 +34,7 @@ export class Home implements OnInit, OnDestroy {
   topDiscountDlcs: DealCardView[] = [];
   featuredIndex = 0;
   loading = true;
+  error = false;
   preferredPlatformLabel = '';
   private favSub!: Subscription;
   private autoplayTimer?: ReturnType<typeof setInterval>;
@@ -48,17 +49,7 @@ export class Home implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadPreferredPlatformDeals();
-    this.gameService.getTopDeals(100, 'rank').subscribe({
-      next: (deals) => {
-        const paid = deals.filter(d => Number(d.discountPct) < 100 && !resolveDlc(d.title, d.isDlc) && this.matchesPreferences(d));
-        this.featuredDeals = this.shuffle(paid).slice(0, 5);
-        this.famousGames = this.shuffle(paid).slice(0, 20).map(d => this.fromTopDeal(d));
-        this.loading = false;
-        this.startAutoplay();
-        this.cdr.detectChanges();
-      },
-      error: () => { this.loading = false; this.cdr.detectChanges(); }
-    });
+    this.carregarDestaques();
 
     this.gameService.getTopDeals(200, 'discount').subscribe({
       next: (deals) => {
@@ -86,6 +77,26 @@ export class Home implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.favSub?.unsubscribe();
     this.stopAutoplay();
+  }
+
+  private carregarDestaques() {
+    this.loading = true;
+    this.error = false;
+    this.gameService.getTopDeals(100, 'rank').subscribe({
+      next: (deals) => {
+        const paid = deals.filter(d => Number(d.discountPct) < 100 && !resolveDlc(d.title, d.isDlc) && this.matchesPreferences(d));
+        this.featuredDeals = this.shuffle(paid).slice(0, 5);
+        this.famousGames = this.shuffle(paid).slice(0, 20).map(d => this.fromTopDeal(d));
+        this.loading = false;
+        this.startAutoplay();
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loading = false; this.error = true; this.cdr.detectChanges(); }
+    });
+  }
+
+  retryDestaques() {
+    this.carregarDestaques();
   }
 
   @HostListener('document:visibilitychange')

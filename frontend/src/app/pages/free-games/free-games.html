@@ -34,9 +34,15 @@
     <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6,7,8]"></div>
   </div>
 
-  <div class="empty-state" *ngIf="!loading && !games.length">
+  <div class="empty-state" *ngIf="!loading && !games.length && !error">
     <div class="empty-icon">🎮</div>
     <h3>Nenhum jogo gratuito no momento</h3>
     <p>Volte mais tarde ou confira as <a routerLink="/promocoes">melhores promoções</a>.</p>
   </div>
+
+  <app-load-error
+    *ngIf="!loading && error"
+    message="Não foi possível carregar os jogos gratuitos."
+    (retry)="load()"
+  ></app-load-error>
 </div>

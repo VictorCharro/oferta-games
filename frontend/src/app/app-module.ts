@@ -11,6 +11,7 @@ import { Sidebar } from './components/sidebar/sidebar';
 import { Topbar } from './components/topbar/topbar';
 import { GameCard } from './components/game-card/game-card';
 import { DealsCarousel } from './components/deals-carousel/deals-carousel';
+import { LoadError } from './components/load-error/load-error';
 import { Home } from './pages/home/home';
 import { Catalog } from './pages/catalog/catalog';
 import { BestSellers } from './pages/best-sellers/best-sellers';
@@ -23,6 +24,7 @@ import { Settings } from './pages/settings/settings';
 import { Favorites } from './pages/favorites/favorites';
 import { AdminColeta } from './pages/admin-coleta/admin-coleta';
 import { PublicProfile } from './pages/public-profile/public-profile';
+import { NotFound } from './pages/not-found/not-found';
 
 @NgModule({
   declarations: [
@@ -31,6 +33,7 @@ import { PublicProfile } from './pages/public-profile/public-profile';
     Topbar,
     GameCard,
     DealsCarousel,
+    LoadError,
     Home,
     Catalog,
     BestSellers,
@@ -43,6 +46,7 @@ import { PublicProfile } from './pages/public-profile/public-profile';
     Favorites,
     AdminColeta,
     PublicProfile,
+    NotFound,
   ],
   imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule, FormsModule, DragDropModule],
   providers: [provideBrowserGlobalErrorListeners()],
