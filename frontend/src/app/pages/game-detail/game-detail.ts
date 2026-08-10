@@ -32,6 +32,8 @@ export class GameDetail implements OnInit, OnDestroy {
   loading = true;
   refreshing = false;
   refreshMsg = '';
+  cooldownSegundos = 0;
+  private cooldownInterval?: ReturnType<typeof setInterval>;
   activeTab: 'precos' | 'sobre' | 'review' | 'conquistas' = 'precos';
   detalhes: GameDetails | null = null;
   conquistas: RespostaConquistas | null = null;
@@ -91,6 +93,7 @@ export class GameDetail implements OnInit, OnDestroy {
         this.loading = true;
         this.refreshing = false;
         this.refreshMsg = '';
+        this.pararCooldown();
         this.activeTab = 'precos';
         this.subTabReview = 'steam';
         this.midiaAtiva = 0;
@@ -113,6 +116,7 @@ export class GameDetail implements OnInit, OnDestroy {
     this.favoriteSub?.unsubscribe();
     this.profileFavoriteSub?.unsubscribe();
     this.hls?.destroy();
+    if (this.cooldownInterval) clearInterval(this.cooldownInterval);
   }
 
   private carregarDetalhesEConquistasEReviews(slug: string) {
@@ -508,8 +512,13 @@ export class GameDetail implements OnInit, OnDestroy {
     };
   }
 
+  // Cooldown de 5min por jogo no backend (ver ServicoCatalogo.COOLDOWN_REFRESH_MANUAL): ao ter
+  // sucesso ja sabemos que o proximo clique vai ser barrado, entao inicia a contagem sem esperar
+  // pelo 429. O botao mostra a contagem regressiva em vez de uma mensagem separada embaixo.
+  private static readonly COOLDOWN_PADRAO_SEGUNDOS = 300;
+
   refresh() {
-    if (!this.game || this.refreshing) return;
+    if (!this.game || this.refreshing || this.cooldownSegundos > 0) return;
     this.refreshing = true;
     this.refreshMsg = '';
     this.cdr.detectChanges();
@@ -518,6 +527,7 @@ export class GameDetail implements OnInit, OnDestroy {
       next: (res) => {
         this.refreshMsg = 'Ofertas atualizadas';
         this.refreshing = false;
+        this.iniciarCooldown(GameDetail.COOLDOWN_PADRAO_SEGUNDOS);
         this.cdr.detectChanges();
         this.gameService.getGame(slug).subscribe({
           next: (d) => { this.game = d; this.cdr.detectChanges(); },
@@ -525,20 +535,44 @@ export class GameDetail implements OnInit, OnDestroy {
         });
       },
       error: (erro: HttpErrorResponse) => {
-        this.refreshMsg = erro.status === 429
-          ? `Aguarde ${this.formatarEspera(erro.error?.segundosRestantes)} para atualizar de novo`
-          : 'Erro ao atualizar. Tente novamente.';
         this.refreshing = false;
+        if (erro.status === 429) {
+          this.iniciarCooldown(erro.error?.segundosRestantes ?? GameDetail.COOLDOWN_PADRAO_SEGUNDOS);
+        } else {
+          this.refreshMsg = 'Erro ao atualizar. Tente novamente.';
+        }
         this.cdr.detectChanges();
       }
     });
   }
 
-  private formatarEspera(segundos: number | undefined): string {
-    if (!segundos || segundos <= 0) return 'alguns instantes';
-    if (segundos < 60) return `${segundos}s`;
-    const minutos = Math.ceil(segundos / 60);
-    return `${minutos} min`;
+  private iniciarCooldown(segundos: number) {
+    this.pararCooldown();
+    this.cooldownSegundos = Math.max(0, Math.round(segundos));
+    if (this.cooldownSegundos === 0) return;
+    this.cooldownInterval = setInterval(() => {
+      this.cooldownSegundos--;
+      if (this.cooldownSegundos <= 0) {
+        this.pararCooldown();
+      }
+      this.cdr.detectChanges();
+    }, 1000);
+  }
+
+  private pararCooldown() {
+    if (this.cooldownInterval) clearInterval(this.cooldownInterval);
+    this.cooldownInterval = undefined;
+    this.cooldownSegundos = 0;
+  }
+
+  get rotuloBotaoRefresh(): string {
+    if (this.refreshing) return 'Atualizando...';
+    if (this.cooldownSegundos > 0) {
+      const minutos = Math.floor(this.cooldownSegundos / 60);
+      const segundos = this.cooldownSegundos % 60;
+      return `Aguarde ${minutos}:${segundos.toString().padStart(2, '0')}`;
+    }
+    return 'Atualizar preços';
   }
 
   bestPrice(offers: Offer[]): number | null {

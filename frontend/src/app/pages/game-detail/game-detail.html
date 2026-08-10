@@ -12,8 +12,8 @@
           </div>
           <div class="hero-actions">
             <div class="refresh-group">
-              <button class="btn-outline refresh-btn" (click)="refresh()" [disabled]="refreshing">
-                {{ refreshing ? 'Atualizando...' : 'Atualizar preços' }}
+              <button class="btn-outline refresh-btn" (click)="refresh()" [disabled]="refreshing || cooldownSegundos > 0" [class.cooldown]="cooldownSegundos > 0">
+                {{ rotuloBotaoRefresh }}
               </button>
               <span class="refresh-msg" *ngIf="refreshMsg">{{ refreshMsg }}</span>
             </div>

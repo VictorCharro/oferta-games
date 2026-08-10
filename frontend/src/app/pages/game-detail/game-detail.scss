@@ -58,7 +58,14 @@
   width: fit-content;
   color: #fff !important;
   border-color: rgba(255,255,255,0.4) !important;
+  font-variant-numeric: tabular-nums;
   &:hover { border-color: var(--color-purple) !important; color: var(--color-purple) !important; }
+
+  &.cooldown {
+    opacity: 0.55;
+    cursor: default;
+    &:hover { border-color: rgba(255,255,255,0.4) !important; color: #fff !important; }
+  }
 }
 
 .hero-actions {
