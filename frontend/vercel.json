@@ -1,3 +1,7 @@
 {
-  "framework": "angular"
+  "buildCommand": "ng build",
+  "outputDirectory": "dist/frontend/browser",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.csr.html" }
+  ]
 }
