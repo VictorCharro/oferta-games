@@ -22,21 +22,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 2
 
-      - name: Verificar se ha mudancas relevantes pro backend
-        id: mudancas
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "relevante=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only HEAD^ HEAD | grep -qE '^(backend-java/|deploy/oracle/|\.github/workflows/deploy-oracle\.yml)'; then
-            echo "relevante=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevante=false" >> "$GITHUB_OUTPUT"
-          fi
-
+      # Sempre deploya quando chega aqui (nao tenta adivinhar "mudou backend?" comparando so o
+      # ultimo commit) - um "git diff HEAD^ HEAD" ja causou um commit com mudanca real no
+      # backend ficar sem deploy: a CI daquele commit falhou (nada rodou), e o commit seguinte
+      # (so o fix da CI) nao tocava backend-java/, entao o diff dele sozinho dava "nao relevante"
+      # mesmo com o commit anterior nao-deployado esperando. git pull --ff-only na VM ja e
+      # idempotente/barato quando nao ha nada novo, entao nao ha custo real em sempre rodar.
       - name: Configurar chave SSH
-        if: steps.mudancas.outputs.relevante == 'true'
         env:
           ORACLE_SSH_PRIVATE_KEY_B64: ${{ secrets.ORACLE_SSH_PRIVATE_KEY_B64 }}
         run: |
@@ -45,7 +38,6 @@ jobs:
           chmod 600 ~/.ssh/id_oracle
 
       - name: Atualizar backend na VM
-        if: steps.mudancas.outputs.relevante == 'true'
         env:
           ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
         run: |
