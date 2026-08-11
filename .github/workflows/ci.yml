@@ -37,7 +37,9 @@ jobs:
 
       - name: Instalar dependencias
         working-directory: frontend
-        run: npm ci
+        # --legacy-peer-deps: @angular/ssr/platform-server precisaram disso pra instalar (ver
+        # doc.md "SEO (SSR)..."); o lockfile foi gerado com a mesma flag, entao o ci tambem precisa.
+        run: npm ci --legacy-peer-deps
 
       - name: Rodar testes do frontend
         working-directory: frontend
