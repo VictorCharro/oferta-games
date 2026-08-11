@@ -5,6 +5,7 @@ import { FavoritesService } from '../../services/favorites';
 import { resolveDlc } from '../../services/filters';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 import { PreferencesService, UserPreferences } from '../../services/preferences';
+import { SeoService } from '../../services/seo';
 
 export interface DealCardView {
   slug: string;
@@ -44,10 +45,12 @@ export class Home implements OnInit, OnDestroy {
     private gameService: GameService,
     private favoritesService: FavoritesService,
     private preferencesService: PreferencesService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private seo: SeoService
   ) {}
 
   ngOnInit() {
+    this.seo.reset();
     this.loadPreferredPlatformDeals();
     this.carregarDestaques();
 

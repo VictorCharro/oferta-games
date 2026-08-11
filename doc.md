@@ -41,7 +41,7 @@ O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de 
 | `STEAM_WEB_API_KEY` | sim para Steam | Biblioteca, horas e conquistas Steam |
 | `XBL_APP_KEY` | sim para Xbox | "Public Key" do "Xbox App" criado no painel OpenXBL (xbl.io), usado no fluxo OAuth de login Xbox |
 | `PUBLIC_BACKEND_URL` | sim para Steam | URL publica do backend para retorno OpenID |
-| `FRONTEND_URL` | sim para Steam | URL do frontend para redirecionamentos |
+| `FRONTEND_URL` | sim | URL do frontend para redirecionamentos (Steam) e pra montar as URLs do `sitemap.xml` (`app.frontend-url`) |
 | `CORS_ALLOWED_ORIGINS` | sim | Separar por virgula; incluir Vercel e `http://localhost:4200` |
 | `APP_SYNC_SCHEDULER_ENABLED` | sim | `true` em producao |
 | `APP_SYNC_SCHEDULER_PRICE_DELAY_MS` | nao | Padrao `600000` (10 min) |
@@ -81,6 +81,20 @@ Ate 10/08/2026 o projeto nao tinha testes de verdade: o backend nao tinha `src/t
   - Rodar localmente: `cd frontend && npm test -- --watch=false`.
 - **CI** (`.github/workflows/ci.yml`, novo, separado do `deploy-oracle.yml`): roda em todo push (qualquer branch) e em pull requests pra `master`. Dois jobs paralelos e independentes — `backend` (`mvn -B test` com JDK 21 via `actions/setup-java`) e `frontend` (`npm ci` + `npm test -- --watch=false` + `npm run build`, com Node 22 via `actions/setup-node`).
 - **Deploy so depois da CI passar (10/08/2026)**: `deploy-oracle.yml` nao dispara mais direto por `push`; agora usa `workflow_run` acionado pela conclusao do workflow `CI` em `master`, com `if: github.event.workflow_run.conclusion == 'success'` — se a CI falhar, o job de deploy nem roda. `workflow_dispatch` continua disponivel pra deploy manual explicito, sem depender da CI. Como `workflow_run` nao suporta filtro por `paths`, o job faz seu proprio `git diff HEAD^ HEAD` (checkout no `head_sha` do run da CI, `fetch-depth: 2`) pra so seguir com SSH/deploy quando o push realmente mexeu em `backend-java/`, `deploy/oracle/` ou no proprio workflow — preserva o comportamento seletivo que o filtro de `paths` dava antes.
+
+### SEO (SSR), sitemap e headers de seguranca (10/08/2026)
+
+O site era 100% CSR (client-side rendering): o servidor mandava um HTML quase vazio e o JS montava tudo depois, entao toda pagina indexava com o mesmo `<title>`/meta generico do `index.html`, sem nome/preco do jogo especifico, e links compartilhados (WhatsApp/Discord/Twitter) nao mostravam preview nenhum. Convertido pra SSR de verdade (nao so prerender estatico, ja que preco muda a cada 10min e prerender geraria HTML desatualizado sem um rebuild):
+
+- **`@angular/ssr`** adicionado via `ng add` (teve que instalar `@angular/ssr`/`@angular/platform-server` manualmente com a versao exata ja usada pelo resto do monorepo — `ng add` tentava puxar a versao `latest`, que ficava um patch a frente e quebrava a resolucao de peer deps do npm). Gerou `src/server.ts` (entrypoint Express), `src/main.server.ts`, `src/app/app.module.server.ts`.
+- **Render mode por rota** (`src/app/app.routes.server.ts`): a maioria das rotas usa `RenderMode.Server` (renderiza a cada request, nunca fica desatualizado). As paginas que dependem de sessao guardada no browser (Supabase Auth) ou nao tem valor de SEO — `login`, `perfil`, `configuracoes`, `monitorados`, `favoritos`, `admin/coleta` — usam `RenderMode.Client` (SSR nao teria a sessao do usuario mesmo, e renderizar como deslogado antes de hidratar geraria um flash visual sem necessidade).
+- **`provideHttpClient(withFetch())`** substituiu `HttpClientModule` em `app-module.ts`: o backend XHR classico do Angular nao existe em Node: precisa do backend baseado em `fetch` (nativo no Node 18+) pra funcionar igual no browser e no servidor.
+- **Bugs de SSR encontrados e corrigidos** (globals de browser que nao existem em Node — cada um derrubava a renderizacao inteira com `ReferenceError`, sem fallback silencioso): `services/supabase.ts` (o client do Supabase tentava usar `localStorage` na propria construcao — corrigido com `persistSession: false` quando `typeof window === 'undefined'`), `services/theme.ts` e `services/preferences.ts` (leem `localStorage`/`document` no construtor do servico, guardado atras de `typeof window !== 'undefined'`), `components/deals-carousel/deals-carousel.ts` (`new MutationObserver(...)` em `ngAfterViewInit`, guardado com `typeof MutationObserver === 'undefined'`), `pages/catalog/catalog.ts` (`checkLoadMore` lia `window.innerHeight`/`document.documentElement.scrollHeight` sem guarda, chamado via `setTimeout` incondicional). Regra geral daqui pra frente: qualquer servico/componente que rode durante o carregamento inicial (constructor, `ngOnInit`, `ngAfterViewInit`, ou qualquer coisa agendada sem esperar interacao do usuario) **nao pode** tocar `window`/`localStorage`/`sessionStorage`/`navigator`/`MutationObserver`/`ResizeObserver` sem checar `typeof window !== 'undefined'` antes — `document` e seguro (o Angular fornece um DOM de servidor pra ele).
+- **`security.allowedHosts`** em `angular.json` (protecao SSRF nativa do `@angular/ssr` contra header `Host` forjado) precisou ser preenchido — vinha vazio (`[]`) do schematic, o que rejeitava **toda** requisicao com 400, inclusive em producao; setado pra `["ofertagames.vercel.app", "*.vercel.app", "localhost"]`.
+- **`services/seo.ts`** (`SeoService`): wrapper de `Title`/`Meta` do Angular (funcionam identico no server e no browser) com `set({title, description, image, path})` e `reset()`. Monta title com sufixo "| Oferta Games", meta description, e tags Open Graph/Twitter (pra preview de link em redes sociais). Chamado em `ngOnInit`/no callback de carregamento de: `game-detail.ts` (titulo = nome do jogo, descricao com o menor preco, imagem = capa do jogo), `public-profile.ts` (titulo = nome de exibicao, descricao = bio, imagem = avatar), `catalog.ts`/`best-sellers.ts`/`free-games.ts`/`search.ts`/`not-found.ts` (titulo/descricao fixos por pagina), `home.ts` (`reset()`, usa o generico). `game-detail.ts` e `public-profile.ts` tambem chamam `reset()` no `ngOnDestroy` pra o titulo anterior nao "vazar" pra uma pagina que nao define o proprio.
+- **`vercel.json` removido**: o arquivo antigo forcava `outputDirectory: dist/frontend/browser` + rewrite `/(.*) -> /index.html`, tratando o site como puramente estatico — isso ignoraria a saida SSR (`dist/frontend/server`) e o site continuaria servindo o shell vazio de sempre, mesmo com todo o resto configurado. Removido pra deixar a deteccao automatica de Angular SSR da Vercel assumir (framework preset zero-config: detecta a pasta `server` gerada e cria a function serverless sozinha). **Isso nao foi validado num deploy real da Vercel** — testado exaustivamente local (`node dist/frontend/server/server.mjs`, todas as rotas retornando 200 com o `<title>`/conteudo certos, sem erros no log), mas o comportamento exato da deteccao automática da Vercel só se confirma no primeiro deploy real.
+- **`sitemap.xml`** fica no dominio do **backend**, nao no frontend (pacote novo `sitemap/`, `ControladorSitemap` + `ServicoSitemap`). Motivo: sitemap referenciado via `Sitemap:` no `robots.txt` aceita dominio cruzado (Google suporta), e gerar no backend evita duplicar a query de jogos/filtros no frontend. Como o catalogo passa de 100k jogos (acima do limite de 50.000 URLs por arquivo do protocolo de sitemap), e um indice: `GET /sitemap.xml` lista `sitemap-estatico.xml` (home/catalogo/mais-vendidos/gratuitos) + uma pagina `sitemap-jogos-N.xml` por bloco de 10.000 jogos (`ServicoSitemap.TAMANHO_PAGINA`). `robots.txt` (`frontend/public/robots.txt`, estatico) desautoriza `/login`, `/perfil`, `/configuracoes`, `/monitorados`, `/admin/` e aponta `Sitemap: https://api.163.176.220.243.sslip.io/sitemap.xml` — precisa ser atualizado se o dominio do backend mudar (hoje e o IP temporario da Oracle via sslip.io).
+- **Headers de seguranca** em toda resposta: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (bloqueia camera/microfone/geolocalizacao), `Strict-Transport-Security` (HSTS, seguro porque o Caddy na Oracle sempre serve por HTTPS). Backend via `FiltroCabecalhosSeguranca` (`OncePerRequestFilter` em `configuracao/`); frontend via middleware Express em `src/server.ts` (so afeta requests que passam pelo servidor SSR — paginas 100% CSR do lado do browser nao tem como adicionar header de resposta HTTP). Sem CSP (Content-Security-Policy) em nenhum dos dois: a API so serve JSON e o frontend usa estilos inline gerados pelo Angular + fontes do Google Fonts, calibrar um CSP direito pra isso sem quebrar nada seria um projeto a parte.
 
 ## Coletas e Atualizacao de Catalogo
 
@@ -418,6 +432,7 @@ Toda rota exige token e valida que a colecao e do usuario autenticado; colecao d
 - `GET /api/admin/coleta` — status de todos os 7 jobs (precos, steam, detalhes, conquistas-catalogo, instant-gaming-escaneamento/casamento/precos) e as filas correspondentes (`fila`, `pendentesDetalhes`, `pendentesConquistas`, `filaInstantGaming`).
 - `POST /api/admin/coleta/{tipo}` — dispara qualquer um dos 7 tipos manualmente, mesmo padrao de auth de admin (`precos`, `steam`, `detalhes`, `conquistas-catalogo`, `instant-gaming-escaneamento`, `instant-gaming-casamento`, `instant-gaming-precos`).
 - `GET /actuator/health`
+- `GET /sitemap.xml`, `GET /sitemap-estatico.xml`, `GET /sitemap-jogos-{pagina}.xml` — publicos, sem auth (ver "SEO (SSR), sitemap e headers de seguranca" acima).
 
 Os endpoints autenticados recebem token Bearer do Supabase. A administracao exige o UID autorizado no backend: `0a6eb06b-756e-4434-899b-33420bed8609`.
 
@@ -538,15 +553,18 @@ backend-java/
     notificacoes/        alertas de preco
     perfis/              perfil publico, avatar e blocos
     sincronizacao/       scheduler, ITAD e locks
+    sitemap/             sitemap.xml (indice + paginas de jogos)
     steam/               metadados Steam de catalogo
 
-frontend/src/app/
-  components/            sidebar, topbar, cards e carrosseis
-  guards/                auth.guard
-  pages/                 home, catalog, game-detail, profile, settings,
-                         favorites/monitorados, login, search e outras
-  services/              API, Auth, Supabase, tema, preferencias,
-                         favoritos, favoritos pessoais e perfis
+frontend/src/
+  server.ts              entrypoint Express do SSR (@angular/ssr)
+  app/
+    components/          sidebar, topbar, cards e carrosseis
+    guards/               auth.guard
+    pages/                home, catalog, game-detail, profile, settings,
+                          favorites/monitorados, login, search e outras
+    services/             API, Auth, Supabase, tema, preferencias,
+                          favoritos, favoritos pessoais, perfis e SEO
 ```
 
 Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portugues. Marcas e contratos JSON podem manter termos externos, por exemplo ITAD, Steam, Bearer, `coverUrl` e `minPrice`.

@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { GameService, GameSummary } from '../../services/game';
+import { SeoService } from '../../services/seo';
 
 @Component({
   selector: 'app-best-sellers',
@@ -12,9 +13,14 @@ export class BestSellers implements OnInit {
   loading = true;
   error = false;
 
-  constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
+  constructor(private gameService: GameService, private cdr: ChangeDetectorRef, private seo: SeoService) {}
 
   ngOnInit() {
+    this.seo.set({
+      title: 'Mais vendidos',
+      description: 'Os jogos mais populares do momento, com os melhores preços encontrados nas principais lojas.',
+      path: '/mais-vendidos',
+    });
     this.load();
   }
 

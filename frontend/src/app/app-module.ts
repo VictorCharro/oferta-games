@@ -1,7 +1,7 @@
 import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
+import { BrowserModule, provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withFetch } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 
@@ -48,8 +48,12 @@ import { NotFound } from './pages/not-found/not-found';
     PublicProfile,
     NotFound,
   ],
-  imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule, FormsModule, DragDropModule],
-  providers: [provideBrowserGlobalErrorListeners()],
+  imports: [BrowserModule, CommonModule, AppRoutingModule, FormsModule, DragDropModule],
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideClientHydration(withEventReplay()),
+    provideHttpClient(withFetch()),
+  ],
   bootstrap: [App],
 })
 export class AppModule {}

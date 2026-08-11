@@ -9,6 +9,7 @@ import { ConexoesSteamService, JogoBibliotecaSteam } from '../../services/conexo
 import { GameService, GameSummary } from '../../services/game';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { supabase } from '../../services/supabase';
+import { SeoService } from '../../services/seo';
 
 @Component({
   selector: 'app-public-profile',
@@ -114,6 +115,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     private games: GameService,
     public auth: AuthService,
     private cdr: ChangeDetectorRef,
+    private seo: SeoService,
   ) {}
 
   ngOnInit() {
@@ -125,6 +127,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
     clearTimeout(this.buscaCatalogoTimer);
+    this.seo.reset();
   }
 
   private async loadProfile(handle: string) {
@@ -161,6 +164,12 @@ export class PublicProfile implements OnInit, OnDestroy {
             .map(block => ({ ...block, corTexto: block.corTexto ?? null }))
         : this.defaultBlocks();
       this.profile = profile;
+      this.seo.set({
+        title: `Perfil de ${profile.nomeExibicao}`,
+        description: profile.bio?.trim() || `Veja a biblioteca e os jogos favoritos de ${profile.nomeExibicao} no Oferta Games.`,
+        image: profile.avatarUrl,
+        path: `/${profile.handle}`,
+      });
       this.bioDraft = profile.bio || '';
       this.avatarZoom = profile.avatarZoom || 1;
       this.avatarPositionX = profile.avatarPosicaoX ?? 50;
@@ -182,6 +191,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     } catch {
       if (request !== this.profileRequest) return;
       this.missing = true;
+      this.seo.reset();
     } finally {
       if (request !== this.profileRequest) return;
       this.loading = false;

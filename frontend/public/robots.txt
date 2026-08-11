@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /perfil
+Disallow: /configuracoes
+Disallow: /monitorados
+Disallow: /admin/
+
+Sitemap: https://api.163.176.220.243.sslip.io/sitemap.xml

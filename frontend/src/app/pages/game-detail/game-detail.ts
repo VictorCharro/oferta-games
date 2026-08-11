@@ -20,6 +20,7 @@ import { ColecaoPerfil } from '../../services/perfis';
 import { GameReviewsService, RespostaAvaliacoes } from '../../services/game-reviews';
 import { AuthService } from '../../services/auth';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
+import { SeoService } from '../../services/seo';
 
 @Component({
   selector: 'app-game-detail',
@@ -70,7 +71,8 @@ export class GameDetail implements OnInit, OnDestroy {
     private colecoesService: ColecoesPerfilService,
     private reviewsService: GameReviewsService,
     private auth: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private seo: SeoService
   ) {}
 
   ngOnInit() {
@@ -107,6 +109,20 @@ export class GameDetail implements OnInit, OnDestroy {
     ).subscribe(data => {
       this.game = data;
       this.loading = false;
+      if (data) {
+        const melhorPreco = this.bestPrice(data.offers);
+        const descricao = melhorPreco != null
+          ? `Compare o preço de ${data.title} nas melhores lojas. Menor preço encontrado: ${this.formatPrice(melhorPreco)}.`
+          : `Compare o preço de ${data.title} nas melhores lojas de jogos.`;
+        this.seo.set({
+          title: data.title,
+          description: descricao,
+          image: data.coverUrl,
+          path: `/jogo/${data.slug}`,
+        });
+      } else {
+        this.seo.reset();
+      }
       this.cdr.detectChanges();
     });
   }
@@ -117,6 +133,7 @@ export class GameDetail implements OnInit, OnDestroy {
     this.profileFavoriteSub?.unsubscribe();
     this.hls?.destroy();
     if (this.cooldownInterval) clearInterval(this.cooldownInterval);
+    this.seo.reset();
   }
 
   private carregarDetalhesEConquistasEReviews(slug: string) {

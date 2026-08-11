@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GameService, GameSummary } from '../../services/game';
+import { SeoService } from '../../services/seo';
 
 @Component({
   selector: 'app-search',
@@ -19,7 +20,8 @@ export class Search implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private gameService: GameService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private seo: SeoService
   ) {}
 
   ngOnInit() {
@@ -34,6 +36,11 @@ export class Search implements OnInit {
 
   doSearch() {
     if (!this.query.trim()) return;
+    this.seo.set({
+      title: `Busca: ${this.query}`,
+      description: `Resultados da busca por "${this.query}" no catálogo de jogos.`,
+      path: '/busca',
+    });
     this.loading = true;
     this.searched = false;
     this.error = false;

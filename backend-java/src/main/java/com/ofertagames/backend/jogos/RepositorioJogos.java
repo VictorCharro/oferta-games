@@ -199,6 +199,36 @@ public class RepositorioJogos {
         .list();
   }
 
+  // Usado pelo sitemap.xml: precisa so do slug, paginado (o catalogo tem 100k+ jogos, acima do
+  // limite de 50k URLs por arquivo de sitemap do Google).
+  public long contarSlugsParaSitemap() {
+    return jdbc.sql("""
+        SELECT COUNT(*)
+        FROM games g
+        WHERE g.slug IS NOT NULL
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .query(Long.class)
+        .single();
+  }
+
+  public List<String> listarSlugsParaSitemap(int pagina, int tamanho) {
+    return jdbc.sql("""
+        SELECT g.slug
+        FROM games g
+        WHERE g.slug IS NOT NULL
+          %s
+          %s
+        ORDER BY g.id ASC
+        LIMIT :tamanho OFFSET :deslocamento
+        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        .param("tamanho", tamanho)
+        .param("deslocamento", pagina * tamanho)
+        .query(String.class)
+        .list();
+  }
+
   public Optional<Long> buscarIdPorSlug(String slug) {
     return jdbc.sql("SELECT id FROM games WHERE slug = :slug "
         + ConteudosNaoJogos.filtroSql("games")

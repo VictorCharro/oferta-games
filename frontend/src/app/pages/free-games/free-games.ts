@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { GameService, TopDeal } from '../../services/game';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
+import { SeoService } from '../../services/seo';
 
 @Component({
   selector: 'app-free-games',
@@ -13,9 +14,14 @@ export class FreeGames implements OnInit {
   loading = true;
   error = false;
 
-  constructor(private gameService: GameService, private cdr: ChangeDetectorRef) {}
+  constructor(private gameService: GameService, private cdr: ChangeDetectorRef, private seo: SeoService) {}
 
   ngOnInit() {
+    this.seo.set({
+      title: 'Jogos gratuitos',
+      description: 'Jogos disponíveis gratuitamente agora nas principais lojas.',
+      path: '/gratuitos',
+    });
     this.load();
   }
 

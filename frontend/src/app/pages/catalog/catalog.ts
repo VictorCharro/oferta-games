@@ -5,6 +5,7 @@ import { debounceTime, distinctUntilChanged, skip } from 'rxjs/operators';
 import { GameService, GameSummary } from '../../services/game';
 import { SearchService } from '../../services/search';
 import { PreferencesService } from '../../services/preferences';
+import { SeoService } from '../../services/seo';
 
 @Component({
   selector: 'app-catalog',
@@ -75,10 +76,16 @@ export class Catalog implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
     private searchService: SearchService,
-    private preferencesService: PreferencesService
+    private preferencesService: PreferencesService,
+    private seo: SeoService
   ) {}
 
   ngOnInit() {
+    this.seo.set({
+      title: 'Catálogo de jogos',
+      description: 'Veja todos os jogos com o menor preço entre as principais lojas, com filtros de tipo, plataforma e desconto.',
+      path: '/catalogo',
+    });
     const params = this.route.snapshot.queryParamMap;
     const type = params.get('type');
     const sort = params.get('sort');
@@ -154,7 +161,8 @@ export class Catalog implements OnInit, OnDestroy {
   }
 
   private checkLoadMore() {
-    if (!this.hasMore || this.loading) return;
+    // window/document nao existem em Node (SSR); scroll infinito so faz sentido no browser.
+    if (!this.hasMore || this.loading || typeof window === 'undefined') return;
     const scrolledToBottom =
       window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 600;
     if (scrolledToBottom) {

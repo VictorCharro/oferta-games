@@ -1,6 +1,10 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 
+// localStorage nao existe em Node (SSR); sem essa guarda, so de injetar este servico no server ja
+// derruba a renderizacao inteira com ReferenceError.
+const isBrowser = typeof window !== 'undefined';
+
 export type PreferredPlatform = 'all' | 'pc' | 'xbox';
 
 export interface UserPreferences {
@@ -62,16 +66,17 @@ export class PreferencesService {
         ? null
         : Math.max(0, Number(value.maximumPrice)),
     };
-    localStorage.setItem(this.preferencesKey, JSON.stringify(normalized));
+    if (isBrowser) localStorage.setItem(this.preferencesKey, JSON.stringify(normalized));
     this.preferencesSubject.next(normalized);
   }
 
   savePrivacy(value: PrivacyPreferences) {
-    localStorage.setItem(this.privacyKey, JSON.stringify(value));
+    if (isBrowser) localStorage.setItem(this.privacyKey, JSON.stringify(value));
     this.privacySubject.next({ ...value });
   }
 
   private read<T>(key: string, defaults: T): T {
+    if (!isBrowser) return { ...defaults };
     try {
       const saved = localStorage.getItem(key);
       return saved ? { ...defaults, ...JSON.parse(saved) } : { ...defaults };

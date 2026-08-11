@@ -18,6 +18,9 @@ export class DealsCarousel implements AfterViewInit, OnChanges, OnDestroy {
   private observer?: MutationObserver;
 
   ngAfterViewInit() {
+    // MutationObserver nao existe em Node (SSR); esse rastreio de scroll so faz sentido no
+    // browser, depois da hidratacao.
+    if (typeof MutationObserver === 'undefined') return;
     const row = this.rowRef.nativeElement;
     this.observer = new MutationObserver(() => this.scheduleUpdate());
     this.observer.observe(row, { childList: true });
