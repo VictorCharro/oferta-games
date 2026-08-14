@@ -50,7 +50,10 @@ export class Home implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.seo.reset();
+    this.seo.set({
+      title: 'Início',
+      description: 'Compare preços de jogos nas melhores lojas e encontre as maiores promoções.',
+    });
     this.loadPreferredPlatformDeals();
     this.carregarDestaques();
 
