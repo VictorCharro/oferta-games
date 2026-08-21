@@ -7,6 +7,7 @@ import com.ofertagames.backend.comum.ConfiguracaoCache;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.JogosBloqueados;
 import com.ofertagames.backend.comum.LojasBloqueadas;
+import com.ofertagames.backend.comum.LojasCatalogo;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -38,7 +39,7 @@ public class RepositorioJogos {
 
   // TTL definido em ConfiguracaoCache (10min): evita repetir a query pesada a cada abertura do catalogo.
   @Cacheable(ConfiguracaoCache.CACHE_CATALOGO)
-  public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, Double descontoMinimo, String busca) {
+  public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, Double descontoMinimo, String busca, List<String> lojas) {
     int deslocamento = pagina * tamanho;
     String filtroTipo = switch (tipo) {
       case "dlc" -> "AND " + ClassificadorDlc.condicaoDlcSql("g");
@@ -52,6 +53,9 @@ public class RepositorioJogos {
     String filtroConteudoNaoJogo = ConteudosNaoJogos.filtroSql("g");
     String filtroJogoBloqueado = JogosBloqueados.filtroSql("g");
     String filtroPreco = filtroPreco(precoMinimo, precoMaximo, descontoMinimo);
+    String regexLojas = LojasCatalogo.regexParaChaves(lojas);
+    String filtroLojasPreferidas = filtroLojasPreferidas(regexLojas);
+    String filtroOfertaLojasPreferidas = filtroOfertaLojasPreferidas(regexLojas);
 
     String sql = """
         SELECT
@@ -64,8 +68,9 @@ public class RepositorioJogos {
           (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
           (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
         FROM games g
-        LEFT JOIN offers o ON o.game_id = g.id %s %s
+        LEFT JOIN offers o ON o.game_id = g.id %s %s %s
         WHERE 1=1
+        %s
         %s
         %s
         %s
@@ -75,7 +80,7 @@ public class RepositorioJogos {
         %s
         ORDER BY %s
         LIMIT :tamanho OFFSET :deslocamento
-        """.formatted(filtroOfertaPlataforma, filtroLojaBloqueada, filtroTipo, filtroBusca, filtroPlataforma, filtroConteudoNaoJogo, filtroJogoBloqueado, filtroPreco, ordenarPor(ordenacao));
+        """.formatted(filtroOfertaPlataforma, filtroLojaBloqueada, filtroOfertaLojasPreferidas, filtroTipo, filtroBusca, filtroPlataforma, filtroLojasPreferidas, filtroConteudoNaoJogo, filtroJogoBloqueado, filtroPreco, ordenarPor(ordenacao));
 
     var comando = jdbc.sql(sql).param("tamanho", tamanho).param("deslocamento", deslocamento);
     if (busca != null && !busca.isBlank()) {
@@ -89,6 +94,9 @@ public class RepositorioJogos {
     }
     if (descontoMinimo != null) {
       comando = comando.param("descontoMinimo", descontoMinimo);
+    }
+    if (regexLojas != null) {
+      comando = comando.param("lojasRegex", regexLojas);
     }
 
     return comando.query(RepositorioJogos::mapearResumo).list();
@@ -857,6 +865,19 @@ public class RepositorioJogos {
   private static String filtroOfertaPlataforma(String plataforma) {
     String condicao = condicaoPlataforma("o", plataforma);
     return condicao.isBlank() ? "" : "AND " + condicao;
+  }
+
+  // "Lojas preferidas" (preferencias do usuario, ver LojasCatalogo): filtra tanto quais jogos entram
+  // no resultado (EXISTS) quanto quais ofertas contam pro MIN(price)/store_name exibidos, senao um
+  // jogo so em loja nao-preferida apareceria com preco de uma loja que o usuario nao quer ver.
+  private static String filtroLojasPreferidas(String regexLojas) {
+    if (regexLojas == null) return "";
+    return "AND EXISTS (SELECT 1 FROM offers ol WHERE ol.game_id = g.id " + filtroLojaBloqueada("ol")
+        + " AND ol.store_name ~* :lojasRegex)";
+  }
+
+  private static String filtroOfertaLojasPreferidas(String regexLojas) {
+    return regexLojas == null ? "" : "AND o.store_name ~* :lojasRegex";
   }
 
   private static String condicaoPlataforma(String alias, String plataforma) {

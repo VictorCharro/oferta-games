@@ -12,6 +12,7 @@ export interface UserPreferences {
   hideDlcs: boolean;
   minimumDiscount: number;
   maximumPrice: number | null;
+  preferredStores: string[];
 }
 
 export interface PrivacyPreferences {
@@ -29,6 +30,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   hideDlcs: false,
   minimumDiscount: 0,
   maximumPrice: null,
+  preferredStores: [],
 };
 
 const DEFAULT_PRIVACY: PrivacyPreferences = {

@@ -88,6 +88,16 @@
           <label class="field"><span>Preço máximo</span><div class="input-prefix"><span>R$</span><input type="number" min="0" [(ngModel)]="preferences.maximumPrice" placeholder="Sem limite" /></div></label>
           <label class="switch-row"><span><strong>Ocultar DLCs</strong><small>Remove conteúdos adicionais das listas gerais.</small></span><input type="checkbox" [(ngModel)]="preferences.hideDlcs" /></label>
         </div>
+        <div class="field store-field">
+          <span>Lojas preferidas</span>
+          <small>Deixe todas desmarcadas para ver ofertas de qualquer loja. Marcando alguma(s), o catálogo só mostra ofertas delas.</small>
+          <div class="store-options">
+            <label class="switch-row" *ngFor="let store of storeOptions">
+              <span>{{ store.label }}</span>
+              <input type="checkbox" [checked]="isStoreSelected(store.key)" (change)="toggleStore(store.key)" />
+            </label>
+          </div>
+        </div>
         <div class="impact-note"><strong>Onde isso se aplica</strong><span>Home: filtra os carrosséis. Catálogo: preenche os filtros iniciais, que continuam editáveis.</span></div>
         <button class="btn-primary action-button" (click)="savePreferences()">Salvar preferências</button>
       </div>

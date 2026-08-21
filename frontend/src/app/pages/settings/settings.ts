@@ -10,6 +10,7 @@ import {
 import { ConexoesSteamService, StatusSteam } from '../../services/conexoes-steam';
 import { ConexoesXboxService, StatusXbox } from '../../services/conexoes-xbox';
 import { PerfisService } from '../../services/perfis';
+import { STORE_FILTER_OPTIONS } from '../../services/store-brand';
 
 type SettingsTab = 'conta' | 'conexoes' | 'preferencias' | 'privacidade';
 
@@ -36,6 +37,8 @@ export class Settings implements OnInit {
   xboxStatus: StatusXbox | null = null;
   xboxLoading = false;
   profileHandle = '';
+
+  readonly storeOptions = STORE_FILTER_OPTIONS;
 
   readonly tabs: Array<{ id: SettingsTab; label: string }> = [
     { id: 'conta', label: 'Conta' },
@@ -124,6 +127,17 @@ export class Settings implements OnInit {
     this.success = error ? '' : 'Informações salvas com sucesso.';
     this.error = error ? 'Não foi possível salvar as informações.' : '';
     this.cdr.detectChanges();
+  }
+
+  isStoreSelected(key: string): boolean {
+    return this.preferences.preferredStores.includes(key);
+  }
+
+  toggleStore(key: string) {
+    const selecionadas = this.preferences.preferredStores;
+    this.preferences.preferredStores = selecionadas.includes(key)
+      ? selecionadas.filter(s => s !== key)
+      : [...selecionadas, key];
   }
 
   savePreferences() {

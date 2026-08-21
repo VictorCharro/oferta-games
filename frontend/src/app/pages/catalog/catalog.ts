@@ -33,6 +33,7 @@ export class Catalog implements OnInit, OnDestroy {
   maxPriceInput = '';
   minDiscountInput = '';
   openDropdown: 'sort' | 'type' | 'platform' | null = null;
+  stores: string[] = [];
 
   private querySub!: Subscription;
   private requestVersion = 0;
@@ -97,6 +98,7 @@ export class Catalog implements OnInit, OnDestroy {
     this.maxPriceInput = preferences.maximumPrice?.toString() ?? '';
     this.minDiscount = preferences.minimumDiscount || null;
     this.minDiscountInput = preferences.minimumDiscount ? preferences.minimumDiscount.toString() : '';
+    this.stores = preferences.preferredStores;
     if (type && ['all', 'game', 'dlc'].includes(type)) this.type = type;
     if (sort && this.sortOptions.some(o => o.value === sort)) this.sort = sort;
     if (platform && this.platformOptions.some(o => o.value === platform)) this.platform = platform;
@@ -183,6 +185,7 @@ export class Catalog implements OnInit, OnDestroy {
       maxPrice: this.maxPrice,
       minDiscount: this.minDiscount,
       q: this.query,
+      stores: this.stores,
     }).subscribe({
       next: (data) => {
         if (requestVersion !== this.requestVersion) return;

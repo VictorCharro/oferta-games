@@ -3,6 +3,7 @@ package com.ofertagames.backend.jogos;
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
 import com.ofertagames.backend.steam.RespostaAvaliacoesSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -46,12 +47,16 @@ public class ControladorJogos {
       @RequestParam(required = false) Double minPrice,
       @RequestParam(required = false) Double maxPrice,
       @RequestParam(required = false) Double minDiscount,
-      @RequestParam(required = false) String q
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) String stores
   ) {
     int paginaSegura = Math.max(0, page);
     int tamanhoSeguro = Math.min(100, Math.max(1, size));
     Double descontoSeguro = minDiscount == null ? null : Math.min(100, Math.max(0, minDiscount));
-    return jogos.listar(paginaSegura, tamanhoSeguro, sort, type, platform, minPrice, maxPrice, descontoSeguro, q);
+    List<String> lojas = stores == null || stores.isBlank()
+        ? List.of()
+        : Arrays.stream(stores.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+    return jogos.listar(paginaSegura, tamanhoSeguro, sort, type, platform, minPrice, maxPrice, descontoSeguro, q, lojas);
   }
 
   @GetMapping("/search")

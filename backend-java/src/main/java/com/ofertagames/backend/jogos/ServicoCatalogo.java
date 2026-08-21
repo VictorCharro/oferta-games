@@ -47,7 +47,7 @@ public class ServicoCatalogo {
       throw new BuscaCurtaException();
     }
 
-    List<ResumoJogo> locais = jogos.listar(0, 20, "rank", "all", "all", null, null, null, termo);
+    List<ResumoJogo> locais = jogos.listar(0, 20, "rank", "all", "all", null, null, null, termo, List.of());
     if (!locais.isEmpty()) {
       return locais;
     }

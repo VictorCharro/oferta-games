@@ -28,8 +28,8 @@ class ServicoAquecimentoCache {
     limpar(ConfiguracaoCache.CACHE_DESCONTOS);
 
     // Catalogo (pagina 1, filtros default) e Mais Vendidos (mesmo endpoint, tamanho maior).
-    jogos.listar(0, 20, "rank", "all", "all", null, null, null, null);
-    jogos.listar(0, 40, "rank", "all", "all", null, null, null, null);
+    jogos.listar(0, 20, "rank", "all", "all", null, null, null, null, java.util.List.of());
+    jogos.listar(0, 40, "rank", "all", "all", null, null, null, null, java.util.List.of());
 
     // Home: os dois usados em Home.ngOnInit.
     descontos.listarMelhores(100, "rank");

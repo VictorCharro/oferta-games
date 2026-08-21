@@ -37,6 +37,23 @@ const BRANDS: Array<{ pattern: RegExp; brand: StoreBrand }> = [
   { pattern: /instant.?gaming/i, brand: { name: 'Instant Gaming', logo: 'store-logos/instant-gaming.png' } },
 ];
 
+// Chaves espelham LojasCatalogo.java no backend (usadas no filtro "lojas preferidas" das
+// configuracoes). So inclui lojas que o catalogo de fato mostra (LojasBloqueadas exclui GOG,
+// Green Man Gaming, Humble etc. globalmente, entao nao faz sentido deixar "preferir" essas).
+export const STORE_FILTER_OPTIONS: Array<{ key: string; label: string }> = [
+  { key: 'steam', label: 'Steam' },
+  { key: 'epic', label: 'Epic Games Store' },
+  { key: 'ubisoft', label: 'Ubisoft Store' },
+  { key: 'ea', label: 'EA Store' },
+  { key: 'battlenet', label: 'Battle.net' },
+  { key: 'fanatical', label: 'Fanatical' },
+  { key: 'nuuvem', label: 'Nuuvem' },
+  { key: 'instantgaming', label: 'Instant Gaming' },
+  { key: '2game', label: '2Game' },
+  { key: 'indiegala', label: 'IndieGala' },
+  { key: 'gamersgate', label: 'GamersGate' },
+];
+
 export function storeBrand(storeName?: string | null): StoreBrand {
   if (!storeName) return DEFAULT_BRAND;
   return BRANDS.find(({ pattern }) => pattern.test(storeName))?.brand ?? {
