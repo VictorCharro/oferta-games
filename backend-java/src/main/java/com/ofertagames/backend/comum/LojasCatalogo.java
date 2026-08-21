@@ -4,10 +4,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-// Chaves usadas pelo filtro "lojas preferidas" (preferencias do usuario -> catalogo). Espelha as
-// mesmas lojas reconhecidas em store-brand.ts no frontend, exceto as ja excluidas globalmente por
-// LojasBloqueadas (gog, humble, greenmangaming etc.) - nao faz sentido deixar o usuario "preferir"
-// uma loja que o catalogo nunca mostra.
+// Chaves usadas pelo filtro "lojas preferidas" (preferencias do usuario -> catalogo). Lista
+// conferida contra as lojas com ofertas de fato ativas em producao (SELECT DISTINCT store_name
+// FROM offers, 21/08/2026), exceto as ja excluidas globalmente por LojasBloqueadas (gog, humble,
+// greenmangaming etc.) - nao faz sentido deixar o usuario "preferir" uma loja que o catalogo nunca
+// mostra. Microsoft Store fica de fora daqui de proposito: ja e coberta pelo filtro de Plataforma
+// (Xbox), que usa o mesmo store_name/url por baixo.
 public final class LojasCatalogo {
   private static final Map<String, String> REGEX_POR_CHAVE = new LinkedHashMap<>();
 
@@ -23,6 +25,15 @@ public final class LojasCatalogo {
     REGEX_POR_CHAVE.put("2game", "2game");
     REGEX_POR_CHAVE.put("indiegala", "indie.?gala");
     REGEX_POR_CHAVE.put("gamersgate", "gamers.?gate");
+    REGEX_POR_CHAVE.put("gamebillet", "gamebillet");
+    REGEX_POR_CHAVE.put("playsum", "playsum");
+    REGEX_POR_CHAVE.put("dreamgame", "dreamgame");
+    REGEX_POR_CHAVE.put("zapagames", "zapagames");
+    REGEX_POR_CHAVE.put("gamesload", "gamesload");
+    REGEX_POR_CHAVE.put("zoomplatform", "zoom.?platform");
+    REGEX_POR_CHAVE.put("fortunadigital", "fortuna.?digital");
+    REGEX_POR_CHAVE.put("fireflower", "fireflower");
+    REGEX_POR_CHAVE.put("etailmarket", "etail.?market");
   }
 
   private LojasCatalogo() {}

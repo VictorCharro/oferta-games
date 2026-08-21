@@ -38,8 +38,9 @@ const BRANDS: Array<{ pattern: RegExp; brand: StoreBrand }> = [
 ];
 
 // Chaves espelham LojasCatalogo.java no backend (usadas no filtro "lojas preferidas" das
-// configuracoes). So inclui lojas que o catalogo de fato mostra (LojasBloqueadas exclui GOG,
-// Green Man Gaming, Humble etc. globalmente, entao nao faz sentido deixar "preferir" essas).
+// configuracoes). Conferida contra as lojas com ofertas de fato ativas em producao, exceto as ja
+// excluidas globalmente por LojasBloqueadas (GOG, Green Man Gaming, Humble etc.) e a Microsoft
+// Store (ja coberta pelo filtro de Plataforma/Xbox).
 export const STORE_FILTER_OPTIONS: Array<{ key: string; label: string }> = [
   { key: 'steam', label: 'Steam' },
   { key: 'epic', label: 'Epic Games Store' },
@@ -52,6 +53,15 @@ export const STORE_FILTER_OPTIONS: Array<{ key: string; label: string }> = [
   { key: '2game', label: '2Game' },
   { key: 'indiegala', label: 'IndieGala' },
   { key: 'gamersgate', label: 'GamersGate' },
+  { key: 'gamebillet', label: 'GameBillet' },
+  { key: 'playsum', label: 'Playsum' },
+  { key: 'dreamgame', label: 'Dreamgame' },
+  { key: 'zapagames', label: 'Zapagames' },
+  { key: 'gamesload', label: 'Gamesload' },
+  { key: 'zoomplatform', label: 'ZOOM Platform' },
+  { key: 'fortunadigital', label: 'Fortuna Digital' },
+  { key: 'fireflower', label: 'FireFlower' },
+  { key: 'etailmarket', label: 'eTail.Market' },
 ];
 
 export function storeBrand(storeName?: string | null): StoreBrand {
