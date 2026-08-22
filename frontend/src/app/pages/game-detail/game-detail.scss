@@ -12,14 +12,13 @@
 }
 
 .hero-content {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 32px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .hero-facts {
-  margin-left: auto;
-  flex-shrink: 0;
   width: 260px;
   display: flex;
   flex-direction: column;
@@ -65,20 +64,19 @@
 }
 
 @media (max-width: 900px) {
-  .hero-content { flex-wrap: wrap; }
-  .hero-facts { width: 100%; margin-left: 0; }
+  .hero-content { grid-template-columns: 1fr; }
+  .hero-facts { width: 100%; }
 }
 
 .hero-cover-wrap {
-  align-self: stretch;
-  width: 400px;
-  min-height: 180px;
-  flex-shrink: 0;
+  // Largura/altura vem via [style] no componente (game-detail.ts:recomputarTamanhoCapa),
+  // calculadas em runtime pra acompanhar a altura do cartao de ficha tecnica e a proporcao real
+  // da imagem sem cortar nada nem sobrar borda - ver comentario no .ts.
+  align-self: center;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   background: rgba(255, 255, 255, 0.04);
-  display: flex;
 }
 
 .hero-cover {
@@ -88,8 +86,14 @@
   display: block;
 }
 
-@media (max-width: 768px) {
-  .hero-cover-wrap { width: 100%; max-width: none; align-self: auto; }
+@media (max-width: 900px) {
+  // Layout empilhado: o calculo em runtime e pra linha lado a lado, entao ignora as dimensoes em
+  // px vindas do [style] (!important vence estilo inline) e volta a proporcao natural da imagem.
+  .hero-cover-wrap {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: var(--cover-ratio, 16 / 9);
+  }
 }
 
 .hero-info {

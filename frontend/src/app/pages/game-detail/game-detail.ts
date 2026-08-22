@@ -60,6 +60,14 @@ export class GameDetail implements OnInit, OnDestroy {
   enviandoAvaliacao = false;
   filtroConquistas: 'todas' | 'desbloqueadas' | 'bloqueadas' = 'todas';
   priceHistory: PontoHistoricoPreco[] = [];
+  heroCoverWidth = 400;
+  heroCoverHeight = 225;
+  private coverNaturalRatio = 16 / 9;
+  private heroFactsHeight = 0;
+  private heroContentWidth = 0;
+  private resizeObserver?: ResizeObserver;
+  private factsEl?: HTMLElement;
+  private contentEl?: HTMLElement;
   readonly chartWidth = 700;
   readonly chartHeight = 220;
   private routeSub?: Subscription;
@@ -78,6 +86,95 @@ export class GameDetail implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private seo: SeoService
   ) {}
+
+  // A capa segue a altura do cartao de ficha tecnica (medida em tempo real, ja que o conteudo do
+  // cartao varia por jogo) mantendo a proporcao real da propria imagem - so assim da pra encher a
+  // caixa inteira sem cortar nada nem sobrar borda (uma proporcao fixa tipo 16:9 nao bate com o
+  // formato real das capas, que sao mais largas, tipo 2.1:1). Mas so a altura do cartao nao basta:
+  // numa tela mais estreita, deixar a largura crescer livre (altura x proporcao) espremeria o bloco
+  // de titulo/preco/botoes ate quebrar os botoes em duas linhas de novo - por isso tambem observa a
+  // largura da linha inteira e limita a capa ao espaco que sobra depois de reservar o cartao e uma
+  // largura minima confortavel pro bloco de titulo/botoes.
+  @ViewChild('factsRef') set factsRefSetter(ref: ElementRef<HTMLElement> | undefined) {
+    if (this.factsEl) this.resizeObserver?.unobserve(this.factsEl);
+    this.factsEl = ref?.nativeElement;
+    if (this.factsEl) {
+      this.ensureResizeObserver();
+      this.resizeObserver!.observe(this.factsEl);
+    } else {
+      this.heroFactsHeight = 0;
+    }
+    this.medirEAtualizarCapa();
+  }
+
+  @ViewChild('heroContentRef') set contentRefSetter(ref: ElementRef<HTMLElement> | undefined) {
+    if (this.contentEl) this.resizeObserver?.unobserve(this.contentEl);
+    this.contentEl = ref?.nativeElement;
+    if (this.contentEl) {
+      this.ensureResizeObserver();
+      this.resizeObserver!.observe(this.contentEl);
+    }
+    this.medirEAtualizarCapa();
+  }
+
+  private ensureResizeObserver() {
+    if (this.resizeObserver || typeof ResizeObserver === 'undefined') return;
+    this.resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        if (entry.target === this.factsEl) {
+          this.heroFactsHeight = entry.contentRect.height;
+        } else if (entry.target === this.contentEl) {
+          this.heroContentWidth = entry.contentRect.width;
+        }
+      }
+      this.recomputarTamanhoCapa();
+    });
+  }
+
+  // ResizeObserver cobre a maioria dos casos (redimensionar a janela, o cartao crescer depois que
+  // os detalhes do jogo chegam), mas seu callback e assincrono/atrelado ao ciclo de renderizacao do
+  // navegador - le direto com getBoundingClientRect tambem, de forma sincrona, como reforco pra
+  // pegar o tamanho certo já na primeira medida (e nao depender so do observer disparar a tempo).
+  private medirEAtualizarCapa() {
+    if (this.factsEl) this.heroFactsHeight = this.factsEl.getBoundingClientRect().height;
+    if (this.contentEl) this.heroContentWidth = this.contentEl.getBoundingClientRect().width;
+    this.recomputarTamanhoCapa();
+  }
+
+  @HostListener('window:resize')
+  onHeroResize() {
+    this.medirEAtualizarCapa();
+  }
+
+  private recomputarTamanhoCapa() {
+    const GAP = 32;
+    const LARGURA_FICHA = this.temFichaTecnica ? 260 : 0;
+    const LARGURA_MINIMA_INFO = 330; // pro titulo/preco/botoes nao quebrarem linha
+    const alturaAlvo = Math.max(160, this.heroFactsHeight || 225);
+
+    let largura = alturaAlvo * this.coverNaturalRatio;
+    if (this.heroContentWidth > 0) {
+      const orcamento = this.heroContentWidth - LARGURA_FICHA - LARGURA_MINIMA_INFO - GAP * 2;
+      if (orcamento > 0) largura = Math.min(largura, orcamento);
+    }
+    largura = Math.max(160, largura);
+
+    this.heroCoverWidth = Math.round(largura);
+    this.heroCoverHeight = Math.round(largura / this.coverNaturalRatio);
+    this.cdr.detectChanges();
+  }
+
+  get coverAspectRatioCss(): string {
+    return String(this.coverNaturalRatio);
+  }
+
+  onCoverLoad(event: Event) {
+    const img = event.target as HTMLImageElement;
+    if (img.naturalWidth && img.naturalHeight) {
+      this.coverNaturalRatio = img.naturalWidth / img.naturalHeight;
+      this.recomputarTamanhoCapa();
+    }
+  }
 
   ngOnInit() {
     this.favoriteSub = this.favoritesService.slugs$.subscribe(() => this.cdr.detectChanges());
@@ -107,6 +204,9 @@ export class GameDetail implements OnInit, OnDestroy {
         this.resetarFormularioAvaliacao();
         this.filtroConquistas = 'todas';
         this.priceHistory = [];
+        this.coverNaturalRatio = 16 / 9;
+        this.heroFactsHeight = 0;
+        this.recomputarTamanhoCapa();
         this.cdr.detectChanges();
         this.carregarDetalhesEConquistasEReviews(slug);
         this.carregarHistoricoPrecos(slug);
@@ -138,6 +238,7 @@ export class GameDetail implements OnInit, OnDestroy {
     this.favoriteSub?.unsubscribe();
     this.profileFavoriteSub?.unsubscribe();
     this.hls?.destroy();
+    this.resizeObserver?.disconnect();
     if (this.cooldownInterval) clearInterval(this.cooldownInterval);
     this.seo.reset();
   }
@@ -146,6 +247,9 @@ export class GameDetail implements OnInit, OnDestroy {
     this.gameService.getGameDetails(slug).pipe(catchError(() => of(null))).subscribe(detalhes => {
       this.detalhes = detalhes;
       this.cdr.detectChanges();
+      // O cartao de ficha tecnica so existe/muda de tamanho depois que "detalhes" chega; espera o
+      // DOM assentar (setTimeout 0) antes de medir de novo.
+      setTimeout(() => this.medirEAtualizarCapa());
     });
     this.gameService.getGameAchievements(slug).then(conquistas => {
       this.conquistas = conquistas;

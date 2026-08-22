@@ -1,9 +1,9 @@
 <div class="page-content" *ngIf="!loading && game">
   <div class="game-hero" [style.backgroundImage]="'url(' + (game.coverUrl || '') + ')'">
     <div class="hero-overlay">
-      <div class="hero-content">
-        <div class="hero-cover-wrap">
-          <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" class="hero-cover" />
+      <div class="hero-content" #heroContentRef>
+        <div class="hero-cover-wrap" [style.width.px]="heroCoverWidth" [style.height.px]="heroCoverHeight" [style.--cover-ratio]="coverAspectRatioCss">
+          <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" class="hero-cover" (load)="onCoverLoad($event)" />
         </div>
         <div class="hero-info">
           <h1>{{ game.title }}</h1>
@@ -78,7 +78,7 @@
           </div>
         </div>
 
-        <div class="hero-facts" *ngIf="temFichaTecnica">
+        <div class="hero-facts" #factsRef *ngIf="temFichaTecnica">
           <div class="hero-fact" *ngIf="detalhes?.dataLancamento">
             <span class="hero-fact-label">Lançamento</span>
             <span class="hero-fact-value">{{ detalhes!.dataLancamento }}</span>
