@@ -113,11 +113,7 @@
   </section>
 
   <div class="offers-section" *ngIf="activeTab === 'precos'">
-    <div class="price-chart-card price-chart-empty" *ngIf="!temHistoricoSuficiente && game.offers.length">
-      <span>Ainda estamos acompanhando o histórico de preço deste jogo — volte em alguns dias para ver a evolução.</span>
-    </div>
-
-    <div class="precos-split" [class.com-grafico]="temHistoricoSuficiente">
+    <div class="precos-split" [class.com-grafico]="game.offers.length">
       <div class="offers-table" *ngIf="game.offers.length; else noOffers">
         <div class="offer-header">
           <span>Loja</span>
@@ -173,6 +169,9 @@
         <div class="price-chart-note" *ngIf="historicoMenorPreco != null">
           <span aria-hidden="true">↘</span> Menor preço dos últimos 90 dias: {{ formatPrice(historicoMenorPreco) }}
         </div>
+      </div>
+      <div class="price-chart-card price-chart-empty" *ngIf="!temHistoricoSuficiente && game.offers.length">
+        <span>Ainda estamos acompanhando o histórico de preço deste jogo — volte em alguns dias para ver a evolução.</span>
       </div>
     </div>
 
