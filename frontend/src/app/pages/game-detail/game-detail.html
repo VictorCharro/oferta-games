@@ -76,6 +76,30 @@
           </div>
         </div>
       </div>
+
+      <div class="hero-facts" *ngIf="temFichaTecnica">
+        <div class="hero-fact" *ngIf="detalhes?.dataLancamento">
+          <span class="hero-fact-label">Lançamento</span>
+          <span class="hero-fact-value">{{ detalhes!.dataLancamento }}</span>
+        </div>
+        <div class="hero-fact" *ngIf="detalhes?.desenvolvedores?.length">
+          <span class="hero-fact-label">Desenvolvedora</span>
+          <span class="hero-fact-value">{{ detalhes!.desenvolvedores.join(', ') }}</span>
+        </div>
+        <div class="hero-fact" *ngIf="detalhes?.publicadoras?.length">
+          <span class="hero-fact-label">Distribuidora</span>
+          <span class="hero-fact-value">{{ detalhes!.publicadoras.join(', ') }}</span>
+        </div>
+        <div class="hero-fact" *ngIf="detalhes?.generos?.length">
+          <span class="hero-fact-label">Gênero</span>
+          <span class="hero-fact-value">{{ detalhes!.generos.join(', ') }}</span>
+        </div>
+        <div class="hero-fact" *ngIf="modoJogo">
+          <span class="hero-fact-label">Modo</span>
+          <span class="hero-fact-value">{{ modoJogo }}</span>
+        </div>
+        <a *ngIf="linkSteam as url" [href]="url" target="_blank" rel="noopener" class="hero-fact-steam-link">Ver na Steam ↗</a>
+      </div>
     </div>
   </div>
 

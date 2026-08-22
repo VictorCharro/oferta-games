@@ -230,6 +230,32 @@ export class GameDetail implements OnInit, OnDestroy {
     return !!this.game;
   }
 
+  get temFichaTecnica(): boolean {
+    const d = this.detalhes;
+    if (!d) return false;
+    return !!(d.dataLancamento || d.desenvolvedores?.length || d.publicadoras?.length || d.generos?.length || this.modoJogo || this.linkSteam);
+  }
+
+  // A Steam nao manda um campo "modo de jogo" separado; aproxima pelas categorias (mesma fonte
+  // usada em about-badges), procurando palavras-chave conhecidas de single/multiplayer.
+  get modoJogo(): string | null {
+    const categorias = (this.detalhes?.categorias ?? []).map(c => c.toLowerCase());
+    if (!categorias.length) return null;
+    const multiplayer = categorias.some(c => c.includes('multi') || c.includes('co-op') || c.includes('coop') || c.includes('mmo') || c.includes('pvp'));
+    const umJogador = categorias.some(c => c.includes('single'));
+    if (multiplayer && umJogador) return 'Um jogador e multiplayer';
+    if (multiplayer) return 'Multiplayer';
+    if (umJogador) return 'Um jogador';
+    return null;
+  }
+
+  // steamAppId vem da resposta de reviews (ja buscada pra aba Review), sem precisar de outra
+  // chamada so pra montar esse link.
+  get linkSteam(): string | null {
+    const appId = this.avaliacoesSteam?.steamAppId;
+    return appId ? `https://store.steampowered.com/app/${appId}` : null;
+  }
+
   get temConquistas(): boolean {
     return (this.conquistas?.total ?? 0) > 0;
   }
