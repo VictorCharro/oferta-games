@@ -1019,11 +1019,14 @@ export class PublicProfile implements OnInit, OnDestroy {
     return this.profile?.favoritos.some(game => game.steamAppId === appId) ?? false;
   }
 
+  // capaUrl (resolvida via appdetails, ver AgendadorCapasBibliotecaSteam) vem primeiro: o padrao
+  // antigo de URL (cdn.akamai.steamstatic.com/.../header.jpg) nao existe mais pra jogos recentes,
+  // cujas imagens vivem num caminho com hash imprevisivel - so a API da Steam sabe a URL certa.
   favoriteImage(game: PerfilPublico['favoritos'][number]): string {
+    if (game.capaUrl) return game.capaUrl;
     if (game.steamAppId != null) {
       return `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
     }
-    if (game.capaUrl) return game.capaUrl;
     return 'store-logos/steam.svg';
   }
 
