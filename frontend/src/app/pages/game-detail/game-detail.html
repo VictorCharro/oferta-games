@@ -83,15 +83,15 @@
           </div>
           <div class="hero-fact" *ngIf="detalhes?.desenvolvedores?.length">
             <span class="hero-fact-label">Desenvolvedora</span>
-            <span class="hero-fact-value">{{ detalhes!.desenvolvedores.join(', ') }}</span>
+            <span class="hero-fact-value clamp" [title]="detalhes!.desenvolvedores.join(', ')">{{ detalhes!.desenvolvedores.join(', ') }}</span>
           </div>
           <div class="hero-fact" *ngIf="detalhes?.publicadoras?.length">
             <span class="hero-fact-label">Distribuidora</span>
-            <span class="hero-fact-value">{{ detalhes!.publicadoras.join(', ') }}</span>
+            <span class="hero-fact-value clamp" [title]="detalhes!.publicadoras.join(', ')">{{ detalhes!.publicadoras.join(', ') }}</span>
           </div>
           <div class="hero-fact" *ngIf="detalhes?.generos?.length">
             <span class="hero-fact-label">Gênero</span>
-            <span class="hero-fact-value">{{ detalhes!.generos.join(', ') }}</span>
+            <span class="hero-fact-value clamp" [title]="detalhes!.generos.join(', ')">{{ detalhes!.generos.join(', ') }}</span>
           </div>
           <div class="hero-fact" *ngIf="modoJogo">
             <span class="hero-fact-label">Modo</span>
