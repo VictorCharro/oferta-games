@@ -3,6 +3,7 @@ package com.ofertagames.backend.administracao;
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
 import com.ofertagames.backend.instantgaming.ServicoInstantGaming;
 import com.ofertagames.backend.jogos.RepositorioJogos;
+import com.ofertagames.backend.jogos.ServicoCatalogo;
 import com.ofertagames.backend.sincronizacao.EstadoColeta.RegistroColeta;
 import com.ofertagames.backend.sincronizacao.ServicoExecucaoColeta;
 import com.ofertagames.backend.sincronizacao.ServicoSincronizacao;
@@ -28,6 +29,7 @@ public class ControladorAdministracao {
   private final ServicoExecucaoColeta execucao;
   private final ServicoSincronizacao sincronizacao;
   private final RepositorioJogos jogos;
+  private final ServicoCatalogo catalogo;
   private final ServicoInstantGaming instantGaming;
   private final TaskExecutor executorManual;
 
@@ -36,6 +38,7 @@ public class ControladorAdministracao {
       ServicoExecucaoColeta execucao,
       ServicoSincronizacao sincronizacao,
       RepositorioJogos jogos,
+      ServicoCatalogo catalogo,
       ServicoInstantGaming instantGaming,
       @Qualifier("executorColetaManual") TaskExecutor executorManual
   ) {
@@ -43,6 +46,7 @@ public class ControladorAdministracao {
     this.execucao = execucao;
     this.sincronizacao = sincronizacao;
     this.jogos = jogos;
+    this.catalogo = catalogo;
     this.instantGaming = instantGaming;
     this.executorManual = executorManual;
   }
@@ -82,6 +86,21 @@ public class ControladorAdministracao {
     };
     executorManual.execute(tarefa);
     return ResponseEntity.accepted().body(new RespostaDisparoColeta(true, tipo));
+  }
+
+  // Preenche metadados Steam, detalhes e conquistas de UM jogo na hora (sincrono), pro admin nao
+  // precisar esperar ele chegar na vez na fila normal quando um jogo novo/pouco tocado esta bombando.
+  @PostMapping("/jogos/{slug}/preencher-tudo")
+  ServicoCatalogo.ResultadoPreenchimentoJogo preencherJogo(
+      @RequestHeader(value = "Authorization", required = false) String autorizacao,
+      @PathVariable String slug
+  ) {
+    exigirAdministrador(autorizacao);
+    try {
+      return catalogo.preencherTudoDoJogo(slug);
+    } catch (ServicoCatalogo.JogoNaoEncontradoException erro) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Jogo nao encontrado");
+    }
   }
 
   private void exigirAdministrador(String autorizacao) {

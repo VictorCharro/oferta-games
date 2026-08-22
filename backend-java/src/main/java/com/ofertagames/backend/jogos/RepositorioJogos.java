@@ -708,6 +708,31 @@ public class RepositorioJogos {
         .update();
   }
 
+  // Versoes "de um jogo so" das buscas usadas pelo preenchimento em lote (listarPendentesSteam
+  // etc.) - usadas pelo botao de admin "Preencher tudo agora" pra atualizar um jogo especifico na
+  // hora, sem esperar ele chegar na fila. Ao contrario das versoes em lote, nao filtram por "ainda
+  // nao preenchido" - forcam a busca de novo mesmo se o jogo ja tiver dado, pra sempre trazer o
+  // mais atual quando o admin pede explicitamente.
+  public Optional<JogoSteamPendente> buscarJogoParaMetadadosSteam(long jogoId) {
+    return jdbc.sql("""
+        SELECT g.id, g.title, o.url
+        FROM games g
+        JOIN offers o ON o.game_id = g.id AND o.store_name = 'Steam'
+        WHERE g.id = :jogoId
+        LIMIT 1
+        """)
+        .param("jogoId", jogoId)
+        .query((rs, linha) -> new JogoSteamPendente(rs.getLong("id"), rs.getString("title"), rs.getString("url")))
+        .optional();
+  }
+
+  public Optional<Integer> buscarSteamAppId(long jogoId) {
+    return jdbc.sql("SELECT steam_app_id FROM games WHERE id = :jogoId")
+        .param("jogoId", jogoId)
+        .query(Integer.class)
+        .optional();
+  }
+
   public void salvarDetalhesJogo(DetalhesParaSalvar dados) {
     String destaquesJson;
     try {

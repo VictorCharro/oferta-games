@@ -41,6 +41,13 @@ export interface StatusAdministrativoColeta {
   filaInstantGaming: ResumoFilaInstantGaming;
 }
 
+export interface ResultadoPreenchimentoJogo {
+  metadadosSteamAtualizados: boolean;
+  temSteamAppId: boolean;
+  detalhesAtualizados: boolean;
+  conquistasAtualizadas: boolean;
+}
+
 export type TipoColeta =
   | 'precos'
   | 'steam'
@@ -64,6 +71,12 @@ export class AdministracaoService {
 
   async dispararColeta(tipo: TipoColeta): Promise<void> {
     await firstValueFrom(this.http.post(`${this.api}/coleta/${tipo}`, {}, {
+      headers: await this.cabecalhosAutorizacao(),
+    }));
+  }
+
+  async preencherJogo(slug: string): Promise<ResultadoPreenchimentoJogo> {
+    return firstValueFrom(this.http.post<ResultadoPreenchimentoJogo>(`${this.api}/jogos/${slug}/preencher-tudo`, {}, {
       headers: await this.cabecalhosAutorizacao(),
     }));
   }

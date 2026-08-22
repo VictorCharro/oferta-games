@@ -12,6 +12,47 @@
     <p class="message success" *ngIf="aviso">{{ aviso }}</p>
     <p class="message error" *ngIf="error">{{ error }}</p>
 
+    <section class="preencher-jogo">
+      <div>
+        <p class="label">Jogo especifico</p>
+        <h2>Preencher tudo agora</h2>
+        <p class="hint">Pula a fila: atualiza metadados Steam, detalhes e conquistas de um jogo na hora. Use quando um jogo novo ou pouco tocado estiver bombando e nao valer esperar a rodada normal.</p>
+      </div>
+      <form class="preencher-jogo-form" (ngSubmit)="preencherJogo()">
+        <input
+          type="text"
+          name="slugPreenchimento"
+          [(ngModel)]="slugPreenchimento"
+          placeholder="slug do jogo, ex: baldurs-gate-3"
+          [disabled]="preenchendo"
+        />
+        <button class="btn-primary" type="submit" [disabled]="preenchendo || !slugPreenchimento.trim()">
+          {{ preenchendo ? 'Preenchendo...' : 'Preencher tudo agora' }}
+        </button>
+      </form>
+      <p class="error-detail" *ngIf="erroPreenchimento">{{ erroPreenchimento }}</p>
+      <ul class="preencher-jogo-resultado" *ngIf="resultadoPreenchimento as r">
+        <li [class.ok]="r.metadadosSteamAtualizados">
+          <span class="preencher-jogo-icone" aria-hidden="true">{{ r.metadadosSteamAtualizados ? '✓' : '—' }}</span>
+          Metadados Steam {{ r.metadadosSteamAtualizados ? 'atualizados' : 'sem mudanca' }}
+        </li>
+        <li *ngIf="!r.temSteamAppId" class="aviso-linha">
+          <span class="preencher-jogo-icone" aria-hidden="true">!</span>
+          Jogo sem oferta Steam identificada ainda — detalhes e conquistas dependem disso, tente de novo depois.
+        </li>
+        <ng-container *ngIf="r.temSteamAppId">
+          <li [class.ok]="r.detalhesAtualizados">
+            <span class="preencher-jogo-icone" aria-hidden="true">{{ r.detalhesAtualizados ? '✓' : '—' }}</span>
+            Detalhes {{ r.detalhesAtualizados ? 'atualizados' : 'sem mudanca' }}
+          </li>
+          <li [class.ok]="r.conquistasAtualizadas">
+            <span class="preencher-jogo-icone" aria-hidden="true">{{ r.conquistasAtualizadas ? '✓' : '—' }}</span>
+            Conquistas {{ r.conquistasAtualizadas ? 'atualizadas' : 'sem conquistas ou sem mudanca' }}
+          </li>
+        </ng-container>
+      </ul>
+    </section>
+
     <nav class="admin-tabs">
       <button type="button" [class.active]="abaAtiva === 'precos-steam'" (click)="selecionarAba('precos-steam')">Precos e Steam</button>
       <button type="button" [class.active]="abaAtiva === 'detalhes-conquistas'" (click)="selecionarAba('detalhes-conquistas')">Detalhes e Conquistas</button>

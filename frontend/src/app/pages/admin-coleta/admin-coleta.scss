@@ -57,4 +57,63 @@ dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top
 .queue-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px; margin-top: 18px; h2 { font-size: 20px; margin-top: 4px; } }
 .queue-metrics { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 24px; > div { display: flex; flex-direction: column; gap: 6px; } span { color: var(--text-secondary); font-size: 12px; } strong { font-size: 16px; } }
 .message { margin-bottom: 18px; padding: 11px 14px; border-radius: 6px; font-size: 13px; &.success { color: var(--color-green); background: rgba(74, 222, 128, .08); border: 1px solid rgba(74, 222, 128, .2); } &.error { color: var(--color-red); background: rgba(239, 68, 68, .08); border: 1px solid rgba(239, 68, 68, .2); } }
-@media (max-width: 760px) { .page-header, .queue-card { align-items: flex-start; flex-direction: column; } .status-grid { grid-template-columns: 1fr; } .queue-metrics { width: 100%; grid-template-columns: 1fr; gap: 14px; } }
+.preencher-jogo {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 22px;
+  margin-bottom: 20px;
+
+  h2 { font-size: 18px; margin: 4px 0 6px; }
+  .hint { color: var(--text-secondary); font-size: 12.5px; max-width: 620px; }
+}
+
+.preencher-jogo-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+
+  input {
+    flex: 1 1 320px;
+    max-width: 420px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 13px;
+  }
+}
+
+.preencher-jogo-resultado {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+
+  li { display: flex; align-items: center; gap: 9px; color: var(--text-secondary); }
+  li.ok { color: var(--text-primary); }
+  li.aviso-linha { color: var(--color-amber, #f0b429); }
+}
+
+.preencher-jogo-icone {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg-card-hover);
+}
+
+.preencher-jogo-resultado li.ok .preencher-jogo-icone { background: rgba(74, 222, 128, .16); color: var(--color-green); }
+.preencher-jogo-resultado li.aviso-linha .preencher-jogo-icone { background: rgba(240, 180, 41, .16); }
+
+@media (max-width: 760px) { .page-header, .queue-card { align-items: flex-start; flex-direction: column; } .status-grid { grid-template-columns: 1fr; } .queue-metrics { width: 100%; grid-template-columns: 1fr; gap: 14px; } .preencher-jogo-form { flex-direction: column; } .preencher-jogo-form input { max-width: none; } }

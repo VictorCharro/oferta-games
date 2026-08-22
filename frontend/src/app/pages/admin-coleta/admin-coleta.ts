@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { AdministracaoService, StatusAdministrativoColeta, StatusColeta, TipoColeta } from '../../services/administracao';
+import { AdministracaoService, ResultadoPreenchimentoJogo, StatusAdministrativoColeta, StatusColeta, TipoColeta } from '../../services/administracao';
 
 type Aba = 'precos-steam' | 'detalhes-conquistas' | 'instant-gaming';
 
@@ -22,6 +22,10 @@ export class AdminColeta implements OnInit, OnDestroy {
   aviso = '';
   disparando: TipoColeta | null = null;
   abaAtiva: Aba = 'precos-steam';
+  slugPreenchimento = '';
+  preenchendo = false;
+  erroPreenchimento = '';
+  resultadoPreenchimento: ResultadoPreenchimentoJogo | null = null;
   private destruido = false;
   private atualizador?: ReturnType<typeof setTimeout>;
 
@@ -106,6 +110,26 @@ export class AdminColeta implements OnInit, OnDestroy {
       this.error = 'Nao foi possivel solicitar a coleta.';
     } finally {
       this.disparando = null;
+      this.cdr.detectChanges();
+    }
+  }
+
+  // Botao "Preencher tudo agora": pra quando um jogo novo/pouco tocado esta bombando e nao vale
+  // esperar ele chegar na vez na fila normal (steam/detalhes/conquistas rodam sincronos, na hora).
+  async preencherJogo() {
+    const slug = this.slugPreenchimento.trim();
+    if (!slug || this.preenchendo) return;
+    this.preenchendo = true;
+    this.erroPreenchimento = '';
+    this.resultadoPreenchimento = null;
+    try {
+      this.resultadoPreenchimento = await this.administracao.preencherJogo(slug);
+    } catch (erro: any) {
+      this.erroPreenchimento = erro?.status === 404
+        ? 'Jogo nao encontrado. Confira o slug (o final da URL da pagina do jogo).'
+        : 'Nao foi possivel preencher esse jogo agora.';
+    } finally {
+      this.preenchendo = false;
       this.cdr.detectChanges();
     }
   }

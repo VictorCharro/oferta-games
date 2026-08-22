@@ -276,95 +276,121 @@ public class ServicoCatalogo {
   }
 
   public int preencherMetadadosSteam(int limite) {
-    List<JogoSteamPendente> pendentes = jogos.listarPendentesSteam(limite);
     int atualizados = 0;
-
-    for (JogoSteamPendente pendente : pendentes) {
-      var appId = steam.resolverAppIdSteam(pendente.url());
-      var detalhes = appId.flatMap(steam::buscarDetalhesAplicativo);
-      boolean ehDlc = Boolean.TRUE.equals(detalhes.map(DetalhesAplicativoSteam::ehDlc).orElse(null))
-          || steam.tituloPareceDlc(pendente.titulo());
-      String capa = detalhes.map(DetalhesAplicativoSteam::imagemCabecalho).orElse(null);
-      Integer steamAppId = appId.map(Integer::parseInt).orElse(null);
-      jogos.atualizarMetadadosSteam(pendente.id(), ehDlc, capa, steamAppId);
-      atualizados++;
+    for (JogoSteamPendente pendente : jogos.listarPendentesSteam(limite)) {
+      if (processarMetadadosSteam(pendente)) atualizados++;
     }
-
     return atualizados;
+  }
+
+  private boolean processarMetadadosSteam(JogoSteamPendente pendente) {
+    var appId = steam.resolverAppIdSteam(pendente.url());
+    var detalhes = appId.flatMap(steam::buscarDetalhesAplicativo);
+    boolean ehDlc = Boolean.TRUE.equals(detalhes.map(DetalhesAplicativoSteam::ehDlc).orElse(null))
+        || steam.tituloPareceDlc(pendente.titulo());
+    String capa = detalhes.map(DetalhesAplicativoSteam::imagemCabecalho).orElse(null);
+    Integer steamAppId = appId.map(Integer::parseInt).orElse(null);
+    jogos.atualizarMetadadosSteam(pendente.id(), ehDlc, capa, steamAppId);
+    return true;
   }
 
   // Descricao/generos/reviews vem da mesma chamada appdetails ja usada acima; so persistimos mais campos dela.
   public int preencherDetalhesJogos(int limite) {
-    List<JogoDetalhesPendente> pendentes = jogos.listarPendentesDetalhes(limite);
     int atualizados = 0;
+    for (JogoDetalhesPendente pendente : jogos.listarPendentesDetalhes(limite)) {
+      if (processarDetalhesJogo(pendente)) atualizados++;
+    }
+    return atualizados;
+  }
 
-    for (JogoDetalhesPendente pendente : pendentes) {
-      String appId = String.valueOf(pendente.steamAppId());
-      var detalhes = steam.buscarDetalhesAplicativo(appId);
-      var reviews = steam.buscarReviews(appId);
-      if (detalhes.isEmpty() && reviews.isEmpty()) {
-        continue;
-      }
-
-      List<DetalhesJogo.DestaqueJogo> destaques = detalhes.map(DetalhesAplicativoSteam::destaques).stream()
-          .flatMap(List::stream)
-          .map(destaque -> new DetalhesJogo.DestaqueJogo(destaque.titulo(), destaque.texto()))
-          .toList();
-
-      jogos.salvarDetalhesJogo(new DetalhesParaSalvar(
-          pendente.id(),
-          detalhes.map(DetalhesAplicativoSteam::descricaoCurta).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::generos).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::desenvolvedores).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::publicadoras).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::dataLancamento).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::screenshots).orElse(null),
-          reviews.map(ReviewsSteam::descricaoNota).orElse(null),
-          reviews.map(ReviewsSteam::positivas).orElse(null),
-          reviews.map(ReviewsSteam::negativas).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::trailerUrl).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::trailerThumbnail).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::sobreCompleto).orElse(null),
-          destaques,
-          detalhes.map(DetalhesAplicativoSteam::categorias).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::requisitosMinimos).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::requisitosRecomendados).orElse(null),
-          detalhes.map(DetalhesAplicativoSteam::dlcAppIds).orElse(null)));
-      atualizados++;
+  private boolean processarDetalhesJogo(JogoDetalhesPendente pendente) {
+    String appId = String.valueOf(pendente.steamAppId());
+    var detalhes = steam.buscarDetalhesAplicativo(appId);
+    var reviews = steam.buscarReviews(appId);
+    if (detalhes.isEmpty() && reviews.isEmpty()) {
+      return false;
     }
 
-    return atualizados;
+    List<DetalhesJogo.DestaqueJogo> destaques = detalhes.map(DetalhesAplicativoSteam::destaques).stream()
+        .flatMap(List::stream)
+        .map(destaque -> new DetalhesJogo.DestaqueJogo(destaque.titulo(), destaque.texto()))
+        .toList();
+
+    jogos.salvarDetalhesJogo(new DetalhesParaSalvar(
+        pendente.id(),
+        detalhes.map(DetalhesAplicativoSteam::descricaoCurta).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::generos).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::desenvolvedores).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::publicadoras).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::dataLancamento).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::screenshots).orElse(null),
+        reviews.map(ReviewsSteam::descricaoNota).orElse(null),
+        reviews.map(ReviewsSteam::positivas).orElse(null),
+        reviews.map(ReviewsSteam::negativas).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::trailerUrl).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::trailerThumbnail).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::sobreCompleto).orElse(null),
+        destaques,
+        detalhes.map(DetalhesAplicativoSteam::categorias).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::requisitosMinimos).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::requisitosRecomendados).orElse(null),
+        detalhes.map(DetalhesAplicativoSteam::dlcAppIds).orElse(null)));
+    return true;
   }
 
   // Schema (nomes/descricoes/icones) muda raramente; percentual global e' mesclado na mesma passada.
   public int preencherConquistas(int limite) {
-    List<JogoDetalhesPendente> pendentes = jogos.listarPendentesConquistas(limite);
     int atualizados = 0;
+    for (JogoDetalhesPendente pendente : jogos.listarPendentesConquistas(limite)) {
+      if (processarConquistas(pendente)) atualizados++;
+    }
+    return atualizados;
+  }
 
-    for (JogoDetalhesPendente pendente : pendentes) {
-      String appId = String.valueOf(pendente.steamAppId());
-      var esquema = steam.buscarEsquemaConquistas(appId);
-      if (esquema.isEmpty()) {
-        jogos.marcarConquistasVerificadas(pendente.id());
-        continue;
-      }
-      var percentuais = steam.buscarPercentuaisGlobais(appId);
+  private boolean processarConquistas(JogoDetalhesPendente pendente) {
+    String appId = String.valueOf(pendente.steamAppId());
+    var esquema = steam.buscarEsquemaConquistas(appId);
+    if (esquema.isEmpty()) {
+      jogos.marcarConquistasVerificadas(pendente.id());
+      return false;
+    }
+    var percentuais = steam.buscarPercentuaisGlobais(appId);
 
-      List<ConquistaParaSalvar> conquistas = esquema.stream()
-          .map(conquista -> new ConquistaParaSalvar(
-              conquista.nome(),
-              conquista.tituloExibicao(),
-              conquista.descricao(),
-              conquista.iconeUrl(),
-              conquista.iconeCinzaUrl(),
-              percentuais.get(conquista.nome())))
-          .toList();
+    List<ConquistaParaSalvar> conquistas = esquema.stream()
+        .map(conquista -> new ConquistaParaSalvar(
+            conquista.nome(),
+            conquista.tituloExibicao(),
+            conquista.descricao(),
+            conquista.iconeUrl(),
+            conquista.iconeCinzaUrl(),
+            percentuais.get(conquista.nome())))
+        .toList();
 
-      jogos.salvarConquistas(pendente.id(), conquistas);
-      atualizados++;
+    jogos.salvarConquistas(pendente.id(), conquistas);
+    return true;
+  }
+
+  // Botao de admin "Preencher tudo agora": pra quando um jogo novo/pouco tocado esta bombando e
+  // nao vale esperar ele chegar na vez na fila normal (que pode levar horas dependendo do tamanho
+  // do backlog). Roda os 3 passos direto, na ordem certa - metadados primeiro pra resolver o
+  // steam_app_id, que detalhes/conquistas precisam.
+  public ResultadoPreenchimentoJogo preencherTudoDoJogo(String slug) {
+    long jogoId = jogos.buscarIdPorSlug(slug).orElseThrow(JogoNaoEncontradoException::new);
+
+    boolean metadadosAtualizados = jogos.buscarJogoParaMetadadosSteam(jogoId)
+        .map(this::processarMetadadosSteam)
+        .orElse(false);
+
+    Integer steamAppId = jogos.buscarSteamAppId(jogoId).orElse(null);
+    boolean detalhesAtualizados = false;
+    boolean conquistasAtualizadas = false;
+    if (steamAppId != null) {
+      JogoDetalhesPendente pendente = new JogoDetalhesPendente(jogoId, steamAppId);
+      detalhesAtualizados = processarDetalhesJogo(pendente);
+      conquistasAtualizadas = processarConquistas(pendente);
     }
 
-    return atualizados;
+    return new ResultadoPreenchimentoJogo(metadadosAtualizados, steamAppId != null, detalhesAtualizados, conquistasAtualizadas);
   }
 
   private void atualizarMetadadosSteamSeNecessario(JogoParaAtualizar jogo, List<OfertaPrecoItad> ofertas) {
@@ -415,4 +441,10 @@ public class ServicoCatalogo {
     }
   }
   public record ResultadoAtualizacaoLote(int jogosAtualizados, int ofertasAtualizadas) {}
+
+  public record ResultadoPreenchimentoJogo(
+      boolean metadadosSteamAtualizados,
+      boolean temSteamAppId,
+      boolean detalhesAtualizados,
+      boolean conquistasAtualizadas) {}
 }

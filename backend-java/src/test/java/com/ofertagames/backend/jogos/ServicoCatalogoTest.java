@@ -166,4 +166,46 @@ class ServicoCatalogoTest {
 
     assertThrows(ServicoCatalogo.JogoSemItadException.class, () -> servico.atualizarPrecos("jogo"));
   }
+
+  // Cobre o botao de admin "Preencher tudo agora" (ver ControladorAdministracao), adicionado em
+  // 22/08/2026 pra atualizar metadados/detalhes/conquistas de um jogo especifico na hora.
+  @Test
+  void preencherTudoLancaNaoEncontradoQuandoSlugNaoExiste() {
+    when(jogos.buscarIdPorSlug("inexistente")).thenReturn(Optional.empty());
+
+    assertThrows(ServicoCatalogo.JogoNaoEncontradoException.class, () -> servico.preencherTudoDoJogo("inexistente"));
+  }
+
+  @Test
+  void preencherTudoNaoTentaDetalhesNemConquistasSemSteamAppId() {
+    when(jogos.buscarIdPorSlug("sem-steam")).thenReturn(Optional.of(1L));
+    when(jogos.buscarJogoParaMetadadosSteam(1L)).thenReturn(Optional.empty());
+    when(jogos.buscarSteamAppId(1L)).thenReturn(Optional.empty());
+
+    ServicoCatalogo.ResultadoPreenchimentoJogo resultado = servico.preencherTudoDoJogo("sem-steam");
+
+    assertEquals(false, resultado.metadadosSteamAtualizados());
+    assertEquals(false, resultado.temSteamAppId());
+    assertEquals(false, resultado.detalhesAtualizados());
+    assertEquals(false, resultado.conquistasAtualizadas());
+    verify(steam, never()).buscarDetalhesAplicativo(anyString());
+    verify(steam, never()).buscarEsquemaConquistas(anyString());
+  }
+
+  @Test
+  void preencherTudoBuscaDetalhesEConquistasQuandoJaTemSteamAppId() {
+    when(jogos.buscarIdPorSlug("com-steam")).thenReturn(Optional.of(1L));
+    when(jogos.buscarJogoParaMetadadosSteam(1L)).thenReturn(Optional.empty());
+    when(jogos.buscarSteamAppId(1L)).thenReturn(Optional.of(730));
+    when(steam.buscarDetalhesAplicativo("730")).thenReturn(Optional.empty());
+    when(steam.buscarReviews("730")).thenReturn(Optional.empty());
+    when(steam.buscarEsquemaConquistas("730")).thenReturn(List.of());
+
+    ServicoCatalogo.ResultadoPreenchimentoJogo resultado = servico.preencherTudoDoJogo("com-steam");
+
+    assertEquals(true, resultado.temSteamAppId());
+    assertEquals(false, resultado.detalhesAtualizados());
+    assertEquals(false, resultado.conquistasAtualizadas());
+    verify(jogos, times(1)).marcarConquistasVerificadas(1L);
+  }
 }
