@@ -66,7 +66,21 @@ export class Home implements OnInit, OnDestroy {
 
         const active = deals.filter(d => Number(d.discountPct) < 100 && this.matchesPreferences(d));
         this.topDiscountGames = active.filter(d => d.rank != null && !resolveDlc(d.title, d.isDlc)).slice(0, 20).map(d => this.fromTopDeal(d));
-        this.topDiscountDlcs = active.filter(d => resolveDlc(d.title, d.isDlc)).slice(0, 20).map(d => this.fromTopDeal(d));
+        this.cdr.detectChanges();
+      }
+    });
+
+    // Busca DLCs direto (type=dlc) em vez de tentar achar dentro dos 200 mais descontados gerais:
+    // DLC e uma fatia pequena do catalogo, entao raramente sobra alguma no topo do ranking geral -
+    // ver ServicoAquecimentoCache/RepositorioDescontos no backend. Pede 50 (nao so 20) porque as
+    // primeiras posicoes por desconto sao dominadas por entradas 100% off (gratis/preco zerado),
+    // que o filtro abaixo descarta - com folga suficiente pra sobrar pelo menos 20 com desconto real.
+    this.gameService.getTopDeals(50, 'discount', 'dlc').subscribe({
+      next: (deals) => {
+        this.topDiscountDlcs = deals
+          .filter(d => Number(d.discountPct) < 100 && this.matchesPreferences(d))
+          .slice(0, 20)
+          .map(d => this.fromTopDeal(d));
         this.cdr.detectChanges();
       }
     });

@@ -31,12 +31,13 @@ class ServicoAquecimentoCache {
     jogos.listar(0, 20, "rank", "all", "all", null, null, null, null, java.util.List.of());
     jogos.listar(0, 40, "rank", "all", "all", null, null, null, null, java.util.List.of());
 
-    // Home: os dois usados em Home.ngOnInit.
-    descontos.listarMelhores(100, "rank");
-    descontos.listarMelhores(200, "discount");
+    // Home: os usados em Home.ngOnInit.
+    descontos.listarMelhores(100, "rank", "all");
+    descontos.listarMelhores(200, "discount", "all");
+    descontos.listarMelhores(50, "discount", "dlc");
 
     // Gratuitos: mesmo endpoint, combinacao propria (tamanho 100, ordenacao discount).
-    descontos.listarMelhores(100, "discount");
+    descontos.listarMelhores(100, "discount", "all");
   }
 
   private void limpar(String nomeCache) {

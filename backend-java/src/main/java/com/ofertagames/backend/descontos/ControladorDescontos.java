@@ -18,9 +18,10 @@ public class ControladorDescontos {
   @GetMapping("/top")
   List<DescontoJogo> listarMelhores(
       @RequestParam(defaultValue = "20") int size,
-      @RequestParam(defaultValue = "discount") String sort
+      @RequestParam(defaultValue = "discount") String sort,
+      @RequestParam(defaultValue = "all") String type
   ) {
     int tamanhoSeguro = Math.min(200, Math.max(1, size));
-    return descontos.listarMelhores(tamanhoSeguro, sort);
+    return descontos.listarMelhores(tamanhoSeguro, sort, type);
   }
 }

@@ -143,8 +143,8 @@ export class GameService {
     return this.http.post<{ ok: boolean; updated: number }>(`${this.api}/games/${slug}/refresh`, {});
   }
 
-  getTopDeals(size = 20, sort: 'discount' | 'rank' = 'discount'): Observable<TopDeal[]> {
-    return this.http.get<TopDeal[]>(`${this.api}/deals/top?size=${size}&sort=${sort}`);
+  getTopDeals(size = 20, sort: 'discount' | 'rank' = 'discount', type: 'all' | 'game' | 'dlc' = 'all'): Observable<TopDeal[]> {
+    return this.http.get<TopDeal[]>(`${this.api}/deals/top?size=${size}&sort=${sort}&type=${type}`);
   }
 
   getGameDetails(slug: string): Observable<GameDetails> {
