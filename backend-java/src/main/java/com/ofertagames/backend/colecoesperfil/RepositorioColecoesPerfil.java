@@ -78,7 +78,7 @@ public class RepositorioColecoesPerfil {
           NULL::text AS slug,
           b.app_id AS steam_app_id,
           b.title,
-          NULL::text AS cover_url,
+          b.cover_url,
           b.icon_hash,
           NULL::boolean AS is_dlc,
           b.playtime_minutes,
