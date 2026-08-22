@@ -1445,14 +1445,14 @@
 
 .precos-split.com-grafico .offer-header,
 .precos-split.com-grafico .offer-row {
-  grid-template-columns: minmax(110px, 1fr) repeat(4, minmax(0, 88px)) 56px;
-  padding-left: 10px;
-  padding-right: 10px;
-  gap: 3px;
+  grid-template-columns: minmax(140px, 220px) repeat(4, minmax(70px, 1fr)) 64px;
+  padding-left: 16px;
+  padding-right: 16px;
+  gap: 10px;
 }
 
 .precos-split.com-grafico .offer-header {
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0;
 
   span:not(:first-child) {
