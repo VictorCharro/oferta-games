@@ -39,18 +39,19 @@ public class RepositorioDescontos {
       default -> "";
     };
 
+    // A elegibilidade (jogo entra na lista) e o discount_pct exibido vem da MELHOR oferta com
+    // desconto real. Mas o preco/loja exibidos vem da oferta mais barata entre TODAS (LATERAL),
+    // pra bater com o "melhor preco" mostrado na pagina do jogo — mesmo quando essa loja mais
+    // barata nao tem desconto oficial (ex: preco padrao mais baixo em outra loja).
     String sql = """
         SELECT * FROM (
           SELECT DISTINCT ON (g.id)
+            g.id AS game_id,
             g.slug,
             g.title,
             g.cover_url,
             g.is_dlc,
             g.rank,
-            o.store_name,
-            o.price,
-            o.regular_price,
-            o.url,
             CASE WHEN o.price = 0 THEN 100 ELSE ROUND((1 - o.price / o.regular_price) * 100)::integer END AS discount_pct
           FROM offers o
           JOIN games g ON g.id = o.game_id
@@ -62,8 +63,16 @@ public class RepositorioDescontos {
             %s
             %s
             %s
-          ORDER BY g.id, o.price ASC
-        ) sub
+          ORDER BY g.id, (CASE WHEN o.price = 0 THEN 100 ELSE ROUND((1 - o.price / o.regular_price) * 100)::integer END) DESC
+        ) elegiveis
+        JOIN LATERAL (
+          SELECT o.store_name, o.price, o.regular_price, o.url
+          FROM offers o
+          WHERE o.game_id = elegiveis.game_id
+            %s
+          ORDER BY o.price ASC
+          LIMIT 1
+        ) barato ON true
         ORDER BY %s
         LIMIT :tamanho
         """.formatted(
@@ -71,6 +80,7 @@ public class RepositorioDescontos {
             ConteudosNaoJogos.filtroSql("g"),
             JogosBloqueados.filtroSql("g"),
             filtroTipo,
+            LojasBloqueadas.filtroSql("o"),
             ordenarPor);
 
     return jdbc.sql(sql)
