@@ -597,12 +597,34 @@ public class RepositorioJogos {
         .update();
   }
 
+  // So preenche o que ainda esta faltando (nunca sobrescreve cover_url/steam_app_id ja resolvidos)
+  // - usado pelo preenchimento em lote, que roda o tempo todo e nao deve ficar rebuscando/trocando
+  // dado que ja esta correto so por rodar de novo.
   public void atualizarMetadadosSteam(long jogoId, Boolean ehDlc, String capaSteam, Integer steamAppId) {
     jdbc.sql("""
         UPDATE games
         SET is_dlc = COALESCE(:ehDlc, is_dlc),
             cover_url = COALESCE(cover_url, :capaSteam),
             steam_app_id = COALESCE(steam_app_id, :steamAppId),
+            last_steam_sync_at = now()
+        WHERE id = :jogoId
+        """)
+        .param("ehDlc", ehDlc)
+        .param("capaSteam", capaSteam)
+        .param("steamAppId", steamAppId)
+        .param("jogoId", jogoId)
+        .update();
+  }
+
+  // Prefere o valor novo (sobrescreve o que ja existia) quando a busca traz algo, so mantendo o
+  // valor antigo se a Steam nao devolveu nada dessa vez - usado pelo botao de admin "Preencher tudo
+  // agora", que existe justamente pra forcar uma capa/steam_app_id errado a ser corrigido na hora.
+  public void forcarMetadadosSteam(long jogoId, Boolean ehDlc, String capaSteam, Integer steamAppId) {
+    jdbc.sql("""
+        UPDATE games
+        SET is_dlc = COALESCE(:ehDlc, is_dlc),
+            cover_url = COALESCE(:capaSteam, cover_url),
+            steam_app_id = COALESCE(:steamAppId, steam_app_id),
             last_steam_sync_at = now()
         WHERE id = :jogoId
         """)

@@ -278,19 +278,26 @@ public class ServicoCatalogo {
   public int preencherMetadadosSteam(int limite) {
     int atualizados = 0;
     for (JogoSteamPendente pendente : jogos.listarPendentesSteam(limite)) {
-      if (processarMetadadosSteam(pendente)) atualizados++;
+      if (processarMetadadosSteam(pendente, false)) atualizados++;
     }
     return atualizados;
   }
 
-  private boolean processarMetadadosSteam(JogoSteamPendente pendente) {
+  // forcar=false (lote agendado): so preenche o que falta, nunca troca capa/steam_app_id ja
+  // resolvidos. forcar=true (admin "Preencher tudo agora"): sobrescreve com o valor novo sempre que
+  // a Steam devolver algo, pra corrigir dado errado (ex: capa resolvida pro app id trocado).
+  private boolean processarMetadadosSteam(JogoSteamPendente pendente, boolean forcar) {
     var appId = steam.resolverAppIdSteam(pendente.url());
     var detalhes = appId.flatMap(steam::buscarDetalhesAplicativo);
     boolean ehDlc = Boolean.TRUE.equals(detalhes.map(DetalhesAplicativoSteam::ehDlc).orElse(null))
         || steam.tituloPareceDlc(pendente.titulo());
     String capa = detalhes.map(DetalhesAplicativoSteam::imagemCabecalho).orElse(null);
     Integer steamAppId = appId.map(Integer::parseInt).orElse(null);
-    jogos.atualizarMetadadosSteam(pendente.id(), ehDlc, capa, steamAppId);
+    if (forcar) {
+      jogos.forcarMetadadosSteam(pendente.id(), ehDlc, capa, steamAppId);
+    } else {
+      jogos.atualizarMetadadosSteam(pendente.id(), ehDlc, capa, steamAppId);
+    }
     return true;
   }
 
@@ -378,7 +385,7 @@ public class ServicoCatalogo {
     long jogoId = jogos.buscarIdPorSlug(slug).orElseThrow(JogoNaoEncontradoException::new);
 
     boolean metadadosAtualizados = jogos.buscarJogoParaMetadadosSteam(jogoId)
-        .map(this::processarMetadadosSteam)
+        .map(pendente -> processarMetadadosSteam(pendente, true))
         .orElse(false);
 
     Integer steamAppId = jogos.buscarSteamAppId(jogoId).orElse(null);

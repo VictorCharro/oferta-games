@@ -2,6 +2,7 @@ package com.ofertagames.backend.jogos;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -190,6 +191,23 @@ class ServicoCatalogoTest {
     assertEquals(false, resultado.conquistasAtualizadas());
     verify(steam, never()).buscarDetalhesAplicativo(anyString());
     verify(steam, never()).buscarEsquemaConquistas(anyString());
+  }
+
+  @Test
+  void preencherTudoForcaMetadadosEmVezDeSoPreencherOQueFalta() {
+    when(jogos.buscarIdPorSlug("com-oferta-steam")).thenReturn(Optional.of(1L));
+    when(jogos.buscarJogoParaMetadadosSteam(1L))
+        .thenReturn(Optional.of(new JogoSteamPendente(1L, "Jogo 1", "https://loja.exemplo/jogo")));
+    when(steam.resolverAppIdSteam("https://loja.exemplo/jogo")).thenReturn(Optional.empty());
+    when(steam.tituloPareceDlc("Jogo 1")).thenReturn(false);
+    when(jogos.buscarSteamAppId(1L)).thenReturn(Optional.empty());
+
+    servico.preencherTudoDoJogo("com-oferta-steam");
+
+    // forcarMetadadosSteam (nao atualizarMetadadosSteam) e quem deve ser chamado - a versao que
+    // sobrescreve capa/steam_app_id em vez de so preencher o que estava faltando.
+    verify(jogos, times(1)).forcarMetadadosSteam(1L, false, null, null);
+    verify(jogos, never()).atualizarMetadadosSteam(anyLong(), any(), any(), any());
   }
 
   @Test
