@@ -69,18 +69,27 @@
   .hero-facts { width: 100%; margin-left: 0; }
 }
 
-.hero-cover {
+.hero-cover-wrap {
+  align-self: stretch;
   width: 400px;
   min-height: 180px;
-  align-self: stretch;
-  object-fit: cover;
-  border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+}
+
+.hero-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 @media (max-width: 768px) {
-  .hero-cover { width: 100%; }
+  .hero-cover-wrap { width: 100%; max-width: none; align-self: auto; }
 }
 
 .hero-info {
