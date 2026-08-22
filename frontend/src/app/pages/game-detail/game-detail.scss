@@ -1445,10 +1445,21 @@
 
 .precos-split.com-grafico .offer-header,
 .precos-split.com-grafico .offer-row {
-  grid-template-columns: minmax(160px, 1fr) repeat(4, minmax(0, 72px)) 70px;
+  grid-template-columns: minmax(140px, 1fr) repeat(4, minmax(0, 80px)) 70px;
   padding-left: 14px;
   padding-right: 14px;
-  gap: 6px;
+  gap: 4px;
+}
+
+.precos-split.com-grafico .offer-header {
+  font-size: 9px;
+  letter-spacing: 0;
+
+  span:not(:first-child) {
+    white-space: normal;
+    line-height: 1.3;
+    word-break: break-word;
+  }
 }
 
 .precos-split.com-grafico .offer-platforms .platform-chip span { display: none; }
