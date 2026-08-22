@@ -69,4 +69,13 @@ class AgendadorColetas {
   void atualizarPrecosInstantGaming() {
     execucao.executar("instant-gaming-precos", sincronizacao::sincronizarRodadaInstantGamingPrecos);
   }
+
+  // Uma vez por dia basta: so apaga linhas com mais de 90 dias (RETENCAO_HISTORICO_PRECOS_DIAS em
+  // ServicoSincronizacao), nao precisa de ritmo fino como os jobs de coleta.
+  @Scheduled(
+      fixedDelayString = "${app.sync.scheduler.historico-precos-poda-delay-ms:86400000}",
+      initialDelayString = "${app.sync.scheduler.historico-precos-poda-initial-delay-ms:900000}")
+  void podarHistoricoDePrecos() {
+    execucao.executar("historico-precos-poda", sincronizacao::podarHistoricoDePrecos);
+  }
 }

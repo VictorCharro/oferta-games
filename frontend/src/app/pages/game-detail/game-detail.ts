@@ -11,7 +11,8 @@ import {
   Offer,
   GameDetails,
   RespostaAvaliacoesSteam,
-  RespostaConquistas
+  RespostaConquistas,
+  PontoHistoricoPreco
 } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
@@ -58,6 +59,9 @@ export class GameDetail implements OnInit, OnDestroy {
   meuComentario = '';
   enviandoAvaliacao = false;
   filtroConquistas: 'todas' | 'desbloqueadas' | 'bloqueadas' = 'todas';
+  priceHistory: PontoHistoricoPreco[] = [];
+  readonly chartWidth = 700;
+  readonly chartHeight = 220;
   private routeSub?: Subscription;
   private favoriteSub?: Subscription;
   private profileFavoriteSub?: Subscription;
@@ -102,8 +106,10 @@ export class GameDetail implements OnInit, OnDestroy {
         this.pararTrailer();
         this.resetarFormularioAvaliacao();
         this.filtroConquistas = 'todas';
+        this.priceHistory = [];
         this.cdr.detectChanges();
         this.carregarDetalhesEConquistasEReviews(slug);
+        this.carregarHistoricoPrecos(slug);
       }),
       switchMap(slug => this.gameService.getGame(slug).pipe(catchError(() => of(null))))
     ).subscribe(data => {
@@ -152,6 +158,64 @@ export class GameDetail implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     }).catch(() => {});
     this.carregarAvaliacoesSteam(slug);
+  }
+
+  private carregarHistoricoPrecos(slug: string) {
+    this.gameService.getPriceHistory(slug).pipe(catchError(() => of([]))).subscribe(historico => {
+      this.priceHistory = historico;
+      this.cdr.detectChanges();
+    });
+  }
+
+  get temHistoricoSuficiente(): boolean {
+    return this.priceHistory.length >= 2;
+  }
+
+  get historicoMenorPreco(): number | null {
+    return this.priceHistory.length ? Math.min(...this.priceHistory.map(p => Number(p.price))) : null;
+  }
+
+  private historicoPontosXY(): { x: number; y: number; price: number; data: Date }[] {
+    const pontos = this.priceHistory;
+    if (pontos.length < 2) return [];
+    const precos = pontos.map(p => Number(p.price));
+    const min = Math.min(...precos);
+    const max = Math.max(...precos);
+    const faixa = max - min || 1;
+    const paddingX = 8;
+    const paddingTop = 16;
+    const paddingBottom = 28;
+    const larguraUtil = this.chartWidth - paddingX * 2;
+    const alturaUtil = this.chartHeight - paddingTop - paddingBottom;
+    return pontos.map((ponto, i) => ({
+      x: paddingX + (i / (pontos.length - 1)) * larguraUtil,
+      y: paddingTop + alturaUtil - ((Number(ponto.price) - min) / faixa) * alturaUtil,
+      price: Number(ponto.price),
+      data: new Date(ponto.capturadoEm),
+    }));
+  }
+
+  get historicoLinhaPath(): string {
+    return this.historicoPontosXY().map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  }
+
+  get historicoAreaPath(): string {
+    const pts = this.historicoPontosXY();
+    if (!pts.length) return '';
+    const base = this.chartHeight - 28;
+    return `${this.historicoLinhaPath} L ${pts[pts.length - 1].x.toFixed(1)} ${base} L ${pts[0].x.toFixed(1)} ${base} Z`;
+  }
+
+  get historicoUltimoPonto() {
+    const pts = this.historicoPontosXY();
+    return pts.length ? pts[pts.length - 1] : null;
+  }
+
+  get historicoRotulosEixoX(): string[] {
+    const pts = this.historicoPontosXY();
+    if (pts.length < 2) return [];
+    const indices = [...new Set([0, Math.floor((pts.length - 1) / 2), pts.length - 1])];
+    return indices.map(i => pts[i].data.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }));
   }
 
   // So mostra a aba quando ha conteudo real (destaques ou trailer): descricao/screenshots sozinhos
@@ -550,6 +614,7 @@ export class GameDetail implements OnInit, OnDestroy {
           next: (d) => { this.game = d; this.cdr.detectChanges(); },
           error: () => {}
         });
+        this.carregarHistoricoPrecos(slug);
       },
       error: (erro: HttpErrorResponse) => {
         this.refreshing = false;

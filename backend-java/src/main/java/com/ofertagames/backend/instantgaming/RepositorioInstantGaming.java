@@ -137,6 +137,7 @@ class RepositorioInstantGaming {
     jdbc.sql("UPDATE games SET last_instant_gaming_sync_at = now() WHERE id = :id")
         .param("id", jogoId)
         .update();
+    registrarHistoricoDePreco(jogoId);
   }
 
   // Produto ficou fora de estoque (ou parou de existir): remove a oferta antiga, senao ela fica
@@ -147,6 +148,31 @@ class RepositorioInstantGaming {
         .update();
     jdbc.sql("UPDATE games SET last_instant_gaming_sync_at = now() WHERE id = :id")
         .param("id", jogoId)
+        .update();
+    registrarHistoricoDePreco(jogoId);
+  }
+
+  // Mesma logica de com.ofertagames.backend.jogos.RepositorioJogos#registrarHistoricoDePrecos
+  // (so grava quando o menor preco do jogo mudou desde a ultima linha), duplicada aqui em vez de
+  // depender do pacote "jogos" - ver nota de dependencia circular acima.
+  private void registrarHistoricoDePreco(long jogoId) {
+    jdbc.sql("""
+        INSERT INTO price_history (game_id, price)
+        SELECT atual.game_id, atual.preco
+        FROM (
+          SELECT game_id, MIN(price) AS preco
+          FROM offers
+          WHERE game_id = :jogoId
+          GROUP BY game_id
+        ) atual
+        WHERE atual.preco IS DISTINCT FROM (
+          SELECT ph.price FROM price_history ph
+          WHERE ph.game_id = atual.game_id
+          ORDER BY ph.captured_at DESC
+          LIMIT 1
+        )
+        """)
+        .param("jogoId", jogoId)
         .update();
   }
 

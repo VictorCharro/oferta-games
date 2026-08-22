@@ -99,6 +99,11 @@ export interface RespostaAvaliacoesSteam {
   ordenacao: 'recent' | 'all' | 'updated';
 }
 
+export interface PontoHistoricoPreco {
+  price: number;
+  capturadoEm: string;
+}
+
 export interface TopDeal {
   slug: string;
   title: string;
@@ -141,6 +146,10 @@ export class GameService {
 
   refreshGame(slug: string): Observable<{ ok: boolean; updated: number }> {
     return this.http.post<{ ok: boolean; updated: number }>(`${this.api}/games/${slug}/refresh`, {});
+  }
+
+  getPriceHistory(slug: string, dias = 90): Observable<PontoHistoricoPreco[]> {
+    return this.http.get<PontoHistoricoPreco[]>(`${this.api}/games/${slug}/historico-precos?dias=${dias}`);
   }
 
   getTopDeals(size = 20, sort: 'discount' | 'rank' = 'discount', type: 'all' | 'game' | 'dlc' = 'all'): Observable<TopDeal[]> {

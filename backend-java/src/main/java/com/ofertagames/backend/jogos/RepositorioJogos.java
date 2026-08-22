@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -386,11 +387,68 @@ public class RepositorioJogos {
       ps.setString(7, o.url());
       ps.setString(8, o.cupom());
     });
+
+    registrarHistoricoDePrecos(ofertasPermitidas.stream().map(OfertaParaSalvar::jogoId).toList());
+
     return Arrays.stream(updateCounts)
         .flatMapToInt(Arrays::stream)
         .map(contagem -> contagem == Statement.SUCCESS_NO_INFO ? 1 : Math.max(contagem, 0))
         .sum();
   }
+
+  // So insere uma linha quando o menor preco do jogo (MIN entre as ofertas) mudou desde a ultima
+  // linha gravada - nao a cada sincronizacao. Isso mantem o volume da tabela proporcional a
+  // mudancas reais de preco, nao ao ritmo dos jobs agendados (que tocam milhares de jogos a cada
+  // 10min mesmo sem nenhum preco ter mudado). "IS DISTINCT FROM" com a subquery vazia (jogo sem
+  // historico ainda) tambem cobre a primeira linha de cada jogo.
+  public void registrarHistoricoDePrecos(List<Long> jogosIds) {
+    if (jogosIds == null || jogosIds.isEmpty()) {
+      return;
+    }
+    List<Long> idsUnicos = List.copyOf(new LinkedHashSet<>(jogosIds));
+    jdbc.sql("""
+        INSERT INTO price_history (game_id, price)
+        SELECT atual.game_id, atual.preco
+        FROM (
+          SELECT game_id, MIN(price) AS preco
+          FROM offers
+          WHERE game_id IN (:jogosIds)
+          GROUP BY game_id
+        ) atual
+        WHERE atual.preco IS DISTINCT FROM (
+          SELECT ph.price FROM price_history ph
+          WHERE ph.game_id = atual.game_id
+          ORDER BY ph.captured_at DESC
+          LIMIT 1
+        )
+        """)
+        .param("jogosIds", idsUnicos)
+        .update();
+  }
+
+  public List<PontoHistoricoPreco> listarHistoricoDePrecos(long jogoId, int dias) {
+    return jdbc.sql("""
+        SELECT price, captured_at
+        FROM price_history
+        WHERE game_id = :jogoId AND captured_at >= now() - make_interval(days => :dias)
+        ORDER BY captured_at ASC
+        """)
+        .param("jogoId", jogoId)
+        .param("dias", dias)
+        .query((rs, linha) -> new PontoHistoricoPreco(
+            rs.getBigDecimal("price"),
+            rs.getTimestamp("captured_at").toInstant()))
+        .list();
+  }
+
+  // Roda diariamente (ver AgendadorColetas): mantem so os ultimos N dias de historico.
+  public int podarHistoricoDePrecos(int diasRetencao) {
+    return jdbc.sql("DELETE FROM price_history WHERE captured_at < now() - make_interval(days => :dias)")
+        .param("dias", diasRetencao)
+        .update();
+  }
+
+  public record PontoHistoricoPreco(BigDecimal price, java.time.Instant capturadoEm) {}
 
   @Transactional
   public int substituirOfertasItad(long jogoId, List<OfertaParaSalvar> ofertas) {

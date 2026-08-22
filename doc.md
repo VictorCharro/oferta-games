@@ -115,6 +115,16 @@ O Spring executa a coleta internamente quando `APP_SYNC_SCHEDULER_ENABLED=true`.
 
 O endpoint `POST /api/sync?page=0` e legado: serve para diagnostico/manual e exige `X-Sync-Key`. Nao usar GitHub Actions para processar o catalogo completo.
 
+### Historico de precos (22/08/2026)
+
+Tabela `price_history` (`game_id`, `price`, `captured_at`) guarda a evolucao do menor preco de cada jogo, usada pelo grafico "Historico de preco (90 dias)" na aba Precos da pagina do jogo (`GET /api/games/{slug}/historico-precos?dias=90`, ver "API HTTP").
+
+- **So grava quando o menor preco muda de verdade**, nao a cada sincronizacao: `RepositorioJogos.registrarHistoricoDePrecos` faz um unico `INSERT ... SELECT` comparando o `MIN(price)` atual das ofertas com a ultima linha gravada daquele jogo (`IS DISTINCT FROM`), so inserindo quando e diferente (ou quando ainda nao ha nenhuma linha). Isso mantem o volume da tabela proporcional a mudancas reais de preco, e nao ao ritmo dos jobs agendados (que tocam milhares de jogos a cada 10min mesmo sem nenhum preco ter mudado — gravar em toda sincronizacao geraria da ordem de 1M linhas/dia).
+- Chamado a partir de `RepositorioJogos.salvarOfertas` (cobre os tres caminhos que escrevem ofertas da ITAD: refresh manual, `substituirOfertasItad` e o lote agendado `substituirOfertasItadEmLote`) e, separadamente, de dentro de `RepositorioInstantGaming` (`salvarPreco`/`removerOferta`) — duplicado ali de proposito, ja que esse pacote nao depende de `jogos` (ver nota de dependencia circular no topo de `RepositorioInstantGaming.java`).
+- **Retencao de 90 dias**: poda diaria via `AgendadorColetas.podarHistoricoDePrecos` → `ServicoSincronizacao.podarHistoricoDePrecos` → `RepositorioJogos.podarHistoricoDePrecos(90)` (`DELETE ... WHERE captured_at < now() - 90 dias`), mesma trava/mecanismo `ServicoExecucaoColeta` dos outros jobs.
+- **Sem dado retroativo**: a tabela comeca vazia em 22/08/2026 — nao ha como recuperar preco historico anterior a essa data. O frontend so mostra o grafico quando ha 2+ pontos (`temHistoricoSuficiente`); com 0 ou 1 ponto mostra uma nota "ainda estamos acompanhando" em vez de um grafico vazio/quebrado.
+- Grafico e um SVG simples desenhado a mao em `game-detail.ts`/`.html` (sem biblioteca de charts, pra nao pesar o bundle) — linha+area com gradiente, ultimo ponto destacado e nota do menor preco do periodo.
+
 ### Metadados Steam de catalogo
 
 Job separado, em geral a cada 15 minutos:
@@ -244,6 +254,11 @@ game_review_votes
 
 sync_locks
   name, locked_until
+
+price_history
+  id, game_id (FK games), price, captured_at
+  -- so grava uma linha quando o menor preco do jogo (MIN entre as ofertas) mudou desde a
+  -- ultima linha gravada, nao a cada sincronizacao (ver "Historico de precos" abaixo)
 ```
 
 ### Conta, monitoramento e notificacoes
@@ -356,8 +371,9 @@ Arquivos em `backend-java/sql/`:
 29. `20260806_coleta_status_persistente.sql`
 30. `20260809_achievements_checked_at.sql`
 31. `20260810_cooldown_refresh_manual.sql`
+32. `20260822_historico_precos.sql`
 
-As migrations 1 a 31 ja foram aplicadas ao projeto Supabase de producao. A 28 adiciona `game_details.dlc_steam_app_ids` (ver "Plataformas e DLCs"). A 29 cria `coleta_status`, usada por `EstadoColeta` pra persistir o status dos jobs de coleta entre deploys; precisa ser aplicada antes do deploy do backend que passou a le-la/escreve-la, senao `/admin/coleta` quebra com erro 500. A 30 adiciona `games.achievements_checked_at` (ver "Detalhes e conquistas de catalogo"). A 31 adiciona `games.last_manual_refresh_at`, usada pelo cooldown do refresh manual (ver acima). A 24 cria `profile_platinum_order` para a ordem manual dos platinados Steam (arrastar no bloco do perfil). A 25 adiciona `offers.voucher_code`. A 26 cria `xbox_connections` (fluxo OAuth "Xbox App" da OpenXBL). A 27 cria `xbox_library_games` (upsert-only) e depois adiciona `minutes_played`; precisa ser aplicada antes do deploy do backend que sincroniza biblioteca Xbox. A migration 21 marcou 408 detalhes existentes como antigos em 18/07/2026 para a fila substitui-los gradualmente pelo conteudo pt-BR, sem apagar o texto atual durante o processamento. Em outro ambiente, executar as migrations estruturais em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500. A migration 22 adiciona `cover_url`/`cover_synced_at` a `steam_library_games` para guardar a capa real de cada jogo (resolvida via appdetails, ja que a Steam mudou o CDN das capas pra um caminho com hash imprevisivel em `shared.akamai.steamstatic.com`); precisa ser aplicada antes do deploy do backend que preenche/le essas colunas. A migration 23 adiciona `instant_gaming_url`/`last_instant_gaming_sync_at` a `games` e cria `instant_gaming_catalog`/`instant_gaming_scan_cursor` (ver secao "Instant Gaming" acima); precisa ser aplicada antes do deploy do backend que usa essas tabelas/colunas.
+As migrations 1 a 32 ja foram aplicadas ao projeto Supabase de producao. A 28 adiciona `game_details.dlc_steam_app_ids` (ver "Plataformas e DLCs"). A 29 cria `coleta_status`, usada por `EstadoColeta` pra persistir o status dos jobs de coleta entre deploys; precisa ser aplicada antes do deploy do backend que passou a le-la/escreve-la, senao `/admin/coleta` quebra com erro 500. A 30 adiciona `games.achievements_checked_at` (ver "Detalhes e conquistas de catalogo"). A 31 adiciona `games.last_manual_refresh_at`, usada pelo cooldown do refresh manual (ver acima). A 24 cria `profile_platinum_order` para a ordem manual dos platinados Steam (arrastar no bloco do perfil). A 25 adiciona `offers.voucher_code`. A 26 cria `xbox_connections` (fluxo OAuth "Xbox App" da OpenXBL). A 27 cria `xbox_library_games` (upsert-only) e depois adiciona `minutes_played`; precisa ser aplicada antes do deploy do backend que sincroniza biblioteca Xbox. A migration 21 marcou 408 detalhes existentes como antigos em 18/07/2026 para a fila substitui-los gradualmente pelo conteudo pt-BR, sem apagar o texto atual durante o processamento. Em outro ambiente, executar as migrations estruturais em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500. A migration 22 adiciona `cover_url`/`cover_synced_at` a `steam_library_games` para guardar a capa real de cada jogo (resolvida via appdetails, ja que a Steam mudou o CDN das capas pra um caminho com hash imprevisivel em `shared.akamai.steamstatic.com`); precisa ser aplicada antes do deploy do backend que preenche/le essas colunas. A migration 23 adiciona `instant_gaming_url`/`last_instant_gaming_sync_at` a `games` e cria `instant_gaming_catalog`/`instant_gaming_scan_cursor` (ver secao "Instant Gaming" acima); precisa ser aplicada antes do deploy do backend que usa essas tabelas/colunas. A migration 32 cria `price_history` (ver "Historico de precos" acima); precisa ser aplicada antes do deploy do backend que grava/le essa tabela.
 
 O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos e seus fundos. Cada usuario so pode gravar na propria pasta. As politicas RLS de `SELECT`, `INSERT`, `UPDATE` e `DELETE` foram aplicadas ao projeto novo em 15/07/2026; sem elas o Storage retorna HTTP 400 nos uploads. Limite de upload de imagem no frontend: 2 MB, JPG/PNG/WebP. Blocos de imagem e fundos tambem aceitam URL externa `http(s)`.
 
@@ -365,9 +381,10 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 
 ### Catalogo
 
-- `GET /api/games?page=&size=&sort=&type=&platform=&minPrice=&maxPrice=&minDiscount=&q=`
+- `GET /api/games?page=&size=&sort=&type=&platform=&minPrice=&maxPrice=&minDiscount=&q=&stores=`
   - `sort`: `rank` (relevancia: destaques com desconto primeiro, depois rank), `popularity` (rank puro, "Mais famosos"), `discount`, `price_asc`, `price_desc`.
   - `type`: `all`, `game`, `dlc`.
+  - `stores` (22/08/2026): chaves separadas por virgula (`steam,epic,...`) do filtro "Lojas preferidas" das Configuracoes — ver `LojasCatalogo` em `comum/`. So filtra quando alguma chave e enviada; sem o parametro, mostra ofertas de todas as lojas (comportamento antigo). Filtra tanto quais jogos aparecem quanto o preco minimo/loja exibidos, pra nao mostrar preco de uma loja que o usuario nao quer ver.
   - Retorna a oferta minima, incluindo loja e URL quando disponiveis.
   - `RepositorioJogos.listar` e cacheado em memoria (Caffeine, `comum/ConfiguracaoCache`) por 10min por combinacao de parametros, pra nao repetir a query a cada abertura do catalogo. Expira sozinho; nao ha invalidacao manual quando a sincronizacao de precos roda. A pagina Mais Vendidos usa este mesmo endpoint (`getGames`), entao ja se beneficia do cache.
 - `GET /api/games/search?q=nome`
@@ -377,7 +394,9 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 - `GET /api/games/{slug}/conquistas` — auth opcional. `{ total, desbloqueadas, percentualConcluido, proxima, conquistas[] }`; cada conquista com `desbloqueada`/`desbloqueadaEm` cruzados com o progresso do visitante logado (ver "Conquistas com progresso pessoal" acima). Sempre 200, mesmo pra jogo inexistente (fica tudo zerado).
 - `GET|POST|DELETE /api/games/{slug}/reviews`, `POST /api/games/{slug}/reviews/{id}/voto` — ver "Reviews (Steam + Oferta Games)" acima.
 - `POST /api/games/{slug}/refresh`
-- `GET /api/deals/top?size=&sort=discount|rank` — usado 2x pela Home (rank e discount) e pela pagina Gratuitos (`size=100&sort=discount`, filtrando `discountPct === 100` no front); `RepositorioDescontos.listarMelhores` tambem cacheado (Caffeine, `ConfiguracaoCache.CACHE_DESCONTOS`, 10min), pois e uma query com DISTINCT ON + join na tabela `offers` inteira. `ServicoAquecimentoCache` reaquece as 3 combinacoes usadas (100/rank, 200/discount, 100/discount) logo apos cada rodada de precos, pra nenhuma delas (incluindo Gratuitos) pegar cache frio.
+- `GET /api/games/{slug}/historico-precos?dias=90` — pontos `{ price, capturadoEm }` de `price_history`, ordem cronologica; `dias` limitado a 1-90. 404 se o slug nao existir. Ver "Historico de precos" acima.
+- `GET /api/deals/top?size=&sort=discount|rank&type=all|game|dlc` — usado pela Home (rank, discount e discount+type=dlc) e pela pagina Gratuitos (`size=100&sort=discount`, filtrando `discountPct === 100` no front); `RepositorioDescontos.listarMelhores` tambem cacheado (Caffeine, `ConfiguracaoCache.CACHE_DESCONTOS`, 10min), pois e uma query com DISTINCT ON + join na tabela `offers` inteira. `ServicoAquecimentoCache` reaquece as combinacoes usadas (100/rank, 200/discount, 100/discount, 50/discount/dlc) logo apos cada rodada de precos, pra nenhuma delas (incluindo Gratuitos) pegar cache frio.
+  - **`type=dlc` (22/08/2026)**: o carrossel "Maiores descontos em DLCs" da Home derivava as DLCs filtrando (no frontend) o mesmo pool geral de 200 mais descontados — como DLC e uma fatia pequena do catalogo, quase nunca sobrava alguma nesse pool (so 3 em producao, apesar de existirem milhares de DLCs com desconto ativo). Agora o backend filtra DLC diretamente na query (reusa `ClassificadorDlc`, ja usado no catalogo) e a Home pede um pool proprio de 50 (nao 20) porque boa parte das entradas mais "descontadas" sao preco zerado/glitch (100% off), que o frontend descarta — com folga suficiente pra sobrar 20+ com desconto real.
 - `POST /api/sync?page=` (legado, exige `X-Sync-Key`)
 
 ### Jogos Monitorados e notificacoes
@@ -481,6 +500,8 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 
 - A home mantem conteudo geral misturado. Se houver plataforma preferida, cria uma secao adicional **Jogos da sua plataforma favorita** abaixo de Jogos Monitorados, sem esconder o restante.
 - Preferencias de plataforma, ocultar DLC, desconto minimo e preco maximo preenchem inicialmente os filtros do catalogo; o usuario ainda pode altera-los.
+- **Lojas preferidas** (22/08/2026): checkboxes em Configuracoes > Preferencias (`STORE_FILTER_OPTIONS` em `services/store-brand.ts`, chaves espelhando `LojasCatalogo` no backend). Sem nenhuma marcada, mostra ofertas de todas as lojas; com alguma marcada, o Catalogo aplica automaticamente ao abrir (`stores=` em `GameService.getGames`). Diferente do filtro de Plataforma, nao tem controle proprio dentro da pagina do Catalogo — so e definido nas Configuracoes.
+- **Historico de preco (22/08/2026)**: grafico na aba Precos da pagina do jogo (abaixo das abas, acima da tabela de ofertas), so aparece com 2+ pontos de historico — ver "Historico de precos" em "Coletas e Atualizacao de Catalogo".
 - Cards e detalhe usam o icone `jogos-monitorados.png` para monitoramento de preco. Nunca usar o icone de favorito pessoal nesse fluxo.
 - **Colecoes ("Minhas Listas")** sao uma feature separada dos favoritos, na aba **Colecoes** do perfil: grupos nomeados criados pelo dono, com um jogo podendo estar em varias colecoes (N:N). Diferente dos favoritos, aceitam jogos do catalogo que o usuario **nao possui** (ex: "Quero jogar em 2027") alem de jogos da biblioteca Steam. Visibilidade pelo toggle proprio **Mostrar colecoes** em Configuracoes > Privacidade. O dono usa o modo **Organizar** da aba para criar, renomear e excluir; fora dele a aba so exibe as listas.
 - Favoritos pessoais sao outra funcionalidade, mostrada no perfil e biblioteca Steam. Na aba **Jogos favoritos**, o dono entra no modo **Organizar** (botao no cabecalho da aba) para reordenar por arrastar e soltar e remover itens; fora desse modo os controles ficam escondidos e os cards navegam normalmente. A ordem e salva automaticamente via `PUT /api/profile-favorites/ordem`; visitantes so visualizam. A ordem manual e unica por usuario e vale para favoritos de catalogo e Steam juntos.
@@ -597,6 +618,8 @@ Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portu
 - Xbox conectado via OpenXBL (OAuth "Xbox App", nao API key pessoal): login, biblioteca (progresso de conquistas e minutos jogados reais via endpoint de stats em lote) e desconexao. Sincronizacao e sempre upsert-only, nunca apaga jogos ja salvos. Biblioteca combinada Steam+Xbox na mesma lista/perfil, com filtro de plataforma na aba Biblioteca quando ha mais de uma conectada — ver secao "Steam e Xbox".
 - Precos com cupom da ITAD (`vouchers=true`): quando existe, o preco com cupom vira o principal exibido, com selo indicando o codigo — ver secao "Precos ITAD".
 - Favoritos e Platinados reordenaveis por arrastar direto no bloco do perfil, sem precisar entrar em "Gerenciar" — ver "Editor de perfil".
+- Filtro de lojas preferidas nas Configuracoes, aplicado automaticamente no Catalogo — ver "Home, catalogo e monitoramento".
+- Historico de preco (90 dias, grava so em mudanca) com grafico na pagina do jogo — ver "Historico de precos".
 
 ### Em validacao
 

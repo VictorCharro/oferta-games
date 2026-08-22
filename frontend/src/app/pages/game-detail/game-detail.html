@@ -87,6 +87,33 @@
   </section>
 
   <div class="offers-section" *ngIf="activeTab === 'precos'">
+    <div class="price-chart-card" *ngIf="temHistoricoSuficiente">
+      <div class="price-chart-header">
+        <span>Histórico de preço (90 dias)</span>
+        <span class="price-chart-current" *ngIf="historicoUltimoPonto as ultimo">{{ formatPrice(ultimo.price) }}</span>
+      </div>
+      <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" class="price-chart-svg" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="priceAreaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--color-purple)" stop-opacity="0.35" />
+            <stop offset="100%" stop-color="var(--color-purple)" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        <path [attr.d]="historicoAreaPath" class="price-chart-area"></path>
+        <path [attr.d]="historicoLinhaPath" class="price-chart-line"></path>
+        <circle *ngIf="historicoUltimoPonto as ultimo" [attr.cx]="ultimo.x" [attr.cy]="ultimo.y" r="4" class="price-chart-dot"></circle>
+      </svg>
+      <div class="price-chart-axis-x">
+        <span *ngFor="let rotulo of historicoRotulosEixoX">{{ rotulo }}</span>
+      </div>
+      <div class="price-chart-note" *ngIf="historicoMenorPreco != null">
+        <span aria-hidden="true">↘</span> Menor preço dos últimos 90 dias: {{ formatPrice(historicoMenorPreco) }}
+      </div>
+    </div>
+    <div class="price-chart-card price-chart-empty" *ngIf="!temHistoricoSuficiente && game.offers.length">
+      <span>Ainda estamos acompanhando o histórico de preço deste jogo — volte em alguns dias para ver a evolução.</span>
+    </div>
+
     <div class="offers-table" *ngIf="game.offers.length; else noOffers">
       <div class="offer-header">
         <span>Loja</span>

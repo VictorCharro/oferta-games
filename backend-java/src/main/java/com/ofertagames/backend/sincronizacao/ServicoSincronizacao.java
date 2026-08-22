@@ -20,6 +20,7 @@ public class ServicoSincronizacao {
   private static final int TAMANHO_LOTE_PRECOS = 200;
   private static final int LIMITE_METADADOS_STEAM = 60;
   private static final int LIMITE_DETALHES_JOGOS = 60;
+  private static final int RETENCAO_HISTORICO_PRECOS_DIAS = 90;
   // Acelerado temporariamente em 09/08/2026: apos corrigir o bug que travava a fila em jogos sem
   // conquistas de verdade (ver games.achievements_checked_at), o backlog real subiu pra 12k+
   // pendentes. Reverter pro ritmo de manutencao (15) quando a fila estiver zerada ou o
@@ -135,6 +136,12 @@ public class ServicoSincronizacao {
     int atualizados = instantGaming.atualizarPrecos(LIMITE_INSTANT_GAMING_PRECOS);
     logger.info("Coleta agendada de precos Instant Gaming concluida: {} jogos atualizados", atualizados);
     return new ResultadoRodadaColeta(0, atualizados);
+  }
+
+  public ResultadoRodadaColeta podarHistoricoDePrecos() {
+    int apagadas = jogos.podarHistoricoDePrecos(RETENCAO_HISTORICO_PRECOS_DIAS);
+    logger.info("Poda do historico de precos concluida: {} linhas apagadas (retencao de {} dias)", apagadas, RETENCAO_HISTORICO_PRECOS_DIAS);
+    return new ResultadoRodadaColeta(0, apagadas);
   }
 
   private ServicoCatalogo.ResultadoAtualizacaoLote atualizarLoteComTentativas(

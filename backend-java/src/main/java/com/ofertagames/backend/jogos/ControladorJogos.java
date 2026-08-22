@@ -75,6 +75,17 @@ public class ControladorJogos {
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
+  @GetMapping("/{slug}/historico-precos")
+  ResponseEntity<List<RepositorioJogos.PontoHistoricoPreco>> historicoPrecos(
+      @PathVariable String slug,
+      @RequestParam(defaultValue = "90") int dias
+  ) {
+    int diasSeguro = Math.min(90, Math.max(1, dias));
+    return jogos.buscarIdPorSlug(slug)
+        .map(id -> ResponseEntity.ok(jogos.listarHistoricoDePrecos(id, diasSeguro)))
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
   @GetMapping("/{slug}/detalhes")
   ResponseEntity<DetalhesJogo> detalhes(@PathVariable String slug) {
     return jogos.buscarIdPorSlug(slug)
