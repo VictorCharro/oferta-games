@@ -81,6 +81,8 @@
   flex-direction: column;
   gap: 16px;
   color: #fff;
+  flex: 1 1 auto;
+  min-width: 0;
   h1 { font-size: 32px; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
 }
 
