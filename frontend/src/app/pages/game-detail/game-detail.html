@@ -113,65 +113,68 @@
   </section>
 
   <div class="offers-section" *ngIf="activeTab === 'precos'">
-    <div class="price-chart-card" *ngIf="temHistoricoSuficiente">
-      <div class="price-chart-header">
-        <span>Histórico de preço (90 dias)</span>
-        <span class="price-chart-current" *ngIf="historicoUltimoPonto as ultimo">{{ formatPrice(ultimo.price) }}</span>
-      </div>
-      <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" class="price-chart-svg" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="priceAreaGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="var(--color-purple)" stop-opacity="0.35" />
-            <stop offset="100%" stop-color="var(--color-purple)" stop-opacity="0" />
-          </linearGradient>
-        </defs>
-        <path [attr.d]="historicoAreaPath" class="price-chart-area"></path>
-        <path [attr.d]="historicoLinhaPath" class="price-chart-line"></path>
-        <circle *ngIf="historicoUltimoPonto as ultimo" [attr.cx]="ultimo.x" [attr.cy]="ultimo.y" r="4" class="price-chart-dot"></circle>
-      </svg>
-      <div class="price-chart-axis-x">
-        <span *ngFor="let rotulo of historicoRotulosEixoX">{{ rotulo }}</span>
-      </div>
-      <div class="price-chart-note" *ngIf="historicoMenorPreco != null">
-        <span aria-hidden="true">↘</span> Menor preço dos últimos 90 dias: {{ formatPrice(historicoMenorPreco) }}
-      </div>
-    </div>
     <div class="price-chart-card price-chart-empty" *ngIf="!temHistoricoSuficiente && game.offers.length">
       <span>Ainda estamos acompanhando o histórico de preço deste jogo — volte em alguns dias para ver a evolução.</span>
     </div>
 
-    <div class="offers-table" *ngIf="game.offers.length; else noOffers">
-      <div class="offer-header">
-        <span>Loja</span>
-        <span>Plataforma</span>
-        <span>Desconto</span>
-        <span>Preço Regular</span>
-        <span>Preço Atual</span>
-        <span></span>
-      </div>
-      <a *ngFor="let offer of game.offers" class="offer-row" [href]="offer.url" target="_blank" rel="noopener">
-        <span class="offer-store">
-          <img class="store-logo" [src]="storeLogo(offer.storeName)" [alt]="offer.storeName" />
-          <span>{{ offer.storeName }}</span>
-        </span>
-        <span class="offer-platforms">
-          <span *ngFor="let platform of platforms(offer.storeName, offer.url)" class="platform-chip" [title]="platform.name">
-            <img [src]="platform.logo" [alt]="platform.name" />
-            <span>{{ platform.name }}</span>
+    <div class="precos-split" [class.com-grafico]="temHistoricoSuficiente">
+      <div class="offers-table" *ngIf="game.offers.length; else noOffers">
+        <div class="offer-header">
+          <span>Loja</span>
+          <span>Plataforma</span>
+          <span>Desconto</span>
+          <span>Preço Regular</span>
+          <span>Preço Atual</span>
+          <span></span>
+        </div>
+        <a *ngFor="let offer of game.offers" class="offer-row" [href]="offer.url" target="_blank" rel="noopener">
+          <span class="offer-store">
+            <img class="store-logo" [src]="storeLogo(offer.storeName)" [alt]="offer.storeName" />
+            <span>{{ offer.storeName }}</span>
           </span>
-        </span>
-        <span class="offer-discount" *ngIf="discount(offer) > 0">-{{ discount(offer) }}%</span>
-        <span class="offer-discount none" *ngIf="discount(offer) === 0">—</span>
-        <span class="price-original">{{ offer.regularPrice ? formatPrice(offer.regularPrice) : '—' }}</span>
-        <span class="price-current">{{ formatPrice(offer.price) }}<span class="voucher-badge" *ngIf="offer.voucherCode" [title]="'Use o cupom ' + offer.voucherCode + ' no carrinho da loja pra garantir esse preço'">Cupom {{ offer.voucherCode }}</span></span>
-        <span class="offer-cta">Ver oferta →</span>
-      </a>
-    </div>
-    <ng-template #noOffers>
-      <div class="no-offers">
-        <p>Nenhuma oferta encontrada. Clique em "Atualizar preços" para buscar.</p>
+          <span class="offer-platforms">
+            <span *ngFor="let platform of platforms(offer.storeName, offer.url)" class="platform-chip" [title]="platform.name">
+              <img [src]="platform.logo" [alt]="platform.name" />
+              <span>{{ platform.name }}</span>
+            </span>
+          </span>
+          <span class="offer-discount" *ngIf="discount(offer) > 0">-{{ discount(offer) }}%</span>
+          <span class="offer-discount none" *ngIf="discount(offer) === 0">—</span>
+          <span class="price-original">{{ offer.regularPrice ? formatPrice(offer.regularPrice) : '—' }}</span>
+          <span class="price-current">{{ formatPrice(offer.price) }}<span class="voucher-badge" *ngIf="offer.voucherCode" [title]="'Use o cupom ' + offer.voucherCode + ' no carrinho da loja pra garantir esse preço'">Cupom {{ offer.voucherCode }}</span></span>
+          <span class="offer-cta">Ver oferta →</span>
+        </a>
       </div>
-    </ng-template>
+      <ng-template #noOffers>
+        <div class="no-offers">
+          <p>Nenhuma oferta encontrada. Clique em "Atualizar preços" para buscar.</p>
+        </div>
+      </ng-template>
+
+      <div class="price-chart-card" *ngIf="temHistoricoSuficiente">
+        <div class="price-chart-header">
+          <span>Histórico de preço (90 dias)</span>
+          <span class="price-chart-current" *ngIf="historicoUltimoPonto as ultimo">{{ formatPrice(ultimo.price) }}</span>
+        </div>
+        <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" class="price-chart-svg" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="priceAreaGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--color-purple)" stop-opacity="0.35" />
+              <stop offset="100%" stop-color="var(--color-purple)" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <path [attr.d]="historicoAreaPath" class="price-chart-area"></path>
+          <path [attr.d]="historicoLinhaPath" class="price-chart-line"></path>
+          <circle *ngIf="historicoUltimoPonto as ultimo" [attr.cx]="ultimo.x" [attr.cy]="ultimo.y" r="4" class="price-chart-dot"></circle>
+        </svg>
+        <div class="price-chart-axis-x">
+          <span *ngFor="let rotulo of historicoRotulosEixoX">{{ rotulo }}</span>
+        </div>
+        <div class="price-chart-note" *ngIf="historicoMenorPreco != null">
+          <span aria-hidden="true">↘</span> Menor preço dos últimos 90 dias: {{ formatPrice(historicoMenorPreco) }}
+        </div>
+      </div>
+    </div>
 
     <div class="dlc-section" *ngIf="game.jogosBase.length">
       <h2>Jogo base</h2>

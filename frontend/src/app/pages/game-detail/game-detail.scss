@@ -1428,6 +1428,32 @@
   .achievements-summary { grid-template-columns: 1fr; }
 }
 
+.precos-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+
+  &.com-grafico {
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .precos-split.com-grafico { grid-template-columns: 1fr; }
+}
+
+.precos-split.com-grafico .offer-header,
+.precos-split.com-grafico .offer-row {
+  grid-template-columns: minmax(160px, 1fr) repeat(4, minmax(0, 72px)) 70px;
+  padding-left: 14px;
+  padding-right: 14px;
+  gap: 6px;
+}
+
+.precos-split.com-grafico .offer-platforms .platform-chip span { display: none; }
+.precos-split.com-grafico .offer-cta { font-size: 11px; }
+
 .price-chart-card {
   background: var(--bg-card);
   border-radius: var(--border-radius);
@@ -1435,6 +1461,8 @@
   padding: 20px 20px 16px;
   margin-bottom: 20px;
 }
+
+.precos-split .price-chart-card { margin-bottom: 0; }
 
 .price-chart-empty {
   text-align: center;
