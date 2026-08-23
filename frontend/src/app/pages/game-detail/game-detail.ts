@@ -337,6 +337,11 @@ export class GameDetail implements OnInit, OnDestroy {
     return this.priceHistory.length ? Math.min(...this.priceHistory.map(p => Number(p.price))) : null;
   }
 
+  get historicoMenorPrecoLoja(): string | null {
+    if (!this.priceHistory.length) return null;
+    return this.priceHistory.reduce((menor, p) => Number(p.price) < Number(menor.price) ? p : menor).lojaNome;
+  }
+
   private historicoPontosXY(): { x: number; y: number; price: number; data: Date }[] {
     const pontos = this.priceHistory;
     if (pontos.length < 2) return [];

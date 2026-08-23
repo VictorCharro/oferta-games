@@ -168,7 +168,7 @@
           <span *ngFor="let rotulo of historicoRotulosEixoX">{{ rotulo }}</span>
         </div>
         <div class="price-chart-note" *ngIf="historicoMenorPreco != null">
-          <span aria-hidden="true">↘</span> Menor preço dos últimos 90 dias: {{ formatPrice(historicoMenorPreco) }}
+          <span aria-hidden="true">↘</span> Menor preço dos últimos 90 dias: {{ formatPrice(historicoMenorPreco) }}<ng-container *ngIf="historicoMenorPrecoLoja as loja"> na {{ loja }}</ng-container>
         </div>
       </div>
       <div class="price-chart-card price-chart-empty" *ngIf="!temHistoricoSuficiente && game.offers.length">

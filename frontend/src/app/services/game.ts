@@ -101,6 +101,7 @@ export interface RespostaAvaliacoesSteam {
 
 export interface PontoHistoricoPreco {
   price: number;
+  lojaNome: string | null;
   capturadoEm: string;
 }
 

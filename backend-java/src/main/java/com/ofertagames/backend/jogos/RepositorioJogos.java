@@ -406,14 +406,17 @@ public class RepositorioJogos {
       return;
     }
     List<Long> idsUnicos = List.copyOf(new LinkedHashSet<>(jogosIds));
+    // Ignora lojas bloqueadas (mesmo filtro da tabela de ofertas da pagina do jogo) - senao o
+    // "menor preco" do historico podia vir de uma loja que o usuario nem consegue ver na pagina.
     jdbc.sql("""
-        INSERT INTO price_history (game_id, price)
-        SELECT atual.game_id, atual.preco
+        INSERT INTO price_history (game_id, price, store_name)
+        SELECT atual.game_id, atual.preco, atual.loja
         FROM (
-          SELECT game_id, MIN(price) AS preco
-          FROM offers
-          WHERE game_id IN (:jogosIds)
-          GROUP BY game_id
+          SELECT DISTINCT ON (o.game_id) o.game_id, o.price AS preco, o.store_name AS loja
+          FROM offers o
+          WHERE o.game_id IN (:jogosIds)
+            %s
+          ORDER BY o.game_id, o.price ASC
         ) atual
         WHERE atual.preco IS DISTINCT FROM (
           SELECT ph.price FROM price_history ph
@@ -421,14 +424,14 @@ public class RepositorioJogos {
           ORDER BY ph.captured_at DESC
           LIMIT 1
         )
-        """)
+        """.formatted(LojasBloqueadas.filtroSql("o")))
         .param("jogosIds", idsUnicos)
         .update();
   }
 
   public List<PontoHistoricoPreco> listarHistoricoDePrecos(long jogoId, int dias) {
     return jdbc.sql("""
-        SELECT price, captured_at
+        SELECT price, store_name, captured_at
         FROM price_history
         WHERE game_id = :jogoId AND captured_at >= now() - make_interval(days => :dias)
         ORDER BY captured_at ASC
@@ -437,6 +440,7 @@ public class RepositorioJogos {
         .param("dias", dias)
         .query((rs, linha) -> new PontoHistoricoPreco(
             rs.getBigDecimal("price"),
+            rs.getString("store_name"),
             rs.getTimestamp("captured_at").toInstant()))
         .list();
   }
@@ -448,7 +452,7 @@ public class RepositorioJogos {
         .update();
   }
 
-  public record PontoHistoricoPreco(BigDecimal price, java.time.Instant capturadoEm) {}
+  public record PontoHistoricoPreco(BigDecimal price, String lojaNome, java.time.Instant capturadoEm) {}
 
   @Transactional
   public int substituirOfertasItad(long jogoId, List<OfertaParaSalvar> ofertas) {
