@@ -60,6 +60,14 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+// Reserva o espaco da barra de rolagem vertical sempre, mesmo em paginas/abas curtas o bastante
+// pra nao precisar dela. Sem isso, trocar de aba (ex: pagina do jogo) entre um conteudo curto e
+// um longo faz a barra aparecer/sumir, mudando a largura disponivel da pagina inteira e
+// redimensionando qualquer elemento cujo tamanho dependa dela (ex: a capa do jogo).
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-primary);
