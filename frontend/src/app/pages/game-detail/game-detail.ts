@@ -133,14 +133,24 @@ export class GameDetail implements OnInit, OnDestroy {
   private ensureResizeObserver() {
     if (this.resizeObserver || typeof ResizeObserver === 'undefined') return;
     this.resizeObserver = new ResizeObserver(entries => {
+      // heroContentEl (#heroContentRef) e o proprio grid que contem a capa - a ALTURA dele muda
+      // toda vez que a capa muda de altura (a linha do grid acompanha o item mais alto), entao o
+      // observer notifica de novo mesmo quando so nos interessa a LARGURA dele (que nao mudou).
+      // So chama recomputarTamanhoCapa() quando o valor que realmente usamos mudou - sem essa
+      // guarda, cada escrita de altura na capa reacionava o observer, e em certas larguras de tela
+      // isso nunca convergia (visto como "ResizeObserver loop completed with undelivered
+      // notifications" no console, mesmo com a guarda em recomputarTamanhoCapa em si).
+      let mudou = false;
       for (const entry of entries) {
         if (entry.target === this.factsEl) {
-          this.heroFactsHeight = entry.contentRect.height;
+          const altura = entry.contentRect.height;
+          if (Math.round(altura) !== Math.round(this.heroFactsHeight)) { this.heroFactsHeight = altura; mudou = true; }
         } else if (entry.target === this.contentEl) {
-          this.heroContentWidth = entry.contentRect.width;
+          const largura = entry.contentRect.width;
+          if (Math.round(largura) !== Math.round(this.heroContentWidth)) { this.heroContentWidth = largura; mudou = true; }
         }
       }
-      this.recomputarTamanhoCapa();
+      if (mudou) this.recomputarTamanhoCapa();
     });
   }
 
