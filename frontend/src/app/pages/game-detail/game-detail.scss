@@ -30,7 +30,11 @@
 
 .hero-content {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  // Coluna da capa encolhivel (min 160px) e coluna do meio com um minimo confortavel pro bloco de
+  // titulo/preco/botoes nao quebrar linha: quando falta espaco, o proprio grid encolhe a capa ate
+  // esse limite. Isso substitui o calculo de "orcamento de largura" que o componente fazia em JS
+  // medindo .hero-content - medida circular que gerava loop de ResizeObserver (ver game-detail.ts).
+  grid-template-columns: minmax(160px, auto) minmax(330px, 1fr) auto;
   gap: 32px;
   align-items: stretch;
 }
@@ -93,10 +97,13 @@
 }
 
 .hero-cover-wrap {
-  // Largura/altura vem via [style] no componente (game-detail.ts:recomputarTamanhoCapa),
-  // calculadas em runtime pra acompanhar a altura do cartao de ficha tecnica e a proporcao real
-  // da imagem sem cortar nada nem sobrar borda - ver comentario no .ts.
+  // So a LARGURA ideal vem via [style] do componente (altura da ficha tecnica x proporcao real da
+  // imagem - ver game-detail.ts). A altura sai daqui, por aspect-ratio, e max-width deixa o grid
+  // encolher a capa quando falta espaco - encolhendo, a altura acompanha sozinha e a imagem
+  // continua sem cortar nem sobrar borda.
   align-self: center;
+  aspect-ratio: var(--cover-ratio, 2.1);
+  max-width: 100%;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -111,13 +118,10 @@
 }
 
 @media (max-width: 900px) {
-  // Layout empilhado: o calculo em runtime e pra linha lado a lado, entao ignora as dimensoes em
-  // px vindas do [style] (!important vence estilo inline) e volta a proporcao natural da imagem.
-  .hero-cover-wrap {
-    width: 100% !important;
-    height: auto !important;
-    aspect-ratio: var(--cover-ratio, 16 / 9);
-  }
+  // Layout empilhado: a largura ideal calculada pra linha lado a lado nao vale aqui, entao ignora
+  // o valor em px vindo do [style] (!important vence estilo inline) e ocupa a largura toda - a
+  // altura continua saindo do aspect-ratio da regra base.
+  .hero-cover-wrap { width: 100% !important; }
 }
 
 .hero-info {

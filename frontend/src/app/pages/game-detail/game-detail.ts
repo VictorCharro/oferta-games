@@ -61,7 +61,6 @@ export class GameDetail implements OnInit, OnDestroy {
   filtroConquistas: 'todas' | 'desbloqueadas' | 'bloqueadas' = 'todas';
   priceHistory: PontoHistoricoPreco[] = [];
   heroCoverWidth = 400;
-  heroCoverHeight = 225;
   capaCarregada = false;
   private imagemCapaCarregada = false;
   private fichaTecnicaResolvida = false;
@@ -77,10 +76,8 @@ export class GameDetail implements OnInit, OnDestroy {
   // (fica mais perto do formato final, reduzindo o quanto a caixa muda quando a imagem chega).
   private coverNaturalRatio = 2.1;
   private heroFactsHeight = 0;
-  private heroContentWidth = 0;
   private resizeObserver?: ResizeObserver;
   private factsEl?: HTMLElement;
-  private contentEl?: HTMLElement;
   readonly chartWidth = 700;
   readonly chartHeight = 220;
   private routeSub?: Subscription;
@@ -100,14 +97,20 @@ export class GameDetail implements OnInit, OnDestroy {
     private seo: SeoService
   ) {}
 
-  // A capa segue a altura do cartao de ficha tecnica (medida em tempo real, ja que o conteudo do
+  // A capa acompanha a altura do cartao de ficha tecnica (medida em runtime, ja que o conteudo do
   // cartao varia por jogo) mantendo a proporcao real da propria imagem - so assim da pra encher a
   // caixa inteira sem cortar nada nem sobrar borda (uma proporcao fixa tipo 16:9 nao bate com o
-  // formato real das capas, que sao mais largas, tipo 2.1:1). Mas so a altura do cartao nao basta:
-  // numa tela mais estreita, deixar a largura crescer livre (altura x proporcao) espremeria o bloco
-  // de titulo/preco/botoes ate quebrar os botoes em duas linhas de novo - por isso tambem observa a
-  // largura da linha inteira e limita a capa ao espaco que sobra depois de reservar o cartao e uma
-  // largura minima confortavel pro bloco de titulo/botoes.
+  // formato real das capas, que sao mais largas, tipo 2.1:1).
+  //
+  // O JS aqui calcula SO a largura ideal (altura da ficha x proporcao). O limite pra capa nao
+  // espremer o bloco de titulo/preco/botoes numa tela estreita e feito 100% em CSS, pelo proprio
+  // grid (ver .hero-content/.hero-cover-wrap no .scss): a coluna da capa encolhe e a altura vem de
+  // aspect-ratio. Isso e proposital - a versao anterior media a largura de .hero-content pra
+  // calcular esse limite, e essa medida e circular: a altura da capa muda a altura da pagina, que
+  // faz a barra de rolagem aparecer/sumir, que muda a largura disponivel, que muda a largura da
+  // capa... O navegador abortava esse ciclo no meio ("ResizeObserver loop completed with
+  // undelivered notifications"), deixando a capa num tamanho diferente a cada vez - era isso que
+  // fazia ela mudar de tamanho ao trocar de aba. Sem medir largura, o ciclo nao existe.
   @ViewChild('factsRef') set factsRefSetter(ref: ElementRef<HTMLElement> | undefined) {
     if (this.factsEl) this.resizeObserver?.unobserve(this.factsEl);
     this.factsEl = ref?.nativeElement;
@@ -120,49 +123,26 @@ export class GameDetail implements OnInit, OnDestroy {
     this.medirEAtualizarCapa();
   }
 
-  @ViewChild('heroContentRef') set contentRefSetter(ref: ElementRef<HTMLElement> | undefined) {
-    if (this.contentEl) this.resizeObserver?.unobserve(this.contentEl);
-    this.contentEl = ref?.nativeElement;
-    if (this.contentEl) {
-      this.ensureResizeObserver();
-      this.resizeObserver?.observe(this.contentEl);
-    }
-    this.medirEAtualizarCapa();
-  }
-
   private ensureResizeObserver() {
     if (this.resizeObserver || typeof ResizeObserver === 'undefined') return;
+    // So observa a ficha tecnica, e so a altura dela. A ficha vive numa coluna de largura fixa
+    // (260px) e com align-self:start, entao a altura dela nao depende em nada do tamanho da capa -
+    // nao ha como realimentar.
     this.resizeObserver = new ResizeObserver(entries => {
-      // heroContentEl (#heroContentRef) e o proprio grid que contem a capa - a ALTURA dele muda
-      // toda vez que a capa muda de altura (a linha do grid acompanha o item mais alto), entao o
-      // observer notifica de novo mesmo quando so nos interessa a LARGURA dele (que nao mudou).
-      // So chama recomputarTamanhoCapa() quando o valor que realmente usamos mudou - sem essa
-      // guarda, cada escrita de altura na capa reacionava o observer, e em certas larguras de tela
-      // isso nunca convergia (visto como "ResizeObserver loop completed with undelivered
-      // notifications" no console, mesmo com a guarda em recomputarTamanhoCapa em si).
-      let mudou = false;
       for (const entry of entries) {
-        if (entry.target === this.factsEl) {
-          const altura = entry.contentRect.height;
-          if (Math.round(altura) !== Math.round(this.heroFactsHeight)) { this.heroFactsHeight = altura; mudou = true; }
-        } else if (entry.target === this.contentEl) {
-          const largura = entry.contentRect.width;
-          if (Math.round(largura) !== Math.round(this.heroContentWidth)) { this.heroContentWidth = largura; mudou = true; }
-        }
+        if (entry.target !== this.factsEl) continue;
+        const altura = entry.contentRect.height;
+        if (Math.round(altura) === Math.round(this.heroFactsHeight)) continue;
+        this.heroFactsHeight = altura;
+        this.recomputarTamanhoCapa();
       }
-      // Adia a escrita real (recomputarTamanhoCapa muda [style.width.px]/[style.height.px]) pro
-      // proximo frame via requestAnimationFrame - recomendacao oficial da spec do ResizeObserver
-      // pra evitar o aviso "loop completed with undelivered notifications", que acontece quando o
-      // callback muda o layout do proprio elemento observado (ou de um elemento cujo tamanho
-      // influencia o observado) de forma sincrona, dentro do mesmo frame da notificacao.
-      if (mudou) requestAnimationFrame(() => this.recomputarTamanhoCapa());
     });
   }
 
-  // ResizeObserver cobre a maioria dos casos (redimensionar a janela, o cartao crescer depois que
-  // os detalhes do jogo chegam), mas seu callback e assincrono/atrelado ao ciclo de renderizacao do
-  // navegador - le direto com getBoundingClientRect tambem, de forma sincrona, como reforco pra
-  // pegar o tamanho certo já na primeira medida (e nao depender so do observer disparar a tempo).
+  // ResizeObserver cobre a maioria dos casos (o cartao crescer depois que os detalhes do jogo
+  // chegam), mas seu callback e assincrono/atrelado ao ciclo de renderizacao do navegador - le
+  // direto com getBoundingClientRect tambem, de forma sincrona, como reforco pra pegar o tamanho
+  // certo já na primeira medida (e nao depender so do observer disparar a tempo).
   private medirEAtualizarCapa() {
     // No SSR o DOM e simulado (domino) e nao implementa getBoundingClientRect - sem essa guarda a
     // medicao lancava excecao nao tratada toda vez que a pagina do jogo era aberta direto (sem vir
@@ -170,39 +150,14 @@ export class GameDetail implements OnInit, OnDestroy {
     // o JS do cliente assumia - o que na pratica aparecia pro usuario como a capa "pulando" de
     // tamanho ~1-2s depois de a pagina abrir.
     if (this.factsEl?.getBoundingClientRect) this.heroFactsHeight = this.factsEl.getBoundingClientRect().height;
-    if (this.contentEl?.getBoundingClientRect) this.heroContentWidth = this.contentEl.getBoundingClientRect().width;
     this.recomputarTamanhoCapa();
   }
 
-  @HostListener('window:resize')
-  onHeroResize() {
-    this.medirEAtualizarCapa();
-  }
-
   private recomputarTamanhoCapa() {
-    const GAP = 32;
-    const LARGURA_FICHA = this.temFichaTecnica ? 260 : 0;
-    const LARGURA_MINIMA_INFO = 330; // pro titulo/preco/botoes nao quebrarem linha
     const alturaAlvo = Math.max(160, this.heroFactsHeight || 225);
-
-    let largura = alturaAlvo * this.coverNaturalRatio;
-    if (this.heroContentWidth > 0) {
-      const orcamento = this.heroContentWidth - LARGURA_FICHA - LARGURA_MINIMA_INFO - GAP * 2;
-      if (orcamento > 0) largura = Math.min(largura, orcamento);
-    }
-    largura = Math.max(160, largura);
-
-    const novaLargura = Math.round(largura);
-    const novaAltura = Math.round(largura / this.coverNaturalRatio);
-    // Guarda contra loop: a capa e filha do proprio elemento observado (#heroContentRef), com a
-    // coluna dela no grid em "auto" - reescrever a largura muda o tamanho do elemento observado,
-    // o que reaciona o ResizeObserver de novo. Sem esse "so escreve se mudou", isso podia entrar
-    // num ciclo de centenas de recalculos (visto em teste: 600+ chamadas, ~1s travado) toda vez
-    // que o layout ao redor da capa mudava (ex: trocar de aba muda a altura da pagina).
-    if (novaLargura === this.heroCoverWidth && novaAltura === this.heroCoverHeight) return;
-
+    const novaLargura = Math.round(alturaAlvo * this.coverNaturalRatio);
+    if (novaLargura === this.heroCoverWidth) return;
     this.heroCoverWidth = novaLargura;
-    this.heroCoverHeight = novaAltura;
     this.cdr.detectChanges();
   }
 

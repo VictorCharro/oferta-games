@@ -2,8 +2,8 @@
 <div class="page-content" [class.medindo]="!capaCarregada">
   <div class="game-hero" [style.backgroundImage]="'url(' + (game.coverUrl || '') + ')'">
     <div class="hero-overlay">
-      <div class="hero-content" #heroContentRef>
-        <div class="hero-cover-wrap" [style.width.px]="heroCoverWidth" [style.height.px]="heroCoverHeight" [style.--cover-ratio]="coverAspectRatioCss">
+      <div class="hero-content">
+        <div class="hero-cover-wrap" [style.width.px]="heroCoverWidth" [style.--cover-ratio]="coverAspectRatioCss">
           <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" class="hero-cover" (load)="onCoverLoad($event)" />
         </div>
         <div class="hero-info">
