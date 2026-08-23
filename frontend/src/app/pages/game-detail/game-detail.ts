@@ -150,7 +150,12 @@ export class GameDetail implements OnInit, OnDestroy {
           if (Math.round(largura) !== Math.round(this.heroContentWidth)) { this.heroContentWidth = largura; mudou = true; }
         }
       }
-      if (mudou) this.recomputarTamanhoCapa();
+      // Adia a escrita real (recomputarTamanhoCapa muda [style.width.px]/[style.height.px]) pro
+      // proximo frame via requestAnimationFrame - recomendacao oficial da spec do ResizeObserver
+      // pra evitar o aviso "loop completed with undelivered notifications", que acontece quando o
+      // callback muda o layout do proprio elemento observado (ou de um elemento cujo tamanho
+      // influencia o observado) de forma sincrona, dentro do mesmo frame da notificacao.
+      if (mudou) requestAnimationFrame(() => this.recomputarTamanhoCapa());
     });
   }
 
