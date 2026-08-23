@@ -62,7 +62,20 @@ export class GameDetail implements OnInit, OnDestroy {
   priceHistory: PontoHistoricoPreco[] = [];
   heroCoverWidth = 400;
   heroCoverHeight = 225;
-  private coverNaturalRatio = 16 / 9;
+  capaCarregada = false;
+  private imagemCapaCarregada = false;
+  private fichaTecnicaResolvida = false;
+  // O link "Ver na Steam" (dentro da ficha tecnica) so aparece depois que avaliacoesSteam chega -
+  // uma chamada separada de "detalhes" (ver linkSteam getter e carregarAvaliacoesSteam) - sem
+  // esperar isso tambem, o cartao ganhava mais uma linha e crescia depois da capa ja revelada.
+  private avaliacoesSteamResolvida = false;
+  // Nao reseta por navegacao (as fontes carregam uma vez por sessao, nao por jogo) - evita esperar
+  // de novo em toda troca de jogo.
+  private fontesProntas = false;
+  // Chute inicial pra 1a pintura, antes do <img> real carregar e onCoverLoad() corrigir pro
+  // formato exato - a maioria das capas do catalogo e mais larga que 16:9, entao ~2.1:1 erra menos
+  // (fica mais perto do formato final, reduzindo o quanto a caixa muda quando a imagem chega).
+  private coverNaturalRatio = 2.1;
   private heroFactsHeight = 0;
   private heroContentWidth = 0;
   private resizeObserver?: ResizeObserver;
@@ -100,7 +113,7 @@ export class GameDetail implements OnInit, OnDestroy {
     this.factsEl = ref?.nativeElement;
     if (this.factsEl) {
       this.ensureResizeObserver();
-      this.resizeObserver!.observe(this.factsEl);
+      this.resizeObserver?.observe(this.factsEl);
     } else {
       this.heroFactsHeight = 0;
     }
@@ -112,7 +125,7 @@ export class GameDetail implements OnInit, OnDestroy {
     this.contentEl = ref?.nativeElement;
     if (this.contentEl) {
       this.ensureResizeObserver();
-      this.resizeObserver!.observe(this.contentEl);
+      this.resizeObserver?.observe(this.contentEl);
     }
     this.medirEAtualizarCapa();
   }
@@ -136,8 +149,13 @@ export class GameDetail implements OnInit, OnDestroy {
   // navegador - le direto com getBoundingClientRect tambem, de forma sincrona, como reforco pra
   // pegar o tamanho certo já na primeira medida (e nao depender so do observer disparar a tempo).
   private medirEAtualizarCapa() {
-    if (this.factsEl) this.heroFactsHeight = this.factsEl.getBoundingClientRect().height;
-    if (this.contentEl) this.heroContentWidth = this.contentEl.getBoundingClientRect().width;
+    // No SSR o DOM e simulado (domino) e nao implementa getBoundingClientRect - sem essa guarda a
+    // medicao lancava excecao nao tratada toda vez que a pagina do jogo era aberta direto (sem vir
+    // de navegacao dentro do site), quebrando a renderizacao no servidor e so se corrigindo quando
+    // o JS do cliente assumia - o que na pratica aparecia pro usuario como a capa "pulando" de
+    // tamanho ~1-2s depois de a pagina abrir.
+    if (this.factsEl?.getBoundingClientRect) this.heroFactsHeight = this.factsEl.getBoundingClientRect().height;
+    if (this.contentEl?.getBoundingClientRect) this.heroContentWidth = this.contentEl.getBoundingClientRect().width;
     this.recomputarTamanhoCapa();
   }
 
@@ -174,9 +192,39 @@ export class GameDetail implements OnInit, OnDestroy {
       this.coverNaturalRatio = img.naturalWidth / img.naturalHeight;
       this.recomputarTamanhoCapa();
     }
+    this.imagemCapaCarregada = true;
+    this.atualizarCapaVisivel();
+  }
+
+  // So revela a capa quando IMAGEM e ficha tecnica (que muda a altura-alvo) ja estao no tamanho
+  // final - senao o fade some o salto da proporcao mas nao o salto de altura que vem depois, quando
+  // "detalhes" chega e o cartao de ficha tecnica muda de tamanho (ver carregarDetalhesEConquistasEReviews).
+  private atualizarCapaVisivel() {
+    this.capaCarregada = this.imagemCapaCarregada && this.fichaTecnicaResolvida
+      && this.avaliacoesSteamResolvida && this.fontesProntas;
+  }
+
+  // Fontes web ainda carregando trocam a altura do texto da ficha tecnica (FOUT/FOIT) depois que
+  // imagem e "detalhes" ja pareciam prontos - sem esperar isso tambem, a capa podia revelar 2x
+  // (uma vez cedo demais, outra quando a fonte troca e o cartao reflui). So roda uma vez por sessao.
+  private aguardarFontesEEntao(cb: () => void) {
+    const fonts = typeof document !== 'undefined' ? (document as any).fonts : undefined;
+    if (this.fontesProntas || !fonts || fonts.status === 'loaded') {
+      this.fontesProntas = true;
+      cb();
+      return;
+    }
+    fonts.ready.then(() => {
+      this.fontesProntas = true;
+      cb();
+    });
   }
 
   ngOnInit() {
+    this.aguardarFontesEEntao(() => {
+      this.atualizarCapaVisivel();
+      this.cdr.detectChanges();
+    });
     this.favoriteSub = this.favoritesService.slugs$.subscribe(() => this.cdr.detectChanges());
     this.profileFavoriteSub = this.profileFavoritesService.slugs$.subscribe(() => this.cdr.detectChanges());
     this.profileFavoritesService.load().catch(() => {});
@@ -204,7 +252,11 @@ export class GameDetail implements OnInit, OnDestroy {
         this.resetarFormularioAvaliacao();
         this.filtroConquistas = 'todas';
         this.priceHistory = [];
-        this.coverNaturalRatio = 16 / 9;
+        this.coverNaturalRatio = 2.1;
+        this.capaCarregada = false;
+        this.imagemCapaCarregada = false;
+        this.fichaTecnicaResolvida = false;
+        this.avaliacoesSteamResolvida = false;
         this.heroFactsHeight = 0;
         this.recomputarTamanhoCapa();
         this.cdr.detectChanges();
@@ -248,8 +300,14 @@ export class GameDetail implements OnInit, OnDestroy {
       this.detalhes = detalhes;
       this.cdr.detectChanges();
       // O cartao de ficha tecnica so existe/muda de tamanho depois que "detalhes" chega; espera o
-      // DOM assentar (setTimeout 0) antes de medir de novo.
-      setTimeout(() => this.medirEAtualizarCapa());
+      // DOM assentar (setTimeout 0) antes de medir de novo e so entao liberar a capa (evita
+      // mostrar a capa e, alguns instantes depois, ela pular de tamanho quando o cartao chegar).
+      setTimeout(() => {
+        this.medirEAtualizarCapa();
+        this.fichaTecnicaResolvida = true;
+        this.atualizarCapaVisivel();
+        this.cdr.detectChanges();
+      });
     });
     this.gameService.getGameAchievements(slug).then(conquistas => {
       this.conquistas = conquistas;
@@ -523,6 +581,17 @@ export class GameDetail implements OnInit, OnDestroy {
       this.avaliacoesSteam = avaliacoes;
       this.carregandoAvaliacoesSteam = false;
       this.cdr.detectChanges();
+      if (!this.avaliacoesSteamResolvida) {
+        // O link "Ver na Steam" da ficha tecnica depende de avaliacoesSteam.steamAppId (linkSteam
+        // getter) - espera o DOM assentar (setTimeout 0) antes de medir de novo, mesmo padrao do
+        // "detalhes" (ver carregarDetalhesEConquistasEReviews).
+        setTimeout(() => {
+          this.medirEAtualizarCapa();
+          this.avaliacoesSteamResolvida = true;
+          this.atualizarCapaVisivel();
+          this.cdr.detectChanges();
+        });
+      }
     });
   }
 

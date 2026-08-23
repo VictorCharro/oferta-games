@@ -1,4 +1,5 @@
-<div class="page-content" *ngIf="!loading && game">
+<div class="game-detail-wrap" *ngIf="!loading && game">
+<div class="page-content" [class.medindo]="!capaCarregada">
   <div class="game-hero" [style.backgroundImage]="'url(' + (game.coverUrl || '') + ')'">
     <div class="hero-overlay">
       <div class="hero-content" #heroContentRef>
@@ -558,6 +559,14 @@
       <p class="review-empty" *ngIf="!conquistasFiltradas.length">Nenhuma conquista nesse filtro.</p>
     </div>
   </div>
+</div>
+
+<div class="page-content loading-state" *ngIf="!capaCarregada">
+  <div class="skeleton-hero"></div>
+  <div class="skeleton-table">
+    <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5]"></div>
+  </div>
+</div>
 </div>
 
 <div class="page-content loading-state" *ngIf="loading">

@@ -1,3 +1,20 @@
+.game-detail-wrap {
+  position: relative;
+}
+
+// Enquanto a capa ainda nao assentou (imagem/ficha-tecnica/fontes), o conteudo real fica montado
+// e mensuravel no DOM (senao a medicao nunca teria como acontecer) mas invisivel - o skeleton
+// abaixo cobre por cima, do tamanho exato do conteudo real, sem esticar a pagina. Quando fica
+// pronto, o skeleton some e o conteudo real aparece direto, ja no tamanho final (sem crescer).
+.page-content.medindo {
+  visibility: hidden;
+}
+
+.game-detail-wrap > .loading-state {
+  position: absolute;
+  inset: 0;
+}
+
 .game-hero {
   border-radius: var(--border-radius);
   background-size: cover;
