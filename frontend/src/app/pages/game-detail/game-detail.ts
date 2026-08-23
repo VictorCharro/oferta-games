@@ -76,8 +76,8 @@ export class GameDetail implements OnInit, OnDestroy {
   // (fica mais perto do formato final, reduzindo o quanto a caixa muda quando a imagem chega).
   private coverNaturalRatio = 2.1;
   private heroFactsHeight = 0;
-  private resizeObserver?: ResizeObserver;
   private factsEl?: HTMLElement;
+  private medicaoAgendada = false;
   readonly chartWidth = 700;
   readonly chartHeight = 220;
   private routeSub?: Subscription;
@@ -112,37 +112,30 @@ export class GameDetail implements OnInit, OnDestroy {
   // undelivered notifications"), deixando a capa num tamanho diferente a cada vez - era isso que
   // fazia ela mudar de tamanho ao trocar de aba. Sem medir largura, o ciclo nao existe.
   @ViewChild('factsRef') set factsRefSetter(ref: ElementRef<HTMLElement> | undefined) {
-    if (this.factsEl) this.resizeObserver?.unobserve(this.factsEl);
     this.factsEl = ref?.nativeElement;
-    if (this.factsEl) {
-      this.ensureResizeObserver();
-      this.resizeObserver?.observe(this.factsEl);
-    } else {
-      this.heroFactsHeight = 0;
-    }
+    if (!this.factsEl) this.heroFactsHeight = 0;
     this.medirEAtualizarCapa();
   }
 
-  private ensureResizeObserver() {
-    if (this.resizeObserver || typeof ResizeObserver === 'undefined') return;
-    // So observa a ficha tecnica, e so a altura dela. A ficha vive numa coluna de largura fixa
-    // (260px) e com align-self:start, entao a altura dela nao depende em nada do tamanho da capa -
-    // nao ha como realimentar.
-    this.resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        if (entry.target !== this.factsEl) continue;
-        const altura = entry.contentRect.height;
-        if (Math.round(altura) === Math.round(this.heroFactsHeight)) continue;
-        this.heroFactsHeight = altura;
-        this.recomputarTamanhoCapa();
-      }
+  // Nao usa ResizeObserver de proposito. A ficha tecnica vive numa coluna de largura fixa (260px),
+  // entao a altura dela so muda quando o CONTEUDO dela muda - e isso acontece em pontos conhecidos:
+  // quando "detalhes" chega, quando avaliacoesSteam chega (traz o link "Ver na Steam"), quando as
+  // fontes web carregam e quando a janela cruza o breakpoint de 900px. Todos ja chamam
+  // medirEAtualizarCapa(). Observar continuamente so criava risco: o zone.js do Angular intercepta
+  // o callback do ResizeObserver e dispara change detection a cada notificacao, o que re-renderiza
+  // e pode gerar novas notificacoes - o navegador aborta esse ciclo com "ResizeObserver loop
+  // completed with undelivered notifications", que era o erro que inundava o console ao trocar de
+  // aba na pagina do jogo.
+  @HostListener('window:resize')
+  onJanelaRedimensionada() {
+    if (this.medicaoAgendada) return;
+    this.medicaoAgendada = true;
+    requestAnimationFrame(() => {
+      this.medicaoAgendada = false;
+      this.medirEAtualizarCapa();
     });
   }
 
-  // ResizeObserver cobre a maioria dos casos (o cartao crescer depois que os detalhes do jogo
-  // chegam), mas seu callback e assincrono/atrelado ao ciclo de renderizacao do navegador - le
-  // direto com getBoundingClientRect tambem, de forma sincrona, como reforco pra pegar o tamanho
-  // certo já na primeira medida (e nao depender so do observer disparar a tempo).
   private medirEAtualizarCapa() {
     // No SSR o DOM e simulado (domino) e nao implementa getBoundingClientRect - sem essa guarda a
     // medicao lancava excecao nao tratada toda vez que a pagina do jogo era aberta direto (sem vir
@@ -201,6 +194,8 @@ export class GameDetail implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.aguardarFontesEEntao(() => {
+      // Fonte web trocando muda a altura do texto da ficha tecnica - remede antes de revelar.
+      this.medirEAtualizarCapa();
       this.atualizarCapaVisivel();
       this.cdr.detectChanges();
     });
@@ -269,7 +264,6 @@ export class GameDetail implements OnInit, OnDestroy {
     this.favoriteSub?.unsubscribe();
     this.profileFavoriteSub?.unsubscribe();
     this.hls?.destroy();
-    this.resizeObserver?.disconnect();
     if (this.cooldownInterval) clearInterval(this.cooldownInterval);
     this.seo.reset();
   }
