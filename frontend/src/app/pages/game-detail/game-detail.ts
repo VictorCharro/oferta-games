@@ -177,8 +177,17 @@ export class GameDetail implements OnInit, OnDestroy {
     }
     largura = Math.max(160, largura);
 
-    this.heroCoverWidth = Math.round(largura);
-    this.heroCoverHeight = Math.round(largura / this.coverNaturalRatio);
+    const novaLargura = Math.round(largura);
+    const novaAltura = Math.round(largura / this.coverNaturalRatio);
+    // Guarda contra loop: a capa e filha do proprio elemento observado (#heroContentRef), com a
+    // coluna dela no grid em "auto" - reescrever a largura muda o tamanho do elemento observado,
+    // o que reaciona o ResizeObserver de novo. Sem esse "so escreve se mudou", isso podia entrar
+    // num ciclo de centenas de recalculos (visto em teste: 600+ chamadas, ~1s travado) toda vez
+    // que o layout ao redor da capa mudava (ex: trocar de aba muda a altura da pagina).
+    if (novaLargura === this.heroCoverWidth && novaAltura === this.heroCoverHeight) return;
+
+    this.heroCoverWidth = novaLargura;
+    this.heroCoverHeight = novaAltura;
     this.cdr.detectChanges();
   }
 
