@@ -37,6 +37,13 @@
 
 .hero-facts {
   width: 260px;
+  // align-items:stretch (padrao do .hero-content) esticaria a ficha tecnica pra acompanhar a
+  // altura que a capa recebe via JS - como e a ALTURA DELA (medida via ResizeObserver) que decide
+  // a altura da capa, isso formava um ciclo de realimentacao (capa muda -> estica a ficha -> mede
+  // a ficha esticada -> capa muda de novo...), que em algumas resolucoes nunca convergia (visto
+  // como "ResizeObserver loop completed with undelivered notifications" no console). align-self
+  // start mantem a ficha na altura natural do proprio conteudo, quebrando o ciclo na raiz.
+  align-self: start;
   display: flex;
   flex-direction: column;
   gap: 14px;
