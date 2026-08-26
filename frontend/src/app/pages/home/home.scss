@@ -127,6 +127,21 @@
     }
   }
 
+  .banner-chart {
+    flex: 0 0 300px;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .banner-chart-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
   .banner-nav {
     background: var(--bg-input);
     border: 1px solid var(--border-color);
@@ -166,6 +181,10 @@
       &.active { background: var(--color-purple); }
     }
   }
+}
+
+@media (max-width: 1100px) {
+  .banner .banner-chart { display: none; }
 }
 
 @media (max-width: 768px) {

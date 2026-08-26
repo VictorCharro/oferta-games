@@ -32,6 +32,10 @@
               </span>
             </div>
           </div>
+          <div class="banner-chart" *ngIf="temHistoricoParaChart(f.slug)">
+            <span class="banner-chart-title">Histórico de preço (90 dias)</span>
+            <app-price-history-chart [pontos]="historicoPorSlug[f.slug]"></app-price-history-chart>
+          </div>
         </a>
       </div>
     </div>

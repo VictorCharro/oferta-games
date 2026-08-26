@@ -78,8 +78,6 @@ export class GameDetail implements OnInit, OnDestroy {
   private heroFactsHeight = 0;
   private factsEl?: HTMLElement;
   private medicaoAgendada = false;
-  readonly chartWidth = 700;
-  readonly chartHeight = 220;
   private routeSub?: Subscription;
   private favoriteSub?: Subscription;
   private profileFavoriteSub?: Subscription;
@@ -315,67 +313,8 @@ export class GameDetail implements OnInit, OnDestroy {
     return this.priceHistory.reduce((menor, p) => Number(p.price) < Number(menor.price) ? p : menor).lojaNome;
   }
 
-  hoveredIndex: number | null = null;
-
-  get historicoPontos(): { x: number; y: number; price: number; data: Date }[] {
-    const pontos = this.priceHistory;
-    if (pontos.length < 2) return [];
-    const precos = pontos.map(p => Number(p.price));
-    const min = Math.min(...precos);
-    const max = Math.max(...precos);
-    const faixa = max - min || 1;
-    const paddingX = 8;
-    const paddingTop = 16;
-    const paddingBottom = 28;
-    const larguraUtil = this.chartWidth - paddingX * 2;
-    const alturaUtil = this.chartHeight - paddingTop - paddingBottom;
-    return pontos.map((ponto, i) => ({
-      x: paddingX + (i / (pontos.length - 1)) * larguraUtil,
-      y: paddingTop + alturaUtil - ((Number(ponto.price) - min) / faixa) * alturaUtil,
-      price: Number(ponto.price),
-      data: new Date(ponto.capturadoEm),
-    }));
-  }
-
-  get historicoLinhaPath(): string {
-    return this.historicoPontos.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-  }
-
-  get historicoAreaPath(): string {
-    const pts = this.historicoPontos;
-    if (!pts.length) return '';
-    const base = this.chartHeight - 28;
-    return `${this.historicoLinhaPath} L ${pts[pts.length - 1].x.toFixed(1)} ${base} L ${pts[0].x.toFixed(1)} ${base} Z`;
-  }
-
-  get historicoUltimoPonto() {
-    const pts = this.historicoPontos;
-    return pts.length ? pts[pts.length - 1] : null;
-  }
-
-  get historicoRotulosEixoX(): string[] {
-    const pts = this.historicoPontos;
-    if (pts.length < 2) return [];
-    const indices = [...new Set([0, Math.floor((pts.length - 1) / 2), pts.length - 1])];
-    return indices.map(i => pts[i].data.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }));
-  }
-
-  get pontoHover() {
-    if (this.hoveredIndex == null) return null;
-    return this.historicoPontos[this.hoveredIndex] ?? null;
-  }
-
-  get pontoHoverAlinhamento(): 'start' | 'center' | 'end' {
-    const ph = this.pontoHover;
-    if (!ph) return 'center';
-    const percentual = (ph.x / this.chartWidth) * 100;
-    if (percentual > 82) return 'end';
-    if (percentual < 18) return 'start';
-    return 'center';
-  }
-
-  formatDataCurta(data: Date): string {
-    return data.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
+  get historicoUltimoPreco(): number | null {
+    return this.priceHistory.length ? Number(this.priceHistory[this.priceHistory.length - 1].price) : null;
   }
 
   // So mostra a aba quando ha conteudo real (destaques ou trailer): descricao/screenshots sozinhos

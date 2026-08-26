@@ -1,0 +1,25 @@
+<div class="price-chart-wrap" *ngIf="temHistoricoSuficiente">
+  <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" class="price-chart-svg" preserveAspectRatio="none">
+    <defs>
+      <linearGradient [attr.id]="gradientId" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--color-purple)" stop-opacity="0.35" />
+        <stop offset="100%" stop-color="var(--color-purple)" stop-opacity="0" />
+      </linearGradient>
+    </defs>
+    <path [attr.d]="areaPath" class="price-chart-area" [attr.fill]="'url(#' + gradientId + ')'"></path>
+    <path [attr.d]="linhaPath" class="price-chart-line"></path>
+    <circle *ngIf="ultimoPonto as ultimo" [attr.cx]="ultimo.x" [attr.cy]="ultimo.y" r="4" class="price-chart-dot"></circle>
+    <line *ngIf="pontoHover as ph" [attr.x1]="ph.x" [attr.y1]="0" [attr.x2]="ph.x" [attr.y2]="chartHeight - 28" class="price-chart-guide"></line>
+    <circle *ngIf="pontoHover as ph" [attr.cx]="ph.x" [attr.cy]="ph.y" r="5" class="price-chart-dot price-chart-dot-hover"></circle>
+    <circle *ngFor="let p of pontosXY; let i = index" [attr.cx]="p.x" [attr.cy]="p.y" r="14" class="price-chart-hit"
+      (mouseenter)="hoveredIndex = i" (mouseleave)="hoveredIndex = null"></circle>
+  </svg>
+  <div class="price-chart-tooltip" *ngIf="pontoHover as ph" [style.left.%]="(ph.x / chartWidth) * 100" [style.top.%]="(ph.y / chartHeight) * 100"
+    [class.price-chart-tooltip--start]="pontoHoverAlinhamento === 'start'" [class.price-chart-tooltip--end]="pontoHoverAlinhamento === 'end'">
+    <strong>{{ formatPrice(ph.price) }}</strong>
+    <span>{{ formatDataCurta(ph.data) }}</span>
+  </div>
+  <div class="price-chart-axis-x" *ngIf="mostrarEixoX">
+    <span *ngFor="let rotulo of rotulosEixoX">{{ rotulo }}</span>
+  </div>
+</div>

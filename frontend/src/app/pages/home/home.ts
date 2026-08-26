@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
-import { Subscription } from 'rxjs';
-import { GameService, TopDeal, GameSummary } from '../../services/game';
+import { Subscription, catchError, of } from 'rxjs';
+import { GameService, TopDeal, GameSummary, PontoHistoricoPreco } from '../../services/game';
 import { FavoritesService } from '../../services/favorites';
 import { resolveDlc } from '../../services/filters';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
@@ -34,6 +34,7 @@ export class Home implements OnInit, OnDestroy {
   topDiscountGames: DealCardView[] = [];
   topDiscountDlcs: DealCardView[] = [];
   featuredIndex = 0;
+  historicoPorSlug: Record<string, PontoHistoricoPreco[]> = {};
   loading = true;
   error = false;
   preferredPlatformLabel = '';
@@ -109,6 +110,7 @@ export class Home implements OnInit, OnDestroy {
         this.famousGames = this.shuffle(paid).slice(0, 20).map(d => this.fromTopDeal(d));
         this.loading = false;
         this.startAutoplay();
+        this.carregarHistoricoSlideAtual();
         this.cdr.detectChanges();
       },
       error: () => { this.loading = false; this.error = true; this.cdr.detectChanges(); }
@@ -139,6 +141,7 @@ export class Home implements OnInit, OnDestroy {
   goToFeatured(i: number) {
     this.featuredIndex = i;
     this.startAutoplay();
+    this.carregarHistoricoSlideAtual();
   }
 
   private startAutoplay() {
@@ -146,8 +149,22 @@ export class Home implements OnInit, OnDestroy {
     if (this.featuredDeals.length <= 1) return;
     this.autoplayTimer = setInterval(() => {
       this.featuredIndex = (this.featuredIndex + 1) % this.featuredDeals.length;
+      this.carregarHistoricoSlideAtual();
       this.cdr.detectChanges();
     }, this.autoplayIntervalMs);
+  }
+
+  temHistoricoParaChart(slug: string): boolean {
+    return (this.historicoPorSlug[slug]?.length ?? 0) >= 2;
+  }
+
+  private carregarHistoricoSlideAtual() {
+    const slide = this.featuredDeals[this.featuredIndex];
+    if (!slide || this.historicoPorSlug[slide.slug]) return;
+    this.gameService.getPriceHistory(slide.slug).pipe(catchError(() => of([]))).subscribe(historico => {
+      this.historicoPorSlug[slide.slug] = historico;
+      this.cdr.detectChanges();
+    });
   }
 
   private stopAutoplay() {
