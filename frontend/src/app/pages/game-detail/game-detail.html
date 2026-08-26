@@ -169,7 +169,8 @@
             <circle *ngFor="let p of historicoPontos; let i = index" [attr.cx]="p.x" [attr.cy]="p.y" r="14" class="price-chart-hit"
               (mouseenter)="hoveredIndex = i" (mouseleave)="hoveredIndex = null"></circle>
           </svg>
-          <div class="price-chart-tooltip" *ngIf="pontoHover as ph" [style.left.%]="(ph.x / chartWidth) * 100" [style.top.%]="(ph.y / chartHeight) * 100">
+          <div class="price-chart-tooltip" *ngIf="pontoHover as ph" [style.left.%]="(ph.x / chartWidth) * 100" [style.top.%]="(ph.y / chartHeight) * 100"
+            [class.price-chart-tooltip--start]="pontoHoverAlinhamento === 'start'" [class.price-chart-tooltip--end]="pontoHoverAlinhamento === 'end'">
             <strong>{{ formatPrice(ph.price) }}</strong>
             <span>{{ formatDataCurta(ph.data) }}</span>
           </div>

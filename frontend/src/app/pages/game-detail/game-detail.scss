@@ -1572,6 +1572,14 @@
   z-index: 2;
 }
 
+.price-chart-tooltip--start {
+  transform: translate(-6%, -130%);
+}
+
+.price-chart-tooltip--end {
+  transform: translate(-94%, -130%);
+}
+
 .price-chart-tooltip strong {
   color: var(--color-purple);
   font-size: 13px;

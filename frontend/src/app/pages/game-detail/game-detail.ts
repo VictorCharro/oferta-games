@@ -365,6 +365,15 @@ export class GameDetail implements OnInit, OnDestroy {
     return this.historicoPontos[this.hoveredIndex] ?? null;
   }
 
+  get pontoHoverAlinhamento(): 'start' | 'center' | 'end' {
+    const ph = this.pontoHover;
+    if (!ph) return 'center';
+    const percentual = (ph.x / this.chartWidth) * 100;
+    if (percentual > 82) return 'end';
+    if (percentual < 18) return 'start';
+    return 'center';
+  }
+
   formatDataCurta(data: Date): string {
     return data.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
   }
