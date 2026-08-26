@@ -153,17 +153,27 @@
           <span>Histórico de preço (90 dias)</span>
           <span class="price-chart-current" *ngIf="historicoUltimoPonto as ultimo">{{ formatPrice(ultimo.price) }}</span>
         </div>
-        <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" class="price-chart-svg" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="priceAreaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="var(--color-purple)" stop-opacity="0.35" />
-              <stop offset="100%" stop-color="var(--color-purple)" stop-opacity="0" />
-            </linearGradient>
-          </defs>
-          <path [attr.d]="historicoAreaPath" class="price-chart-area"></path>
-          <path [attr.d]="historicoLinhaPath" class="price-chart-line"></path>
-          <circle *ngIf="historicoUltimoPonto as ultimo" [attr.cx]="ultimo.x" [attr.cy]="ultimo.y" r="4" class="price-chart-dot"></circle>
-        </svg>
+        <div class="price-chart-wrap">
+          <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" class="price-chart-svg" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="priceAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--color-purple)" stop-opacity="0.35" />
+                <stop offset="100%" stop-color="var(--color-purple)" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <path [attr.d]="historicoAreaPath" class="price-chart-area"></path>
+            <path [attr.d]="historicoLinhaPath" class="price-chart-line"></path>
+            <circle *ngIf="historicoUltimoPonto as ultimo" [attr.cx]="ultimo.x" [attr.cy]="ultimo.y" r="4" class="price-chart-dot"></circle>
+            <line *ngIf="pontoHover as ph" [attr.x1]="ph.x" [attr.y1]="0" [attr.x2]="ph.x" [attr.y2]="chartHeight - 28" class="price-chart-guide"></line>
+            <circle *ngIf="pontoHover as ph" [attr.cx]="ph.x" [attr.cy]="ph.y" r="5" class="price-chart-dot price-chart-dot-hover"></circle>
+            <circle *ngFor="let p of historicoPontos; let i = index" [attr.cx]="p.x" [attr.cy]="p.y" r="14" class="price-chart-hit"
+              (mouseenter)="hoveredIndex = i" (mouseleave)="hoveredIndex = null"></circle>
+          </svg>
+          <div class="price-chart-tooltip" *ngIf="pontoHover as ph" [style.left.%]="(ph.x / chartWidth) * 100" [style.top.%]="(ph.y / chartHeight) * 100">
+            <strong>{{ formatPrice(ph.price) }}</strong>
+            <span>{{ formatDataCurta(ph.data) }}</span>
+          </div>
+        </div>
         <div class="price-chart-axis-x">
           <span *ngFor="let rotulo of historicoRotulosEixoX">{{ rotulo }}</span>
         </div>

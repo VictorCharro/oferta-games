@@ -315,7 +315,9 @@ export class GameDetail implements OnInit, OnDestroy {
     return this.priceHistory.reduce((menor, p) => Number(p.price) < Number(menor.price) ? p : menor).lojaNome;
   }
 
-  private historicoPontosXY(): { x: number; y: number; price: number; data: Date }[] {
+  hoveredIndex: number | null = null;
+
+  get historicoPontos(): { x: number; y: number; price: number; data: Date }[] {
     const pontos = this.priceHistory;
     if (pontos.length < 2) return [];
     const precos = pontos.map(p => Number(p.price));
@@ -336,26 +338,35 @@ export class GameDetail implements OnInit, OnDestroy {
   }
 
   get historicoLinhaPath(): string {
-    return this.historicoPontosXY().map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+    return this.historicoPontos.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
   }
 
   get historicoAreaPath(): string {
-    const pts = this.historicoPontosXY();
+    const pts = this.historicoPontos;
     if (!pts.length) return '';
     const base = this.chartHeight - 28;
     return `${this.historicoLinhaPath} L ${pts[pts.length - 1].x.toFixed(1)} ${base} L ${pts[0].x.toFixed(1)} ${base} Z`;
   }
 
   get historicoUltimoPonto() {
-    const pts = this.historicoPontosXY();
+    const pts = this.historicoPontos;
     return pts.length ? pts[pts.length - 1] : null;
   }
 
   get historicoRotulosEixoX(): string[] {
-    const pts = this.historicoPontosXY();
+    const pts = this.historicoPontos;
     if (pts.length < 2) return [];
     const indices = [...new Set([0, Math.floor((pts.length - 1) / 2), pts.length - 1])];
     return indices.map(i => pts[i].data.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }));
+  }
+
+  get pontoHover() {
+    if (this.hoveredIndex == null) return null;
+    return this.historicoPontos[this.hoveredIndex] ?? null;
+  }
+
+  formatDataCurta(data: Date): string {
+    return data.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
   // So mostra a aba quando ha conteudo real (destaques ou trailer): descricao/screenshots sozinhos
