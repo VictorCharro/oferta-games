@@ -79,6 +79,13 @@ export class PriceHistoryChart {
     return 'center';
   }
 
+  get pontoHoverPosicaoVertical(): 'acima' | 'abaixo' {
+    const ph = this.pontoHover;
+    if (!ph) return 'acima';
+    const percentual = (ph.y / this.chartHeight) * 100;
+    return percentual < 25 ? 'abaixo' : 'acima';
+  }
+
   formatPrice(price: number | string | null): string {
     const n = Number(price);
     if (price == null || isNaN(n)) return '—';

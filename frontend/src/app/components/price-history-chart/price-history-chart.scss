@@ -50,7 +50,9 @@
 
 .price-chart-tooltip {
   position: absolute;
-  transform: translate(-50%, -130%);
+  --tx: -50%;
+  --ty: -130%;
+  transform: translate(var(--tx), var(--ty));
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -67,11 +69,15 @@
 }
 
 .price-chart-tooltip--start {
-  transform: translate(-6%, -130%);
+  --tx: -6%;
 }
 
 .price-chart-tooltip--end {
-  transform: translate(-94%, -130%);
+  --tx: -94%;
+}
+
+.price-chart-tooltip--abaixo {
+  --ty: 30%;
 }
 
 .price-chart-tooltip strong {
