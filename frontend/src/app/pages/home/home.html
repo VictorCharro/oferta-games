@@ -35,6 +35,9 @@
           <div class="banner-chart" *ngIf="temHistoricoParaChart(f.slug)">
             <span class="banner-chart-title">Histórico de preço (90 dias)</span>
             <app-price-history-chart [pontos]="historicoPorSlug[f.slug]"></app-price-history-chart>
+            <div class="banner-chart-note" *ngIf="historicoMenorPreco(f.slug) as menorPreco">
+              <span aria-hidden="true">↘</span> Menor preço dos últimos 90 dias: {{ formatPrice(menorPreco) }}<ng-container *ngIf="historicoMenorPrecoLoja(f.slug) as loja"> na {{ loja }}</ng-container>
+            </div>
           </div>
         </a>
       </div>

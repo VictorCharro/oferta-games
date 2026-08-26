@@ -158,6 +158,17 @@ export class Home implements OnInit, OnDestroy {
     return (this.historicoPorSlug[slug]?.length ?? 0) >= 2;
   }
 
+  historicoMenorPreco(slug: string): number | null {
+    const historico = this.historicoPorSlug[slug];
+    return historico?.length ? Math.min(...historico.map(p => Number(p.price))) : null;
+  }
+
+  historicoMenorPrecoLoja(slug: string): string | null {
+    const historico = this.historicoPorSlug[slug];
+    if (!historico?.length) return null;
+    return historico.reduce((menor, p) => Number(p.price) < Number(menor.price) ? p : menor).lojaNome;
+  }
+
   private carregarHistoricoSlideAtual() {
     const slide = this.featuredDeals[this.featuredIndex];
     if (!slide || this.historicoPorSlug[slide.slug]) return;
