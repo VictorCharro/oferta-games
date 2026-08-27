@@ -13,6 +13,8 @@ import { GameCard } from './components/game-card/game-card';
 import { DealsCarousel } from './components/deals-carousel/deals-carousel';
 import { LoadError } from './components/load-error/load-error';
 import { PriceHistoryChart } from './components/price-history-chart/price-history-chart';
+import { MonitoredDealsCarousel } from './components/monitored-deals-carousel/monitored-deals-carousel';
+import { MonitoredGameCard } from './components/monitored-game-card/monitored-game-card';
 import { Home } from './pages/home/home';
 import { Catalog } from './pages/catalog/catalog';
 import { BestSellers } from './pages/best-sellers/best-sellers';
@@ -36,6 +38,8 @@ import { NotFound } from './pages/not-found/not-found';
     DealsCarousel,
     LoadError,
     PriceHistoryChart,
+    MonitoredDealsCarousel,
+    MonitoredGameCard,
     Home,
     Catalog,
     BestSellers,

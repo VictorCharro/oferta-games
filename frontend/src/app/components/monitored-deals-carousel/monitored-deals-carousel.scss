@@ -1,0 +1,33 @@
+.carousel {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.carousel-nav {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 20px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s, color 0.2s;
+  cursor: pointer;
+  &:hover { border-color: var(--color-purple); color: var(--color-purple); }
+  &.prev { margin-right: 8px; }
+  &.next { margin-left: 8px; }
+}
+
+.monitor-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}

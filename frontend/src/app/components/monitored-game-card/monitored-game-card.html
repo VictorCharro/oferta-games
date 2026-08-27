@@ -1,0 +1,60 @@
+<a class="monitor-card" [routerLink]="['/jogo', game.slug]">
+  <div class="monitor-cover">
+    <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" loading="lazy" />
+    <button
+      class="monitor-btn"
+      type="button"
+      (click)="abrirMenuMeta($event)"
+      [class.active]="game.targetPrice != null"
+      [title]="game.targetPrice != null ? 'Editar meta de preço' : 'Definir meta de preço'"
+      [attr.aria-label]="game.targetPrice != null ? 'Editar meta de preço' : 'Definir meta de preço'"
+    >
+      <img src="jogos-monitorados-modo-escuro.png" alt="" />
+    </button>
+    <div class="monitor-meta-menu" *ngIf="menuMetaAberto" [style.top.px]="metaMenuPos.top" [style.left.px]="metaMenuPos.left" (click)="$event.preventDefault(); $event.stopPropagation()">
+      <p class="monitor-meta-title">Editar meta de preço</p>
+      <p class="monitor-meta-hint">Avisamos quando o preço chegar nesse valor.</p>
+      <div class="monitor-meta-field">
+        <span>R$</span>
+        <input
+          type="text"
+          inputmode="decimal"
+          [(ngModel)]="metaPrecoInput"
+          placeholder="Ex: 49,90"
+          aria-label="Meta de preço"
+          (keyup.enter)="salvarMeta()"
+        />
+      </div>
+      <div class="monitor-meta-actions">
+        <button type="button" class="monitor-meta-remove" (click)="removerMonitoramento($event)" [disabled]="salvandoMeta">Remover monitoramento</button>
+        <button type="button" class="monitor-meta-save" (click)="salvarMeta($event)" [disabled]="salvandoMeta">Salvar</button>
+      </div>
+    </div>
+  </div>
+  <div class="monitor-info">
+    <p class="monitor-title">{{ game.title }}</p>
+    <span class="monitor-store" *ngIf="game.storeName">
+      <img class="store-logo" [src]="storeLogo(game.storeName)" [alt]="game.storeName" />
+      <span>{{ game.storeName }}</span>
+    </span>
+    <div class="monitor-price-block">
+      <span class="monitor-price-label">Preço atual</span>
+      <span class="monitor-price-current">{{ formatPrice(game.minPrice) }}</span>
+    </div>
+    <button type="button" class="monitor-set-goal" *ngIf="game.targetPrice == null" (click)="abrirMenuMeta($event)">Toque para definir uma meta de preço</button>
+    <ng-container *ngIf="game.targetPrice != null">
+      <span class="monitor-target">Meta: {{ formatPrice(game.targetPrice) }}</span>
+      <span class="monitor-diff" [class.reached]="metaAtingida">
+        <span aria-hidden="true">{{ metaAtingida ? '✓' : '↑' }}</span>
+        <ng-container *ngIf="metaAtingida; else acimaMeta">Meta atingida!</ng-container>
+        <ng-template #acimaMeta>{{ formatPrice(diferencaMeta) }} acima da meta</ng-template>
+      </span>
+      <div class="monitor-progress">
+        <div class="monitor-progress-track">
+          <div class="monitor-progress-bar" [class.reached]="metaAtingida" [style.width.%]="progressoPct"></div>
+        </div>
+        <span class="monitor-progress-pct">{{ progressoPct }}%</span>
+      </div>
+    </ng-container>
+  </div>
+</a>

@@ -1,0 +1,7 @@
+<div class="carousel">
+  <button class="carousel-nav prev" #prevBtn (click)="scroll(-1)">‹</button>
+  <div class="monitor-row" #row (scroll)="onScroll()">
+    <app-monitored-game-card *ngFor="let game of games" [game]="game"></app-monitored-game-card>
+  </div>
+  <button class="carousel-nav next" #nextBtn (click)="scroll(1)">›</button>
+</div>

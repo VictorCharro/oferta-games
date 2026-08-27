@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { Subscription, catchError, of } from 'rxjs';
 import { GameService, TopDeal, GameSummary, PontoHistoricoPreco } from '../../services/game';
-import { FavoritesService } from '../../services/favorites';
+import { FavoritesService, FavoriteGame } from '../../services/favorites';
 import { resolveDlc } from '../../services/filters';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 import { PreferencesService, UserPreferences } from '../../services/preferences';
@@ -28,7 +28,7 @@ export interface DealCardView {
 export class Home implements OnInit, OnDestroy {
   featuredDeals: TopDeal[] = [];
   famousGames: DealCardView[] = [];
-  favoritesDeals: DealCardView[] = [];
+  favoritesDeals: FavoriteGame[] = [];
   preferredPlatformDeals: DealCardView[] = [];
   freeWeek: DealCardView[] = [];
   topDiscountGames: DealCardView[] = [];
@@ -87,10 +87,7 @@ export class Home implements OnInit, OnDestroy {
     });
 
     this.favSub = this.favoritesService.list$.subscribe(list => {
-      this.favoritesDeals = list
-        .map(g => this.fromGameSummary(g))
-        .sort((a, b) => b.discountPct - a.discountPct)
-        .slice(0, 15);
+      this.favoritesDeals = list.slice(0, 15);
       this.cdr.detectChanges();
     });
   }

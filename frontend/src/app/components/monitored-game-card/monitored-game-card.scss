@@ -1,0 +1,260 @@
+// display:contents faz o host "desaparecer" do layout - o <a class="monitor-card"> vira o filho
+// direto do flex (carrossel) ou grid (pagina /monitorados), herdando o flex-basis/grid-item normal.
+:host {
+  display: contents;
+}
+
+.monitor-card {
+  flex: 0 0 210px;
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  transition: border-color 0.2s;
+  cursor: pointer;
+
+  // Sem overflow:hidden aqui (diferente do resto dos cards) pra nao cortar o popover de meta,
+  // que precisa transbordar pra baixo da capa. O arredondado do topo fica so no .monitor-cover.
+  // Tambem sem transform no hover: um transform em qualquer ancestral vira containing block pra
+  // position:fixed, quebrando o calculo de posicao do popover (ele e fixed exatamente pra escapar
+  // do overflow do carrossel).
+  &:hover { border-color: var(--color-purple); }
+}
+
+.monitor-cover {
+  position: relative;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  background: var(--bg-input);
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.monitor-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s, background 0.2s;
+  z-index: 1;
+
+  img { width: 16px; height: 16px; object-fit: contain; }
+
+  &:hover { border-color: var(--color-purple); }
+  &.active { border-color: var(--color-purple); background: rgba(41, 168, 224, 0.3); }
+}
+
+.monitor-meta-menu {
+  // top/left vem via [style] (calculado no clique, ver abrirMenuMeta) - fixed escapa do
+  // overflow: auto do carrossel, que cortaria um popover absoluto normal.
+  position: fixed;
+  z-index: 50;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+
+.monitor-meta-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.monitor-meta-hint {
+  margin-top: -4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.monitor-meta-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 12px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 13px;
+
+    &:focus { outline: none; }
+  }
+}
+
+.monitor-meta-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.monitor-meta-save {
+  height: 32px;
+  border: 1px solid var(--color-purple);
+  border-radius: 7px;
+  background: var(--color-purple);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+.monitor-meta-remove {
+  height: 30px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: transparent;
+  color: #e35d5d;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+
+  &:hover { border-color: #e35d5d; }
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+.monitor-info {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.monitor-title {
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-store {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.store-logo {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.monitor-price-block {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1px;
+}
+
+.monitor-price-label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.monitor-price-current {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-green);
+}
+
+.monitor-set-goal {
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  color: var(--color-purple);
+
+  &:hover { text-decoration: underline; }
+}
+
+.monitor-target {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.monitor-diff {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e35d5d;
+
+  &.reached {
+    color: var(--color-green);
+  }
+}
+
+.monitor-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monitor-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  overflow: hidden;
+}
+
+.monitor-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: #e35d5d;
+  transition: width 0.3s;
+
+  &.reached {
+    background: var(--color-green);
+  }
+}
+
+.monitor-progress-pct {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}

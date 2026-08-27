@@ -20,16 +20,37 @@
               </button>
               <span class="refresh-msg" *ngIf="refreshMsg">{{ refreshMsg }}</span>
             </div>
-            <button
-              class="detail-monitor-btn"
-              type="button"
-              (click)="toggleMonitoring($event)"
-              [class.active]="monitoring"
-              [title]="monitoring ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
-              [attr.aria-label]="monitoring ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
-            >
-              <img src="jogos-monitorados-modo-escuro.png" alt="" />
-            </button>
+            <div class="detail-monitor">
+              <button
+                class="detail-monitor-btn"
+                type="button"
+                (click)="abrirMenuMeta($event)"
+                [class.active]="monitoring"
+                [title]="monitoring ? 'Editar meta de preço' : 'Adicionar aos jogos monitorados'"
+                [attr.aria-label]="monitoring ? 'Editar meta de preço' : 'Adicionar aos jogos monitorados'"
+              >
+                <img src="jogos-monitorados-modo-escuro.png" alt="" />
+              </button>
+              <div class="detail-meta-menu" *ngIf="menuMetaAberto" (click)="$event.stopPropagation()">
+                <p class="detail-meta-title">{{ monitoring ? 'Editar meta de preço' : 'Monitorar preço' }}</p>
+                <p class="detail-meta-hint">Avisamos quando o preço chegar nesse valor.</p>
+                <div class="detail-meta-field">
+                  <span>R$</span>
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    [(ngModel)]="metaPrecoInput"
+                    placeholder="Ex: 49,90"
+                    aria-label="Meta de preço"
+                    (keyup.enter)="salvarMeta()"
+                  />
+                </div>
+                <div class="detail-meta-actions">
+                  <button type="button" class="detail-meta-remove" *ngIf="monitoring" (click)="removerMonitoramento()" [disabled]="salvandoMeta">Remover monitoramento</button>
+                  <button type="button" class="detail-meta-save" (click)="salvarMeta()" [disabled]="salvandoMeta">{{ monitoring ? 'Salvar' : 'Monitorar' }}</button>
+                </div>
+              </div>
+            </div>
             <button
               class="detail-profile-favorite-btn"
               type="button"

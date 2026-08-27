@@ -7,6 +7,7 @@ import { GameSummary } from './game';
 import { URL_API } from '../configuracao/url-api';
 
 export interface FavoriteGame extends GameSummary {
+  targetPrice: number | null;
   favoritedAt: string;
 }
 
@@ -35,6 +36,10 @@ export class FavoritesService {
 
   isFavorited(slug: string): boolean {
     return this._slugs.value.has(slug);
+  }
+
+  getFavorite(slug: string): FavoriteGame | undefined {
+    return this._list.value.find(g => g.slug === slug);
   }
 
   private async authHeaders(): Promise<{ Authorization: string } | null> {
@@ -73,22 +78,33 @@ export class FavoritesService {
   }
 
   async toggle(game: GameSummary) {
+    if (this.isFavorited(game.slug)) {
+      await this.remove(game.slug);
+    } else {
+      await this.add(game.slug);
+    }
+  }
+
+  async remove(slug: string) {
     const headers = await this.authHeaders();
     if (!headers) return;
 
-    const favorited = this.isFavorited(game.slug);
+    const set = new Set(this._slugs.value);
+    set.delete(slug);
+    this._slugs.next(set);
+    this._list.next(this._list.value.filter(g => g.slug !== slug));
+    await firstValueFrom(this.http.delete(`${this.api}/favorites/${slug}`, { headers }));
+  }
 
-    if (favorited) {
-      const set = new Set(this._slugs.value);
-      set.delete(game.slug);
-      this._slugs.next(set);
-      this._list.next(this._list.value.filter(g => g.slug !== game.slug));
-      this.http.delete(`${this.api}/favorites/${game.slug}`, { headers }).subscribe();
-    } else {
-      const set = new Set(this._slugs.value);
-      set.add(game.slug);
-      this._slugs.next(set);
-      this.http.post(`${this.api}/favorites`, { slug: game.slug }, { headers }).subscribe(() => this.load());
-    }
+  // Tambem serve pra editar a meta de um jogo ja monitorado (upsert no backend).
+  async add(slug: string, targetPrice: number | null = null) {
+    const headers = await this.authHeaders();
+    if (!headers) return;
+
+    const set = new Set(this._slugs.value);
+    set.add(slug);
+    this._slugs.next(set);
+    await firstValueFrom(this.http.post(`${this.api}/favorites`, { slug, targetPrice }, { headers }));
+    await this.load();
   }
 }

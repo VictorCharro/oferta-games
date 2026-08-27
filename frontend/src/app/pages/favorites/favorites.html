@@ -5,7 +5,7 @@
   </div>
 
   <div class="games-grid" *ngIf="!loading && games.length">
-    <app-game-card *ngFor="let game of games" [game]="game"></app-game-card>
+    <app-monitored-game-card *ngFor="let game of games" [game]="game"></app-monitored-game-card>
   </div>
 
   <div class="games-grid" *ngIf="loading">

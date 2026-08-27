@@ -44,6 +44,9 @@ export class GameDetail implements OnInit, OnDestroy {
   @ViewChild('trailerVideo') trailerVideoRef?: ElementRef<HTMLVideoElement>;
   private hls?: Hls;
   menuColecoesAberto = false;
+  menuMetaAberto = false;
+  metaPrecoInput = '';
+  salvandoMeta = false;
   colecoes: ColecaoPerfil[] = [];
   carregandoColecoes = false;
   novaListaNome = '';
@@ -621,7 +624,9 @@ export class GameDetail implements OnInit, OnDestroy {
     return this.game ? this.favoritesService.isFavorited(this.game.slug) : false;
   }
 
-  toggleMonitoring(event: Event) {
+  // Abre o popover de meta de preco, tanto pra comecar a monitorar quanto pra editar a meta de
+  // um jogo ja monitorado - nos dois casos o usuario ve/preenche o campo antes de confirmar.
+  abrirMenuMeta(event: Event) {
     event.preventDefault();
     event.stopPropagation();
     if (!this.game) return;
@@ -629,7 +634,42 @@ export class GameDetail implements OnInit, OnDestroy {
       this.router.navigate(['/login']);
       return;
     }
-    this.favoritesService.toggle(this.gameSummary(this.game));
+    const atual = this.favoritesService.getFavorite(this.game.slug)?.targetPrice;
+    this.metaPrecoInput = atual != null ? String(atual) : '';
+    this.menuMetaAberto = true;
+  }
+
+  fecharMenuMeta() {
+    this.menuMetaAberto = false;
+    this.metaPrecoInput = '';
+  }
+
+  async salvarMeta() {
+    if (!this.game || this.salvandoMeta) return;
+    const valor = this.metaPrecoInput.trim().replace(',', '.');
+    const targetPrice = valor ? Number(valor) : null;
+    if (valor && (isNaN(targetPrice!) || targetPrice! < 0)) return;
+
+    this.salvandoMeta = true;
+    try {
+      await this.favoritesService.add(this.game.slug, targetPrice);
+      this.fecharMenuMeta();
+    } finally {
+      this.salvandoMeta = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async removerMonitoramento() {
+    if (!this.game || this.salvandoMeta) return;
+    this.salvandoMeta = true;
+    try {
+      await this.favoritesService.remove(this.game.slug);
+      this.fecharMenuMeta();
+    } finally {
+      this.salvandoMeta = false;
+      this.cdr.detectChanges();
+    }
   }
 
   get personalFavorite(): boolean {
@@ -663,6 +703,9 @@ export class GameDetail implements OnInit, OnDestroy {
   onDocumentClick(event: MouseEvent) {
     if (this.menuColecoesAberto && !(event.target as HTMLElement).closest('.detail-collections')) {
       this.fecharMenuColecoes();
+    }
+    if (this.menuMetaAberto && !(event.target as HTMLElement).closest('.detail-monitor')) {
+      this.fecharMenuMeta();
     }
   }
 
