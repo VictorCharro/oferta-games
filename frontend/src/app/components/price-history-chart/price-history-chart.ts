@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, HostBinding, Input } from '@angular/core';
 import { PontoHistoricoPreco } from '../../services/game';
 
 let proximoId = 0;
@@ -14,6 +14,8 @@ export class PriceHistoryChart {
   @Input() chartWidth = 700;
   @Input() chartHeight = 220;
   @Input() mostrarEixoX = true;
+  // Versao menor pra caber no carrossel/banner, sem competir de tamanho com o resto do conteudo.
+  @HostBinding('class.compacto') @Input() compacto = false;
 
   readonly gradientId = `priceAreaGradient-${proximoId++}`;
   hoveredIndex: number | null = null;

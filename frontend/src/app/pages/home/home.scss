@@ -135,10 +135,9 @@
 
   .banner-chart {
     flex: 0 0 300px;
-    align-self: stretch;
+    align-self: flex-start;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     gap: 8px;
   }
 

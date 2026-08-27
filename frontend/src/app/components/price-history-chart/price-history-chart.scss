@@ -13,6 +13,14 @@
   overflow: visible;
 }
 
+:host(.compacto) .price-chart-svg {
+  height: 110px;
+}
+
+:host(.compacto) .price-chart-axis-x {
+  margin-top: 4px;
+}
+
 .price-chart-area {
   stroke: none;
 }
