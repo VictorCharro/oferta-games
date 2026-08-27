@@ -53,6 +53,12 @@
     h1 { font-size: 32px; font-weight: 800; line-height: 1.1; }
   }
 
+  // Quando ha grafico, o info nao deve esticar ate a largura toda do banner - senao o
+  // grafico fica empurrado pra beirada direita, longe do resto do conteudo.
+  .banner-slide:has(.banner-chart) .banner-info {
+    flex: 0 1 460px;
+  }
+
   .banner-tag {
     background: var(--color-purple);
     color: #fff;
