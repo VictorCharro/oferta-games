@@ -54,12 +54,6 @@
     h1 { font-size: 32px; font-weight: 800; line-height: 1.1; }
   }
 
-  // Cap pra nao esticar ate a beirada quando ha grafico - senao o grafico fica muito longe
-  // do resto do conteudo. Sem cap nenhum, o item tambem podia ser forcado a encolher demais
-  // (abaixo do tamanho natural do texto) e transbordar a linha toda pra fora do banner.
-  .banner-slide:has(.banner-chart) .banner-info {
-    max-width: 600px;
-  }
 
 
   .banner-tag {
@@ -139,6 +133,7 @@
   .banner-chart {
     flex: 0 0 300px;
     align-self: flex-start;
+    margin-right: 48px;
     display: flex;
     flex-direction: column;
     gap: 8px;
