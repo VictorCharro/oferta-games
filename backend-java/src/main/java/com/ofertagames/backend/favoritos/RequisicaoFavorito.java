@@ -1,3 +1,5 @@
 package com.ofertagames.backend.favoritos;
 
-public record RequisicaoFavorito(String slug) {}
+import java.math.BigDecimal;
+
+public record RequisicaoFavorito(String slug, BigDecimal targetPrice) {}

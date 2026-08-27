@@ -54,7 +54,7 @@ public class ControladorFavoritos {
       return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
     }
 
-    if (favoritos.adicionar(usuarioId.get(), jogoId.get())) {
+    if (favoritos.adicionar(usuarioId.get(), jogoId.get(), requisicao.targetPrice())) {
       atividades.registrar(usuarioId.get(), "MONITORAMENTO_ADICIONADO", jogoId.get());
     }
     return ResponseEntity.status(201).body(Map.of("ok", true));

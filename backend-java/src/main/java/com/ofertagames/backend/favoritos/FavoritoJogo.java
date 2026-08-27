@@ -9,5 +9,7 @@ public record FavoritoJogo(
     Boolean isDlc,
     BigDecimal minPrice,
     BigDecimal regularPrice,
+    String storeName,
+    BigDecimal targetPrice,
     String favoritedAt
 ) {}
