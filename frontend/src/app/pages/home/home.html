@@ -7,7 +7,7 @@
   ></app-load-error>
 
   <!-- Banner principal / carrossel -->
-  <div class="banner" *ngIf="featuredDeals.length">
+  <div class="banner" *ngIf="featuredDeals.length" (mouseenter)="pausarAutoplay()" (mouseleave)="retomarAutoplay()">
     <button class="banner-nav prev" (click)="prevFeatured()">‹</button>
     <div class="banner-viewport">
       <div class="banner-track" [style.transform]="'translateX(-' + (featuredIndex * 100) + '%)'">

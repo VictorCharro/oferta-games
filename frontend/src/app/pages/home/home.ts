@@ -127,6 +127,14 @@ export class Home implements OnInit, OnDestroy {
     }
   }
 
+  pausarAutoplay() {
+    this.stopAutoplay();
+  }
+
+  retomarAutoplay() {
+    this.startAutoplay();
+  }
+
   prevFeatured() {
     this.goToFeatured((this.featuredIndex - 1 + this.featuredDeals.length) % this.featuredDeals.length);
   }
