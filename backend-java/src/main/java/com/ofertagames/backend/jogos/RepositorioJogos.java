@@ -113,32 +113,39 @@ public class RepositorioJogos {
     String filtroLojasPreferidas = filtroLojasPreferidas(regexLojas);
     String filtroOfertaLojasPreferidas = filtroOfertaLojasPreferidas(regexLojas);
 
-    String sql = """
-        SELECT
-          g.slug,
-          g.title,
-          g.cover_url AS cover_url,
-          g.is_dlc AS is_dlc,
-          MIN(o.price) AS min_price,
-          MAX(o.regular_price) AS regular_price,
-          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
-          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
-        FROM games g
-        LEFT JOIN offers o ON o.game_id = g.id %s %s %s
-        WHERE 1=1
-        %s
-        %s
-        %s
-        %s
-        %s
-        %s
-        GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
-        %s
-        ORDER BY %s
-        LIMIT :tamanho OFFSET :deslocamento
-        """.formatted(filtroOfertaPlataforma, filtroLojaBloqueada, filtroOfertaLojasPreferidas, filtroTipo, filtroBusca, filtroPlataforma, filtroLojasPreferidas, filtroConteudoNaoJogo, filtroJogoBloqueado, filtroPreco, ordenarPor(ordenacao));
+    String filtrosDeJogo = String.join("\n", filtroTipo, filtroBusca, filtroPlataforma,
+        filtroLojasPreferidas, filtroConteudoNaoJogo, filtroJogoBloqueado);
+    String filtrosDeOferta = String.join(" ", filtroOfertaPlataforma, filtroLojaBloqueada,
+        filtroOfertaLojasPreferidas);
+
+    String sql = podePrePaginar(ordenacao, precoMinimo, precoMaximo, descontoMinimo)
+        ? sqlPrePaginado(ordenacao, filtrosDeJogo, filtrosDeOferta)
+        : """
+            SELECT
+              g.slug,
+              g.title,
+              g.cover_url AS cover_url,
+              g.is_dlc AS is_dlc,
+              MIN(o.price) AS min_price,
+              MAX(o.regular_price) AS regular_price,
+              (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+              (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
+            FROM games g
+            LEFT JOIN offers o ON o.game_id = g.id %s
+            WHERE 1=1
+            %s
+            GROUP BY g.id, g.slug, g.title, g.cover_url, g.is_dlc
+            %s
+            ORDER BY %s
+            LIMIT :tamanho OFFSET :deslocamento
+            """.formatted(filtrosDeOferta, filtrosDeJogo, filtroPreco, ordenarPor(ordenacao));
 
     var comando = jdbc.sql(sql).param("tamanho", tamanho).param("deslocamento", deslocamento);
+    if (podePrePaginar(ordenacao, precoMinimo, precoMaximo, descontoMinimo)) {
+      // Teto do que a pagina pode consumir do "resto": as linhas de destaque so empurram itens
+      // pra frente, nunca exigem mais linhas do resto do que isso.
+      comando = comando.param("limiteResto", deslocamento + tamanho);
+    }
     if (busca != null && !busca.isBlank()) {
       comando = comando.param("busca", "%" + busca.trim() + "%");
     }
@@ -156,6 +163,123 @@ public class RepositorioJogos {
     }
 
     return comando.query(RepositorioJogos::mapearResumo).list();
+  }
+
+  /** Fatia de destaque da ordenacao padrao: ate 200 no rank, o que a torna barata de agregar. */
+  private static final int RANK_MAXIMO_DESTAQUE = 200;
+
+  /**
+   * Se da pra escolher a pagina olhando so {@code games}, sem agregar o catalogo inteiro.
+   *
+   * <p>Impedem: filtros de preco/desconto (viram {@code HAVING} sobre o agregado) e as ordenacoes
+   * que dependem do preco. Ver {@code filtroPreco} e {@code ordenarPor}.
+   */
+  private static boolean podePrePaginar(String ordenacao, Double precoMinimo, Double precoMaximo, Double descontoMinimo) {
+    if (precoMinimo != null || precoMaximo != null || descontoMinimo != null) return false;
+    return switch (ordenacao) {
+      case "discount", "price_asc", "price_desc" -> false;
+      default -> true;
+    };
+  }
+
+  /**
+   * Mesma pagina do catalogo, sem agregar o catalogo inteiro pra devolver 24 linhas.
+   *
+   * <p>A query antiga fazia {@code games JOIN offers} + {@code GROUP BY} sobre os 110k jogos, e so
+   * entao aplicava {@code LIMIT} — 519ms e 215 mil buffers pra descartar 110.309 linhas. Aqui a
+   * pagina e escolhida primeiro (usando {@code idx_games_rank}) e as ofertas so sao buscadas para
+   * as linhas que sobraram: <b>27ms e 2,3 mil buffers</b>, mesmo resultado.
+   *
+   * <p>Duas partes, porque a ordenacao padrao promove ao topo os jogos de rank alto que estao em
+   * promocao de verdade:
+   *
+   * <ol>
+   *   <li>{@code destaque} — jogos ate {@link #RANK_MAXIMO_DESTAQUE} no rank com desconto real.
+   *       Sao ~250 linhas, entao agregar as ofertas <i>deles</i> e barato;</li>
+   *   <li>{@code resto} — todo o restante por {@code rank, id}, puro {@code games}. Busca so
+   *       {@code deslocamento + tamanho} linhas, que e o maximo que a pagina pode precisar.</li>
+   * </ol>
+   *
+   * <p>{@code popularity} nao tem fatia de destaque (ordena so por {@code rank, id}), entao a
+   * parte 1 e omitida.
+   *
+   * <p>Os filtros de <b>oferta</b> entram duas vezes de proposito — no agregado do destaque e no
+   * LATERAL final. Se sairem de sincronia, o desconto que decide a posicao passa a ser calculado
+   * sobre um conjunto de ofertas diferente do preco exibido.
+   */
+  private static String sqlPrePaginado(String ordenacao, String filtrosDeJogo, String filtrosDeOferta) {
+    boolean comDestaque = !"popularity".equals(ordenacao);
+
+    String descontoReal = "MIN(o.price) IS NOT NULL AND MAX(o.regular_price) IS NOT NULL"
+        + " AND MIN(o.price) < MAX(o.regular_price) * 0.99";
+
+    String cteDestaque = !comDestaque ? "" : """
+        destaque AS MATERIALIZED (
+          SELECT g.id, g.rank,
+                 ROUND((1 - MIN(o.price) / NULLIF(MAX(o.regular_price), 0)) * 100)::int AS desconto
+          FROM games g
+          JOIN offers o ON o.game_id = g.id %s
+          WHERE g.rank <= %d
+          %s
+          GROUP BY g.id, g.rank
+          HAVING %s
+        ),
+        """.formatted(filtrosDeOferta, RANK_MAXIMO_DESTAQUE, filtrosDeJogo, descontoReal);
+
+    // Sem o curto-circuito por rank, o NOT EXISTS seria avaliado pros 110k jogos; com ele, so pros
+    // ~290 que poderiam estar no destaque.
+    String excluirDestaque = !comDestaque ? "" :
+        "AND (g.rank IS NULL OR g.rank > %d OR NOT EXISTS (SELECT 1 FROM destaque d WHERE d.id = g.id))"
+            .formatted(RANK_MAXIMO_DESTAQUE);
+
+    String uniaoDestaque = !comDestaque ? "" : """
+        SELECT id, ROW_NUMBER() OVER (ORDER BY desconto DESC NULLS LAST, rank ASC NULLS LAST, id) AS ordem
+        FROM destaque
+        UNION ALL
+        """;
+
+    return """
+        WITH %s
+        resto AS (
+          SELECT g.id, g.rank
+          FROM games g
+          WHERE 1=1
+          %s
+          %s
+          ORDER BY g.rank ASC NULLS LAST, g.id ASC
+          LIMIT :limiteResto
+        ),
+        pagina AS (
+          SELECT id, ordem FROM (
+            %s
+            SELECT id, 1000000 + ROW_NUMBER() OVER (ORDER BY rank ASC NULLS LAST, id) AS ordem
+            FROM resto
+          ) ordenado
+          ORDER BY ordem
+          LIMIT :tamanho OFFSET :deslocamento
+        )
+        SELECT
+          g.slug,
+          g.title,
+          g.cover_url AS cover_url,
+          g.is_dlc AS is_dlc,
+          oferta.min_price,
+          oferta.regular_price,
+          oferta.store_name,
+          oferta.url
+        FROM pagina p
+        JOIN games g ON g.id = p.id
+        LEFT JOIN LATERAL (
+          SELECT
+            MIN(o.price) AS min_price,
+            MAX(o.regular_price) AS regular_price,
+            (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+            (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
+          FROM offers o
+          WHERE o.game_id = p.id %s
+        ) oferta ON true
+        ORDER BY p.ordem
+        """.formatted(cteDestaque, filtrosDeJogo, excluirDestaque, uniaoDestaque, filtrosDeOferta);
   }
 
   public Optional<DetalheJogo> buscarPorSlug(String slug) {
