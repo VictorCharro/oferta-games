@@ -21,6 +21,25 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
+/**
+ * Orquestra o catalogo: busca com fallback na ITAD, atualizacao de preco (manual e agendada) e os
+ * tres passos de enriquecimento vindos da Steam.
+ *
+ * <p>Os passos da Steam tem <b>ordem obrigatoria</b>, porque cada um depende do anterior:
+ *
+ * <ol>
+ *   <li>{@link #preencherMetadadosSteam} — resolve {@code games.steam_app_id} (alem de capa e
+ *       {@code is_dlc});</li>
+ *   <li>{@link #preencherDetalhesJogos} — precisa do {@code steam_app_id} ja resolvido;</li>
+ *   <li>{@link #preencherConquistas} — idem.</li>
+ * </ol>
+ *
+ * <p>Consequencia: jogo sem oferta Steam nunca ganha {@code steam_app_id} e portanto fica
+ * permanentemente sem as abas Sobre/Review/Conquistas. E limitacao conhecida, nao bug.
+ *
+ * <p>Os metodos {@code preencher*} sao os que os jobs agendados chamam e processam um lote da
+ * fila; {@link #preencherTudoDoJogo} faz os tres de uma vez para um jogo so (botao de admin).
+ */
 @Service
 public class ServicoCatalogo {
   // POST /api/games/{slug}/refresh nao exige login (qualquer visitante ve o botao "Atualizar
@@ -41,6 +60,20 @@ public class ServicoCatalogo {
     this.instantGaming = instantGaming;
   }
 
+  /**
+   * Busca no catalogo local e, so quando nao ha nenhum resultado, consulta a ITAD.
+   *
+   * <p><b>Efeito colateral:</b> os jogos encontrados na ITAD sao <b>persistidos no catalogo</b>
+   * antes de retornar. E por isso que buscar por um jogo inexistente faz ele passar a existir aqui
+   * — e um dos caminhos pelos quais o catalogo cresce, junto da coleta agendada.
+   *
+   * <p>Os jogos recem-salvos entram sem preco: so ganham oferta quando a sincronizacao passar por
+   * eles.
+   *
+   * @param busca termo com no minimo 2 caracteres uteis (apos {@code trim})
+   * @return resultados locais quando houver; senao os recem-importados da ITAD; senao lista vazia
+   * @throws BuscaCurtaException quando o termo tem menos de 2 caracteres
+   */
   public List<ResumoJogo> buscarComFallbackItad(String busca) {
     String termo = busca == null ? "" : busca.trim();
     if (termo.length() < 2) {
@@ -70,6 +103,22 @@ public class ServicoCatalogo {
     return jogos.listarPorItadIds(encontrados.stream().map(ResultadoBuscaItad::id).toList());
   }
 
+  /**
+   * Atualiza na hora os precos de um jogo (botao "Atualizar precos"), incluindo os das DLCs dele.
+   *
+   * <p>O endpoint e publico, entao o unico freio e o cooldown de 5 min por jogo — que vale so pro
+   * <b>jogo principal</b>: as DLCs sao atualizadas junto sem consumir/checar cooldown proprio.
+   * Atualizar o jogo base ja cobre as DLCs pra o usuario nao ter que repetir a acao em cada uma.
+   *
+   * <p>Uma DLC sem fonte de preco e ignorada em silencio; so a ausencia de fonte no jogo principal
+   * derruba a operacao.
+   *
+   * @return total de ofertas gravadas somando jogo base e DLCs
+   * @throws JogoNaoEncontradoException slug inexistente
+   * @throws RefreshRecenteException ainda dentro do cooldown; carrega os segundos restantes, que
+   *     viram {@code Retry-After} e a contagem regressiva no botao
+   * @throws JogoSemItadException o jogo principal nao tem ITAD nem Instant Gaming
+   */
   public ResultadoAtualizacaoJogo atualizarPrecos(String slug) {
     JogoParaAtualizar jogo = jogos.buscarParaAtualizar(slug).orElseThrow(JogoNaoEncontradoException::new);
 
@@ -95,9 +144,14 @@ public class ServicoCatalogo {
     return new ResultadoAtualizacaoJogo(true, atualizadas);
   }
 
-  // obrigatorio=true lanca JogoSemItadException se nao houver nenhuma fonte de preco; usado so pro
-  // jogo principal do refresh. Pras DLCs (obrigatorio=false) simplesmente ignoramos a ausencia de
-  // fonte, sem falhar o refresh do jogo base por causa de uma DLC sem preco disponivel.
+  /**
+   * Busca preco de um jogo nas duas fontes (ITAD e Instant Gaming) e grava o resultado.
+   *
+   * @param obrigatorio {@code true} exige que ao menos uma fonte tenha respondido — usado pro jogo
+   *     principal do refresh. {@code false} (usado pras DLCs) ignora a ausencia de fonte em
+   *     silencio, pra uma DLC sem preco nao derrubar o refresh do jogo base
+   * @throws JogoSemItadException so quando {@code obrigatorio} e nenhuma fonte trouxe preco
+   */
   private int atualizarPrecosDoJogo(JogoParaAtualizar jogo, boolean obrigatorio) {
     boolean temItad = jogo.itadId() != null && !jogo.itadId().isBlank();
 
@@ -137,6 +191,23 @@ public class ServicoCatalogo {
     return atualizadas;
   }
 
+  /**
+   * Caminho da coleta agendada: busca precos de varios jogos numa chamada so a ITAD e substitui as
+   * ofertas do lote inteiro.
+   *
+   * <p><b>Efeito colateral:</b> compara o menor preco antes e depois de gravar e cria notificacao
+   * de queda pra quem monitora o jogo. A comparacao usa {@link RepositorioJogos#precosMinimos},
+   * que nao filtra lojas bloqueadas — ver o Javadoc de la. Ao final marca todos como
+   * sincronizados, o que os manda pro fim da fila.
+   *
+   * <p>Jogo do lote que a ITAD nao reconhecer e simplesmente ignorado; jogo reconhecido mas sem
+   * nenhuma oferta valida tem as ofertas ITAD apagadas (ver
+   * {@link RepositorioJogos#substituirOfertasItadEmLote}).
+   *
+   * @throws IllegalStateException quando a ITAD nao devolve nada ou nada reconhecivel — falha o
+   *     lote inteiro de proposito, pra o job registrar erro em vez de marcar como sincronizado um
+   *     lote que nao foi atualizado
+   */
   public ResultadoAtualizacaoLote atualizarPrecosEmLote(List<RepositorioJogos.JogoParaSincronizar> jogosParaAtualizar) {
     if (jogosParaAtualizar == null || jogosParaAtualizar.isEmpty()) {
       return new ResultadoAtualizacaoLote(0, 0);
@@ -283,9 +354,18 @@ public class ServicoCatalogo {
     return atualizados;
   }
 
-  // forcar=false (lote agendado): so preenche o que falta, nunca troca capa/steam_app_id ja
-  // resolvidos. forcar=true (admin "Preencher tudo agora"): sobrescreve com o valor novo sempre que
-  // a Steam devolver algo, pra corrigir dado errado (ex: capa resolvida pro app id trocado).
+  /**
+   * Resolve o app id da Steam pela URL da oferta e grava capa, {@code is_dlc} e
+   * {@code steam_app_id}.
+   *
+   * <p>{@code is_dlc} sai do OR entre o sinal da Steam e a heuristica de titulo: a Steam classifica
+   * trilha sonora como {@code music}, entao depender so dela deixava esses itens como jogo base.
+   *
+   * @param forcar {@code false} (lote agendado) preenche so o que falta;
+   *     {@code true} (admin) sobrescreve sempre que a Steam devolver algo, pra corrigir dado errado
+   * @return sempre {@code true} — grava mesmo quando a Steam nao devolve nada, pra tirar o jogo da
+   *     fila e nao ficar reconsultando pra sempre quem simplesmente nao tem pagina na Steam
+   */
   private boolean processarMetadadosSteam(JogoSteamPendente pendente, boolean forcar) {
     var appId = steam.resolverAppIdSteam(pendente.url());
     var detalhes = appId.flatMap(steam::buscarDetalhesAplicativo);
@@ -310,6 +390,17 @@ public class ServicoCatalogo {
     return atualizados;
   }
 
+  /**
+   * Salva descricao, generos, midia, requisitos, resumo de reviews e a lista de DLCs de um jogo.
+   *
+   * <p>Exige {@code steam_app_id} ja resolvido. O array {@code dlc} salvo aqui em
+   * {@code game_details.dlc_steam_app_ids} e o que alimenta as duas direcoes de DLC na pagina do
+   * jogo ({@link RepositorioJogos#listarDlcsDoJogo} e
+   * {@link RepositorioJogos#listarJogosBaseDaDlc}).
+   *
+   * @return {@code false} quando nem detalhes nem reviews vieram — nesse caso nada e gravado e o
+   *     jogo <b>continua na fila</b> pra ser tentado de novo
+   */
   private boolean processarDetalhesJogo(JogoDetalhesPendente pendente) {
     String appId = String.valueOf(pendente.steamAppId());
     var detalhes = steam.buscarDetalhesAplicativo(appId);
@@ -354,6 +445,20 @@ public class ServicoCatalogo {
     return atualizados;
   }
 
+  /**
+   * Salva o catalogo de conquistas do jogo, mesclando o esquema da Steam com o percentual global
+   * de cada uma.
+   *
+   * <p><b>Cuidado com o retorno:</b> quando o esquema vem vazio (jogo sem conquista nenhuma) este
+   * metodo devolve {@code false} <b>mas mesmo assim trabalhou</b> — ele chama
+   * {@link RepositorioJogos#marcarConquistasVerificadas}, que e o que tira o jogo da fila.
+   * Portanto "0 atualizados" numa rodada nao significa que nada avancou.
+   *
+   * <p>Essa marcacao e essencial: sem ela os jogos sem conquista voltavam pra fila pra sempre e
+   * travavam o backlog (bug corrigido em 09/08/2026).
+   *
+   * @return {@code true} so quando havia conquistas de fato pra gravar
+   */
   private boolean processarConquistas(JogoDetalhesPendente pendente) {
     String appId = String.valueOf(pendente.steamAppId());
     var esquema = steam.buscarEsquemaConquistas(appId);
@@ -377,10 +482,20 @@ public class ServicoCatalogo {
     return true;
   }
 
-  // Botao de admin "Preencher tudo agora": pra quando um jogo novo/pouco tocado esta bombando e
-  // nao vale esperar ele chegar na vez na fila normal (que pode levar horas dependendo do tamanho
-  // do backlog). Roda os 3 passos direto, na ordem certa - metadados primeiro pra resolver o
-  // steam_app_id, que detalhes/conquistas precisam.
+  /**
+   * Roda os tres passos da Steam para um unico jogo, na hora — botao de admin "Preencher tudo
+   * agora", pra quando nao vale esperar o jogo chegar na vez da fila (que pode levar horas).
+   *
+   * <p>Executa na ordem obrigatoria (metadados primeiro, pra resolver o {@code steam_app_id} de
+   * que detalhes e conquistas dependem) e usa {@code forcar = true} nos metadados, entao aqui
+   * <b>sobrescreve</b> capa/{@code steam_app_id} ja existentes — e o proposito: corrigir dado
+   * errado.
+   *
+   * <p>Se mesmo depois do primeiro passo o jogo continuar sem {@code steam_app_id}, detalhes e
+   * conquistas sao pulados e o resultado sai com {@code temSteamAppId = false}.
+   *
+   * @throws JogoNaoEncontradoException slug inexistente
+   */
   public ResultadoPreenchimentoJogo preencherTudoDoJogo(String slug) {
     long jogoId = jogos.buscarIdPorSlug(slug).orElseThrow(JogoNaoEncontradoException::new);
 
