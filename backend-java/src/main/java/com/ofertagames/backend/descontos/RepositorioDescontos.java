@@ -10,6 +10,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Ranking de melhores descontos — alimenta os carrosseis da Home e a pagina Gratuitos.
+ */
 @Repository
 public class RepositorioDescontos {
   private final JdbcClient jdbc;
@@ -18,16 +21,42 @@ public class RepositorioDescontos {
     this.jdbc = jdbc;
   }
 
-  // Query pesada (DISTINCT ON + join em offers inteira) chamada 2x a cada carregamento da home.
-  // TTL definido em ConfiguracaoCache (10min).
-  // price=0 entra sempre como 100% off (mesmo com regular_price nulo/0): jogos permanentemente
-  // gratis nao tem "preco normal" pra calcular desconto a partir dele, mas ainda sao gratuitos
-  // de verdade (ex: giveaway numa loja com o jogo ainda pago em outra).
-  // tipo=dlc busca DLCs diretamente (WHERE g.is_dlc), em vez de confiar em uma amostra generica
-  // conter DLCs suficientes: como DLCs sao uma fatia pequena do catalogo, um "top 200 por desconto"
-  // sem esse filtro quase nunca traz DLC nenhuma nas primeiras posicoes (jogos base dominam o
-  // ranking), entao filtrar so depois (no frontend) deixava o carrossel de DLCs quase vazio mesmo
-  // havendo milhares de DLCs com desconto ativo no catalogo.
+  /**
+   * Melhores descontos do catalogo, ja com o preco e a loja que serao exibidos.
+   *
+   * <p><b>Elegibilidade e preco vem de ofertas diferentes</b>, e isso e intencional:
+   *
+   * <ul>
+   *   <li>o {@code discount_pct} e o fato de o jogo entrar na lista saem da <b>melhor oferta com
+   *       desconto real</b> ({@code DISTINCT ON});</li>
+   *   <li>o preco e a loja exibidos saem da <b>oferta mais barata entre todas</b>
+   *       ({@code JOIN LATERAL}), mesmo que ela nao esteja em promocao.</li>
+   * </ul>
+   *
+   * <p>Sem essa separacao a Home anunciava um preco maior que o "melhor preco" da propria pagina do
+   * jogo, quando a loja mais barata nao era a que estava com desconto oficial.
+   *
+   * <p>Regras que valem a pena conhecer:
+   *
+   * <ul>
+   *   <li>{@code price = 0} conta sempre como 100% off, mesmo sem {@code regular_price}: jogo
+   *       permanentemente gratuito nao tem preco normal de onde derivar desconto, mas e gratuito de
+   *       verdade;</li>
+   *   <li>desconto so conta a partir de 1% ({@code price < regular_price * 0.99}), pra ruido de
+   *       conversao cambial nao virar "promocao";</li>
+   *   <li>{@code tipo = "dlc"} filtra DLC <b>na query</b>. Filtrar depois, no frontend, deixava o
+   *       carrossel de DLCs quase vazio: como DLC e fatia pequena do catalogo, os jogos base
+   *       dominam o topo do ranking geral.</li>
+   * </ul>
+   *
+   * <p>Query cara ({@code DISTINCT ON} + join na tabela de ofertas inteira) e chamada varias vezes
+   * por carregamento da Home, por isso o cache de 10 min e o reaquecimento apos cada rodada de
+   * precos. Ver {@link ConfiguracaoCache}.
+   *
+   * @param ordenacao {@code rank} (relevancia primeiro) ou qualquer outro valor para ordenar por
+   *     maior desconto
+   * @param tipo {@code game}, {@code dlc}, ou outro valor para nao filtrar
+   */
   @Cacheable(ConfiguracaoCache.CACHE_DESCONTOS)
   public List<DescontoJogo> listarMelhores(int tamanho, String ordenacao, String tipo) {
     String ordenarPor = "rank".equals(ordenacao)
