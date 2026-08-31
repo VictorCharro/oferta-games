@@ -12,6 +12,8 @@ export interface PriceNotification {
   precoAnterior: number;
   precoAtual: number;
   loja: string | null;
+  /** 'meta_atingida' = o preço cruzou a meta definida pelo usuário; 'queda' = alerta comum. */
+  tipo: 'queda' | 'meta_atingida';
   lida: boolean;
   criadaEm: string;
 }

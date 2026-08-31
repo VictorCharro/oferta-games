@@ -38,9 +38,15 @@
       <div class="notifications-panel" *ngIf="notificationsOpen">
         <div class="notifications-heading"><strong>Notificações</strong><button type="button" *ngIf="unreadNotifications" (click)="markAllNotificationsRead()">Marcar todas como lidas</button></div>
         <div class="notification-list" *ngIf="notifications.length; else noNotifications">
-          <a *ngFor="let notification of notifications" [routerLink]="['/jogo', notification.slug]" (click)="markNotificationRead(notification)" [class.unread]="!notification.lida" class="notification-item">
+          <a *ngFor="let notification of notifications" [routerLink]="['/jogo', notification.slug]" (click)="markNotificationRead(notification)" [class.unread]="!notification.lida" [class.meta-atingida]="notification.tipo === 'meta_atingida'" class="notification-item">
             <img src="jogos-monitorados-modo-escuro.png" alt="" />
-            <span><b>{{ notification.titulo }}</b> caiu de {{ formatNotificationPrice(notification.precoAnterior) }} para <strong>{{ formatNotificationPrice(notification.precoAtual) }}</strong><small>{{ notification.loja || 'Melhor oferta' }} · {{ relativeNotificationTime(notification.criadaEm) }}</small></span>
+            <span *ngIf="notification.tipo === 'meta_atingida'; else quedaComum">
+              <span class="notification-tag">Meta atingida</span>
+              <b>{{ notification.titulo }}</b> chegou a <strong>{{ formatNotificationPrice(notification.precoAtual) }}</strong><small>{{ notification.loja || 'Melhor oferta' }} · {{ relativeNotificationTime(notification.criadaEm) }}</small>
+            </span>
+            <ng-template #quedaComum>
+              <span><b>{{ notification.titulo }}</b> caiu de {{ formatNotificationPrice(notification.precoAnterior) }} para <strong>{{ formatNotificationPrice(notification.precoAtual) }}</strong><small>{{ notification.loja || 'Melhor oferta' }} · {{ relativeNotificationTime(notification.criadaEm) }}</small></span>
+            </ng-template>
             <button type="button" (click)="removeNotification($event, notification.id)" title="Remover notificação" aria-label="Remover notificação">×</button>
           </a>
         </div>

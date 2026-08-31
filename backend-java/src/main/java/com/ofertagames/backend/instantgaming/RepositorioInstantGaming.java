@@ -2,6 +2,8 @@ package com.ofertagames.backend.instantgaming;
 
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.JogosBloqueados;
+import com.ofertagames.backend.comum.LojasBloqueadas;
+import com.ofertagames.backend.comum.VariacaoPrecoRelevante;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -189,18 +191,23 @@ class RepositorioInstantGaming {
         INSERT INTO price_history (game_id, price)
         SELECT atual.game_id, atual.preco
         FROM (
-          SELECT game_id, MIN(price) AS preco
-          FROM offers
-          WHERE game_id = :jogoId
-          GROUP BY game_id
+          SELECT o.game_id, MIN(o.price) AS preco
+          FROM offers o
+          WHERE o.game_id = :jogoId
+            %s
+          GROUP BY o.game_id
         ) atual
-        WHERE atual.preco IS DISTINCT FROM (
-          SELECT ph.price FROM price_history ph
+        LEFT JOIN LATERAL (
+          SELECT ph.price
+          FROM price_history ph
           WHERE ph.game_id = atual.game_id
           ORDER BY ph.captured_at DESC
           LIMIT 1
-        )
-        """)
+        ) ultimo ON true
+        WHERE %s
+        """.formatted(
+            LojasBloqueadas.filtroSql("o"),
+            VariacaoPrecoRelevante.condicaoSql("atual.preco", "ultimo.price")))
         .param("jogoId", jogoId)
         .update();
   }

@@ -8,6 +8,7 @@ import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.JogosBloqueados;
 import com.ofertagames.backend.comum.LojasBloqueadas;
 import com.ofertagames.backend.comum.LojasCatalogo;
+import com.ofertagames.backend.comum.VariacaoPrecoRelevante;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -494,8 +495,8 @@ public class RepositorioJogos {
    *       estender o ultimo valor ate a data atual (ver issue #4).</li>
    * </ul>
    *
-   * <p>Hoje nao ha limiar minimo: variacao de centavos vinda da conversao cambial e gravada como
-   * se fosse mudanca de preco (ver issue #1).
+   * <p>Variacao abaixo do limiar de {@link VariacaoPrecoRelevante} e descartada, pra ruido de
+   * conversao cambial nao virar ponto no grafico nem alerta de queda.
    *
    * <p>Normalmente nao e chamado direto — {@link #salvarOfertas} ja invoca.
    */
@@ -516,13 +517,17 @@ public class RepositorioJogos {
             %s
           ORDER BY o.game_id, o.price ASC
         ) atual
-        WHERE atual.preco IS DISTINCT FROM (
-          SELECT ph.price FROM price_history ph
+        LEFT JOIN LATERAL (
+          SELECT ph.price
+          FROM price_history ph
           WHERE ph.game_id = atual.game_id
           ORDER BY ph.captured_at DESC
           LIMIT 1
-        )
-        """.formatted(LojasBloqueadas.filtroSql("o")))
+        ) ultimo ON true
+        WHERE %s
+        """.formatted(
+            LojasBloqueadas.filtroSql("o"),
+            VariacaoPrecoRelevante.condicaoSql("atual.preco", "ultimo.price")))
         .param("jogosIds", idsUnicos)
         .update();
   }
