@@ -4,12 +4,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-// Chaves usadas pelo filtro "lojas preferidas" (preferencias do usuario -> catalogo). Lista
-// conferida contra as lojas com ofertas de fato ativas em producao (SELECT DISTINCT store_name
-// FROM offers, 21/08/2026), exceto as ja excluidas globalmente por LojasBloqueadas (gog, humble,
-// greenmangaming etc.) - nao faz sentido deixar o usuario "preferir" uma loja que o catalogo nunca
-// mostra. Microsoft Store fica de fora daqui de proposito: ja e coberta pelo filtro de Plataforma
-// (Xbox), que usa o mesmo store_name/url por baixo.
+/**
+ * Chaves do filtro "lojas preferidas" (Configuracoes &gt; Preferencias no frontend, parametro
+ * {@code stores=} no catalogo). As chaves espelham {@code STORE_FILTER_OPTIONS} em
+ * {@code services/store-brand.ts} — mexer aqui exige mexer la.
+ *
+ * <p>Lista conferida contra as lojas com oferta de fato ativa em producao
+ * ({@code SELECT DISTINCT store_name FROM offers}, 21/08/2026), exceto as ja excluidas
+ * globalmente por {@link LojasBloqueadas}: nao faz sentido deixar o usuario "preferir" uma loja
+ * que o catalogo nunca mostra.
+ *
+ * <p>Microsoft Store fica de fora de proposito — ja e coberta pelo filtro de Plataforma (Xbox),
+ * que usa o mesmo {@code store_name}/url por baixo.
+ */
 public final class LojasCatalogo {
   private static final Map<String, String> REGEX_POR_CHAVE = new LinkedHashMap<>();
 
@@ -42,8 +49,15 @@ public final class LojasCatalogo {
     return chave != null && REGEX_POR_CHAVE.containsKey(chave);
   }
 
-  // Retorna um regex (pra usar com "~*" no Postgres) combinando as lojas escolhidas, ou null se a
-  // lista estiver vazia/sem nenhuma chave reconhecida (equivale a "nao filtrar por loja").
+  /**
+   * Monta o regex (pra usar com {@code ~*} no Postgres) que casa qualquer uma das lojas escolhidas.
+   *
+   * <p>Chaves desconhecidas sao ignoradas em silencio, entao entrada invalida nunca zera o
+   * resultado por engano.
+   *
+   * @return {@code null} quando nao ha nenhuma chave valida — e o sinal de <b>nao filtrar por
+   *     loja</b> (mostrar todas), nao de "nao casar com nenhuma"
+   */
   public static String regexParaChaves(List<String> chaves) {
     if (chaves == null || chaves.isEmpty()) {
       return null;
