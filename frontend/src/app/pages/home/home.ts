@@ -6,6 +6,7 @@ import { resolveDlc } from '../../services/filters';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 import { PreferencesService, UserPreferences } from '../../services/preferences';
 import { SeoService } from '../../services/seo';
+import { temHistoricoParaGrafico } from '../../components/price-history-chart/price-history-chart';
 
 export interface DealCardView {
   slug: string;
@@ -160,7 +161,7 @@ export class Home implements OnInit, OnDestroy {
   }
 
   temHistoricoParaChart(slug: string): boolean {
-    return (this.historicoPorSlug[slug]?.length ?? 0) >= 2;
+    return temHistoricoParaGrafico(this.historicoPorSlug[slug] ?? []);
   }
 
   historicoMenorPreco(slug: string): number | null {

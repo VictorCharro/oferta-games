@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { of, Subscription } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 import type Hls from 'hls.js';
+import { temHistoricoParaGrafico } from '../../components/price-history-chart/price-history-chart';
 import {
   GameService,
   GameDetail as GameDetailModel,
@@ -304,7 +305,7 @@ export class GameDetail implements OnInit, OnDestroy {
   }
 
   get temHistoricoSuficiente(): boolean {
-    return this.priceHistory.length >= 2;
+    return temHistoricoParaGrafico(this.priceHistory);
   }
 
   get historicoMenorPreco(): number | null {

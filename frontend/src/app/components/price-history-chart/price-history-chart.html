@@ -18,7 +18,7 @@
     [class.price-chart-tooltip--start]="pontoHoverAlinhamento === 'start'" [class.price-chart-tooltip--end]="pontoHoverAlinhamento === 'end'"
     [class.price-chart-tooltip--abaixo]="pontoHoverPosicaoVertical === 'abaixo'">
     <strong>{{ formatPrice(ph.price) }}</strong>
-    <span>{{ formatDataCurta(ph.data) }}</span>
+    <span>{{ rotuloDataTooltip(ph) }}</span>
   </div>
   <div class="price-chart-axis-x" *ngIf="mostrarEixoX">
     <span *ngFor="let rotulo of rotulosEixoX">{{ rotulo }}</span>
