@@ -26,6 +26,26 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Acesso SQL a tudo que gira em torno de {@code games}: catalogo, detalhe, ofertas, historico de
+ * preco, filas dos jobs de sincronizacao, metadados/detalhes/conquistas da Steam e sitemap.
+ *
+ * <p>E a maior classe do backend e concentra responsabilidades demais pra um repositorio so —
+ * dividir por assunto (catalogo / ofertas / sincronizacao / steam) e uma refatoracao desejavel,
+ * mas ainda nao feita.
+ *
+ * <h2>Convencoes das queries</h2>
+ *
+ * <ul>
+ *   <li>As leituras do catalogo aplicam sempre os filtros de dominio de {@code comum/}
+ *       ({@link com.ofertagames.backend.comum.LojasBloqueadas},
+ *       {@link com.ofertagames.backend.comum.ConteudosNaoJogos},
+ *       {@link com.ofertagames.backend.comum.JogosBloqueados}). Esses filtros devolvem fragmentos
+ *       que comecam com {@code AND} — e por isso que as queries abrem com {@code WHERE 1=1}.</li>
+ *   <li>Menor preco nunca e armazenado: sai de {@code MIN(o.price)} em tempo de query.</li>
+ *   <li>Aliases interpolados em SQL sao sempre literais do proprio codigo, nunca valor de request.</li>
+ * </ul>
+ */
 @Repository
 public class RepositorioJogos {
   private final JdbcClient jdbc;
@@ -38,7 +58,41 @@ public class RepositorioJogos {
     this.objectMapper = objectMapper;
   }
 
-  // TTL definido em ConfiguracaoCache (10min): evita repetir a query pesada a cada abertura do catalogo.
+  /**
+   * Pagina do catalogo, ja com o menor preco e a loja correspondente. Usada pelo Catalogo (scroll
+   * infinito), pela pagina Mais Vendidos e pela busca com filtro.
+   *
+   * <p><b>Custo:</b> a query junta {@code games} com {@code offers} e agrega o catalogo inteiro
+   * antes de aplicar {@code LIMIT}, entao o custo e praticamente o mesmo para qualquer pagina
+   * (~500ms no banco, medido com 110k jogos). O cache de 10 min
+   * ({@link ConfiguracaoCache#CACHE_CATALOGO}) e o que segura isso hoje — mas a chave inclui
+   * <i>todos</i> os parametros, entao cada combinacao de filtro/pagina paga o custo cheio uma vez.
+   * Ver issue #3.
+   *
+   * <p><b>O que depende do agregado</b> (relevante pra qualquer tentativa de pre-paginar em
+   * {@code games} antes do join):
+   *
+   * <ul>
+   *   <li>{@code precoMinimo}, {@code precoMaximo} e {@code descontoMinimo} viram {@code HAVING}
+   *       sobre {@code MIN(o.price)}/{@code MAX(o.regular_price)} — ver {@code filtroPreco}.</li>
+   *   <li>As ordenacoes {@code discount}, {@code price_asc} e {@code price_desc} tambem, e a
+   *       padrao ({@code rank}) parcialmente — ver {@code ordenarPor}.</li>
+   *   <li>So {@code popularity} ordena exclusivamente por colunas de {@code games}.</li>
+   * </ul>
+   *
+   * @param ordenacao {@code rank} (padrao: destaque com desconto primeiro, depois rank),
+   *     {@code popularity}, {@code discount}, {@code price_asc} ou {@code price_desc}. Valor
+   *     desconhecido cai no padrao
+   * @param tipo {@code game}, {@code dlc} ou qualquer outro valor para nao filtrar
+   * @param plataforma {@code pc}, {@code xbox}, {@code playstation}, ou outro valor para nao
+   *     filtrar. Inferida do nome/URL da loja, nao de coluna propria
+   * @param busca casa por {@code ILIKE} em qualquer posicao do titulo; nulo/vazio nao filtra
+   * @param lojas chaves de {@link com.ofertagames.backend.comum.LojasCatalogo} ("lojas
+   *     preferidas"). Lista vazia ou so com chaves invalidas <b>nao filtra</b> — nao devolve vazio.
+   *     Quando filtra, restringe tanto quais jogos aparecem quanto quais ofertas contam pro preco
+   *     exibido
+   * @return no maximo {@code tamanho} itens; lista vazia quando a pagina passa do fim
+   */
   @Cacheable(ConfiguracaoCache.CACHE_CATALOGO)
   public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, Double descontoMinimo, String busca, List<String> lojas) {
     int deslocamento = pagina * tamanho;
@@ -124,9 +178,17 @@ public class RepositorioJogos {
         listarDlcsDoJogo(linha.id()), listarJogosBaseDaDlc(linha.id())));
   }
 
-  // As DLCs de um jogo vem do array "dlc" da appdetails da Steam (ver ServicoSteam), salvo em
-  // game_details.dlc_steam_app_ids quando preenchemos os detalhes do jogo base. So aparecem aqui
-  // as que ja existem no nosso catalogo (i.e., ja foram descobertas via ITAD em algum momento).
+  /**
+   * DLCs de um jogo base, para a secao correspondente na aba Precos.
+   *
+   * <p>A relacao vem do array {@code dlc} da appdetails da Steam, salvo em
+   * {@code game_details.dlc_steam_app_ids} quando os detalhes do jogo base sao preenchidos. So
+   * retorna DLCs que <b>ja existem no nosso catalogo</b> (descobertas via ITAD em algum momento),
+   * entao a lista costuma ser menor que a da Steam.
+   *
+   * @return lista vazia quando o jogo base ainda nao foi detalhado ou nenhuma DLC dele esta no
+   *     catalogo — nos dois casos a secao inteira fica oculta na interface
+   */
   public List<ResumoJogo> listarDlcsDoJogo(long jogoId) {
     List<Integer> appIds = jdbc.sql("SELECT dlc_steam_app_ids FROM game_details WHERE game_id = :jogoId")
         .param("jogoId", jogoId)
@@ -171,9 +233,14 @@ public class RepositorioJogos {
         .list();
   }
 
-  // Caminho inverso de listarDlcsDoJogo: se este jogo e uma DLC, mostra de qual(is) jogo(s) base
-  // ela faz parte, pra dar ida e volta entre as duas paginas. Cruza o proprio steam_app_id do jogo
-  // com o dlc_steam_app_ids de todo mundo — so acha algo quando o jogo base ja foi detalhado.
+  /**
+   * Caminho inverso de {@link #listarDlcsDoJogo}: dado uma DLC, os jogos base dos quais ela faz
+   * parte — o que fecha a ida e volta entre as duas paginas.
+   *
+   * <p>Cruza o {@code steam_app_id} deste jogo contra o {@code dlc_steam_app_ids} de todos os
+   * demais, entao so encontra algo depois que o <b>jogo base</b> foi detalhado. Devolve lista (nao
+   * um item so) porque a mesma DLC pode constar em mais de um jogo base, como edicoes/bundles.
+   */
   public List<ResumoJogo> listarJogosBaseDaDlc(long jogoId) {
     Integer steamAppId = jdbc.sql("SELECT steam_app_id FROM games WHERE id = :jogoId")
         .param("jogoId", jogoId)
@@ -358,6 +425,19 @@ public class RepositorioJogos {
         .update();
   }
 
+  /**
+   * Grava ofertas em lote (upsert por {@code game_id + source + store_name}).
+   *
+   * <p>Descarta silenciosamente ofertas de loja bloqueada, entao o retorno pode ser menor que a
+   * lista recebida — e uma lista so de lojas bloqueadas resulta em zero, sem erro.
+   *
+   * <p><b>Efeito colateral:</b> chama {@link #registrarHistoricoDePrecos} para todos os jogos
+   * tocados. E por aqui que o historico de preco e alimentado nos tres caminhos que escrevem
+   * oferta da ITAD (refresh manual, {@link #substituirOfertasItad} e
+   * {@link #substituirOfertasItadEmLote}).
+   *
+   * @return quantidade de linhas afetadas no {@code offers}
+   */
   public int salvarOfertas(List<OfertaParaSalvar> ofertas) {
     List<OfertaParaSalvar> ofertasPermitidas = ofertas.stream()
         .filter(oferta -> !lojaBloqueada(oferta.loja()))
@@ -396,11 +476,29 @@ public class RepositorioJogos {
         .sum();
   }
 
-  // So insere uma linha quando o menor preco do jogo (MIN entre as ofertas) mudou desde a ultima
-  // linha gravada - nao a cada sincronizacao. Isso mantem o volume da tabela proporcional a
-  // mudancas reais de preco, nao ao ritmo dos jobs agendados (que tocam milhares de jogos a cada
-  // 10min mesmo sem nenhum preco ter mudado). "IS DISTINCT FROM" com a subquery vazia (jogo sem
-  // historico ainda) tambem cobre a primeira linha de cada jogo.
+  /**
+   * Grava um ponto em {@code price_history} para cada jogo cujo menor preco mudou.
+   *
+   * <p><b>So grava em mudanca</b>, nao a cada sincronizacao: compara o {@code MIN(price)} atual
+   * com a ultima linha registrada daquele jogo. Isso mantem o volume da tabela proporcional a
+   * mudancas de preco e nao ao ritmo dos jobs (que tocam milhares de jogos a cada 10 min mesmo sem
+   * nada ter mudado). O {@code IS DISTINCT FROM} com subquery vazia cobre a primeira linha de cada
+   * jogo.
+   *
+   * <p>Duas consequencias que importam pra quem le o historico depois:
+   *
+   * <ul>
+   *   <li>Um jogo com <b>um unico ponto</b> nao e um jogo sem dado — e um jogo cujo preco nunca
+   *       mudou desde aquela data.</li>
+   *   <li>O ultimo ponto e a ultima <b>mudanca</b>, nao o estado de hoje. Um grafico fiel precisa
+   *       estender o ultimo valor ate a data atual (ver issue #4).</li>
+   * </ul>
+   *
+   * <p>Hoje nao ha limiar minimo: variacao de centavos vinda da conversao cambial e gravada como
+   * se fosse mudanca de preco (ver issue #1).
+   *
+   * <p>Normalmente nao e chamado direto — {@link #salvarOfertas} ja invoca.
+   */
   public void registrarHistoricoDePrecos(List<Long> jogosIds) {
     if (jogosIds == null || jogosIds.isEmpty()) {
       return;
@@ -429,6 +527,18 @@ public class RepositorioJogos {
         .update();
   }
 
+  /**
+   * Pontos do historico em ordem cronologica (mais antigo primeiro), ja no formato que o grafico
+   * da pagina do jogo espera.
+   *
+   * <p>Cada ponto e uma <b>mudanca</b> de preco, nao uma amostragem periodica: os intervalos entre
+   * pontos sao irregulares e o ultimo ponto costuma ser mais antigo que hoje. Ver
+   * {@link #registrarHistoricoDePrecos}.
+   *
+   * @param dias janela pra tras a partir de agora; o filtro e por
+   *     {@code captured_at >= now() - dias}
+   * @return lista vazia quando o jogo nao tem historico na janela — nunca {@code null}
+   */
   public List<PontoHistoricoPreco> listarHistoricoDePrecos(long jogoId, int dias) {
     return jdbc.sql("""
         SELECT price, store_name, captured_at
@@ -445,7 +555,15 @@ public class RepositorioJogos {
         .list();
   }
 
-  // Roda diariamente (ver AgendadorColetas): mantem so os ultimos N dias de historico.
+  /**
+   * Apaga pontos de historico mais antigos que a retencao. Roda diariamente pelo
+   * {@code AgendadorColetas}.
+   *
+   * <p>Perda de dado e definitiva e nao ha backup do historico — reduzir a retencao descarta o
+   * passado na primeira execucao seguinte.
+   *
+   * @return quantidade de linhas removidas
+   */
   public int podarHistoricoDePrecos(int diasRetencao) {
     return jdbc.sql("DELETE FROM price_history WHERE captured_at < now() - make_interval(days => :dias)")
         .param("dias", diasRetencao)
@@ -454,6 +572,13 @@ public class RepositorioJogos {
 
   public record PontoHistoricoPreco(BigDecimal price, String lojaNome, java.time.Instant capturadoEm) {}
 
+  /**
+   * Troca as ofertas ITAD de um jogo pelas recebidas, removendo as que a ITAD nao devolve mais.
+   *
+   * <p>O {@code DELETE} e restrito a {@code source = 'itad'}: ofertas de outras fontes (hoje
+   * {@code instant_gaming}) sobrevivem. Transacional, entao nunca deixa o jogo sem oferta nenhuma
+   * caso a insercao falhe.
+   */
   @Transactional
   public int substituirOfertasItad(long jogoId, List<OfertaParaSalvar> ofertas) {
     jdbc.sql("DELETE FROM offers WHERE game_id = :jogoId AND source = 'itad'")
@@ -462,6 +587,13 @@ public class RepositorioJogos {
     return salvarOfertas(ofertas);
   }
 
+  /**
+   * Versao em lote de {@link #substituirOfertasItad}, usada pela coleta agendada: um unico
+   * {@code DELETE} e um unico batch de insercao para todos os jogos da rodada.
+   *
+   * <p>Cuidado ao chamar: um jogo presente no mapa com lista vazia tem as ofertas ITAD apagadas e
+   * nenhuma inserida no lugar — e assim que um jogo delistado perde as ofertas.
+   */
   @Transactional
   public int substituirOfertasItadEmLote(Map<Long, List<OfertaParaSalvar>> ofertasPorJogo) {
     if (ofertasPorJogo.isEmpty()) {
@@ -477,6 +609,19 @@ public class RepositorioJogos {
     return salvarOfertas(ofertas);
   }
 
+  /**
+   * Menor preco atual de varios jogos de uma vez. Usado por {@code ServicoCatalogo} antes e depois
+   * de gravar as ofertas, pra comparar e decidir se houve queda (ver
+   * {@code RepositorioNotificacoes.registrarQueda}).
+   *
+   * <p><b>Atencao:</b> diferente de todas as leituras do catalogo, esta query <b>nao</b> aplica
+   * {@link com.ofertagames.backend.comum.LojasBloqueadas}. Entao o preco comparado aqui pode vir de
+   * uma loja que o usuario nunca ve na interface, o que gera notificacao de queda que nao bate com
+   * o preco exibido na tela.
+   *
+   * @return mapa so com os jogos que tem ao menos uma oferta; jogo sem oferta fica ausente (nao
+   *     vem com valor nulo)
+   */
   public Map<Long, BigDecimal> precosMinimos(List<Long> jogosIds) {
     if (jogosIds == null || jogosIds.isEmpty()) return Map.of();
     Map<Long, BigDecimal> precos = new HashMap<>();
@@ -593,17 +738,27 @@ public class RepositorioJogos {
         .list();
   }
 
-  // Cooldown do refresh manual ("Atualizar precos"): o endpoint e publico (sem login), entao isso
-  // e o unico freio contra alguem martelando o botao pro mesmo jogo repetidas vezes.
+  /**
+   * Carimba {@code games.last_manual_refresh_at = now()}, iniciando o cooldown do botao
+   * "Atualizar precos".
+   *
+   * <p>O endpoint de refresh e <b>publico</b> (sem login), entao este cooldown e o unico freio
+   * contra alguem martelando o botao no mesmo jogo. Vale por jogo, nao por usuario ou IP.
+   */
   public void marcarRefreshManual(long jogoId) {
     jdbc.sql("UPDATE games SET last_manual_refresh_at = now() WHERE id = :jogoId")
         .param("jogoId", jogoId)
         .update();
   }
 
-  // So preenche o que ainda esta faltando (nunca sobrescreve cover_url/steam_app_id ja resolvidos)
-  // - usado pelo preenchimento em lote, que roda o tempo todo e nao deve ficar rebuscando/trocando
-  // dado que ja esta correto so por rodar de novo.
+  /**
+   * Preenche apenas o que ainda esta faltando — <b>nunca sobrescreve</b> {@code cover_url} ou
+   * {@code steam_app_id} ja resolvidos.
+   *
+   * <p>E a versao usada pelo job em lote, que roda o tempo todo: passar por um jogo de novo nao
+   * pode trocar dado que ja esta correto. Para forcar correcao, use
+   * {@link #forcarMetadadosSteam}.
+   */
   public void atualizarMetadadosSteam(long jogoId, Boolean ehDlc, String capaSteam, Integer steamAppId) {
     jdbc.sql("""
         UPDATE games
@@ -620,9 +775,14 @@ public class RepositorioJogos {
         .update();
   }
 
-  // Prefere o valor novo (sobrescreve o que ja existia) quando a busca traz algo, so mantendo o
-  // valor antigo se a Steam nao devolveu nada dessa vez - usado pelo botao de admin "Preencher tudo
-  // agora", que existe justamente pra forcar uma capa/steam_app_id errado a ser corrigido na hora.
+  /**
+   * Contrario de {@link #atualizarMetadadosSteam}: o valor novo <b>sobrescreve</b> o existente,
+   * mantendo o antigo apenas quando a Steam nao devolveu nada nesta chamada.
+   *
+   * <p>Existe pro botao de admin "Preencher tudo agora", cujo proposito e justamente corrigir na
+   * hora uma capa ou {@code steam_app_id} errado. Nao usar em job automatico — ficaria trocando
+   * dado correto a cada rodada.
+   */
   public void forcarMetadadosSteam(long jogoId, Boolean ehDlc, String capaSteam, Integer steamAppId) {
     jdbc.sql("""
         UPDATE games
@@ -724,10 +884,15 @@ public class RepositorioJogos {
         .single();
   }
 
-  // Marca que ja verificamos as conquistas deste jogo na Steam, mesmo quando ele nao tem nenhuma
-  // (esquema vazio): sem isso, listarPendentesConquistas reconsulta pra sempre os mesmos jogos sem
-  // conquistas de verdade (NOT EXISTS continua verdadeiro), entupindo o inicio da fila (ORDER BY
-  // id ASC) e impedindo o resto do backlog de avancar.
+  /**
+   * Carimba {@code games.achievements_checked_at}, marcando que a Steam ja foi consultada — mesmo
+   * quando ela devolveu esquema vazio (jogo sem conquista nenhuma).
+   *
+   * <p>Precisa ser chamado tambem no caso vazio. Sem isso, {@link #listarPendentesConquistas}
+   * reconsulta pra sempre os mesmos jogos sem conquista (o {@code NOT EXISTS} segue verdadeiro),
+   * e como a fila e {@code ORDER BY id ASC} eles entopem o inicio dela e travam o backlog inteiro.
+   * Foi exatamente o bug corrigido em 09/08/2026.
+   */
   public void marcarConquistasVerificadas(long jogoId) {
     jdbc.sql("UPDATE games SET achievements_checked_at = now() WHERE id = :jogoId")
         .param("jogoId", jogoId)
@@ -1000,6 +1165,16 @@ public class RepositorioJogos {
     return condicao;
   }
 
+  /**
+   * Monta a clausula {@code HAVING} dos filtros de preco/desconto.
+   *
+   * <p>E {@code HAVING} e nao {@code WHERE} porque as tres condicoes olham o agregado das ofertas
+   * ({@code MIN(price)}, {@code MAX(regular_price)}), que so existe depois do {@code GROUP BY}.
+   * Consequencia pratica: com qualquer um desses filtros ativo nao da pra escolher a pagina
+   * olhando so {@code games} — a linha precisa ser agregada antes de se saber se entra.
+   *
+   * @return string vazia quando nenhum filtro foi informado (nao filtrar)
+   */
   private static String filtroPreco(Double precoMinimo, Double precoMaximo, Double descontoMinimo) {
     List<String> condicoes = new java.util.ArrayList<>();
     if (precoMinimo != null) condicoes.add("MIN(o.price) >= :precoMinimo");
@@ -1010,6 +1185,27 @@ public class RepositorioJogos {
     return condicoes.isEmpty() ? "" : "HAVING " + String.join(" AND ", condicoes);
   }
 
+  /**
+   * Traduz a ordenacao pedida em {@code ORDER BY}.
+   *
+   * <p>Quais dependem do agregado das ofertas (e portanto impedem escolher a pagina so por
+   * {@code games}):
+   *
+   * <table border="1">
+   *   <caption>Dependencia de agregado por ordenacao</caption>
+   *   <tr><th>ordenacao</th><th>depende de MIN/MAX das ofertas?</th></tr>
+   *   <tr><td>{@code popularity}</td><td>nao — so {@code g.rank}, {@code g.id}</td></tr>
+   *   <tr><td>{@code rank} (padrao)</td><td>parcialmente — ver abaixo</td></tr>
+   *   <tr><td>{@code discount}</td><td>sim</td></tr>
+   *   <tr><td>{@code price_asc} / {@code price_desc}</td><td>sim</td></tr>
+   * </table>
+   *
+   * <p>A ordenacao padrao promove pro topo os jogos com {@code rank <= 200} que estejam com
+   * desconto real (menor preco abaixo de 99% do preco normal — a folga de 1% evita tratar ruido de
+   * conversao cambial como promocao), ordenados por maior desconto; o resto sai por
+   * {@code rank}. Ou seja: ela precisa do agregado <b>apenas</b> para decidir a fatia de ate 200
+   * jogos do topo — da metade pra baixo e ordenacao pura de {@code games}.
+   */
   private static String ordenarPor(String ordenacao) {
     return switch (ordenacao) {
       case "discount" -> "ROUND((1 - MIN(o.price) / NULLIF(MAX(o.regular_price), 0)) * 100) DESC NULLS LAST, g.rank ASC NULLS LAST";
