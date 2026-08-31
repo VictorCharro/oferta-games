@@ -4,6 +4,21 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+/**
+ * Dispara os jobs de coleta em intervalo fixo. Aqui fica so o <b>ritmo</b>; o que cada rodada faz
+ * e quantos itens processa esta em {@link ServicoSincronizacao}.
+ *
+ * <p>Todo o agendamento e desligado quando {@code app.sync.scheduler.enabled} nao e {@code true} —
+ * e o que mantem ambiente local sem coletar nada por acidente. Em producao fica ligado.
+ *
+ * <p>Usa {@code fixedDelay} (nao {@code fixedRate}), entao o intervalo conta a partir do
+ * <b>fim</b> da execucao anterior: uma rodada lenta empurra a proxima, sem acumular disparos.
+ * Somado a trava unica de {@link ServicoExecucaoColeta}, um job atrasado faz os outros do mesmo
+ * periodo serem pulados em vez de enfileirados.
+ *
+ * <p>Todos os intervalos sao sobrescreviveis por variavel de ambiente, o que permite acelerar um
+ * job pra drenar backlog sem alterar codigo.
+ */
 @Component
 @ConditionalOnProperty(name = "app.sync.scheduler.enabled", havingValue = "true")
 class AgendadorColetas {

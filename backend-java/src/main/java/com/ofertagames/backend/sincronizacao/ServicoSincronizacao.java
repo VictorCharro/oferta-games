@@ -12,6 +12,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/**
+ * Corpo dos 8 jobs agendados: uma rodada de cada tipo de coleta, mais a poda do historico.
+ *
+ * <p>Aqui fica o <b>tamanho</b> de cada rodada (as constantes {@code LIMITE_*}); o
+ * <b>intervalo</b> entre rodadas fica no {@link AgendadorColetas}. Mexer no ritmo de um job
+ * normalmente exige olhar os dois lugares.
+ *
+ * <p>Todos os {@code sincronizarRodada*} sao chamados tanto pelo agendador quanto pelo disparo
+ * manual do admin, e todos compartilham a mesma trava via {@code ServicoExecucaoColeta} — dois
+ * jobs nunca rodam ao mesmo tempo, mesmo com duas instancias no ar durante um deploy.
+ *
+ * <p>Nenhum deles propaga excecao pra fora: falha e registrada em log e a rodada seguinte tenta de
+ * novo, ja que os itens que falharam continuam no topo da fila por nao terem sido marcados como
+ * sincronizados.
+ */
 @Service
 public class ServicoSincronizacao {
   private static final int TAMANHO_PAGINA = 50;
@@ -66,6 +81,18 @@ public class ServicoSincronizacao {
     return new ResultadoSincronizacao(true, sincronizadas, ignoradas, temMais, temMais ? paginaSegura + 1 : null, 0);
   }
 
+  /**
+   * Rodada principal: seleciona ate 5.000 jogos da fila (200 relevantes + 4.800 gerais) e atualiza
+   * os precos deles em lotes de 200 contra a ITAD.
+   *
+   * <p>A fila e ordenada por {@code games.last_price_sync_at}, entao o jogo atualizado volta
+   * naturalmente pro fim. Cada lote tem ate 3 tentativas com 10s de espera; um lote que falha
+   * definitivamente e registrado em log e <b>nao interrompe</b> os demais — os jogos dele ficam
+   * sem marca de sincronizacao e voltam prioritarios na proxima rodada.
+   *
+   * <p>No fim, se alguma oferta mudou, reaquece o cache do catalogo pra Home e Catalogo nao
+   * pegarem cache frio (ver {@link com.ofertagames.backend.comum.ConfiguracaoCache}).
+   */
   public ResultadoRodadaColeta sincronizarRodadaPrecos() {
     List<RepositorioJogos.JogoParaSincronizar> selecionados = jogos.listarParaSincronizar(
         LIMITE_RELEVANTES, LIMITE_GERAIS);
@@ -138,12 +165,27 @@ public class ServicoSincronizacao {
     return new ResultadoRodadaColeta(0, atualizados);
   }
 
+  /**
+   * Apaga pontos de {@code price_history} com mais de 90 dias. Roda uma vez por dia.
+   *
+   * <p>Descarte definitivo e sem backup — ver
+   * {@link RepositorioJogos#podarHistoricoDePrecos}.
+   */
   public ResultadoRodadaColeta podarHistoricoDePrecos() {
     int apagadas = jogos.podarHistoricoDePrecos(RETENCAO_HISTORICO_PRECOS_DIAS);
     logger.info("Poda do historico de precos concluida: {} linhas apagadas (retencao de {} dias)", apagadas, RETENCAO_HISTORICO_PRECOS_DIAS);
     return new ResultadoRodadaColeta(0, apagadas);
   }
 
+  /**
+   * Ate 3 tentativas do mesmo lote, com 10 segundos de espera entre elas, pra absorver
+   * instabilidade momentanea da ITAD.
+   *
+   * <p>A espera e {@link Thread#sleep} no proprio thread do job — aceitavel porque a coleta roda
+   * num executor dedicado, mas significa que a rodada inteira fica parada nesses 10s.
+   *
+   * @throws IllegalStateException apos a terceira falha, com o ultimo erro como causa
+   */
   private ServicoCatalogo.ResultadoAtualizacaoLote atualizarLoteComTentativas(
       List<RepositorioJogos.JogoParaSincronizar> lote) {
     RuntimeException ultimoErro = null;

@@ -6,9 +6,13 @@ import java.time.Instant;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-// Persistido na tabela coleta_status em vez de um Map em memoria: o backend redeploya varias
-// vezes ao dia (todo push que mexe em backend-java/**), e um Map perderia status/contadores a
-// cada deploy, fazendo a tela de admin parecer "resetada" toda hora.
+/**
+ * Status e contadores de cada tipo de coleta, mostrados em {@code /admin/coleta}.
+ *
+ * <p>Persistido na tabela {@code coleta_status}, e nao num {@code Map} em memoria: o backend
+ * redeploya varias vezes ao dia (todo push que toca {@code backend-java/}), e um Map perderia
+ * status e contadores a cada deploy, fazendo a tela de admin parecer resetada o tempo todo.
+ */
 @Component
 public class EstadoColeta {
   private final JdbcClient jdbc;
@@ -17,9 +21,15 @@ public class EstadoColeta {
     this.jdbc = jdbc;
   }
 
-  // No boot, nenhum job pode estar de fato em execucao (o processo acabou de subir); limpa
-  // qualquer "em execucao" travado por um restart no meio de uma rodada (deploy, crash etc) -
-  // senao a linha ficaria presa em "Em execucao" ate o proximo disparo daquele mesmo tipo.
+  /**
+   * No boot, marca como nao-executando qualquer job que ficou preso em "em execucao".
+   *
+   * <p>Logo apos o processo subir nenhum job pode estar de fato rodando, entao uma linha nesse
+   * estado so pode ter vindo de um restart no meio de uma rodada (deploy, crash, OOM). Sem essa
+   * limpeza a tela de admin mostraria "Em execucao" ate o proximo disparo daquele mesmo tipo.
+   *
+   * <p>Nao mexe na trava de {@code sync_locks} — essa expira sozinha por tempo.
+   */
   @PostConstruct
   void limparExecucoesTravadas() {
     jdbc.sql("UPDATE coleta_status SET em_execucao = false WHERE em_execucao = true").update();

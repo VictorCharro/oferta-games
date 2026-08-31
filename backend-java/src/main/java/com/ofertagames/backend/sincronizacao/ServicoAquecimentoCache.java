@@ -7,10 +7,18 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
-// Sem isso, o cache so e populado pela primeira visita apos expirar (ou apos um preco mudar),
-// entao quem chega logo depois de uma sincronizacao ainda paga a query pesada. Aqui o cache e
-// limpo e reaquecido com as combinacoes mais usadas (home, catalogo, mais vendidos) logo depois
-// de cada rodada de precos, pra ninguem pegar o cache frio nem os preços velhos.
+/**
+ * Limpa e repopula o cache de catalogo/descontos logo apos cada rodada de precos.
+ *
+ * <p>Sem isso, o cache so seria populado pela primeira visita apos a expiracao, e quem chegasse
+ * logo depois de uma sincronizacao pagaria a query pesada (~2s contra ~46ms quente). Limpar antes
+ * de reaquecer tambem evita servir preco velho de uma entrada que ainda nao expirou.
+ *
+ * <p>So aquece as combinacoes que Home, Catalogo, Mais Vendidos e Gratuitos usam de fato — e a
+ * lista precisa ser mantida em sincronia com essas telas. Uma combinacao nova no frontend que nao
+ * seja adicionada aqui simplesmente nunca sera aquecida, e quem abrir aquela tela paga o custo
+ * frio.
+ */
 @Service
 class ServicoAquecimentoCache {
   private final CacheManager cacheManager;
