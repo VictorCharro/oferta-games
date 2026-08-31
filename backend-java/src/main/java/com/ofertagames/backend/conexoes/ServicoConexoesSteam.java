@@ -23,11 +23,15 @@ import org.springframework.web.client.RestClient;
  * um {@code state} sorteado e guardado no banco antes do redirect. E a diferenca central em
  * relacao ao {@link ServicoConexoesXbox}, que por ser OAuth com bearer nao precisa dessa tabela.
  *
- * <p><b>Estrategia de sincronizacao — atencao:</b> a biblioteca Steam e <b>substituida por
- * inteiro</b> a cada sync, enquanto a do Xbox e upsert-only. Sao decisoes diferentes de proposito,
- * e um incidente em 06/08/2026 mostrou o risco desse caminho: um DELETE em cascata chegou a apagar
- * favoritos e colecoes dos usuarios. Qualquer mudanca aqui precisa garantir que dado do usuario
- * (favoritos, colecoes, ordem de platinados) nunca dependa de linha que o sync apaga.
+ * <p><b>Sincronizacao e upsert-only</b>, igual a do Xbox: {@code steam_library_games} nunca sofre
+ * DELETE. Nem sempre foi assim — em 06/08/2026 o resync apagava e reinseria a biblioteca, e o
+ * DELETE em cascata levou junto favoritos e colecoes dos usuarios. Desde a correcao o caminho e so
+ * INSERT/UPDATE por {@code (user_id, app_id)}.
+ *
+ * <p>Nao reintroduzir DELETE aqui: qualquer dado do usuario que referencie a biblioteca
+ * (favoritos, colecoes, ordem de platinados) volta a correr o risco de sumir em cascata. O nome
+ * {@code RepositorioConexoesSteam.substituirBiblioteca} sobrou de antes da correcao e engana — ele
+ * nao substitui nada, so faz upsert.
  *
  * <p>Nunca lanca excecao por falha da API da Steam durante a sincronizacao: registra o erro em
  * {@code steam_connections.last_error} e mantem a conexao viva, pra uma instabilidade momentanea

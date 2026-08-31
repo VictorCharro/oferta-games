@@ -17,8 +17,8 @@ import org.springframework.stereotype.Service;
  * pro frontend com o usuario ainda logado.
  *
  * <p><b>Sincronizacao e sempre upsert-only</b> — {@code xbox_library_games} nunca sofre DELETE,
- * decisao deliberada e oposta a da Steam, pra nunca apagar jogo que o perfil do usuario ja
- * mostrava caso a OpenXBL pare de devolve-lo.
+ * pra nunca apagar jogo que o perfil do usuario ja mostrava caso a OpenXBL pare de devolve-lo. A
+ * Steam segue a mesma regra hoje (ver {@link ServicoConexoesSteam}).
  *
  * <p>Limitacoes conhecidas: favoritar, link "Ver na loja" e ordem persistida de platinados
  * continuam so para itens Steam.
