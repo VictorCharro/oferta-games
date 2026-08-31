@@ -590,6 +590,33 @@ frontend/src/
 
 Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portugues. Marcas e contratos JSON podem manter termos externos, por exemplo ITAD, Steam, Bearer, `coverUrl` e `minPrice`.
 
+### Documentacao de codigo (Javadoc / TSDoc)
+
+O objetivo e que quem abre um arquivo pela primeira vez entenda **por que** ele existe e onde estao as pegadinhas — nao descrever o que a assinatura ja diz. Documentacao redundante nao e neutra: ela envelhece (parametro renomeado, comportamento mudado) e afunda os comentarios que realmente importam no meio do boilerplate.
+
+**Sempre documentar:**
+
+- **Toda classe/interface**: o que ela resolve, e quando houver, a restricao de arquitetura que explica o desenho dela. Exemplo real: `RepositorioInstantGaming` grava direto em `offers`/`games` via SQL propria porque nao pode depender do pacote `jogos` (dependencia circular com `ServicoCatalogo`).
+- **Metodo com contrato nao-obvio**, ou seja quando existe pelo menos um destes:
+  - **unidade ou formato** que a assinatura nao revela (`minutos` vs `segundos`, centavos vs reais, timestamp em UTC);
+  - **efeito colateral** fora do retorno (grava historico, registra atividade, dispara notificacao, invalida cache);
+  - **caso vazio/limite/erro** relevante pro chamador (retorna lista vazia vs 404, o que acontece quando nao ha oferta, o que acontece dentro do cooldown);
+  - **invariante que o chamador precisa respeitar** (precisa ter chamado X antes, nao pode rodar concorrente, espera lote de no maximo N);
+  - **decisao deliberada que parece bug** — sempre com o porque (ex: upsert em vez de DELETE+INSERT por causa do cascade; `prepareThreshold=0` por causa do pooler do Supabase).
+
+**Nao documentar:** getters/setters, `record`, DTOs, construtores triviais e CRUD direto cujo nome ja diz tudo (`remover(usuarioId, jogoId)`). Javadoc que so repete a assinatura e ruido e nao deve ser adicionado.
+
+**Formato:**
+
+- Portugues, igual ao resto do backend. Sem acento e aceitavel (o codebase ja e assim).
+- `@param`/`@return` **so quando agregam** informacao alem do nome — unidade, formato, o que significa `null`, faixa valida. Nao escrever `@param jogoId o id do jogo`.
+- `@throws` quando a excecao faz parte do contrato (ex: `JogoSemItadException`).
+- Comentario `//` dentro do metodo continua sendo o lugar certo pra explicar um trecho especifico (uma linha de SQL, um truque de CSS). Javadoc e pro contrato; `//` e pro trecho. O projeto ja usa bem esse estilo — manter.
+
+No frontend a mesma regra vale com TSDoc (`/** ... */`), aplicada principalmente a services e aos componentes com logica nao-trivial (posicionamento calculado, change detection manual, workaround de SSR). Template e SCSS continuam com `//`/`<!-- -->` quando precisar.
+
+**Como aplicar:** todo arquivo tocado por uma mudanca deve sair dela documentado conforme essa regra. O backfill do que ja existe esta rastreado em issue propria, com escopo nos arquivos que concentram a logica dificil — nao e pra sair documentando os 108 arquivos de uma vez.
+
 ## Assets e Tema
 
 - Cor principal: `#29A8E0`.
