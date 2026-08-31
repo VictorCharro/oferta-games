@@ -1,6 +1,7 @@
 package com.ofertagames.backend.jogos;
 
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
+import com.ofertagames.backend.comum.CacheHttp;
 import com.ofertagames.backend.steam.RespostaAvaliacoesSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
 import java.util.Arrays;
@@ -37,8 +38,13 @@ public class ControladorJogos {
     this.steam = steam;
   }
 
+  /**
+   * Publico e igual pra todo mundo: as preferencias do usuario que afetam o resultado (lojas,
+   * plataforma, faixa de preco) viajam como parametro de URL, entao ja fazem parte da chave de
+   * cache.
+   */
   @GetMapping
-  List<ResumoJogo> listar(
+  ResponseEntity<List<ResumoJogo>> listar(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size,
       @RequestParam(defaultValue = "rank") String sort,
@@ -56,7 +62,9 @@ public class ControladorJogos {
     List<String> lojas = stores == null || stores.isBlank()
         ? List.of()
         : Arrays.stream(stores.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
-    return jogos.listar(paginaSegura, tamanhoSeguro, sort, type, platform, minPrice, maxPrice, descontoSeguro, q, lojas);
+    return ResponseEntity.ok()
+        .cacheControl(CacheHttp.publico())
+        .body(jogos.listar(paginaSegura, tamanhoSeguro, sort, type, platform, minPrice, maxPrice, descontoSeguro, q, lojas));
   }
 
   @GetMapping("/search")
@@ -68,6 +76,11 @@ public class ControladorJogos {
     }
   }
 
+  /**
+   * <b>Sem cache HTTP de proposito.</b> O botao "Atualizar precos" recarrega este endpoint logo
+   * apos o POST de refresh; com resposta cacheada o usuario veria os precos antigos e concluiria
+   * que a atualizacao nao funcionou. Ver {@link CacheHttp}.
+   */
   @GetMapping("/{slug}")
   ResponseEntity<DetalheJogo> detalhar(@PathVariable String slug) {
     return jogos.buscarPorSlug(slug)
@@ -75,6 +88,7 @@ public class ControladorJogos {
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
+  /** Sem cache HTTP: tambem e recarregado logo apos o refresh manual (ver {@link #detalhar}). */
   @GetMapping("/{slug}/historico-precos")
   ResponseEntity<List<RepositorioJogos.PontoHistoricoPreco>> historicoPrecos(
       @PathVariable String slug,
@@ -86,11 +100,16 @@ public class ControladorJogos {
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
+  /**
+   * Metadados da Steam (descricao, generos, midia, requisitos). Cacheavel: nao tem preco, entao o
+   * botao "Atualizar precos" nao mexe nisso, e o job que preenche so revisita cada jogo a cada
+   * 30 dias.
+   */
   @GetMapping("/{slug}/detalhes")
   ResponseEntity<DetalhesJogo> detalhes(@PathVariable String slug) {
     return jogos.buscarIdPorSlug(slug)
         .flatMap(jogos::buscarDetalhesJogo)
-        .map(ResponseEntity::ok)
+        .map(detalhe -> ResponseEntity.ok().cacheControl(CacheHttp.publico()).body(detalhe))
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
@@ -113,6 +132,11 @@ public class ControladorJogos {
             new RespostaAvaliacoesSteam(null, List.of(), null, false, idioma, ordenacao)));
   }
 
+  /**
+   * <b>Nunca cachear publicamente:</b> o {@code Authorization} e opcional, mas quando presente a
+   * resposta muda (traz o progresso pessoal). Um cache compartilhado entregaria o progresso de um
+   * usuario para outro.
+   */
   @GetMapping("/{slug}/conquistas")
   ResponseEntity<RespostaConquistas> conquistas(
       @PathVariable String slug,

@@ -25,18 +25,23 @@ public class ConfiguracaoCache {
   public static final String CACHE_AVALIACOES_STEAM = "avaliacoesSteam";
 
   /**
-   * TTL de 10 min: curto o bastante pra acompanhar a sincronizacao de precos, longo o bastante pra
-   * nao repetir a query a cada abertura de catalogo/home.
+   * TTL propositalmente <b>maior</b> que o intervalo do job de precos
+   * ({@code APP_SYNC_SCHEDULER_PRICE_DELAY_MS}, 10 min).
    *
-   * <p>Atencao ao mexer: o TTL esta empatado com o intervalo do job de precos
-   * ({@code APP_SYNC_SCHEDULER_PRICE_DELAY_MS}, tambem 10 min), entao existe janela em que a
-   * entrada expira antes do reaquecimento chegar e o usuario pega cache frio.
+   * <p>Os dois eram 10 min, e isso criava uma corrida: como {@code ServicoAquecimentoCache} so
+   * reaquece <i>depois</i> de cada rodada, a entrada as vezes expirava antes do reaquecimento
+   * chegar e o usuario pagava o caminho frio — medido em ~2s contra ~46ms quente. Com folga de
+   * 5 min o reaquecimento sempre chega primeiro.
+   *
+   * <p>Isso nao deixa o preco mais velho na pratica: o aquecimento reescreve as entradas a cada
+   * rodada, entao o TTL so vale pras combinacoes que ninguem aquece (paginas fundas do catalogo,
+   * filtros incomuns).
    */
   @Bean
   CacheManager cacheManager() {
     CaffeineCacheManager gerenciador = new CaffeineCacheManager(
         CACHE_CATALOGO, CACHE_DESCONTOS, CACHE_AVALIACOES_STEAM);
-    gerenciador.setCaffeine(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(10)).maximumSize(500));
+    gerenciador.setCaffeine(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(15)).maximumSize(500));
     return gerenciador;
   }
 }
