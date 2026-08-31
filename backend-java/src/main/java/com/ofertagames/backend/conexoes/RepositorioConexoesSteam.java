@@ -130,14 +130,26 @@ class RepositorioConexoesSteam {
         .list();
   }
 
-  // Upsert por app_id: nunca faz DELETE da biblioteca existente. Antes esse metodo apagava
-  // tudo e reinseria (por isso existia o hack de "capasBiblioteca" pra nao perder a capa
-  // resolvida a cada sync) - alem de ser desnecessariamente destrutivo, isso disparava o
-  // ON DELETE CASCADE de profile_steam_favorites (que referencia steam_library_games por
-  // user_id+app_id) e apagava os favoritos Steam do usuario a cada sincronizacao (bug real,
-  // descoberto em 06/08/2026). O upsert evita as duas coisas de uma vez: nunca perde favorito
-  // nem capa ja resolvida, e ainda assim atualiza titulo/minutos jogados/icone normalmente.
-  List<JogoBibliotecaSteam> substituirBiblioteca(String usuarioId, List<JogoBibliotecaSteam> jogos, boolean identificarNovos) {
+  /**
+   * Grava a biblioteca do usuario por upsert em {@code (user_id, app_id)} — <b>nunca faz
+   * DELETE</b>.
+   *
+   * <p>Ate 06/08/2026 este metodo apagava tudo e reinseria. Isso disparava o
+   * {@code ON DELETE CASCADE} de {@code profile_steam_favorites} (que referencia
+   * {@code steam_library_games} por {@code user_id + app_id}) e apagava os favoritos Steam do
+   * usuario a cada sincronizacao — bug real, corrigido trocando por upsert. Era tambem o motivo do
+   * antigo hack de reaproveitar {@code capasBiblioteca}, pra nao perder a capa ja resolvida.
+   *
+   * <p>O upsert resolve as duas coisas: preserva favorito e capa, e ainda assim atualiza titulo,
+   * minutos jogados e icone. Jogo que a Steam nao devolver mais permanece salvo.
+   *
+   * @param identificarNovos quando {@code true}, compara com o que ja existia pra descobrir quais
+   *     jogos sao novos. Passar {@code false} na primeira sincronizacao evita gerar uma atividade
+   *     por jogo da biblioteca inteira
+   * @return apenas os jogos que ainda nao estavam na biblioteca; lista vazia quando
+   *     {@code identificarNovos} e {@code false}
+   */
+  List<JogoBibliotecaSteam> salvarBiblioteca(String usuarioId, List<JogoBibliotecaSteam> jogos, boolean identificarNovos) {
     Set<Integer> idsAnteriores = identificarNovos ? idsBiblioteca(usuarioId) : Set.of();
     for (JogoBibliotecaSteam jogo : jogos) {
       jdbc.sql("""

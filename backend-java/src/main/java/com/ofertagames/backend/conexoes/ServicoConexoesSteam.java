@@ -29,9 +29,7 @@ import org.springframework.web.client.RestClient;
  * INSERT/UPDATE por {@code (user_id, app_id)}.
  *
  * <p>Nao reintroduzir DELETE aqui: qualquer dado do usuario que referencie a biblioteca
- * (favoritos, colecoes, ordem de platinados) volta a correr o risco de sumir em cascata. O nome
- * {@code RepositorioConexoesSteam.substituirBiblioteca} sobrou de antes da correcao e engana — ele
- * nao substitui nada, so faz upsert.
+ * (favoritos, colecoes, ordem de platinados) volta a correr o risco de sumir em cascata.
  *
  * <p>Nunca lanca excecao por falha da API da Steam durante a sincronizacao: registra o erro em
  * {@code steam_connections.last_error} e mantem a conexao viva, pra uma instabilidade momentanea
@@ -101,7 +99,7 @@ public class ServicoConexoesSteam {
     try {
       boolean primeiraSincronizacao = !conexoes.atividadesBibliotecaInicializadas(usuarioId);
       java.util.List<RepositorioConexoesSteam.JogoBibliotecaSteam> jogos = steam.buscarBiblioteca(conexao.steamId());
-      java.util.List<RepositorioConexoesSteam.JogoBibliotecaSteam> novos = conexoes.substituirBiblioteca(usuarioId, jogos, !primeiraSincronizacao);
+      java.util.List<RepositorioConexoesSteam.JogoBibliotecaSteam> novos = conexoes.salvarBiblioteca(usuarioId, jogos, !primeiraSincronizacao);
       if (primeiraSincronizacao) {
         atividades.registrar(usuarioId, "BIBLIOTECA_STEAM_SINCRONIZADA", jogos.size() + " jogos");
         conexoes.marcarAtividadesBibliotecaInicializadas(usuarioId);

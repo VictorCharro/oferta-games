@@ -614,18 +614,23 @@ public class RepositorioJogos {
    * de gravar as ofertas, pra comparar e decidir se houve queda (ver
    * {@code RepositorioNotificacoes.registrarQueda}).
    *
-   * <p><b>Atencao:</b> diferente de todas as leituras do catalogo, esta query <b>nao</b> aplica
-   * {@link com.ofertagames.backend.comum.LojasBloqueadas}. Entao o preco comparado aqui pode vir de
-   * uma loja que o usuario nunca ve na interface, o que gera notificacao de queda que nao bate com
-   * o preco exibido na tela.
+   * <p>Aplica {@link com.ofertagames.backend.comum.LojasBloqueadas} igual as demais leituras do
+   * catalogo — o preco daqui precisa ser o mesmo que o usuario ve na tela, senao a notificacao
+   * anuncia uma queda que nao existe em nenhuma loja visivel.
    *
-   * @return mapa so com os jogos que tem ao menos uma oferta; jogo sem oferta fica ausente (nao
-   *     vem com valor nulo)
+   * @return mapa so com os jogos que tem ao menos uma oferta em loja visivel; jogo sem oferta fica
+   *     ausente (nao vem com valor nulo)
    */
   public Map<Long, BigDecimal> precosMinimos(List<Long> jogosIds) {
     if (jogosIds == null || jogosIds.isEmpty()) return Map.of();
     Map<Long, BigDecimal> precos = new HashMap<>();
-    jdbc.sql("SELECT game_id, MIN(price) AS preco FROM offers WHERE game_id IN (:jogosIds) GROUP BY game_id")
+    jdbc.sql("""
+        SELECT o.game_id, MIN(o.price) AS preco
+        FROM offers o
+        WHERE o.game_id IN (:jogosIds)
+          %s
+        GROUP BY o.game_id
+        """.formatted(LojasBloqueadas.filtroSql("o")))
         .param("jogosIds", jogosIds)
         .query((rs, linha) -> new PrecoMinimo(rs.getLong("game_id"), rs.getBigDecimal("preco")))
         .list()
