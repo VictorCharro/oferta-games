@@ -16,6 +16,23 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
+/**
+ * Conexao da conta Steam via OpenID 2.0 e sincronizacao de biblioteca, horas e conquistas.
+ *
+ * <p>A Steam nao usa OAuth: o fluxo e OpenID, em que a correlacao com o usuario nosso e feita por
+ * um {@code state} sorteado e guardado no banco antes do redirect. E a diferenca central em
+ * relacao ao {@link ServicoConexoesXbox}, que por ser OAuth com bearer nao precisa dessa tabela.
+ *
+ * <p><b>Estrategia de sincronizacao — atencao:</b> a biblioteca Steam e <b>substituida por
+ * inteiro</b> a cada sync, enquanto a do Xbox e upsert-only. Sao decisoes diferentes de proposito,
+ * e um incidente em 06/08/2026 mostrou o risco desse caminho: um DELETE em cascata chegou a apagar
+ * favoritos e colecoes dos usuarios. Qualquer mudanca aqui precisa garantir que dado do usuario
+ * (favoritos, colecoes, ordem de platinados) nunca dependa de linha que o sync apaga.
+ *
+ * <p>Nunca lanca excecao por falha da API da Steam durante a sincronizacao: registra o erro em
+ * {@code steam_connections.last_error} e mantem a conexao viva, pra uma instabilidade momentanea
+ * nao desconectar a conta do usuario.
+ */
 @Service
 public class ServicoConexoesSteam {
   private static final String URL_OPENID = "https://steamcommunity.com/openid/login";
@@ -136,9 +153,14 @@ public class ServicoConexoesSteam {
     conexoes.reordenarPlatinados(usuarioId, appIds);
   }
 
-  // Preenche a capa real dos jogos da biblioteca via appdetails da Steam: o padrao antigo de URL
-  // (cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg) nao existe mais pra jogos recentes,
-  // cujas imagens vivem num caminho com hash imprevisivel; so a API da Steam sabe a URL certa.
+  /**
+   * Resolve e grava a capa real dos jogos da biblioteca, um lote por vez.
+   *
+   * <p>Precisa consultar a API porque o padrao antigo de URL
+   * ({@code cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg}) deixou de valer: as imagens
+   * de jogos recentes vivem num caminho com hash imprevisivel, e so a Steam sabe a URL certa.
+   * Montar a URL na mao gera imagem quebrada.
+   */
   public int preencherCapasBiblioteca(int limite) {
     int atualizadas = 0;
     for (RepositorioConexoesSteam.JogoParaCapa jogo : conexoes.listarSemCapa(limite)) {
@@ -151,8 +173,16 @@ public class ServicoConexoesSteam {
     return atualizadas;
   }
 
-  // Usado pela pagina do jogo pra cruzar o progresso pessoal com o catalogo global de conquistas.
-  // Devolve vazio se o usuario nao tem Steam conectada ou nunca jogou esse app id, sem lancar excecao.
+  /**
+   * Conquistas que o usuario ja desbloqueou num jogo, com a data de cada uma.
+   *
+   * <p>Existe como metodo publico especificamente porque o repositorio de {@code conexoes} e
+   * package-private: e a unica porta pela qual o pacote {@code jogos} cruza o progresso pessoal com
+   * o catalogo global de conquistas na pagina do jogo.
+   *
+   * @return mapa vazio (nunca excecao) quando o usuario nao tem Steam conectada, nunca jogou esse
+   *     app id, ou nao esta logado — a pagina do jogo entao mostra tudo bloqueado e 0%
+   */
   public java.util.Map<String, java.time.Instant> conquistasDesbloqueadas(String usuarioId, int appId) {
     return conexoes.conquistasDesbloqueadasComData(usuarioId, appId);
   }

@@ -4,6 +4,25 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 
+/**
+ * Conexao da conta Xbox via OAuth da OpenXBL (xbl.io) e sincronizacao da biblioteca.
+ *
+ * <p>Usa o recurso "Xbox App" da OpenXBL, e nao a API key pessoal — a key pessoal so consulta
+ * dados publicos de gamertags usando a conta do dono do site, enquanto o app permite agir em nome
+ * de cada usuario. O token por usuario devolvido no {@code /app/claim} fica em
+ * {@code xbox_connections.access_token} e e o que autentica as chamadas seguintes.
+ *
+ * <p>Diferente do Steam ({@link ServicoConexoesSteam}), aqui nao ha tabela de {@code state}: a
+ * correlacao com o usuario vem do proprio bearer da sessao, ja que a OpenXBL redireciona de volta
+ * pro frontend com o usuario ainda logado.
+ *
+ * <p><b>Sincronizacao e sempre upsert-only</b> — {@code xbox_library_games} nunca sofre DELETE,
+ * decisao deliberada e oposta a da Steam, pra nunca apagar jogo que o perfil do usuario ja
+ * mostrava caso a OpenXBL pare de devolve-lo.
+ *
+ * <p>Limitacoes conhecidas: favoritar, link "Ver na loja" e ordem persistida de platinados
+ * continuam so para itens Steam.
+ */
 @Service
 public class ServicoConexoesXbox {
   private final RepositorioConexoesXbox conexoes;
@@ -46,8 +65,19 @@ public class ServicoConexoesXbox {
     conexoes.removerConexao(usuarioId);
   }
 
-  // So incrementa/atualiza (upsert por titleId) - nunca apaga jogos ja salvos, mesmo que a
-  // OpenXBL pare de devolve-los (ex: usuario escondeu um jogo do historico dele).
+  /**
+   * Sincroniza a biblioteca inteira do usuario em duas chamadas.
+   *
+   * <p>A biblioteca vem de uma unica chamada ({@code titleHistory}) de proposito: a OpenXBL tem
+   * rate limit apertado (60 req / 5 min no free tier) e uma chamada por jogo estouraria na hora.
+   * Minutos jogados exigem uma segunda chamada porque nao vem no {@code titleHistory} — mas ela
+   * tambem aceita todos os titulos em lote.
+   *
+   * <p><b>Upsert-only, nunca DELETE:</b> jogo que a OpenXBL parar de devolver (usuario escondeu do
+   * historico, por exemplo) continua salvo. E o oposto da estrategia da Steam, e deliberado.
+   *
+   * @throws ConexaoXboxNaoEncontradaException usuario sem conexao Xbox ou sem token salvo
+   */
   void sincronizarBiblioteca(String usuarioId) {
     RepositorioConexoesXbox.ConexaoXbox conexao = conexoes.buscarConexao(usuarioId).orElseThrow(ConexaoXboxNaoEncontradaException::new);
     String token = conexoes.buscarToken(usuarioId).orElseThrow(ConexaoXboxNaoEncontradaException::new);
@@ -73,11 +103,19 @@ public class ServicoConexoesXbox {
     conexoes.marcarBibliotecaSincronizada(usuarioId);
   }
 
-  // Usado pelo perfil publico/proprio pra montar a biblioteca combinada (Steam + Xbox).
-  // Reaproveita o tipo JogoBibliotecaSteam (com plataforma="xbox") pra nao duplicar toda a
-  // logica de biblioteca/platinados/filtro no frontend. O titleId da Xbox e mapeado pra
-  // "appId" (int) so como identificador tecnico; titulos com id fora da faixa de int (raro)
-  // sao ignorados em vez de quebrar a sincronizacao inteira.
+  /**
+   * Biblioteca Xbox no mesmo formato da Steam, pro perfil montar a lista combinada.
+   *
+   * <p>Reaproveita {@link ServicoConexoesSteam.JogoBibliotecaSteam} com {@code plataforma="xbox"}
+   * de proposito, pra nao duplicar no frontend toda a logica de biblioteca, platinados e filtro.
+   *
+   * <p>O {@code titleId} do Xbox e mapeado para o campo {@code appId} apenas como identificador
+   * tecnico — <b>nao e um app id da Steam</b>. Como os dois sao numeros indistinguiveis, e por isso
+   * que favoritar por {@code appId} continua Steam-only: colidiria entre as plataformas.
+   *
+   * <p>Titulo cujo id nao cabe em {@code int} (raro) e ignorado, em vez de derrubar a
+   * sincronizacao inteira.
+   */
   public List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca(String usuarioId) {
     return conexoes.listarBiblioteca(usuarioId).stream()
         .map(jogo -> {
