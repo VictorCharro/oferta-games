@@ -8,9 +8,19 @@ import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-// Nao depende do pacote jogos (pra nao criar dependencia circular: ServicoCatalogo, em jogos,
-// chama ServicoInstantGaming no refresh manual). Por isso grava direto em offers/games aqui,
-// duplicando o upsert minimo que RepositorioJogos.salvarOferta ja faz pra fonte ITAD.
+/**
+ * Persistencia do modulo Instant Gaming: catalogo descoberto, cursor da varredura, casamento com
+ * {@code games} e gravacao das ofertas.
+ *
+ * <p><b>Restricao de arquitetura:</b> nao depende do pacote {@code jogos}, pra evitar dependencia
+ * circular — {@code ServicoCatalogo} (em {@code jogos}) chama {@code ServicoInstantGaming} no
+ * refresh manual. Por isso escreve direto em {@code offers}/{@code games} com SQL propria,
+ * duplicando de proposito o upsert de oferta e o registro de historico de preco que
+ * {@code RepositorioJogos} ja faz para a fonte ITAD.
+ *
+ * <p>Consequencia pratica: mudanca na regra de gravacao de oferta ou de historico precisa ser
+ * aplicada <b>nos dois lugares</b>.
+ */
 @Repository
 class RepositorioInstantGaming {
   // Mesma prioridade dos outros jobs de coleta: top-2000 por rank primeiro, resto depois.
@@ -49,8 +59,17 @@ class RepositorioInstantGaming {
         .update();
   }
 
-  // So retorna a URL quando o titulo normalizado casa com exatamente um produto: evita linkar
-  // o jogo errado quando ha ambiguidade (edicoes/remakes com titulo parecido).
+  /**
+   * URL do produto cujo titulo normalizado casa com o informado — <b>e so quando o match e
+   * unico</b>.
+   *
+   * <p>Ambiguidade (duas edicoes, remake com nome parecido) devolve vazio de proposito: linkar o
+   * produto errado manda o usuario comprar outro jogo, o que e pior que ficar sem a oferta. Por
+   * isso o {@code LIMIT 2} — basta saber se ha mais de um.
+   *
+   * @param tituloNormalizado precisa vir da mesma normalizacao de
+   *     {@code GeradorSlug.porTitulo}, senao nunca casa
+   */
   Optional<String> buscarUrlUnica(String tituloNormalizado) {
     List<String> urls = jdbc.sql("SELECT url FROM instant_gaming_catalog WHERE normalized_title = :titulo LIMIT 2")
         .param("titulo", tituloNormalizado)
@@ -140,8 +159,13 @@ class RepositorioInstantGaming {
     registrarHistoricoDePreco(jogoId);
   }
 
-  // Produto ficou fora de estoque (ou parou de existir): remove a oferta antiga, senao ela fica
-  // parecendo disponivel pra sempre com o ultimo preco conhecido.
+  /**
+   * Apaga a oferta Instant Gaming do jogo — usado quando o produto sai de estoque ou some.
+   *
+   * <p>Sem isso a oferta antiga ficaria parecendo disponivel pra sempre com o ultimo preco
+   * conhecido, e como o menor preco do catalogo sai de {@code MIN(price)}, um produto indisponivel
+   * poderia continuar sendo anunciado como a melhor oferta do jogo.
+   */
   void removerOferta(long jogoId) {
     jdbc.sql("DELETE FROM offers WHERE game_id = :jogoId AND source = 'instant_gaming'")
         .param("jogoId", jogoId)
@@ -152,9 +176,14 @@ class RepositorioInstantGaming {
     registrarHistoricoDePreco(jogoId);
   }
 
-  // Mesma logica de com.ofertagames.backend.jogos.RepositorioJogos#registrarHistoricoDePrecos
-  // (so grava quando o menor preco do jogo mudou desde a ultima linha), duplicada aqui em vez de
-  // depender do pacote "jogos" - ver nota de dependencia circular acima.
+  /**
+   * Grava um ponto de historico se o menor preco do jogo mudou.
+   *
+   * <p>Copia deliberada de {@code RepositorioJogos.registrarHistoricoDePrecos} — ver a nota de
+   * dependencia circular no Javadoc da classe. <b>Alterar a regra de gravacao exige mudar os dois
+   * lugares</b>, senao o historico passa a ter criterios diferentes conforme a fonte que atualizou
+   * o preco.
+   */
   private void registrarHistoricoDePreco(long jogoId) {
     jdbc.sql("""
         INSERT INTO price_history (game_id, price)

@@ -12,9 +12,23 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriBuilder;
 
-// So le paginas de produto individuais (permitido pelo robots.txt deles); nunca usa a busca do
-// site, que o robots.txt bloqueia explicitamente. Preco/nome vem de meta tags schema.org
-// (itemprop="name"/"price"/"priceCurrency"), mais estavel que depender de classes CSS visuais.
+/**
+ * Le preco e nome direto do HTML das paginas de produto da Instant Gaming — unica excecao de
+ * scraping do projeto, porque eles nao tem API publica nem estao na ITAD (contato oficial feito e
+ * negado).
+ *
+ * <p><b>Limite auto-imposto:</b> so le paginas de produto individuais, que o robots.txt deles
+ * permite. Nunca usa a busca do site, que o robots.txt bloqueia explicitamente — e por isso que a
+ * descoberta varre ids sequenciais em vez de pesquisar por titulo.
+ *
+ * <p>Os dados saem das meta tags schema.org ({@code itemprop="name"/"price"/"priceCurrency"}),
+ * escolha deliberada por serem mais estaveis que classes CSS visuais, que mudam a cada
+ * redesign.
+ *
+ * <p>Toda falha (rede, HTTP, HTML fora do formato) vira {@link Optional#empty()}: nao existe
+ * distincao entre "produto nao existe" e "nao consegui ler". Para a varredura por id sequencial os
+ * dois casos sao equivalentes, mas quem chamar precisa saber que um empty nao prova ausencia.
+ */
 @Component
 class ClienteInstantGaming {
   private static final String USER_AGENT =
@@ -51,6 +65,18 @@ class ClienteInstantGaming {
     }
   }
 
+  /**
+   * Extrai titulo, preco, moeda e URL canonica do HTML.
+   *
+   * <p>Rejeita explicitamente produto <b>fora de estoque</b>: nesse caso a pagina deles mantem
+   * {@code itemprop="price"} como {@code "0.00"} em vez de omitir o campo, e sem essa checagem o
+   * produto aparecia como o menor preco do catalogo inteiro — de graca e sem poder comprar. Alem
+   * da flag {@code availability}, qualquer preco {@code <= 0} tambem e rejeitado, como cinto de
+   * seguranca caso eles mudem o formato.
+   *
+   * @return vazio quando o produto nao existe, esta fora de estoque, ou o HTML nao tem as meta
+   *     tags esperadas
+   */
   private Optional<ProdutoInstantGaming> parsear(String html) {
     Document documento = Jsoup.parse(html);
     Element container = documento.selectFirst("#product-app");
