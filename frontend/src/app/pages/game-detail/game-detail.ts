@@ -1,4 +1,9 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { GameCard } from '../../components/game-card/game-card';
+import { PriceHistoryChart } from '../../components/price-history-chart/price-history-chart';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, Subscription } from 'rxjs';
@@ -26,7 +31,7 @@ import { SeoService } from '../../services/seo';
 
 @Component({
   selector: 'app-game-detail',
-  standalone: false,
+  imports: [CommonModule, FormsModule, RouterModule, GameCard, PriceHistoryChart],
   templateUrl: './game-detail.html',
   styleUrl: './game-detail.scss',
 })

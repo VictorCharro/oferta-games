@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { GameSummary } from '../../services/game';
 import { resolveDlc } from '../../services/filters';
@@ -9,7 +10,7 @@ import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-
 
 @Component({
   selector: 'app-game-card',
-  standalone: false,
+  imports: [CommonModule, RouterModule],
   templateUrl: './game-card.html',
   styleUrl: './game-card.scss',
 })

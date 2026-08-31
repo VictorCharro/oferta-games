@@ -1,4 +1,7 @@
 import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { supabase } from '../../services/supabase';
@@ -9,7 +12,7 @@ import { PerfisService } from '../../services/perfis';
 
 @Component({
   selector: 'app-profile',
-  standalone: false,
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })

@@ -1,4 +1,8 @@
 import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -13,7 +17,7 @@ import { SeoService } from '../../services/seo';
 
 @Component({
   selector: 'app-public-profile',
-  standalone: false,
+  imports: [CommonModule, FormsModule, RouterModule, DragDropModule],
   templateUrl: './public-profile.html',
   styleUrl: './public-profile.scss',
 })

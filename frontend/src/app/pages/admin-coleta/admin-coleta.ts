@@ -1,4 +1,6 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AdministracaoService, ResultadoPreenchimentoJogo, StatusAdministrativoColeta, StatusColeta, TipoColeta } from '../../services/administracao';
 
 type Aba = 'precos-steam' | 'detalhes-conquistas' | 'instant-gaming';
@@ -11,7 +13,7 @@ interface CartaoColeta {
 
 @Component({
   selector: 'app-admin-coleta',
-  standalone: false,
+  imports: [CommonModule, FormsModule],
   templateUrl: './admin-coleta.html',
   styleUrl: './admin-coleta.scss',
 })

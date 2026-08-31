@@ -18,43 +18,35 @@ import { MonitoredGameCard } from './components/monitored-game-card/monitored-ga
 import { Home } from './pages/home/home';
 import { Catalog } from './pages/catalog/catalog';
 import { BestSellers } from './pages/best-sellers/best-sellers';
-import { GameDetail } from './pages/game-detail/game-detail';
 import { Search } from './pages/search/search';
 import { FreeGames } from './pages/free-games/free-games';
-import { Login } from './pages/login/login';
-import { Profile } from './pages/profile/profile';
-import { Settings } from './pages/settings/settings';
 import { Favorites } from './pages/favorites/favorites';
-import { AdminColeta } from './pages/admin-coleta/admin-coleta';
-import { PublicProfile } from './pages/public-profile/public-profile';
 import { NotFound } from './pages/not-found/not-found';
 
+// As paginas pesadas nao aparecem aqui de proposito: sao standalone e entram por
+// loadComponent nas rotas (ver app-routing-module). Declarar qualquer uma delas de volta faz
+// ela voltar pro bundle inicial de todo visitante, desfazendo o lazy loading.
 @NgModule({
   declarations: [
     App,
     Sidebar,
     Topbar,
-    GameCard,
     DealsCarousel,
     LoadError,
-    PriceHistoryChart,
     MonitoredDealsCarousel,
     MonitoredGameCard,
     Home,
     Catalog,
     BestSellers,
-    GameDetail,
     Search,
     FreeGames,
-    Login,
-    Profile,
-    Settings,
     Favorites,
-    AdminColeta,
-    PublicProfile,
     NotFound,
   ],
-  imports: [BrowserModule, CommonModule, AppRoutingModule, FormsModule, DragDropModule],
+  // GameCard e PriceHistoryChart sao standalone (usados tanto pelas paginas lazy quanto pelas
+  // declaradas aqui), entao entram como import, nao como declaration.
+  imports: [BrowserModule, CommonModule, AppRoutingModule, FormsModule, DragDropModule,
+    GameCard, PriceHistoryChart],
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideClientHydration(withEventReplay()),

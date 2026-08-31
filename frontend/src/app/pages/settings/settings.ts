@@ -1,4 +1,6 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { supabase } from '../../services/supabase';
@@ -16,7 +18,7 @@ type SettingsTab = 'conta' | 'conexoes' | 'preferencias' | 'privacidade';
 
 @Component({
   selector: 'app-settings',
-  standalone: false,
+  imports: [CommonModule, FormsModule],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })

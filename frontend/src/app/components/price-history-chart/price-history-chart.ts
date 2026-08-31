@@ -1,4 +1,5 @@
 import { Component, HostBinding, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { PontoHistoricoPreco } from '../../services/game';
 
 let proximoId = 0;
@@ -27,7 +28,7 @@ export function temHistoricoParaGrafico(pontos: PontoHistoricoPreco[]): boolean 
 
 @Component({
   selector: 'app-price-history-chart',
-  standalone: false,
+  imports: [CommonModule],
   templateUrl: './price-history-chart.html',
   styleUrl: './price-history-chart.scss',
 })
