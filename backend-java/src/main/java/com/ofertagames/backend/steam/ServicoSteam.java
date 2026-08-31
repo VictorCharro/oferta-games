@@ -24,11 +24,35 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+/**
+ * Cliente das APIs publicas da Steam usadas para enriquecer o catalogo: {@code appdetails}
+ * (capa, descricao, generos, midia, requisitos, DLCs), {@code appreviews} (resumo e avaliacoes) e
+ * {@code ISteamUserStats} (esquema de conquistas e percentuais globais).
+ *
+ * <p>Sao APIs de duas naturezas: as da <b>loja</b> ({@code store.steampowered.com}) sao publicas e
+ * nao pedem chave; as de <b>stats</b> ({@code api.steampowered.com}) exigem
+ * {@code STEAM_WEB_API_KEY}. Sem a chave, so o esquema de conquistas para de funcionar.
+ *
+ * <p>Nenhum metodo propaga excecao: falha de rede ou resposta fora do formato vira
+ * {@link Optional#empty()} ou lista vazia. E deliberado, porque quem chama sao jobs de lote em que
+ * um jogo problematico nao pode derrubar a rodada — mas significa que <b>nao da pra distinguir
+ * "nao existe" de "falhou"</b>.
+ *
+ * <p>Tudo e pedido em pt-BR ({@code l=brazilian}, {@code cc=br}). Esquecer esse parametro ja
+ * causou o catalogo inteiro de conquistas ser gravado em ingles (corrigido em 19/07/2026, exigiu
+ * reprocessar a tabela).
+ */
 @Service
 public class ServicoSteam {
-  // Jogos com aviso de conteudo (violencia/nudez) redirecionam para /agecheck/app/<id>/ em vez de
-  // /app/<id>/ direto; sem o grupo opcional o appId nunca era extraido e o jogo ficava sem
-  // steam_app_id pra sempre, bloqueando reviews/detalhes/conquistas.
+  /**
+   * Extrai o app id da URL da loja.
+   *
+   * <p>O grupo {@code (?:agecheck/)?} e essencial: jogos com aviso de conteudo (violencia/nudez)
+   * redirecionam para {@code /agecheck/app/<id>/} em vez de {@code /app/<id>/}. Sem ele o appId
+   * nunca era extraido e o jogo ficava permanentemente sem {@code steam_app_id}, o que bloqueia
+   * reviews, detalhes e conquistas. Corrigido em 31/07/2026 — o fix liberou centenas de jogos de
+   * uma vez e dobrou o backlog do job de conquistas.
+   */
   private static final Pattern APP_ID = Pattern.compile("store\\.steampowered\\.com/(?:agecheck/)?app/(\\d+)");
 
   private final RestClient restClient;
@@ -47,6 +71,19 @@ public class ServicoSteam {
     return ClassificadorDlc.pareceDlc(titulo);
   }
 
+  /**
+   * Descobre o app id da Steam a partir da URL de uma oferta.
+   *
+   * <p>Faz uma requisicao <b>seguindo redirecionamentos</b> e le o app id da URL final, e nao da
+   * original: as URLs que a ITAD entrega costumam ser links de redirecionamento
+   * ({@code itad.link/...}), que so revelam o destino depois de seguidos. Se a requisicao falhar,
+   * tenta extrair da URL original como ultimo recurso.
+   *
+   * <p>Usa {@code BodyHandlers.discarding()} — interessa so a URL final, nao o HTML.
+   *
+   * @return vazio quando a URL (original ou final) nao aponta pra uma pagina de app da Steam, o
+   *     que e o caso normal de ofertas de outras lojas
+   */
   public Optional<String> resolverAppIdSteam(String urlOferta) {
     try {
       HttpRequest requisicao = HttpRequest.newBuilder(URI.create(urlOferta)).GET().build();
@@ -57,6 +94,19 @@ public class ServicoSteam {
     }
   }
 
+  /**
+   * Chamada {@code appdetails} da loja — a fonte de quase tudo que o catalogo mostra sobre um jogo.
+   *
+   * <p>Uma unica chamada alimenta dois jobs diferentes (metadados e detalhes), por isso ela
+   * devolve muito mais campo do que qualquer chamador usa sozinho.
+   *
+   * <p>Cuidado com {@code ehDlc}: vem de {@code type == "dlc"}, e a Steam classifica trilha sonora
+   * como {@code "music"}. Quem consome precisa combinar com a heuristica de titulo
+   * ({@link #tituloPareceDlc}) — e o que {@code ServicoCatalogo} faz.
+   *
+   * @return vazio quando a Steam responde {@code success: false}, o que acontece com app id
+   *     inexistente, removido ou restrito por regiao
+   */
   public Optional<DetalhesAplicativoSteam> buscarDetalhesAplicativo(String appId) {
     try {
       @SuppressWarnings("unchecked")
@@ -108,6 +158,13 @@ public class ServicoSteam {
     }
   }
 
+  /**
+   * Resumo agregado das reviews (rotulo tipo "Muito positivas" e totais de positivas/negativas).
+   *
+   * <p>So o resumo — o texto das avaliacoes vem de {@code buscarAvaliacoes}, que e paginado e
+   * cacheado a parte. Consulta {@code language=all} de proposito: o resumo deve refletir a
+   * recepcao global do jogo, nao so a de quem escreveu em portugues.
+   */
   public Optional<ReviewsSteam> buscarReviews(String appId) {
     try {
       Map<String, Object> resposta = restClient.get()
@@ -288,6 +345,19 @@ public class ServicoSteam {
     }
   }
 
+  /**
+   * Catalogo de conquistas do jogo (nome, titulo, descricao e icones), em pt-BR.
+   *
+   * <p>Exige {@code STEAM_WEB_API_KEY}: sem chave devolve lista vazia sem nem tentar a chamada.
+   *
+   * <p><b>Lista vazia e ambigua</b> e o chamador precisa tratar: pode ser jogo que realmente nao
+   * tem conquista, chave ausente, ou falha de rede. {@code ServicoCatalogo.processarConquistas}
+   * resolve marcando o jogo como verificado de qualquer jeito, pra ele nao voltar pra fila pra
+   * sempre.
+   *
+   * <p>O {@code l=brazilian} nao e opcional: sem ele a Steam devolve tudo em ingles, o que ja
+   * obrigou a zerar e reprocessar a tabela inteira de conquistas.
+   */
   public List<ConquistaEsquemaSteam> buscarEsquemaConquistas(String appId) {
     if (chaveApi == null || chaveApi.isBlank()) {
       return List.of();
@@ -326,6 +396,16 @@ public class ServicoSteam {
     }
   }
 
+  /**
+   * Percentual global de jogadores que desbloqueou cada conquista, chaveado pelo
+   * {@code api_name} — a mesma chave do esquema, para mesclar as duas respostas.
+   *
+   * <p>Endpoint publico: funciona mesmo sem {@code STEAM_WEB_API_KEY}, ao contrario de
+   * {@link #buscarEsquemaConquistas}.
+   *
+   * @return mapa vazio quando o jogo nao tem estatistica publica; conquista ausente do mapa
+   *     simplesmente fica sem percentual
+   */
   public Map<String, Double> buscarPercentuaisGlobais(String appId) {
     try {
       Map<String, Object> resposta = restClient.get()
@@ -365,8 +445,17 @@ public class ServicoSteam {
     return url != null ? url : comoTexto(trailer.get("dash_h264"));
   }
 
-  // A Steam manda a descricao longa em HTML com blocos "<h2 class=bb_tag>Titulo</h2>texto...":
-  // o texto antes do primeiro titulo vira a descricao completa, cada bloco depois vira um destaque.
+  /**
+   * Quebra o {@code about_the_game} (HTML) em texto corrido + destaques.
+   *
+   * <p>A Steam manda tudo num HTML unico com blocos {@code <h2 class="bb_tag">Titulo</h2>} seguidos
+   * do conteudo. A convencao adotada: o texto <b>antes</b> do primeiro titulo vira a descricao
+   * completa, e cada bloco a partir dali vira um destaque com titulo proprio.
+   *
+   * <p>Como depende do markup deles, jogo sem nenhum {@code bb_tag} sai com zero destaques e so o
+   * texto — situacao normal, nao erro. E o motivo de a aba "Sobre" so aparecer quando ha destaques
+   * ou trailer.
+   */
   private static SobreParseado parsearSobre(String html) {
     if (html == null || html.isBlank()) {
       return new SobreParseado(null, List.of());
