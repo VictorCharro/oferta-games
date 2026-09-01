@@ -10,7 +10,20 @@ import { join } from 'node:path';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+
+/**
+ * `trustProxyHeaders` e obrigatorio atras da edge da Vercel.
+ *
+ * Sem isso o engine ignora `X-Forwarded-Host`/`X-Forwarded-Proto`, nao consegue montar a URL real
+ * da requisicao e devolve a casca CSR em vez de renderizar — silenciosamente, com HTTP 200. O
+ * unico sinal e um warning no log da function ("Received x-forwarded-for header but
+ * trustProxyHeaders was not set up to allow it").
+ *
+ * Confiar nesses headers e seguro aqui porque quem os define e a edge da Vercel, que descarta os
+ * equivalentes vindos do cliente, e porque `security.allowedHosts` no angular.json restringe o
+ * host aceito — e essa validacao que impede um Host forjado de virar SSRF.
+ */
+const angularApp = new AngularNodeAppEngine({ trustProxyHeaders: true });
 
 // Headers de seguranca basicos em toda resposta. Sem CSP: os inline styles do Angular
 // (component styles injetados no HTML) e as fontes do Google Fonts tornariam um CSP
