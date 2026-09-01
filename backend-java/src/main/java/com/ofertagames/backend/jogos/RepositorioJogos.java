@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofertagames.backend.comum.ClassificadorDlc;
 import com.ofertagames.backend.comum.ConfiguracaoCache;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
+import com.ofertagames.backend.comum.IconeConquista;
 import com.ofertagames.backend.comum.JogosBloqueados;
 import com.ofertagames.backend.comum.LojasBloqueadas;
 import com.ofertagames.backend.comum.LojasCatalogo;
@@ -1123,15 +1124,16 @@ public class RepositorioJogos {
     }
     for (int i = 0; i < conquistas.size(); i++) {
       ConquistaParaSalvar conquista = conquistas.get(i);
+      // icon_gray_url saiu do schema: era gravado e nunca lido (a UI usa o icone colorido com um
+      // cadeado por cima, nao uma versao cinza), custando 57 MB. Ver migration de 01/09/2026.
       jdbc.sql("""
           INSERT INTO game_achievements (
-            game_id, api_name, display_name, description, icon_url, icon_gray_url, global_percent, position)
-          VALUES (:jogoId, :apiName, :displayName, :descricao, :iconeUrl, :iconeCinzaUrl, :percentualGlobal, :posicao)
+            game_id, api_name, display_name, description, icon_url, global_percent, position)
+          VALUES (:jogoId, :apiName, :displayName, :descricao, :iconeUrl, :percentualGlobal, :posicao)
           ON CONFLICT (game_id, api_name) DO UPDATE
             SET display_name = EXCLUDED.display_name,
                 description = EXCLUDED.description,
                 icon_url = EXCLUDED.icon_url,
-                icon_gray_url = EXCLUDED.icon_gray_url,
                 global_percent = EXCLUDED.global_percent,
                 position = EXCLUDED.position
           """)
@@ -1139,8 +1141,7 @@ public class RepositorioJogos {
           .param("apiName", conquista.apiName())
           .param("displayName", conquista.displayName())
           .param("descricao", conquista.descricao())
-          .param("iconeUrl", conquista.iconeUrl())
-          .param("iconeCinzaUrl", conquista.iconeCinzaUrl())
+          .param("iconeUrl", IconeConquista.compactar(conquista.iconeUrl()))
           .param("percentualGlobal", conquista.percentualGlobal())
           .param("posicao", i)
           .update();
@@ -1161,7 +1162,9 @@ public class RepositorioJogos {
               rs.getString("api_name"),
               rs.getString("display_name"),
               rs.getString("description"),
-              rs.getString("icon_url"),
+              // Guardado sem o prefixo do CDN da Steam; expandir aceita tanto o formato compacto
+              // quanto URL completa, entao funciona antes e depois da migration.
+              IconeConquista.expandir(rs.getString("icon_url")),
               percentual == null ? null : percentual.doubleValue());
         })
         .list();

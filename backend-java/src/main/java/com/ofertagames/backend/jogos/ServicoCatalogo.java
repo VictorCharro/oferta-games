@@ -474,7 +474,6 @@ public class ServicoCatalogo {
             conquista.tituloExibicao(),
             conquista.descricao(),
             conquista.iconeUrl(),
-            conquista.iconeCinzaUrl(),
             percentuais.get(conquista.nome())))
         .toList();
 
