@@ -30,6 +30,9 @@ app:
     frontend-url: ${FRONTEND_URL:http://localhost:4200}
   xbox:
     app-key: ${XBL_APP_KEY:}
+  # URL publica deste backend. Usada no retorno OpenID da Steam e nos <loc> do indice do
+  # sitemap (que apontam pros sub-sitemaps servidos aqui, nao pro frontend). Precisa bater com o
+  # dominio do `Sitemap:` em frontend/public/robots.txt.
   public-backend-url: ${PUBLIC_BACKEND_URL:}
   supabase:
     url: ${SUPABASE_URL:}

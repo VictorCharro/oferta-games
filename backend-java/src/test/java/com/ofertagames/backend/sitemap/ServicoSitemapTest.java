@@ -1,6 +1,7 @@
 package com.ofertagames.backend.sitemap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -16,10 +17,14 @@ class ServicoSitemapTest {
   @Mock private RepositorioJogos jogos;
   private ServicoSitemap servico;
 
+  private static final String FRONTEND = "https://ofertagames.vercel.app";
+  private static final String BACKEND = "https://api.exemplo-backend.test";
+
   @BeforeEach
   void configurar() {
     MockitoAnnotations.openMocks(this);
-    servico = new ServicoSitemap(jogos, "https://ofertagames.vercel.app/");
+    // Ambas com barra final de proposito: cobre a normalizacao das duas de uma vez.
+    servico = new ServicoSitemap(jogos, FRONTEND + "/", BACKEND + "/");
   }
 
   @Test
@@ -29,38 +34,52 @@ class ServicoSitemapTest {
   }
 
   @Test
-  void indiceListaSitemapEstaticoETodasAsPaginasDeJogos() {
+  void indiceApontaProsSubSitemapsNoBACKEND() {
     when(jogos.contarSlugsParaSitemap()).thenReturn(25_000L);
     String indice = servico.gerarIndice();
-    assertTrue(indice.contains("<loc>https://ofertagames.vercel.app/sitemap-estatico.xml</loc>"));
-    assertTrue(indice.contains("<loc>https://ofertagames.vercel.app/sitemap-jogos-1.xml</loc>"));
-    assertTrue(indice.contains("<loc>https://ofertagames.vercel.app/sitemap-jogos-3.xml</loc>"));
+    assertTrue(indice.contains("<loc>" + BACKEND + "/sitemap-estatico.xml</loc>"));
+    assertTrue(indice.contains("<loc>" + BACKEND + "/sitemap-jogos-1.xml</loc>"));
+    assertTrue(indice.contains("<loc>" + BACKEND + "/sitemap-jogos-3.xml</loc>"));
   }
 
+  /**
+   * Regressao do bug corrigido em 01/09/2026: o indice apontava pro dominio do frontend, que
+   * responde HTML pra esses caminhos, entao o crawler nunca chegava nos sub-sitemaps. O teste
+   * antigo afirmava justamente o comportamento errado.
+   */
   @Test
-  void removeBarraFinalDaUrlDoFrontendPraNaoDuplicar() {
-    // configurar() ja injeta a URL do frontend com barra final; garante que nao vira "//sitemap".
-    when(jogos.contarSlugsParaSitemap()).thenReturn(1L);
+  void indiceNaoPodeApontarProFrontend() {
+    when(jogos.contarSlugsParaSitemap()).thenReturn(25_000L);
     String indice = servico.gerarIndice();
-    assertTrue(indice.contains("vercel.app/sitemap-estatico.xml"));
-    assertTrue(!indice.contains("vercel.app//sitemap"));
+    assertFalse(indice.contains(FRONTEND), "os <loc> do indice sao sub-sitemaps servidos pelo backend");
   }
 
   @Test
-  void sitemapEstaticoIncluiAsPaginasPrincipais() {
+  void removeBarraFinalDasDuasUrlsPraNaoDuplicar() {
+    // configurar() injeta as duas URLs com barra final; garante que nao vira "//sitemap".
+    when(jogos.contarSlugsParaSitemap()).thenReturn(1L);
+    assertFalse(servico.gerarIndice().contains("//sitemap"));
+    assertFalse(servico.gerarEstatico().contains("app//"));
+  }
+
+  @Test
+  void sitemapEstaticoIncluiAsPaginasPrincipaisNoFRONTEND() {
     String xml = servico.gerarEstatico();
-    assertTrue(xml.contains("<loc>https://ofertagames.vercel.app</loc>"));
-    assertTrue(xml.contains("<loc>https://ofertagames.vercel.app/catalogo</loc>"));
-    assertTrue(xml.contains("<loc>https://ofertagames.vercel.app/mais-vendidos</loc>"));
-    assertTrue(xml.contains("<loc>https://ofertagames.vercel.app/gratuitos</loc>"));
+    assertTrue(xml.contains("<loc>" + FRONTEND + "</loc>"));
+    assertTrue(xml.contains("<loc>" + FRONTEND + "/catalogo</loc>"));
+    assertTrue(xml.contains("<loc>" + FRONTEND + "/mais-vendidos</loc>"));
+    assertTrue(xml.contains("<loc>" + FRONTEND + "/gratuitos</loc>"));
+    // As paginas em si sao do site, nunca do backend.
+    assertFalse(xml.contains(BACKEND));
   }
 
   @Test
-  void paginaDeJogosMontaUrlPorSlug() {
+  void paginaDeJogosMontaUrlPorSlugNoFRONTEND() {
     when(jogos.listarSlugsParaSitemap(0, ServicoSitemap.TAMANHO_PAGINA)).thenReturn(List.of("baldurs-gate-3", "cult-of-the-lamb"));
     String xml = servico.gerarPaginaDeJogos(1);
-    assertTrue(xml.contains("<loc>https://ofertagames.vercel.app/jogo/baldurs-gate-3</loc>"));
-    assertTrue(xml.contains("<loc>https://ofertagames.vercel.app/jogo/cult-of-the-lamb</loc>"));
+    assertTrue(xml.contains("<loc>" + FRONTEND + "/jogo/baldurs-gate-3</loc>"));
+    assertTrue(xml.contains("<loc>" + FRONTEND + "/jogo/cult-of-the-lamb</loc>"));
+    assertFalse(xml.contains(BACKEND));
   }
 
   @Test
