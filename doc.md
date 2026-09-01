@@ -573,6 +573,40 @@ Os dropdowns de tamanho e fundo devem seguir o mesmo padrao visual do filtro de 
   - **Biblioteca combinada**: `ServicoPerfis` mescla `steam.biblioteca()` + `xbox.biblioteca()` numa lista so, cada item com o campo `plataforma` ('steam'|'xbox'). `plataformasConectadas` passa a incluir `xbox` quando conectado. Os agregados do topo do perfil (total de horas, conquistas gerais) continuam vindo so da Steam — so a lista de biblioteca e o contador de jogos somam as duas plataformas. A aba Biblioteca ganha um filtro de plataforma (Steam/Xbox/Todas), visivel so quando o usuario tem mais de uma conectada.
   - **Limitacoes conhecidas**: favoritar, o link "Ver na [loja]" e a capa alternativa em cascata continuam Steam-only (favoritar por appId colidiria com titleId do Xbox, que sao so numeros indistinguiveis entre plataformas). Reordenar platinados por arrastar tambem so persiste pra itens Steam (o endpoint de ordem e especifico da Steam); itens Xbox reordenam na tela mas nao persistem entre sessoes ainda.
 
+## Seguranca
+
+### RLS: a chave do Supabase e publica, e o RLS e a unica barreira (01/09/2026)
+
+A chave anon do Supabase e **publica por design** — vai no bundle do frontend e qualquer visitante extrai em segundos. Ela nao e segredo; quem protege os dados e o Row Level Security.
+
+Ate 01/09/2026 o RLS estava **desligado nas 28 tabelas** do schema `public`. Verificado com a propria chave do bundle: dava pra **ler** `profiles`, `favorites`, `steam_connections`, `xbox_connections`, `steam_library_games`, `price_notifications` e `profile_collections`, e **escrever/apagar** em `favorites`, `profiles` e `price_history`. Um `DELETE` sem filtro apagaria os jogos monitorados de todos os usuarios, ou o historico de preco dos 110k jogos.
+
+**Agora todas tem RLS ligado e nenhuma policy** (`backend-java/sql/20260901_rls_todas_tabelas.sql`). A ausencia de policy e o desenho, nao um passo esquecido:
+
+- o frontend **nunca** acessa tabela direto — so `supabase.auth.*` (sessao) e `supabase.storage.*` (avatares); todo dado passa pelo backend Java. Nao existe caso legitimo de acesso pela API publica, entao negar tudo e o correto, e evita escrever policy por tabela (trabalhoso e sujeito a erro);
+- o backend nao e afetado porque conecta por JDBC como `postgres`, dono das 28 tabelas, e **dono ignora RLS**. **Nunca usar `FORCE ROW LEVEL SECURITY`**: passaria a valer pro dono tambem e derrubaria a API inteira;
+- o linter do Supabase passa a apontar `rls_enabled_no_policy` (nivel INFO) nas 28 tabelas. E esperado. O que nao pode reaparecer e o `rls_disabled_in_public`, que e ERROR.
+
+Se algum dia o frontend precisar ler uma tabela direto, **a policy vem junto** — nao desligue o RLS.
+
+O `storage.objects` ja estava correto desde antes: leitura publica do bucket `avatars`, escrita restrita a pasta do proprio usuario (`foldername[1] = auth.uid()`).
+
+**Ao testar escrita no PostgREST:** um `204` **nao** prova que a escrita passou — ele responde 204 mesmo afetando 0 linhas. So `Prefer: return=representation` e conclusivo: devolve as linhas afetadas, ou `[]` se o RLS bloqueou.
+
+### O que ja estava certo
+
+- **Admin validado no servidor** (`ControladorAdministracao.exigirAdministrador`, por UID). O `adminGuard` do frontend e so cosmetico — quem protege e o backend.
+- **Sem IDOR**: nenhum endpoint aceita `userId` vindo do cliente; e sempre derivado do token.
+- **Sem SQL injection**: as interpolacoes em `comum/` usam constantes do codigo (alias literal, regex fixa), e `ordenarPor()` e um `switch` com `default`, entao `sort` arbitrario cai no padrao.
+- `auth.users` (e-mails e hashes de senha) nao e exposta pelo PostgREST.
+- Dependencias do frontend sem vulnerabilidade conhecida (`npm audit`).
+
+### Pendencias conhecidas
+
+- **Sem rate limiting** em nenhuma rota — nem no login (tentativa de senha em massa), nem nas caras (`/api/deals/top` custa ~2s frio).
+- **Validacao de token sem cache**: cada request autenticado chama o Supabase (ver `ServicoAutenticacao`), o que amplifica DoS e amarra a disponibilidade a deles.
+- **Protecao de senha vazada desligada** no Supabase Auth — e um toggle no painel, cruza a senha com a base do HaveIBeenPwned.
+
 ## Estrutura de Codigo
 
 ```text
