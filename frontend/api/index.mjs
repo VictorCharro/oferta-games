@@ -13,7 +13,13 @@
  * sao carregados dinamicamente pelo manifest e o tracer nao os enxerga.
  *
  * O handler exportado e o app Express de src/server.ts. Ele tambem serve estatico de ../browser,
- * mas na Vercel esses arquivos sao servidos pela CDN antes da requisicao chegar aqui — a
- * verificacao de filesystem acontece antes dos rewrites.
+ * mas na Vercel esses arquivos sao servidos pela CDN antes da requisicao chegar aqui.
+ *
+ * Sobre o vercel.json usar `routes` em vez de `rewrites`: `rewrites` so e avaliado DEPOIS da
+ * verificacao de filesystem, e a Vercel resolve "/" para o index.csr.html do build — medido, a
+ * resposta em "/" vinha byte a byte igual a /index.csr.html. E o bug angular/angular-cli#30736.
+ * Com `routes` da pra colocar "/" -> "/api" ANTES do `handle: filesystem`, que e a unica forma de
+ * a raiz chegar ate aqui. As demais rotas continuam caindo no catch-all depois do filesystem, pra
+ * que JS, CSS e imagens sigam vindo da CDN.
  */
 export { reqHandler as default } from '../dist/frontend/server/server.mjs';
