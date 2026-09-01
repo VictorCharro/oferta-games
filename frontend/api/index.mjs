@@ -15,11 +15,17 @@
  * O handler exportado e o app Express de src/server.ts. Ele tambem serve estatico de ../browser,
  * mas na Vercel esses arquivos sao servidos pela CDN antes da requisicao chegar aqui.
  *
- * Sobre o vercel.json usar `routes` em vez de `rewrites`: `rewrites` so e avaliado DEPOIS da
- * verificacao de filesystem, e a Vercel resolve "/" para o index.csr.html do build — medido, a
- * resposta em "/" vinha byte a byte igual a /index.csr.html. E o bug angular/angular-cli#30736.
- * Com `routes` da pra colocar "/" -> "/api" ANTES do `handle: filesystem`, que e a unica forma de
- * a raiz chegar ate aqui. As demais rotas continuam caindo no catch-all depois do filesystem, pra
- * que JS, CSS e imagens sigam vindo da CDN.
+ * Sobre o `rm index.csr.html` no buildCommand: a Vercel resolve "/" para esse arquivo (medido — a
+ * resposta em "/" vinha byte a byte igual a /index.csr.html), e como a verificacao de filesystem
+ * roda ANTES dos rewrites, nenhum rewrite alcanca a raiz enquanto ele existir. E o bug
+ * angular/angular-cli#30736. Apagar do output estatico e seguro porque a function nao usa esse
+ * arquivo: ela tem a propria copia embutida em server/assets-chunks/index_csr_html.mjs, que e o
+ * que continua servindo as rotas em RenderMode.Client (login, perfil, configuracoes, monitorados,
+ * favoritos, admin/coleta).
+ *
+ * Tentativa descartada: trocar `rewrites` por `routes` com "/" antes do `handle: filesystem`
+ * resolvia a raiz, mas `routes` assume a tabela de roteamento inteira e quebrava o fluxo de
+ * autenticacao dos deploys de preview (todo request virava 302 pro SSO, sem nunca chegar na
+ * function) — o que impedia justamente validar a mudanca antes de produção.
  */
 export { reqHandler as default } from '../dist/frontend/server/server.mjs';

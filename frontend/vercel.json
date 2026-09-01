@@ -1,14 +1,12 @@
 {
-  "buildCommand": "ng build",
+  "buildCommand": "ng build && rm -f dist/frontend/browser/index.csr.html",
   "outputDirectory": "dist/frontend/browser",
   "functions": {
     "api/index.mjs": {
       "includeFiles": "dist/frontend/server/**"
     }
   },
-  "routes": [
-    { "src": "/", "dest": "/api" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/api" }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api" }
   ]
 }
