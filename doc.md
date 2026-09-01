@@ -601,11 +601,34 @@ O `storage.objects` ja estava correto desde antes: leitura publica do bucket `av
 - `auth.users` (e-mails e hashes de senha) nao e exposta pelo PostgREST.
 - Dependencias do frontend sem vulnerabilidade conhecida (`npm audit`).
 
+### Limite de requisicoes e cache de token (01/09/2026)
+
+**`FiltroLimiteRequisicoes`** — janela fixa de 1 minuto por IP, com dois tetos:
+
+| | Limite/min | Por que |
+|---|---:|---|
+| Escrita (POST/PUT/PATCH/DELETE) | 30 | So parte de navegador real, entao pode ficar perto do uso humano |
+| Leitura (GET/HEAD/OPTIONS) | 600 | **Precisa acomodar o SSR** |
+
+O teto de leitura alto nao e frouxidao: o SSR na Vercel chama esta API para renderizar cada pagina, e todas essas chamadas saem de um punhado de IPs da Vercel. Um limite de navegador em GET derrubaria o site sob trafego normal — nao o atacante. Se o trafego crescer a ponto de o SSR encostar nos 600, a saida **nao** e aumentar o numero: e isentar o SSR com um cabecalho secreto compartilhado, ai sim apertando a leitura.
+
+Detalhes que nao sao obvios:
+
+- **Usa a ultima entrada de `X-Forwarded-For`, nao a primeira.** O Caddy *anexa* o peer real ao que veio na requisicao, entao um cliente consegue plantar valores no inicio da lista — mas nunca no fim. Ler a primeira entrada deixaria qualquer um trocar de identidade a cada request e furar o limite por completo. Coberto por teste.
+- **A recusa repete o `Access-Control-Allow-Origin`** (so para origem que ja esta na lista permitida). O CORS do Spring e aplicado no handler, depois dos filtros, entao uma resposta cortada no filtro sairia sem ele e o navegador reportaria "erro de CORS" no lugar do 429 — escondendo o motivo real.
+- **Nao protege login**: a autenticacao vai direto do navegador para o Supabase, sem passar pelo backend. Forca bruta de senha e limitada pelo Supabase, nao aqui.
+- Estado em memoria, por instancia. Basta para uma VM so; com mais de uma, o limite efetivo viraria a soma e seria preciso contador compartilhado.
+
+**Cache de validacao de token** (`ServicoAutenticacao`) — 60s, chaveado pelo **hash SHA-256** do token. Antes era uma chamada ao Supabase por requisicao autenticada.
+
+- O hash existe porque o id do usuario em cache nao serve para se autenticar, mas o token sim: guardar so o hash evita manter credencial reutilizavel viva em memoria, onde um dump de heap a pegaria pronta.
+- **So o sucesso e cacheado.** Falha nao entra de proposito: como toda falha e indistinguivel — inclusive "Supabase fora do ar" —, cachear negativo faria uma instabilidade de um segundo virar um minuto de usuarios deslogados. O custo e que token invalido sempre bate no Supabase; quem contem enxurrada disso e o limite de requisicoes, nao o cache.
+- Risco aceito: um token continua valido por ate 60s depois de invalidado. E pequeno porque o token de acesso ja e um JWT de ~1h — sair da conta nao o revoga de imediato de qualquer forma. Subir muito esse valor inverte a conta.
+
 ### Pendencias conhecidas
 
-- **Sem rate limiting** em nenhuma rota — nem no login (tentativa de senha em massa), nem nas caras (`/api/deals/top` custa ~2s frio).
-- **Validacao de token sem cache**: cada request autenticado chama o Supabase (ver `ServicoAutenticacao`), o que amplifica DoS e amarra a disponibilidade a deles.
-- **Protecao de senha vazada desligada** no Supabase Auth — e um toggle no painel, cruza a senha com a base do HaveIBeenPwned.
+- **Protecao de senha vazada desligada** no Supabase Auth — toggle no painel, cruza a senha escolhida com a base do HaveIBeenPwned. E do lado do Supabase, nao do codigo.
+- **Rate limiting nao cobre login**, porque o login nao passa pelo backend (ver acima).
 
 ## Estrutura de Codigo
 
