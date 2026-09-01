@@ -12,11 +12,28 @@ export class AuthService {
   user$ = this._user.asObservable();
   avatar$ = this._avatar.asObservable();
 
+  /**
+   * Se a sessão inicial já foi consultada.
+   *
+   * `isLoggedIn` sozinho não distingue "deslogado" de "ainda não sei" — `_user` começa `null` e o
+   * `getSession()` é assíncrono. Quem monta interface a partir do estado de login precisa checar
+   * isto antes, senão mostra a versão de visitante por um instante para quem está logado.
+   *
+   * <b>Fica `false` para sempre no servidor</b>, mesmo depois do `getSession()` responder: a sessão
+   * mora no browser do visitante, então o que o servidor obtém é sempre "deslogado" — uma resposta
+   * que ele não tem como saber se é verdade. Marcá-la como resolvida faria o SSR renderizar
+   * "Entrar / Criar conta" no HTML de todo mundo, que é exatamente a piscada que isto evita.
+   */
+  private _sessaoResolvida = new BehaviorSubject<boolean>(false);
+  sessaoResolvida$ = this._sessaoResolvida.asObservable();
+  get sessaoResolvida(): boolean { return this._sessaoResolvida.value; }
+
   constructor(private router: Router) {
     // Carrega sessão existente
     this.sessaoInicial = supabase.auth.getSession().then(({ data }) => {
       this._user.next(data.session?.user ?? null);
       this.loadAvatar(data.session?.user ?? null);
+      if (typeof window !== 'undefined') this._sessaoResolvida.next(true);
     });
 
     // Escuta mudanças de sessão

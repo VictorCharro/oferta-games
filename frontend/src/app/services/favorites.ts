@@ -21,6 +21,17 @@ export class FavoritesService {
   private _list = new BehaviorSubject<FavoriteGame[]>([]);
   list$ = this._list.asObservable();
 
+  /**
+   * Se a lista já reflete a resposta do servidor (ou a certeza de que não há o que buscar, no caso
+   * de visitante deslogado).
+   *
+   * `list$` é um `BehaviorSubject([])`, então emite lista vazia no instante da inscrição — antes de
+   * qualquer requisição. Quem usar só essa emissão para decidir que terminou de carregar mostra
+   * "nenhum jogo monitorado" por um instante para quem tem jogos monitorados.
+   */
+  private _carregado = new BehaviorSubject<boolean>(false);
+  carregado$ = this._carregado.asObservable();
+
   loading = false;
   private loadingPromise: Promise<void> | null = null;
 
@@ -30,6 +41,9 @@ export class FavoritesService {
       else {
         this._slugs.next(new Set());
         this._list.next([]);
+        // Só é "carregado" como lista vazia depois que a sessão foi consultada; enquanto ela não
+        // resolveu, `user` é null por não sabermos ainda, não por estar deslogado.
+        if (this.auth.sessaoResolvida) this._carregado.next(true);
       }
     });
   }
@@ -63,6 +77,7 @@ export class FavoritesService {
       this._slugs.next(new Set());
       this._list.next([]);
       this.loading = false;
+      this._carregado.next(true);
       return;
     }
 
@@ -70,8 +85,10 @@ export class FavoritesService {
       const list = await firstValueFrom(this.http.get<FavoriteGame[]>(`${this.api}/favorites`, { headers }));
       this._list.next(list);
       this._slugs.next(new Set(list.map(g => g.slug)));
+      this._carregado.next(true);
     } catch {
-      // Mantem o estado atual; o usuario pode tentar carregar novamente ao navegar.
+      // Mantem o estado atual; o usuario pode tentar carregar novamente ao navegar. Nao marca como
+      // carregado: a tela segue em "carregando" em vez de afirmar que nao ha jogos monitorados.
     } finally {
       this.loading = false;
     }

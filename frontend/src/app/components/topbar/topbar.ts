@@ -28,6 +28,7 @@ export class Topbar implements OnInit, OnDestroy {
   private routeSub!: Subscription;
   private searchSub!: Subscription;
   private notificationsSub!: Subscription;
+  private sessaoSub!: Subscription;
   private searchInput$ = new Subject<string>();
 
   constructor(
@@ -43,6 +44,9 @@ export class Topbar implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.sub = this.auth.user$.subscribe(() => this.cdr.detectChanges());
+    // Sem isto o bloco de login fica escondido: o template depende de sessaoResolvida, e a virada
+    // dela pode nao coincidir com uma emissao de user$ (quando ja estava null e continua null).
+    this.sessaoSub = this.auth.sessaoResolvida$.subscribe(() => this.cdr.detectChanges());
     this.avatarSub = this.auth.avatar$.subscribe(() => this.cdr.detectChanges());
     this.notificationsSub = this.notificationsService.list$.subscribe(notifications => { this.notifications = notifications; this.cdr.detectChanges(); });
 
@@ -81,6 +85,7 @@ export class Topbar implements OnInit, OnDestroy {
     this.routeSub?.unsubscribe();
     this.searchSub?.unsubscribe();
     this.notificationsSub?.unsubscribe();
+    this.sessaoSub?.unsubscribe();
   }
 
   onSearchInput(value: string) {

@@ -30,7 +30,7 @@
       <img [src]="theme.isDark() ? 'sol-tema-claro.png' : 'lua-tema-escuro.png'" style="width:20px;height:20px;object-fit:contain;" />
     </button>
 
-    <div class="notifications-menu" *ngIf="auth.isLoggedIn">
+    <div class="notifications-menu" *ngIf="auth.sessaoResolvida && auth.isLoggedIn">
       <button type="button" class="action-btn notification-btn" (click)="toggleNotifications()" title="Notificações" aria-label="Notificações">
         <img src="notificacao.png" alt="" />
         <span class="notification-badge" *ngIf="unreadNotifications">{{ unreadNotifications > 9 ? '9+' : unreadNotifications }}</span>
@@ -55,7 +55,7 @@
     </div>
 
     <!-- Logado: avatar com dropdown -->
-    <div class="user-menu" *ngIf="auth.isLoggedIn">
+    <div class="user-menu" *ngIf="auth.sessaoResolvida && auth.isLoggedIn">
       <div class="avatar" (click)="toggleDropdown()">
         <div class="avatar-circle">
           <img *ngIf="auth.avatarUrl; else avatarInitial" [src]="auth.avatarUrl" alt="Foto de perfil" />
@@ -80,7 +80,7 @@
     </div>
 
     <!-- Não logado: botões de login/cadastro -->
-    <div class="auth-buttons" *ngIf="!auth.isLoggedIn">
+    <div class="auth-buttons" *ngIf="auth.sessaoResolvida && !auth.isLoggedIn">
       <a routerLink="/login" class="btn-outline btn-sm">Entrar</a>
       <a routerLink="/login" [queryParams]="{mode: 'register'}" class="btn-primary btn-sm">Criar conta</a>
     </div>

@@ -5,10 +5,56 @@
   <title>Oferta Games</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!--
+    Estas meta tags precisam ficar AQUI, no topo do <head>, e nao serem criadas pelo SeoService.
+
+    O SeoService usa Meta.updateTag() quando a tag ja existe e Meta.addTag() quando nao existe.
+    addTag anexa no FIM do <head> — e como o Angular injeta ~64 kB de CSS inline (estilos de
+    componente + critical CSS do beasties) antes disso, as tags og: caiam por volta do byte 63.000.
+    O crawler do WhatsApp le so o inicio do documento, entao nunca as alcancava: o preview do link
+    saia sem capa, sem nome do jogo e sem preco, mostrando so o dominio.
+
+    Declaradas aqui, o SeoService as ATUALIZA no lugar e elas ficam por volta do byte 500.
+    Os valores abaixo sao so o fallback pra quando nenhuma pagina define nada.
+  -->
   <meta name="description" content="Compare preços de jogos nas melhores lojas e encontre as maiores promoções.">
+  <meta property="og:title" content="Oferta Games">
+  <meta property="og:description" content="Compare preços de jogos nas melhores lojas e encontre as maiores promoções.">
+  <meta property="og:image" content="https://ofertagames.vercel.app/logo.png">
+  <meta property="og:url" content="https://ofertagames.vercel.app">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Oferta Games">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Oferta Games">
+  <meta name="twitter:description" content="Compare preços de jogos nas melhores lojas e encontre as maiores promoções.">
+  <meta name="twitter:image" content="https://ofertagames.vercel.app/logo.png">
+
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
   <link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <!--
+    Aplica o tema salvo ANTES do primeiro paint.
+
+    O tema so existe no localStorage do visitante, entao o servidor nao tem como saber qual e e
+    manda o HTML sem data-theme — e o :root do styles.scss e escuro. Sem este script, quem usa
+    tema claro via a pagina escura ate o Angular inicializar e o ThemeService corrigir.
+
+    Precisa ser inline e sincrono, aqui no <head>: um arquivo externo ou um defer/async pintariam
+    depois do CSS e a piscada continuaria. E o try/catch cobre navegador com storage bloqueado,
+    onde ler localStorage lanca excecao.
+  -->
+  <script>
+    (function () {
+      try {
+        var salvo = localStorage.getItem('theme');
+        document.documentElement.setAttribute('data-theme', salvo === 'light' ? 'light' : 'dark');
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>
