@@ -200,9 +200,17 @@
 
 @media (max-width: 768px) {
   .banner {
-    padding: 24px;
-    .banner-slide { flex-direction: column; }
+    padding: 24px 20px 40px;
+    .banner-slide { flex-direction: column; align-items: flex-start; }
     .banner-cover { width: 100%; }
+    .banner-info h1 { font-size: 24px; }
+
+    // As setas sao position:absolute; top:50% calculado sobre a altura INTEIRA do .banner. Em
+    // desktop isso cai certo porque capa e informacoes ficam lado a lado na mesma linha (altura
+    // do banner ~= altura da capa); empilhado (coluna) o banner fica bem mais alto e o "meio"
+    // passa a cair em cima do titulo/preco. Os dots (clicaveis, pulam pra qualquer slide) ja
+    // cobrem a navegacao sem esse problema, entao as setas somem em vez de recalcular a posicao.
+    .banner-nav { display: none; }
   }
 }
 
