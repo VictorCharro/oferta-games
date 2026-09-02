@@ -51,6 +51,19 @@
     z-index: 1;
   }
 
+  // Sem isto, um DLC em promocao (badge-discount + badge-dlc + o botao de monitorar, os 3
+  // possiveis ao mesmo tempo) fica com o botao exatamente por cima do badge "DLC" — os dois usam
+  // o mesmo canto superior direito com offsets quase identicos (confirmado via
+  // getBoundingClientRect: as caixas se sobrepoem de fato). badge-discount fica no canto oposto
+  // (esquerdo) de proposito, entao so precisa desviar do badge-dlc.
+  //
+  // Nao pode ir dentro do bloco `.btn-monitor { }` usando `&`: la dentro `&` ja e
+  // ".card-image .btn-monitor" (por causa do aninhamento), entao repetir ".card-image" na frente
+  // geraria um seletor que exige um .card-image aninhado dentro de outro, que nunca existe no DOM.
+  &:has(.badge-dlc) .btn-monitor {
+    top: 40px;
+  }
+
   .btn-monitor {
     position: absolute;
     top: 8px;

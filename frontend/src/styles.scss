@@ -262,9 +262,14 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
-  h2 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  a { color: var(--color-purple); font-size: 14px; font-weight: 500; &:hover { text-decoration: underline; } }
+  // Sem min-width:0 o h2 nao encolhe abaixo do seu conteudo (comportamento padrao de flex item),
+  // entao em tela estreita ele empurra o link "Ver todos" pra fora em vez de quebrar linha.
+  h2 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  // flex-shrink:0 + nowrap: e um rotulo curto de UI, nunca deve quebrar em duas linhas
+  // ("Ver" / "todos") por falta de espaco - quem cede espaco e o titulo (h2), acima.
+  a { flex-shrink: 0; white-space: nowrap; color: var(--color-purple); font-size: 14px; font-weight: 500; &:hover { text-decoration: underline; } }
 }
 
 .page-content { padding: 32px; }
