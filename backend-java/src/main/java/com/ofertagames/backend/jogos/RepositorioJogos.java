@@ -1005,6 +1005,27 @@ public class RepositorioJogos {
         .list();
   }
 
+  /**
+   * Se a Steam ainda nao foi consultada sobre as conquistas deste jogo.
+   *
+   * <p>Mesma condicao de {@link #contarPendentesConquistas}, para um jogo so: usada pela coleta sob
+   * demanda, disparada ao abrir a pagina. Devolve {@code false} tambem quando a consulta ja foi
+   * feita e a Steam nao tinha conquista nenhuma — e para isso que serve o carimbo
+   * {@code achievements_checked_at} (ver {@link #marcarConquistasVerificadas}).
+   */
+  public boolean precisaColetarConquistas(long jogoId) {
+    return Boolean.TRUE.equals(jdbc.sql("""
+        SELECT g.achievements_checked_at IS NULL
+               AND NOT EXISTS (SELECT 1 FROM game_achievements ga WHERE ga.game_id = g.id)
+        FROM games g
+        WHERE g.id = :jogoId
+        """)
+        .param("jogoId", jogoId)
+        .query(Boolean.class)
+        .optional()
+        .orElse(false));
+  }
+
   public long contarPendentesConquistas() {
     return jdbc.sql("""
         SELECT COUNT(*)

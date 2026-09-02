@@ -51,15 +51,16 @@ class AgendadorColetas {
     execucao.executar("detalhes", sincronizacao::sincronizarRodadaDetalhes);
   }
 
-  // Acelerado temporariamente em 09/08/2026 (ver LIMITE_CONQUISTAS_CATALOGO em
-  // ServicoSincronizacao): reverter pra 10800000 (3h) quando o backlog de conquistas zerar ou
-  // estagnar.
-  @Scheduled(
-      fixedDelayString = "${app.sync.scheduler.conquistas-catalogo-delay-ms:120000}",
-      initialDelayString = "${app.sync.scheduler.conquistas-catalogo-initial-delay-ms:540000}")
-  void coletarConquistasCatalogo() {
-    execucao.executar("conquistas-catalogo", sincronizacao::sincronizarRodadaConquistasCatalogo);
-  }
+  // A varredura agendada de conquistas foi DESLIGADA em 01/09/2026. Nao readicionar sem reavaliar
+  // o espaco em disco: ela percorria os 39 mil jogos com steam_app_id e, com 35% da fila
+  // processada, game_achievements ja ocupava 121 MB; completar levaria o banco a ~590 MB, acima da
+  // cota de 0,5 GB do plano free do Supabase.
+  //
+  // A coleta agora e sob demanda, disparada ao abrir a pagina do jogo
+  // (ServicoConquistasSobDemanda), entao so entra no banco conquista de jogo que alguem olhou.
+  //
+  // sincronizarRodadaConquistasCatalogo continua existindo e o botao "conquistas-catalogo" do
+  // painel de admin segue disparando a varredura manualmente, para quando fizer sentido.
 
   // Instant Gaming nao tem API: varredura por id numerico de produto (permitida pelo robots.txt
   // deles, diferente da busca do site). Ritmo de manutencao (15min): a descoberta ja cobriu o

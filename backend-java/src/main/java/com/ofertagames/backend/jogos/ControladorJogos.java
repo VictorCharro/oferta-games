@@ -24,18 +24,21 @@ public class ControladorJogos {
   private final ServicoConquistasJogo conquistasJogo;
   private final ServicoAutenticacao autenticacao;
   private final ServicoSteam steam;
+  private final ServicoConquistasSobDemanda conquistasSobDemanda;
 
   ControladorJogos(
       RepositorioJogos jogos,
       ServicoCatalogo catalogo,
       ServicoConquistasJogo conquistasJogo,
       ServicoAutenticacao autenticacao,
-      ServicoSteam steam) {
+      ServicoSteam steam,
+      ServicoConquistasSobDemanda conquistasSobDemanda) {
     this.jogos = jogos;
     this.catalogo = catalogo;
     this.conquistasJogo = conquistasJogo;
     this.autenticacao = autenticacao;
     this.steam = steam;
+    this.conquistasSobDemanda = conquistasSobDemanda;
   }
 
   /**
@@ -142,6 +145,9 @@ public class ControladorJogos {
       @PathVariable String slug,
       @RequestHeader(value = "Authorization", required = false) String autorizacao
   ) {
+    // A pagina do jogo chama esta rota ao abrir, entao ela e o gatilho da coleta sob demanda que
+    // substituiu a varredura agendada. Nao bloqueia: agenda e responde na hora.
+    conquistasSobDemanda.agendarSeNecessario(slug);
     String visitanteId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao).orElse(null);
     return conquistasJogo.buscar(slug, visitanteId)
         .map(ResponseEntity::ok)

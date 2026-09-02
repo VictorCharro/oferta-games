@@ -459,6 +459,18 @@ public class ServicoCatalogo {
    *
    * @return {@code true} so quando havia conquistas de fato pra gravar
    */
+  /**
+   * Coleta as conquistas de um jogo especifico, fora da fila.
+   *
+   * <p>Usado pela coleta sob demanda ({@code ServicoConquistasSobDemanda}), que substituiu a
+   * varredura agendada dos 39 mil jogos com {@code steam_app_id}.
+   *
+   * @return {@code true} se havia conquistas de fato pra gravar
+   */
+  public boolean coletarConquistasDoJogo(long jogoId, int steamAppId) {
+    return processarConquistas(new JogoDetalhesPendente(jogoId, steamAppId));
+  }
+
   private boolean processarConquistas(JogoDetalhesPendente pendente) {
     String appId = String.valueOf(pendente.steamAppId());
     var esquema = steam.buscarEsquemaConquistas(appId);
