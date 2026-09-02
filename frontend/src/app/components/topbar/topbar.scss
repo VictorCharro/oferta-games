@@ -13,6 +13,25 @@
   z-index: 99;
 }
 
+.hamburger-btn {
+  // Escondido por padrao: so aparece no @media do drawer, no fim do arquivo. Em telas >900px o
+  // sidebar fica sempre fixo e visivel, entao o botao que abre o drawer nao tem o que fazer ali.
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+
+  &:hover { background: var(--bg-card); color: var(--text-primary); }
+}
+
 .topbar-logo {
   display: flex;
   align-items: center;
@@ -290,4 +309,46 @@
 
   .avatar-info { display: flex; flex-direction: column; }
   .avatar-name { font-size: 13px; font-weight: 600; }
+}
+
+// Issue #9: abaixo de 900px a sidebar deixa de empurrar o conteudo (vira drawer sobreposto, ver
+// sidebar.scss), entao a topbar passa a ocupar a largura inteira a partir de left:0.
+@media (max-width: 900px) {
+  .topbar {
+    left: 0;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .search-wrapper {
+    // Sai do posicionamento absoluto-centralizado (pensado pra sobrar espaco largo dos dois
+    // lados) e passa a disputar espaco no flex normal entre o hamburguer e as acoes — e o que
+    // da pra ela em telas estreitas, sem calculo manual de centralizacao.
+    //
+    // relative, nao static: o icone de lupa e o atalho dentro do wrapper sao position:absolute
+    // e esperam se posicionar contra ELE. Com static, sem contexto de posicionamento proprio,
+    // eles "vazam" pro ancestral fixed mais proximo (.topbar) e saem do lugar por completo.
+    position: relative;
+    // left:50% do desktop continua valendo em position:relative (so position:static ignora
+    // offsets) — sem resetar, o wrapper desloca 50% da largura do container pra direita da
+    // posicao natural do flex, empurrando ele pra cima das acoes. transform tambem precisa sair.
+    left: auto;
+    transform: none;
+    width: auto;
+    max-width: none;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .topbar-actions {
+    gap: 2px;
+  }
+
+  .action-btn {
+    padding: 8px;
+  }
 }

@@ -3,6 +3,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, switchMap } from 'rxjs/operators';
 import { ThemeService } from '../../services/theme';
+import { MenuMobileService } from '../../services/menu-mobile';
 import { AuthService } from '../../services/auth';
 import { GameService, GameSummary } from '../../services/game';
 import { SearchService } from '../../services/search';
@@ -34,6 +35,7 @@ export class Topbar implements OnInit, OnDestroy {
   constructor(
     public theme: ThemeService,
     public auth: AuthService,
+    public menuMobile: MenuMobileService,
     private router: Router,
     private gameService: GameService,
     private searchService: SearchService,
@@ -54,6 +56,9 @@ export class Topbar implements OnInit, OnDestroy {
     this.routeSub = this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe(e => {
+        // Fecha o drawer tambem em navegacao que nao veio de clicar num link da sidebar (voltar
+        // do navegador, redirect programatico) — sem isso ele ficaria aberto sobre a pagina nova.
+        this.menuMobile.close();
         this.isCatalogPage = e.urlAfterRedirects.startsWith('/catalogo');
         this.searchQuery = '';
         this.suggestions = [];

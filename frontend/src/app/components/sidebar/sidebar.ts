@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { MenuMobileService } from '../../services/menu-mobile';
 
 @Component({
   selector: 'app-sidebar',
@@ -6,4 +7,6 @@ import { Component } from '@angular/core';
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',
 })
-export class Sidebar {}
+export class Sidebar {
+  constructor(public menuMobile: MenuMobileService) {}
+}

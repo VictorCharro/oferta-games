@@ -4,3 +4,11 @@
   min-height: calc(100vh - 64px);
   background: var(--bg-primary);
 }
+
+// Issue #9: abaixo de 900px a sidebar vira drawer sobreposto (sidebar.scss) em vez de empurrar o
+// conteudo, entao o conteudo volta a ocupar a largura inteira.
+@media (max-width: 900px) {
+  .app-main {
+    margin-left: 0;
+  }
+}

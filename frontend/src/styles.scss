@@ -349,3 +349,9 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
   h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
   p { font-size: 14px; }
 }
+
+// Issue #9: trava o scroll da pagina atras do menu gaveta enquanto ele esta aberto
+// (MenuMobileService aplica/remove esta classe no body).
+body.menu-mobile-aberto {
+  overflow: hidden;
+}

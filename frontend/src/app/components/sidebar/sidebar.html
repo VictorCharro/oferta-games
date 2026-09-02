@@ -1,9 +1,16 @@
-<aside class="sidebar">
-  <a class="logo" routerLink="/">
-    <img src="logo.png" class="logo-full" alt="Oferta Games" />
-  </a>
+<!-- So existe/e clicavel quando o drawer esta aberto (controlado por *ngIf, nao so opacidade),
+     senao ficaria interceptando clique por cima da pagina mesmo fechado. -->
+<div class="mobile-backdrop" *ngIf="menuMobile.isOpen()" (click)="menuMobile.close()"></div>
 
-  <nav class="nav-section">
+<aside class="sidebar" [class.open]="menuMobile.isOpen()">
+  <div class="sidebar-header">
+    <a class="logo" routerLink="/" (click)="menuMobile.close()">
+      <img src="logo.png" class="logo-full" alt="Oferta Games" />
+    </a>
+    <button type="button" class="close-btn" (click)="menuMobile.close()" aria-label="Fechar menu">✕</button>
+  </div>
+
+  <nav class="nav-section" (click)="menuMobile.close()">
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-item">
       <img class="nav-icon" src="home.png" alt="Início" /> Início
     </a>
@@ -19,7 +26,7 @@
   </nav>
 
   <div class="nav-label">BIBLIOTECA</div>
-  <nav class="nav-section">
+  <nav class="nav-section" (click)="menuMobile.close()">
     <a routerLink="/monitorados" routerLinkActive="active" class="nav-item">
       <img class="nav-icon" src="jogos-monitorados-modo-escuro.png" alt="Jogos Monitorados" /> Jogos Monitorados
     </a>
