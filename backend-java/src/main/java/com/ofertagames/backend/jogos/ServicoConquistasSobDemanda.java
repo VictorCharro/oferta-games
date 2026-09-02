@@ -61,18 +61,24 @@ public class ServicoConquistasSobDemanda {
    * <p>Silencioso e sem efeito quando o jogo nao tem {@code steam_app_id}, ja foi verificado ou ja
    * esta em coleta. Nunca lanca: e um efeito colateral de uma visita, e falhar aqui nao pode
    * derrubar a pagina do jogo.
+   *
+   * @return {@code true} se ha coleta em andamento para este jogo — inclusive uma disparada por
+   *     outra visita simultanea. O controlador devolve isso na resposta para o frontend saber que
+   *     vale reconsultar em alguns segundos; sem esse sinal, ele teria que ou tentar de novo em
+   *     todo jogo sem conquista (a maioria, desperdicio) ou exigir um F5 do usuario.
    */
-  public void agendarSeNecessario(String slug) {
+  public boolean agendarSeNecessario(String slug) {
     try {
       var jogo = jogos.buscarIdESteamAppIdPorSlug(slug).orElse(null);
       if (jogo == null || jogo.steamAppId() == null) {
-        return;
+        return false;
       }
       if (!jogos.precisaColetarConquistas(jogo.id())) {
-        return;
+        return false;
       }
       if (!emAndamento.add(jogo.id())) {
-        return;
+        // Outra visita ja disparou: nao duplica a coleta, mas o frontend deve esperar por ela.
+        return true;
       }
       executor.execute(() -> {
         try {
@@ -83,8 +89,10 @@ public class ServicoConquistasSobDemanda {
           emAndamento.remove(jogo.id());
         }
       });
+      return true;
     } catch (RuntimeException erro) {
       log.warn("Falha agendando conquistas sob demanda de {}: {}", slug, erro.toString());
+      return false;
     }
   }
 }

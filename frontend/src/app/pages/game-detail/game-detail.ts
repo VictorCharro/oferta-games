@@ -275,6 +275,26 @@ export class GameDetail implements OnInit, OnDestroy {
     this.seo.reset();
   }
 
+  /**
+   * Carrega as conquistas e, se o backend avisar que acabou de disparar a coleta na Steam,
+   * reconsulta sozinho — senão a aba só apareceria depois de um F5 do usuário.
+   *
+   * A nova tentativa acontece só quando vem `coletando`. A maioria dos jogos sem conquista
+   * realmente não tem nenhuma (a Steam já confirmou), e reconsultar em todos eles seria uma
+   * requisição desperdiçada por visita.
+   */
+  private carregarConquistas(slug: string, tentativa = 0) {
+    this.gameService.getGameAchievements(slug).then(conquistas => {
+      this.conquistas = conquistas;
+      this.cdr.detectChanges();
+      // Uma nova tentativa só, com folga para a ida à Steam. Se ainda não chegou, a aba aparece na
+      // próxima visita — não vale ficar consultando em laço por causa de um caso raro.
+      if (conquistas.coletando && !conquistas.total && tentativa < 1) {
+        setTimeout(() => this.carregarConquistas(slug, tentativa + 1), 5000);
+      }
+    }).catch(() => {});
+  }
+
   private carregarDetalhesEConquistasEReviews(slug: string) {
     this.gameService.getGameDetails(slug).pipe(catchError(() => of(null))).subscribe(detalhes => {
       this.detalhes = detalhes;
@@ -289,10 +309,7 @@ export class GameDetail implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       });
     });
-    this.gameService.getGameAchievements(slug).then(conquistas => {
-      this.conquistas = conquistas;
-      this.cdr.detectChanges();
-    }).catch(() => {});
+    this.carregarConquistas(slug);
     this.reviewsService.listar(slug).then(avaliacoes => {
       this.avaliacoes = avaliacoes;
       this.minhaNota = avaliacoes.minha?.nota ?? 0;

@@ -146,12 +146,13 @@ public class ControladorJogos {
       @RequestHeader(value = "Authorization", required = false) String autorizacao
   ) {
     // A pagina do jogo chama esta rota ao abrir, entao ela e o gatilho da coleta sob demanda que
-    // substituiu a varredura agendada. Nao bloqueia: agenda e responde na hora.
-    conquistasSobDemanda.agendarSeNecessario(slug);
+    // substituiu a varredura agendada. Nao bloqueia: agenda, marca "coletando" e responde na hora —
+    // o frontend reconsulta sozinho quando essa marca vem, sem precisar de F5.
+    boolean coletando = conquistasSobDemanda.agendarSeNecessario(slug);
     String visitanteId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao).orElse(null);
     return conquistasJogo.buscar(slug, visitanteId)
-        .map(ResponseEntity::ok)
-        .orElseGet(() -> ResponseEntity.ok(new RespostaConquistas(0, 0, 0, null, List.of())));
+        .map(resposta -> ResponseEntity.ok(resposta.comColeta(coletando)))
+        .orElseGet(() -> ResponseEntity.ok(new RespostaConquistas(0, 0, 0, null, List.of(), coletando)));
   }
 
   @PostMapping("/{slug}/refresh")

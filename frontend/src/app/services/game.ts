@@ -73,6 +73,12 @@ export interface RespostaConquistas {
   percentualConcluido: number;
   proxima: ConquistaComProgresso | null;
   conquistas: ConquistaComProgresso[];
+  /**
+   * A lista veio vazia porque o backend acabou de disparar a coleta na Steam, não porque o jogo não
+   * tem conquistas. Quem exibe deve reconsultar em alguns segundos — e só nesse caso: a maioria dos
+   * jogos sem conquista realmente não tem nenhuma, e tentar de novo neles seria desperdício.
+   */
+  coletando: boolean;
 }
 
 export interface AvaliacaoSteam {

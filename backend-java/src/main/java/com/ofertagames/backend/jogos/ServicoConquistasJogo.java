@@ -50,6 +50,7 @@ public class ServicoConquistasJogo {
     int desbloqueadasCount = (int) comProgresso.stream().filter(ConquistaComProgresso::desbloqueada).count();
     int percentual = total == 0 ? 0 : Math.round(desbloqueadasCount * 100f / total);
 
-    return Optional.of(new RespostaConquistas(total, desbloqueadasCount, percentual, proxima, comProgresso));
+    // coletando = false aqui: quem sabe se ha coleta em andamento e o controlador, que a dispara.
+    return Optional.of(new RespostaConquistas(total, desbloqueadasCount, percentual, proxima, comProgresso, false));
   }
 }
