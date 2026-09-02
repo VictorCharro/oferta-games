@@ -573,6 +573,22 @@ Os dropdowns de tamanho e fundo devem seguir o mesmo padrao visual do filtro de 
   - **Biblioteca combinada**: `ServicoPerfis` mescla `steam.biblioteca()` + `xbox.biblioteca()` numa lista so, cada item com o campo `plataforma` ('steam'|'xbox'). `plataformasConectadas` passa a incluir `xbox` quando conectado. Os agregados do topo do perfil (total de horas, conquistas gerais) continuam vindo so da Steam — so a lista de biblioteca e o contador de jogos somam as duas plataformas. A aba Biblioteca ganha um filtro de plataforma (Steam/Xbox/Todas), visivel so quando o usuario tem mais de uma conectada.
   - **Limitacoes conhecidas**: favoritar, o link "Ver na [loja]" e a capa alternativa em cascata continuam Steam-only (favoritar por appId colidiria com titleId do Xbox, que sao so numeros indistinguiveis entre plataformas). Reordenar platinados por arrastar tambem so persiste pra itens Steam (o endpoint de ordem e especifico da Steam); itens Xbox reordenam na tela mas nao persistem entre sessoes ainda.
 
+### Conquistas sao coletadas sob demanda, nao por varredura (01/09/2026)
+
+A varredura agendada (`AgendadorColetas.coletarConquistasCatalogo`) foi **removida**. Ela percorria os 39 mil jogos com `steam_app_id` a cada 2 minutos; com a fila ja esgotada, gastava CPU e chamadas a Steam pra nao achar nada. **Nao readicionar** sem reavaliar espaco em disco: `game_achievements` e a maior tabela do banco (121 MB de 361 MB).
+
+`ServicoSincronizacao.sincronizarRodadaConquistasCatalogo` continua existindo e o botao **"conquistas-catalogo" do painel de admin ainda dispara a varredura manualmente**, pra quando fizer sentido (por exemplo, depois de uma entrada grande de jogos novos no catalogo).
+
+**O gatilho e abrir a pagina do jogo**, via `GET /api/games/{slug}/conquistas`, que a pagina ja chamava. Nao e o botao "Atualizar precos": a aba "Conquistas" so aparece quando ja ha conquistas gravadas (`*ngIf="temConquistas"`), entao quem abre um jogo sem elas nao ve aba nenhuma e nao teria motivo pra imaginar que atualizar precos faria uma surgir — a coleta so aconteceria por acidente.
+
+**Cada jogo e consultado uma vez.** Quem garante e `games.achievements_checked_at`, carimbado inclusive quando a Steam devolve esquema vazio. Sem ele, os 25.750 jogos que a Steam confirmou nao ter conquista seriam reconsultados a cada visita.
+
+**A coleta roda fora da requisicao** e a resposta traz `coletando: true` quando a lista veio vazia *porque a coleta acabou de ser disparada* — e nao porque o jogo nao tem conquistas. So nesse caso o frontend reconsulta, uma vez, 5s depois (`game-detail.ts`, `carregarConquistas`). Sem esse sinal a alternativa seria tentar de novo em todo jogo de lista vazia: uma requisicao desperdicada por visita, na maioria dos jogos.
+
+**Efeito colateral bom do SSR:** como o servidor renderiza a pagina e nisso ja chama `/conquistas`, a coleta costuma comecar antes do navegador pedir os dados — medido, a aba aparece **no primeiro frame, com uma unica requisicao**. A nova tentativa vira rede de seguranca pra quando a Steam demora, nao o caminho normal.
+
+Pra testar de novo: apagar as linhas de `game_achievements` do jogo e zerar `achievements_checked_at`. Sao dados derivados da Steam, recolhidos sozinhos na visita seguinte.
+
 ## Seguranca
 
 ### RLS: a chave do Supabase e publica, e o RLS e a unica barreira (01/09/2026)
