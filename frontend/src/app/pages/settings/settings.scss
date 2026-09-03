@@ -37,4 +37,10 @@ select { cursor: pointer; }
 .public-profile-link { color: var(--color-purple); font-weight: 700; font-size: 13px; }
 
 @media (max-width: 850px) { .password-grid, .preferences-grid { grid-template-columns: 1fr 1fr; } .connections-grid { grid-template-columns: 1fr; } .store-options { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 620px) { .page-content { padding: 20px 14px; } .settings-tabs { grid-template-columns: repeat(2, 1fr); } .form-grid, .password-grid, .preferences-grid { grid-template-columns: 1fr; } .connection-card { grid-template-columns: 42px 1fr; button { grid-column: 1 / -1; width: 100%; } } .session-card { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 620px) { .page-content { padding: 20px 14px; } .settings-tabs { grid-template-columns: repeat(2, 1fr); } .form-grid, .password-grid, .preferences-grid { grid-template-columns: 1fr; } .connection-card { grid-template-columns: 42px 1fr; button { grid-column: 1 / -1; width: 100%; }
+  /* .connection-actions (o <div> com Sincronizar+Desconectar, usado quando ja conectado) nao e um
+     <button> direto — a regra acima nao o alcanca, e como filho direto do grid ele cai sozinho na
+     coluna de 42px, espremendo os 2 botoes internos. Precisa da mesma largura total, soltando os
+     botoes internos em coluna por falta de espaco lado a lado num card estreito. */
+  .connection-actions { grid-column: 1 / -1; width: 100%; flex-direction: column; }
+} .session-card { align-items: flex-start; flex-direction: column; } }
