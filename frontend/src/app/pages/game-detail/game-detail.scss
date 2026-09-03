@@ -473,13 +473,39 @@
     border: 1px solid var(--border-color);
   }
 
-  .hero-overlay {
+  // Capa sangrando ate a borda do card (mockup aprovado), sem o "gutter" que o padding do
+  // .hero-overlay criava. Repete o prefixo ".game-hero" pra bater a especificidade da regra
+  // aninhada la em cima — um ".hero-overlay" flat nunca venceria.
+  .game-hero .hero-overlay {
     background: none;
+    padding: 0;
+  }
+
+  .hero-content {
+    gap: 0;
+  }
+
+  .hero-cover-wrap {
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    box-shadow: none;
+    margin: 0;
+  }
+
+  .hero-info {
     padding: 16px;
+    gap: 10px;
   }
 
   .hero-info h1 {
     font-size: 22px;
+  }
+
+  // Base (desktop) usa uppercase+letter-spacing pro rotulo "MELHOR PREÇO" — no mockup aprovado
+  // e "Melhor preço" normal, mais discreto ao lado do nome da loja.
+  .hero-best .label {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 12px;
   }
 
   .hero-cta-oferta {
@@ -498,82 +524,58 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
-    margin-top: 4px;
   }
 
-  // As 4 acoes (Favoritar/Monitorar/Lista/Atualizar) ficam identicas em tamanho e formato — hoje
-  // eram 3 estilos diferentes (pilula de texto, 2 circulos, mais um circulo) espalhados sem
-  // alinhamento. .detail-monitor e .detail-collections sao wrappers (tem popover dentro) — o
-  // seletor pega o BOTAO la dentro, nao o wrapper, pra manter o wrapper como container relative
-  // do popover sem interferir no grid.
+  // As 4 acoes (Favoritar/Monitorar/Lista/Atualizar) ficam identicas em tamanho/formato/ordem —
+  // hoje sao 3 estilos diferentes (pilula, 2 circulos, outro circulo) fora de ordem (DOM e
+  // Atualizar/Monitorar/Favoritar/Lista; mockup aprovado e Favoritar/Monitorar/Lista/Atualizar,
+  // por isso os `order`). .detail-monitor/.detail-collections sao wrappers com popover dentro — o
+  // seletor pega o BOTAO la dentro, nao o wrapper, que so precisa de width:100% pro grid.
   .refresh-group,
   .detail-monitor .detail-monitor-btn,
   .detail-profile-favorite-btn,
   .detail-collections .detail-collections-btn {
     width: 100%;
-    height: auto;
     min-height: 56px;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .detail-monitor,
-  .detail-collections {
-    width: 100%;
-  }
-
-  .refresh-group {
+    background: rgba(255, 255, 255, .05);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 2px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
     padding: 6px 4px;
+  }
 
-    // O botao em si fica sem borda/fundo proprios aqui dentro — quem desenha o quadrado e o
-    // .refresh-group ao redor, senao ficaria "quadrado dentro de quadrado".
-    .refresh-btn {
-      border: 0 !important;
-      background: none !important;
-      padding: 0;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
+  // order nos 4 filhos DIRETOS do grid — .detail-monitor/.detail-collections sao os wrappers.
+  .detail-profile-favorite-btn { order: 1; }
+  .detail-monitor { order: 2; width: 100%; }
+  .detail-collections { order: 3; width: 100%; }
+  .refresh-group { order: 4; }
 
+  // O botao em si fica sem borda/fundo proprios — quem desenha o quadrado e o .refresh-group ao
+  // redor, senao vira "quadrado dentro de quadrado".
+  .refresh-group {
+    border: 1px solid rgba(255, 255, 255, .4);
+    .refresh-btn { border: 0 !important; background: none !important; padding: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
     .refresh-msg { font-size: 9px; text-align: center; }
   }
 
-  .detail-monitor .detail-monitor-btn,
-  .detail-profile-favorite-btn,
-  .detail-collections .detail-collections-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    padding: 6px 4px;
-
-    img { width: 18px; height: 18px; }
-  }
-
-  .btn-icon-glyph,
-  .btn-label-text {
-    display: block;
-  }
-
-  .btn-icon-glyph { font-size: 16px; line-height: 1; }
-  .btn-label-text { font-size: 9px; font-weight: 600; white-space: nowrap; }
+  .btn-icon-glyph { display: block; font-size: 16px; line-height: 1; }
+  // overflow+ellipsis como rede de seguranca: se algum rotulo (ou o texto dinamico do
+  // rotuloBotaoRefresh, tipo "Aguarde 4:32" no cooldown) nao couber nos ~70px do botao, corta com
+  // "…" em vez de vazar por cima dos vizinhos.
+  .btn-label-text { display: block; font-size: 9px; font-weight: 600; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
   // Ficha tecnica em grid 2 colunas — empilhada (1 coluna) ocupava bastante altura antes de
-  // chegar nas abas de Precos/Sobre/etc, empurrando tudo pra baixo sem necessidade.
+  // chegar nas abas de Precos/Sobre/etc, empurrando tudo pra baixo sem necessidade. margin (nao
+  // padding): a propria .hero-facts ja e um card com padding interno — precisa so do respiro em
+  // volta que o .hero-content { gap:0 } tirou.
   .hero-facts {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px 10px;
+    margin: 0 16px 16px;
 
     .hero-fact-steam-link {
       grid-column: 1 / -1;

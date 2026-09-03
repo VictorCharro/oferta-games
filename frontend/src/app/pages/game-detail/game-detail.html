@@ -43,7 +43,7 @@
                 [attr.aria-label]="monitoring ? 'Editar meta de preço' : 'Adicionar aos jogos monitorados'"
               >
                 <img src="jogos-monitorados-modo-escuro.png" alt="" />
-                <span class="btn-label-text">{{ monitoring ? 'Monitorando' : 'Monitorar' }}</span>
+                <span class="btn-label-text">Monitorar</span>
               </button>
               <div class="detail-meta-menu" *ngIf="menuMetaAberto" (click)="$event.stopPropagation()">
                 <p class="detail-meta-title">{{ monitoring ? 'Editar meta de preço' : 'Monitorar preço' }}</p>
@@ -74,7 +74,7 @@
               [attr.aria-label]="personalFavorite ? 'Remover dos jogos favoritos' : 'Adicionar aos jogos favoritos'"
             >
               <img src="jogos-favoritos.png" alt="" />
-              <span class="btn-label-text">{{ personalFavorite ? 'Favoritado' : 'Favoritar' }}</span>
+              <span class="btn-label-text">Favoritar</span>
             </button>
             <div class="detail-collections">
               <button
