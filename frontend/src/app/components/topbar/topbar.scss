@@ -430,6 +430,12 @@
 
   .topbar-actions {
     gap: 2px;
+    // Reseta o margin-left:auto herdado do desktop (linha ~171): la faz sentido, ele e o unico
+    // item "livre" no flex (o resto e absolute ou display:none). Aqui o .search-toggle-btn TAMBEM
+    // tem margin-left:auto pra empurrar o grupo pra direita — os dois "auto" juntos dividiam o
+    // espaco livre em 2 vaos (um antes da lupa, outro antes do tema), abrindo um buraco enorme
+    // entre a lupa e o botao de tema. Achado real (usuario testando em aparelho de tela maior).
+    margin-left: 0;
   }
 
   .action-btn {
