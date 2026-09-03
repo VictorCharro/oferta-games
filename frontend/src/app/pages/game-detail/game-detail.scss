@@ -428,6 +428,13 @@
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   background: var(--bg-card);
+  // Os 4 rotulos (Precos/Sobre/Review/Conquistas) nao cabem lado a lado abaixo de ~430px de
+  // largura util. Em vez de encolher/quebrar o texto (ilegivel em botao de aba), rola
+  // horizontalmente — mesmo padrao ja usado nos carrosseis de cards do site (scrollbar-width:none
+  // + pseudo-elemento webkit escondem a barra, mas o gesto de arrastar/rolar continua funcionando).
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 
   button {
     position: relative;
@@ -439,6 +446,10 @@
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    // flex-shrink:0 pra nao competir por espaco entre si dentro do container agora scrollavel —
+    // cada aba mantem sua largura natural e o overflow-x que resolve, nao o encolhimento.
+    flex-shrink: 0;
+    white-space: nowrap;
 
     &.active {
       color: var(--color-purple);
@@ -1766,6 +1777,42 @@
   padding: 48px;
   text-align: center;
   color: var(--text-muted);
+}
+
+// A tabela de ofertas nunca teve tratamento mobile: mesmo na variante mais estreita
+// (.precos-split.com-grafico .offer-header, a que realmente esta ativa sempre que ha oferta —
+// a base .offer-header de 920px so se aplica no caso raro de 0 ofertas, que nem chega a
+// renderizar a tabela) o piso e minmax(140px,220px) + 4x minmax(70px,1fr) + 64px = 484px minimo,
+// acima de qualquer celular. Sem limite, isso forcava a PAGINA INTEIRA a alargar (medido: pagina
+// de 375px virando 424px, e ate a topbar - position:fixed, deveria ser sempre igual ao viewport -
+// esticando junto, efeito colateral do overflow horizontal do body).
+//
+// Reaproveita os MESMOS elementos (nenhuma mudanca de HTML), so troca de grid pra
+// flex-wrap + order: cada .offer-row vira um cartao empilhado em vez de uma linha de tabela.
+@media (max-width: 640px) {
+  // Cabecalho de coluna nao faz sentido num layout empilhado - cada linha ja rotula a si mesma
+  // (logo da loja, "Ver oferta").
+  .offer-header { display: none; }
+
+  .precos-split.com-grafico .offer-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 14px 16px;
+  }
+
+  // Linha 1: loja (encolhe) ....... preco atual (grudado a direita)
+  .offer-store { order: 1; flex: 1 1 auto; }
+  .price-current { order: 2; font-size: 15px; }
+
+  // Linha 2 (flex-basis:100% forca quebra): chips de plataforma
+  .offer-platforms { order: 3; flex-basis: 100%; justify-content: flex-start; }
+
+  // Linha 3: desconto + preco riscado ....... "Ver oferta" grudado a direita
+  .offer-discount { order: 4; }
+  .price-original { order: 5; }
+  .offer-cta { order: 6; margin-left: auto; }
 }
 
 .dlc-section {
