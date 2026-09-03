@@ -435,4 +435,17 @@
   .action-btn {
     padding: 8px;
   }
+
+  // Achado real (usuario testando em aparelho): painel tinha width:350px fixo, position:absolute
+  // ancorado em right:0 do botao de sino — que nao fica na borda direita da tela (o avatar ainda
+  // sobra a direita dele), entao o painel de 350px "vazava" pra fora da tela pela esquerda numa
+  // viewport de ~375px. Fixed com left/right relativos a VIEWPORT (nao mais ao botao) resolve pra
+  // qualquer posicao do sino na topbar.
+  .notifications-panel {
+    position: fixed;
+    top: 60px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
 }
