@@ -327,3 +327,27 @@
   background: rgba(0, 0, 0, 0.55);
   z-index: 150;
 }
+
+// Achado real (usuario testando em aparelho): em celular os modos "compacto" e "grande" ficavam
+// visualmente identicos — 1 card gigante por linha nos dois. Causa: .page-content tem 32px de
+// padding fixo (64px nos dois lados) e o piso do modo compacto e minmax(180px,1fr); numa tela de
+// 375px sobram so 311px de conteudo, onde nem 2 cards de 180px cabem lado a lado (180*2+gap=380).
+//
+// Breakpoint proprio (560px), separado do @media de 900px que controla o drawer de filtros:
+// sao problemas independentes — em tablets (560-900px) ja ha espaco de sobra pro piso original,
+// so o celular estreito precisa de piso e padding menores.
+@media (max-width: 560px) {
+  .page-content { padding: 20px 16px 32px; }
+
+  .games-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+
+    // O modo "grande" continua 1 card por linha de proposito — e a diferenca que distingue os
+    // dois modos; so o "compacto" precisava do piso mais baixo pra caber 2 colunas.
+    &.large {
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+  }
+}
