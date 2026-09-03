@@ -562,10 +562,14 @@
   }
 
   .btn-icon-glyph { display: block; font-size: 16px; line-height: 1; }
-  // overflow+ellipsis como rede de seguranca: se algum rotulo (ou o texto dinamico do
-  // rotuloBotaoRefresh, tipo "Aguarde 4:32" no cooldown) nao couber nos ~70px do botao, corta com
-  // "…" em vez de vazar por cima dos vizinhos.
-  .btn-label-text { display: block; font-size: 9px; font-weight: 600; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  // Repete ".refresh-btn" (nao so ".btn-icon-glyph") pra bater a especificidade da regra que
+  // ESCONDE o glifo em desktop (.refresh-btn .btn-icon-glyph, mais acima) — a de cima tem 2
+  // classes, ".btn-icon-glyph" sozinho (1 classe) nunca a venceria. Sem isto o botao Atualizar
+  // ficava so texto (2 linhas), destoando dos outros 3 (icone em cima + rotulo embaixo).
+  .refresh-btn .btn-icon-glyph { display: block; }
+  // color:#fff — monitor/favoritar nunca precisaram de cor de texto antes (so tinham icone), sem
+  // isto o texto cai no preto padrao do navegador, quase invisivel no fundo escuro do card.
+  .btn-label-text { display: block; font-size: 9px; font-weight: 600; color: #fff; white-space: nowrap; }
 
   // Ficha tecnica em grid 2 colunas — empilhada (1 coluna) ocupava bastante altura antes de
   // chegar nas abas de Precos/Sobre/etc, empurrando tudo pra baixo sem necessidade. margin (nao
