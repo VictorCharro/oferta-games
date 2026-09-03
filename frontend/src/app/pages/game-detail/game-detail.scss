@@ -576,6 +576,11 @@
   // padding): a propria .hero-facts ja e um card com padding interno — precisa so do respiro em
   // volta que o .hero-content { gap:0 } tirou.
   .hero-facts {
+    // width:auto sobrepoe o "width:100%" de uma regra mais antiga (linha ~96) — com width:100%
+    // FIXO, o margin:0 16px abaixo somava 32px em cima dos 100%, empurrando o card 32px pra fora
+    // da tela pela direita. width:auto deixa o navegador descontar as margens sozinho, como
+    // qualquer bloco normal faria por padrao.
+    width: auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px 10px;
@@ -1967,21 +1972,46 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 10px;
+    gap: 6px 6px;
     padding: 14px 16px;
   }
 
-  // Linha 1: loja (encolhe) ....... preco atual (grudado a direita)
-  .offer-store { order: 1; flex: 1 1 auto; }
-  .price-current { order: 2; font-size: 15px; }
+  // Achado real (usuario testando): a versao anterior espalhava loja/plataforma/desconto/precos
+  // em 3 linhas soltas, com o preco atual isolado no canto oposto da loja — parecia desalinhado
+  // por natureza (nada ficava embaixo de nada). Reagrupado numa linha SO (loja, desconto, preco
+  // riscado, preco atual — preco atual empurrado pro canto direito via margin-left:auto) e "Ver
+  // oferta" sozinho numa segunda linha, alinhado a direita — mais parecido com um card de resumo
+  // do que com uma tabela quebrada.
+  //
+  // O chip de plataforma sai da linha (a info de PC/Xbox/etc continua disponivel no desktop): o
+  // nome da loja sozinho ja varia MUITO (5 letras "Steam" a 15 "Microsoft Store") e o preco
+  // tambem (2 a 3 digitos, com ou sem centavos-largos) — nao da pra garantir espaco pros 5
+  // elementos juntos em ~277px uteis (309px de linha - 32px de padding) sem cortar algo. Loja
+  // ganha max-width com "…" (pior caso testado: "Microsoft Store" cortada, ainda reconhecivel)
+  // pra sempre sobrar espaco fixo e prova de estouro pros precos, que sao a info mais importante
+  // da linha.
+  .offer-row .offer-platforms { display: none; }
+  .offer-row .offer-discount.none { display: none; } // "—" sem desconto so ocupa espaco a toa
+  .offer-row .store-logo { width: 20px; height: 20px; }
 
-  // Linha 2 (flex-basis:100% forca quebra): chips de plataforma
-  .offer-platforms { order: 3; flex-basis: 100%; justify-content: flex-start; }
+  .offer-store {
+    order: 1;
+    gap: 6px;
+    flex: 0 1 auto;
+    max-width: 100px;
 
-  // Linha 3: desconto + preco riscado ....... "Ver oferta" grudado a direita
-  .offer-discount { order: 4; }
-  .price-original { order: 5; }
-  .offer-cta { order: 6; margin-left: auto; }
+    span { min-width: 0; flex: 1; }
+  }
+
+  .offer-discount { order: 2; flex-shrink: 0; font-size: 12px; }
+  // .price-original/.price-current SAO REUSADAS no preco do heroi (.hero-best-price-row) — sem
+  // escopar em ".offer-row", essas regras de order/margin-left:auto vazavam pra la tambem,
+  // baguncando o preco do topo (achado depois de comparar com o mockup: o "R$ 121,99" riscado
+  // tinha ido pra esquerda e o preco atual virado gigante, empurrado pro canto oposto).
+  .offer-row .price-original { order: 3; flex-shrink: 0; font-size: 12px; }
+  .offer-row .price-current { order: 4; flex-shrink: 0; margin-left: auto; font-size: 14px; }
+
+  .offer-cta { order: 5; flex-basis: 100%; text-align: right; }
 }
 
 .dlc-section {
