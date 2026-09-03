@@ -32,6 +32,21 @@
   &:hover { background: var(--bg-card); color: var(--text-primary); }
 }
 
+// Os 3 abaixo seguem o mesmo padrao do hamburguer: escondidos por padrao, so aparecem no @media
+// mobile no fim do arquivo. Em desktop o campo de busca fica sempre visivel por extenso, entao
+// nao ha o que a lupa/fechar/logo-mobile fariam ali.
+.topbar-logo-mobile {
+  display: none;
+}
+
+.search-toggle-btn {
+  display: none;
+}
+
+.search-close-btn {
+  display: none;
+}
+
 .topbar-logo {
   display: flex;
   align-items: center;
@@ -324,24 +339,93 @@
     display: flex;
   }
 
+  // Unica marca "Oferta Games" visivel em mobile — a sidebar (onde o logo normalmente aparece)
+  // vira drawer escondido por padrao abaixo de 900px (ver sidebar.scss).
+  .topbar-logo-mobile {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    img { height: 22px; width: auto; object-fit: contain; }
+  }
+
+  .search-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    img { width: 18px; height: 18px; object-fit: contain; opacity: .75; }
+    &:hover { background: var(--bg-card); }
+  }
+
+  // Escondido por padrao: o campo de busca inline (que ficava espremido entre hamburguer e
+  // avatar, truncando o placeholder pra uma letra so) vira um botao de lupa + esta caixa, que so
+  // aparece quando buscaMobileAberta (ver topbar.ts). Quando aberta, ocupa a topbar inteira —
+  // ver `.busca-mobile-aberta` abaixo, que esconde os outros elementos pra abrir espaco.
   .search-wrapper {
+    display: none;
+
     // Sai do posicionamento absoluto-centralizado (pensado pra sobrar espaco largo dos dois
-    // lados) e passa a disputar espaco no flex normal entre o hamburguer e as acoes — e o que
-    // da pra ela em telas estreitas, sem calculo manual de centralizacao.
+    // lados) e passa a ocupar a largura toda da topbar quando aberta.
     //
-    // relative, nao static: o icone de lupa e o atalho dentro do wrapper sao position:absolute
-    // e esperam se posicionar contra ELE. Com static, sem contexto de posicionamento proprio,
-    // eles "vazam" pro ancestral fixed mais proximo (.topbar) e saem do lugar por completo.
+    // relative, nao static: o icone de lupa e o botao de fechar dentro do wrapper sao
+    // position:absolute e esperam se posicionar contra ELE. Com static, sem contexto de
+    // posicionamento proprio, eles "vazam" pro ancestral fixed mais proximo (.topbar) e saem do
+    // lugar por completo.
     position: relative;
     // left:50% do desktop continua valendo em position:relative (so position:static ignora
     // offsets) — sem resetar, o wrapper desloca 50% da largura do container pra direita da
-    // posicao natural do flex, empurrando ele pra cima das acoes. transform tambem precisa sair.
+    // posicao natural do flex. transform tambem precisa sair.
     left: auto;
     transform: none;
     width: auto;
     max-width: none;
     flex: 1;
     min-width: 0;
+
+    .search-input { padding-right: 40px; } // espaco pro botao de fechar (36px + respiro)
+  }
+
+  .search-close-btn {
+    display: none;
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    transform: translateY(-50%);
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    &:hover { background: var(--bg-card-hover); }
+  }
+
+  .topbar.busca-mobile-aberta {
+    .hamburger-btn,
+    .topbar-logo-mobile,
+    .search-toggle-btn,
+    .topbar-actions {
+      display: none;
+    }
+
+    .search-wrapper {
+      display: flex;
+    }
+
+    .search-close-btn {
+      display: flex;
+    }
   }
 
   .topbar-actions {

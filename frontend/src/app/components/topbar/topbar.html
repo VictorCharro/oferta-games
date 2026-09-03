@@ -1,5 +1,18 @@
-<header class="topbar">
+<header class="topbar" [class.busca-mobile-aberta]="buscaMobileAberta">
   <button type="button" class="hamburger-btn" (click)="menuMobile.toggle()" aria-label="Abrir menu">☰</button>
+
+  <!-- So visivel em mobile (ver @media) — em desktop a marca fica so na sidebar, que ali e sempre
+       visivel. Em mobile a sidebar vira drawer escondido, entao sem isto nao sobra nenhuma marca
+       "Oferta Games" na tela por padrao. -->
+  <a class="topbar-logo-mobile" routerLink="/">
+    <img src="logo.png" alt="Oferta Games" />
+  </a>
+
+  <!-- So visivel em mobile: abre a busca em vez de ocupar espaco fixo na topbar o tempo todo (era
+       o que espremia o campo a ponto do placeholder truncar pra uma letra so). -->
+  <button type="button" class="search-toggle-btn" (click)="abrirBuscaMobile()" aria-label="Pesquisar">
+    <img src="pesquisar.png" alt="" />
+  </button>
 
   <div class="search-wrapper">
     <img class="search-icon" src="pesquisar.png" alt="Pesquisar" />
@@ -16,6 +29,8 @@
       (keydown)="onSearch($event)"
       class="search-input"
     />
+    <!-- So visivel em mobile, com a busca aberta — fecha e volta a mostrar hamburguer/logo/acoes. -->
+    <button type="button" class="search-close-btn" (click)="fecharBuscaMobile()" aria-label="Fechar busca">✕</button>
     <div class="search-suggestions" *ngIf="showSuggestions">
       <a *ngFor="let g of suggestions" class="suggestion-item" [routerLink]="['/jogo', g.slug]" (click)="closeSuggestions()">
         <img [src]="g.coverUrl || 'no-cover.svg'" [alt]="g.title" />

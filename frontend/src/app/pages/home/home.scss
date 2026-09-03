@@ -199,18 +199,59 @@
 }
 
 @media (max-width: 768px) {
+  // Layout lado a lado (capa ~40%, texto ~60%), como no desktop so que compacto — pedido explicito
+  // do usuario com mockup pra referencia, revertendo a primeira tentativa (empilhar em coluna).
+  //
+  // A primeira tentativa empilhava a capa em cima do texto pra resolver as setas de navegacao
+  // sobrepondo o titulo: elas sao position:absolute;top:50% calculado sobre a altura INTEIRA do
+  // .banner, e empilhado a altura vira capa+texto somados, entao o "meio" caia em cima do
+  // titulo/preco. Lado a lado a altura do banner volta a ser so o MAIOR entre capa e texto (como
+  // no desktop), entao o mesmo bug nao deveria voltar — mas o texto (titulo+preco+loja+plataforma)
+  // pode ficar mais alto que a capa reduzida, diferente do desktop onde os dois ficam parecidos.
+  // Ver verificacao visual antes de dar como resolvido.
   .banner {
-    padding: 24px 20px 40px;
-    .banner-slide { flex-direction: column; align-items: flex-start; }
-    .banner-cover { width: 100%; }
-    .banner-info h1 { font-size: 24px; }
+    // Lateral maior que o resto (nao so 16px): as setas ficam em left/right:6px com 30px de
+    // largura (ver .banner-nav abaixo), entao precisam de ~40px de respiro pro conteudo nao
+    // encostar nelas. Medido antes de ajustar: o preco riscado ia ate 20px DENTRO da area da seta
+    // direita (banner-price right:326px vs banner-nav.next left:306px).
+    padding: 20px 40px;
 
-    // As setas sao position:absolute; top:50% calculado sobre a altura INTEIRA do .banner. Em
-    // desktop isso cai certo porque capa e informacoes ficam lado a lado na mesma linha (altura
-    // do banner ~= altura da capa); empilhado (coluna) o banner fica bem mais alto e o "meio"
-    // passa a cair em cima do titulo/preco. Os dots (clicaveis, pulam pra qualquer slide) ja
-    // cobrem a navegacao sem esse problema, entao as setas somem em vez de recalcular a posicao.
-    .banner-nav { display: none; }
+    .banner-slide { gap: 16px; }
+
+    .banner-cover {
+      width: 38%;
+      flex-shrink: 0;
+    }
+
+    .banner-info {
+      gap: 8px;
+      h1 {
+        font-size: 18px;
+        line-height: 1.25;
+        // Sem isto, titulo longo ("Ghost of Tsushima DIRECTOR'S CUT") quebra em 4 linhas e empurra
+        // a capa pra baixo/pequena — nao chega a sobrepor nada, mas desequilibra o card. 2 linhas
+        // com "..." mantem o card compacto pra qualquer titulo.
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+    }
+
+    .banner-tag { font-size: 10px; padding: 3px 8px; }
+    // wrap: badge de desconto + preco atual + preco riscado juntos precisam de mais largura do
+    // que sobra na coluna de texto (medido: 178px de conteudo pra 126px disponiveis). Sem quebrar
+    // linha o preco riscado cortava no meio, ilegivel. Empilhado em 2 linhas fica confortavel.
+    .banner-price { font-size: 16px; gap: 6px; flex-wrap: wrap; }
+    .banner-store { font-size: 12px; }
+
+    .banner-nav {
+      width: 30px;
+      height: 30px;
+      font-size: 16px;
+      &.prev { left: 6px; }
+      &.next { right: 6px; }
+    }
   }
 }
 

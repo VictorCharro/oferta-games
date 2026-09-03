@@ -1,4 +1,4 @@
-import { Component, HostListener, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
+import { Component, ElementRef, HostListener, ChangeDetectorRef, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, switchMap } from 'rxjs/operators';
@@ -23,6 +23,10 @@ export class Topbar implements OnInit, OnDestroy {
   suggestions: GameSummary[] = [];
   notifications: PriceNotification[] = [];
   showSuggestions = false;
+  // So tem efeito visual em mobile (ver @media em topbar.scss) — em desktop o campo de busca
+  // sempre fica visivel, entao esse estado nunca chega a ser lido pelo CSS la.
+  buscaMobileAberta = false;
+  @ViewChild('searchInput') private searchInputRef?: ElementRef<HTMLInputElement>;
   private isCatalogPage = false;
   private sub!: Subscription;
   private avatarSub!: Subscription;
@@ -59,6 +63,7 @@ export class Topbar implements OnInit, OnDestroy {
         // Fecha o drawer tambem em navegacao que nao veio de clicar num link da sidebar (voltar
         // do navegador, redirect programatico) — sem isso ele ficaria aberto sobre a pagina nova.
         this.menuMobile.close();
+        this.buscaMobileAberta = false;
         this.isCatalogPage = e.urlAfterRedirects.startsWith('/catalogo');
         this.searchQuery = '';
         this.suggestions = [];
@@ -120,6 +125,24 @@ export class Topbar implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Abre a busca expandida em mobile (icone de lupa na topbar — ver design da issue de
+   * responsividade). O campo de busca em si e o MESMO elemento sempre usado, so a visibilidade
+   * muda via CSS; nao ha um segundo input duplicado.
+   */
+  abrirBuscaMobile() {
+    this.buscaMobileAberta = true;
+    this.cdr.detectChanges();
+    // setTimeout(0): a troca de classe que torna o input visivel (display:none -> flex) precisa
+    // renderizar antes do focus — focar um elemento ainda display:none e um no-op silencioso.
+    setTimeout(() => this.searchInputRef?.nativeElement.focus());
+  }
+
+  fecharBuscaMobile() {
+    this.buscaMobileAberta = false;
+    this.showSuggestions = false;
+  }
+
   closeSuggestions() {
     this.showSuggestions = false;
     this.searchQuery = '';
@@ -175,6 +198,7 @@ export class Topbar implements OnInit, OnDestroy {
     if (!target.closest('.user-menu')) this.dropdownOpen = false;
     if (!target.closest('.notifications-menu')) this.notificationsOpen = false;
     if (!target.closest('.search-wrapper')) this.showSuggestions = false;
+    if (!target.closest('.search-wrapper') && !target.closest('.search-toggle-btn')) this.buscaMobileAberta = false;
   }
 
   logout() {
