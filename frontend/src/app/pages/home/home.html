@@ -9,9 +9,12 @@
   <!-- Banner principal / carrossel -->
   <div class="banner" *ngIf="featuredDeals.length" (mouseenter)="pausarAutoplay()" (mouseleave)="retomarAutoplay()">
     <button class="banner-nav prev" (click)="prevFeatured()">‹</button>
-    <div class="banner-viewport">
-      <div class="banner-track" [style.transform]="'translateX(-' + (featuredIndex * 100) + '%)'">
-        <a class="banner-slide" *ngFor="let f of featuredDeals; let i = index" [class.active]="i === featuredIndex" [routerLink]="['/jogo', f.slug]">
+    <div class="banner-viewport"
+         (touchstart)="onBannerTouchStart($event)"
+         (touchmove)="onBannerTouchMove($event)"
+         (touchend)="onBannerTouchEnd()">
+      <div class="banner-track" [class.arrastando]="arrastandoBanner" [style.transform]="bannerTrackTransform">
+        <a class="banner-slide" *ngFor="let f of featuredDeals; let i = index" [class.active]="i === featuredIndex" [routerLink]="['/jogo', f.slug]" (click)="onBannerSlideClick($event)">
           <img class="banner-cover" [src]="f.coverUrl || 'no-cover.svg'" [alt]="f.title" />
           <div class="banner-info">
             <span class="banner-tag">Melhor oferta</span>

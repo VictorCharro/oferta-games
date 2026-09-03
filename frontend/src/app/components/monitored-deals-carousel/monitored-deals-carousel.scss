@@ -31,3 +31,12 @@
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
+
+// Mesmo achado do deals-carousel (ver comentario la): card de 210px so deixava 1 e pouco visivel
+// num celular. Reduzido, mas menos que o deal-card — este tem mais conteudo (preco + meta +
+// barra de progresso), precisa de um pouco mais de largura pra nao virar sopa de letrinhas.
+@media (max-width: 768px) {
+  .carousel-nav { display: none !important; } // ver comentario equivalente em deals-carousel.scss
+
+  .monitor-row { gap: 10px; }
+}

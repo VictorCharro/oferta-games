@@ -132,6 +132,54 @@ export class Home implements OnInit, OnDestroy {
     this.stopAutoplay();
   }
 
+  // Arrastar o banner com o dedo (mobile): as setas somem em telas pequenas (ver @media no
+  // home.scss) e o card de dicas passa a exigir arrastar pra navegar, no lugar delas.
+  arrastandoBanner = false;
+  private toqueInicioX = 0;
+  bannerToqueDeltaX = 0;
+
+  onBannerTouchStart(event: TouchEvent) {
+    this.toqueInicioX = event.touches[0].clientX;
+    this.bannerToqueDeltaX = 0;
+    this.arrastandoBanner = false;
+    this.pausarAutoplay();
+  }
+
+  onBannerTouchMove(event: TouchEvent) {
+    const delta = event.touches[0].clientX - this.toqueInicioX;
+    // So entra em modo "arrastando" depois de um limiar minimo — um toque quase parado (tremor
+    // do dedo antes de soltar) nao pode acabar cancelando o clique de abrir o jogo.
+    if (!this.arrastandoBanner && Math.abs(delta) < 8) return;
+    this.arrastandoBanner = true;
+    this.bannerToqueDeltaX = delta;
+  }
+
+  onBannerTouchEnd() {
+    const LIMIAR_TROCA_PX = 50;
+    if (this.arrastandoBanner) {
+      if (this.bannerToqueDeltaX > LIMIAR_TROCA_PX) this.prevFeatured();
+      else if (this.bannerToqueDeltaX < -LIMIAR_TROCA_PX) this.nextFeatured();
+    }
+    this.bannerToqueDeltaX = 0;
+    this.retomarAutoplay();
+    // O touchend dispara antes do "click" sintetico do browser no <a> do slide — mantem a flag
+    // ligada mais um instante pra onBannerSlideClick conseguir cancelar a navegacao acidental.
+    if (this.arrastandoBanner) {
+      setTimeout(() => { this.arrastandoBanner = false; }, 100);
+    }
+  }
+
+  onBannerSlideClick(event: MouseEvent) {
+    if (this.arrastandoBanner) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  get bannerTrackTransform(): string {
+    return `translateX(calc(-${this.featuredIndex * 100}% + ${this.bannerToqueDeltaX}px))`;
+  }
+
   retomarAutoplay() {
     this.startAutoplay();
   }

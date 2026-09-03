@@ -12,6 +12,13 @@
   transition: border-color 0.2s;
   cursor: pointer;
 
+  // Achado real em aparelho (ver comentario em monitored-deals-carousel.scss): reduzido, mas
+  // menos que o .deal-card — este card carrega mais conteudo (preco atual + meta + barra de
+  // progresso), precisa de um pouco mais de largura pra nao virar sopa de letrinhas.
+  @media (max-width: 768px) {
+    flex-basis: 155px;
+  }
+
   // Sem overflow:hidden aqui (diferente do resto dos cards) pra nao cortar o popover de meta,
   // que precisa transbordar pra baixo da capa. O arredondado do topo fica so no .monitor-cover.
   // Tambem sem transform no hover: um transform em qualquer ancestral vira containing block pra

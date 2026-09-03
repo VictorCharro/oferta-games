@@ -139,3 +139,23 @@
     white-space: nowrap;
   }
 }
+
+// Achado real (usuario testando em aparelho): card de 200px e mais de metade da largura util de
+// um celular — so cabia 1 card e meio na tela. Reduzido pra caber ~2.3 cards, dando o "espiadinha"
+// do proximo card que sinaliza que da pra arrastar. As setas (‹ ›) tambem somem: a linha ja e
+// arrastavel com o dedo (overflow-x:auto nativo do .deals-row), entao elas so ocupavam espaco.
+@media (max-width: 768px) {
+  .carousel-nav { display: none !important; } // !important: sobrepoe o display inline que o
+  // scroll listener escreve direto no elemento (ver deals-carousel.ts updateScrollState) —
+  // especificidade normal de stylesheet nao vence estilo inline.
+
+  .deals-row { gap: 10px; }
+
+  .deal-card { flex-basis: 132px; }
+
+  .deal-info { padding: 8px; gap: 3px; }
+
+  .deal-title { font-size: 11px; }
+
+  .deal-prices { font-size: 12px; gap: 6px; }
+}
