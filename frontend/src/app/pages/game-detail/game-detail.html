@@ -9,14 +9,27 @@
         <div class="hero-info">
           <h1>{{ game.title }}</h1>
           <div class="hero-best" *ngIf="game.offers.length">
-            <span class="label">Melhor preço</span>
-            <span class="price-current large">{{ formatPrice(bestPrice(game.offers)!) }}</span>
+            <span class="label">Melhor preço<ng-container *ngIf="bestOffer(game.offers)?.storeName as loja"> · {{ loja }}</ng-container></span>
+            <span class="hero-best-price-row">
+              <span class="price-current large">{{ formatPrice(bestPrice(game.offers)!) }}</span>
+              <span class="price-original" *ngIf="bestOffer(game.offers)?.regularPrice as regular">{{ formatPrice(regular) }}</span>
+            </span>
             <span class="voucher-badge" *ngIf="bestOffer(game.offers)?.voucherCode as codigo" [title]="'Use o cupom ' + codigo + ' no carrinho da loja pra garantir esse preço'">Cupom {{ codigo }}</span>
           </div>
+          <!-- So aparece em mobile (ver @media em game-detail.scss) — em desktop a tabela de ofertas
+               logo abaixo ja cumpre esse papel; no card empilhado de mobile ela fica mais longe do
+               heroi, entao um atalho direto pra melhor oferta evita esse scroll extra. -->
+          <a
+            *ngIf="bestOffer(game.offers)?.url as urlMelhorOferta"
+            [href]="urlMelhorOferta"
+            target="_blank"
+            rel="noopener"
+            class="hero-cta-oferta"
+          >Ver oferta<ng-container *ngIf="bestOffer(game.offers)?.storeName as loja"> na {{ loja }}</ng-container></a>
           <div class="hero-actions">
             <div class="refresh-group">
               <button class="btn-outline refresh-btn" (click)="refresh()" [disabled]="refreshing || cooldownSegundos > 0" [class.cooldown]="cooldownSegundos > 0">
-                {{ rotuloBotaoRefresh }}
+                <span class="btn-icon-glyph" aria-hidden="true">↻</span><span class="btn-label-text">{{ rotuloBotaoRefresh }}</span>
               </button>
               <span class="refresh-msg" *ngIf="refreshMsg">{{ refreshMsg }}</span>
             </div>
@@ -30,6 +43,7 @@
                 [attr.aria-label]="monitoring ? 'Editar meta de preço' : 'Adicionar aos jogos monitorados'"
               >
                 <img src="jogos-monitorados-modo-escuro.png" alt="" />
+                <span class="btn-label-text">{{ monitoring ? 'Monitorando' : 'Monitorar' }}</span>
               </button>
               <div class="detail-meta-menu" *ngIf="menuMetaAberto" (click)="$event.stopPropagation()">
                 <p class="detail-meta-title">{{ monitoring ? 'Editar meta de preço' : 'Monitorar preço' }}</p>
@@ -60,6 +74,7 @@
               [attr.aria-label]="personalFavorite ? 'Remover dos jogos favoritos' : 'Adicionar aos jogos favoritos'"
             >
               <img src="jogos-favoritos.png" alt="" />
+              <span class="btn-label-text">{{ personalFavorite ? 'Favoritado' : 'Favoritar' }}</span>
             </button>
             <div class="detail-collections">
               <button
@@ -70,7 +85,7 @@
                 title="Adicionar a uma lista"
                 aria-label="Adicionar a uma lista"
               >
-                <span aria-hidden="true">≡</span>+
+                <span class="btn-icon-glyph" aria-hidden="true"><span aria-hidden="true">≡</span>+</span><span class="btn-label-text">Lista</span>
               </button>
               <div class="detail-collections-menu" *ngIf="menuColecoesAberto" (click)="$event.stopPropagation()">
                 <div class="detail-collections-create">

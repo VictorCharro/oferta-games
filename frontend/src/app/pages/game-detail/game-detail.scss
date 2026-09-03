@@ -144,6 +144,39 @@
   .large { font-size: 28px; }
 }
 
+.hero-best-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+// So aparece em mobile (ver @media abaixo) — em desktop a tabela de ofertas logo abaixo ja cumpre
+// esse papel de "ir direto pra loja".
+.hero-cta-oferta {
+  display: none;
+}
+
+// Rotulo abaixo do icone dos botoes de acao (Favoritar/Monitorar/Lista/Atualizar) — so aparece em
+// mobile (ver @media abaixo). Em desktop os botoes continuam so-icone, como sempre foram.
+.btn-label-text {
+  display: none;
+}
+
+// Excecao: o refresh-btn NUNCA foi so-icone, o texto de {{ rotuloBotaoRefresh }} sempre foi o
+// conteudo inteiro do botao em desktop (o span so existe agora pra poder ficar embaixo do glifo
+// "↻" no layout compacto de mobile) — sem isto a regra generica acima escondia esse texto tambem
+// em desktop, deixando o botao vazio.
+.refresh-btn .btn-label-text {
+  display: inline;
+}
+
+// O refresh-btn nao tinha icone nenhum em desktop, so o texto — o glifo "↻" e so pro layout
+// compacto de mobile (ver @media abaixo).
+.refresh-btn .btn-icon-glyph {
+  display: none;
+}
+
 .refresh-group {
   display: flex;
   flex-direction: column;
@@ -418,6 +451,136 @@
 .refresh-msg {
   font-size: 13px;
   color: var(--color-green);
+}
+
+// Redesenho da tela do jogo em mobile, a partir de feedback real testando no aparelho: a capa com
+// fundo desfocado colidia com o texto, o botao grande era "Atualizar precos" (uma acao
+// secundaria) em vez de "ir comprar", e os icones de favoritar/monitorar/lista eram soltos, sem
+// rotulo, sem tamanho consistente. Mockup aprovado antes de implementar (ver conversa).
+//
+// Precisa vir DEPOIS de todas as regras de .refresh-btn / .detail-monitor-btn /
+// .detail-profile-favorite-btn / .detail-collections-btn / .btn-label-text acima — em empate de
+// especificidade (varias delas tem a mesma, ex: ".detail-profile-favorite-btn" sozinho) quem
+// decide e a ordem no arquivo, e as regras base (".btn-label-text { display:none }" etc) tambem
+// precisam ficar ANTES daqui pra este bloco conseguir reverter pra "display:block" em mobile.
+@media (max-width: 900px) {
+  // [style.backgroundImage] e inline, so !important vence. Sem o fundo com a capa esticada atras
+  // do texto, mais limpo e mais parecido com os outros cards mobile do site (banner da home,
+  // .deal-card): capa solida no topo, texto embaixo, sem nada competindo atras.
+  .game-hero {
+    background-image: none !important;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+  }
+
+  .hero-overlay {
+    background: none;
+    padding: 16px;
+  }
+
+  .hero-info h1 {
+    font-size: 22px;
+  }
+
+  .hero-cta-oferta {
+    display: block;
+    text-align: center;
+    background: var(--color-purple);
+    color: #04283a;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px;
+    border-radius: 10px;
+    margin-top: 2px;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  // As 4 acoes (Favoritar/Monitorar/Lista/Atualizar) ficam identicas em tamanho e formato — hoje
+  // eram 3 estilos diferentes (pilula de texto, 2 circulos, mais um circulo) espalhados sem
+  // alinhamento. .detail-monitor e .detail-collections sao wrappers (tem popover dentro) — o
+  // seletor pega o BOTAO la dentro, nao o wrapper, pra manter o wrapper como container relative
+  // do popover sem interferir no grid.
+  .refresh-group,
+  .detail-monitor .detail-monitor-btn,
+  .detail-profile-favorite-btn,
+  .detail-collections .detail-collections-btn {
+    width: 100%;
+    height: auto;
+    min-height: 56px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .detail-monitor,
+  .detail-collections {
+    width: 100%;
+  }
+
+  .refresh-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 6px 4px;
+
+    // O botao em si fica sem borda/fundo proprios aqui dentro — quem desenha o quadrado e o
+    // .refresh-group ao redor, senao ficaria "quadrado dentro de quadrado".
+    .refresh-btn {
+      border: 0 !important;
+      background: none !important;
+      padding: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .refresh-msg { font-size: 9px; text-align: center; }
+  }
+
+  .detail-monitor .detail-monitor-btn,
+  .detail-profile-favorite-btn,
+  .detail-collections .detail-collections-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 4px;
+
+    img { width: 18px; height: 18px; }
+  }
+
+  .btn-icon-glyph,
+  .btn-label-text {
+    display: block;
+  }
+
+  .btn-icon-glyph { font-size: 16px; line-height: 1; }
+  .btn-label-text { font-size: 9px; font-weight: 600; white-space: nowrap; }
+
+  // Ficha tecnica em grid 2 colunas — empilhada (1 coluna) ocupava bastante altura antes de
+  // chegar nas abas de Precos/Sobre/etc, empurrando tudo pra baixo sem necessidade.
+  .hero-facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 10px;
+
+    .hero-fact-steam-link {
+      grid-column: 1 / -1;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+  }
 }
 
 .detail-tabs {
