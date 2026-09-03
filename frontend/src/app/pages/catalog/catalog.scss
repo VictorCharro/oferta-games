@@ -18,6 +18,18 @@
   top: 80px;
 }
 
+// So aparece no @media do drawer, no fim do arquivo — em desktop o painel e sempre visivel (sticky
+// na lateral) e nao faz sentido ter cabecalho com botao de fechar.
+.filters-panel-header {
+  display: none;
+}
+
+// Botao "Filtros" que abre o drawer: so existe pra ter o que clicar em mobile. Fica escondido em
+// desktop (ver @media no fim do arquivo) porque o painel ja esta sempre visivel la.
+.filters-open-btn {
+  display: none;
+}
+
 .filter-group {
   h3 {
     font-size: 12px;
@@ -241,4 +253,77 @@
   margin-top: 8px;
   color: var(--text-muted);
   font-size: 14px;
+}
+
+// Issue #12: abaixo de 900px o painel de 220px comeria ~60% de uma tela de celular (medido:
+// sobravam 131px pra grade de cards). Mesmo padrao ja aprovado do menu de navegacao (#9) — drawer
+// que desliza por cima da pagina — mas pela DIREITA, pra nao se confundir com o de navegacao
+// (esquerda) quando os dois existirem na tela ao mesmo tempo.
+@media (max-width: 900px) {
+  .catalog-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .filters-open-btn {
+    display: block;
+    order: 1;
+  }
+
+  .view-toggle { order: 2; }
+
+  .filters-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(85vw, 320px);
+    max-width: none;
+    z-index: 200; // acima do backdrop (150) e da topbar (99)
+    border-radius: 0;
+    border-right: 0;
+    border-left: 1px solid var(--border-color);
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    // sticky so faz sentido dentro do fluxo normal da pagina (desktop); fixed dispensa e
+    // "top: 80px" herdado colidiria com o cabecalho do proprio drawer.
+    top: 0;
+
+    &.open { transform: translateX(0); }
+  }
+
+  .filters-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 { font-size: 16px; font-weight: 700; }
+  }
+
+  .close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 50%;
+
+    &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+  }
+}
+
+.filters-backdrop {
+  // So e criado pelo *ngIf quando o painel esta aberto, e o painel so abre em telas <=900px (o
+  // botao que chama abrirFiltros() fica escondido acima disso), entao nao precisa de @media aqui.
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 150;
 }

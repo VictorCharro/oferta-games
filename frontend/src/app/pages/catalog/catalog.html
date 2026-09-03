@@ -1,8 +1,18 @@
 <div class="page-content">
   <div class="catalog-layout">
 
+    <!-- So existe/e clicavel quando o painel esta aberto (controlado por *ngIf), senao ficaria
+         interceptando clique por cima da pagina mesmo fechado. Mesma tecnica do menu de navegacao
+         (sidebar), com id proprio pra nao colidir com o backdrop dele. -->
+    <div class="filters-backdrop" *ngIf="filtrosAbertos" (click)="fecharFiltros()"></div>
+
     <!-- Painel de filtros -->
-    <aside class="filters-panel">
+    <aside class="filters-panel" [class.open]="filtrosAbertos">
+      <div class="filters-panel-header">
+        <h2>Filtros</h2>
+        <button type="button" class="close-btn" (click)="fecharFiltros()" aria-label="Fechar filtros">✕</button>
+      </div>
+
       <div class="filter-group">
         <h3>Ordenar por</h3>
         <div class="custom-select" [class.open]="openDropdown === 'sort'">
@@ -100,6 +110,7 @@
           <h1>Catálogo</h1>
           <p>Todos os jogos com menor preço entre as principais lojas</p>
         </div>
+        <button type="button" class="btn-outline filters-open-btn" (click)="abrirFiltros()">Filtros</button>
         <div class="view-toggle">
         <button [class.active]="viewMode === 'compact'" (click)="viewMode = 'compact'" title="Grade compacta">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">

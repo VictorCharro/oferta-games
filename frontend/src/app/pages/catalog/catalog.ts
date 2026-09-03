@@ -35,6 +35,18 @@ export class Catalog implements OnInit, OnDestroy {
   openDropdown: 'sort' | 'type' | 'platform' | null = null;
   stores: string[] = [];
 
+  // Abaixo de 900px o painel de filtros (220px fixos, ~60% de uma tela de celular) vira drawer:
+  // escondido por padrao, aberto pelo botao "Filtros" no cabecalho. Issue #12.
+  filtrosAbertos = false;
+
+  abrirFiltros() {
+    this.filtrosAbertos = true;
+  }
+
+  fecharFiltros() {
+    this.filtrosAbertos = false;
+  }
+
   private querySub!: Subscription;
   private requestVersion = 0;
 
@@ -209,9 +221,13 @@ export class Catalog implements OnInit, OnDestroy {
     this.maxPrice = this.maxPriceInput !== '' ? Number(this.maxPriceInput) : null;
     this.minDiscount = this.minDiscountInput !== '' ? Number(this.minDiscountInput) : null;
     this.load(true);
+    // No drawer mobile, aplicar filtro e o sinal de "terminei" — fecha pra ja mostrar o resultado.
+    // Sem efeito no desktop, onde o painel nunca esta "aberto" (ver [class.open] no template).
+    this.fecharFiltros();
   }
 
   clearFilters() {
+    this.fecharFiltros();
     this.sort = 'rank';
     this.type = 'all';
     this.platform = 'all';
