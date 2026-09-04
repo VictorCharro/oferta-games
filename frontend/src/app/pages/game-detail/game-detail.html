@@ -175,7 +175,9 @@
                  repetido aqui pra poder ficar embaixo do nome da loja nessa largura (o original,
                  dentro de .price-current, nao da pra mover so com CSS pra ca porque fica aninhado
                  dentro de outro elemento). -->
-            <span class="voucher-badge offer-store-voucher" *ngIf="offer.voucherCode" [title]="'Use o cupom ' + offer.voucherCode + ' no carrinho da loja pra garantir esse preço'">Cupom {{ offer.voucherCode }}</span>
+            <!-- So o codigo (sem o prefixo "Cupom") — pedido do usuario, fica mais compacto
+                 embaixo do nome da loja; o title (tooltip) continua explicando o que e. -->
+            <span class="voucher-badge offer-store-voucher" *ngIf="offer.voucherCode" [title]="'Use o cupom ' + offer.voucherCode + ' no carrinho da loja pra garantir esse preço'">{{ offer.voucherCode }}</span>
           </span>
           <span class="offer-platforms">
             <span *ngFor="let platform of platforms(offer.storeName, offer.url)" class="platform-chip" [title]="platform.name">
