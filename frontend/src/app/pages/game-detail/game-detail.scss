@@ -688,7 +688,13 @@
 }
 
 @media (max-width: 900px) {
-  .about-section { grid-template-columns: 1fr; }
+  // "1fr" sozinho (sem minmax(0, ...)) ainda respeita o min-content do conteudo de dentro como
+  // piso — a coluna nao encolhe abaixo disso, e AQUI dentro tem paragrafo de texto longo sem
+  // quebra (about-text) que forcava um piso bem maior que a tela. Resultado: a secao inteira
+  // (midia + texto) ficava larga demais (medido: 1070px numa tela de 375px) e cortava dos dois
+  // lados, com a pagina inteira ganhando scroll horizontal. minmax(0, 1fr), igual a regra
+  // desktop ja usa, remove esse piso.
+  .about-section { grid-template-columns: minmax(0, 1fr); }
 }
 
 .about-media-main {
