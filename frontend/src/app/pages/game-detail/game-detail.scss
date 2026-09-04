@@ -650,9 +650,23 @@
     gap: 2px;
     padding: 0 6px;
 
+    // flex-basis:auto (nao 0) — cada aba mantem o proprio tamanho de conteudo (como sempre foi)
+    // enquanto couber; flex-shrink:1 (nao mais o flex-shrink:0 fixo da regra base) so entra em
+    // acao SE a soma das 4 nao couber na largura do bloco, encolhendo TODAS proporcionalmente ate
+    // caber — .detail-tabs aqui e nowrap (sem flex-wrap), entao encolher e o comportamento nativo
+    // do flexbox pra evitar overflow, sem precisar de um segundo breakpoint fixo. (flex:1 1 0,
+    // testado antes, forçava as 4 abas a dividir a largura em fatias IGUAIS o tempo todo —
+    // "Conquistas" cortava desnecessariamente mesmo quando sobrava espaco de sobra.)
+    // min-width:0 e obrigatorio pro flex-shrink conseguir encolher abaixo do texto inteiro — sem
+    // isso um flex item so encolhe ate o tamanho do seu conteudo, nunca menos.
     button {
-      padding: 0 6px;
+      flex: 0 1 auto;
+      min-width: 0;
+      padding: 0 4px;
       font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
     }
   }
 }
@@ -2010,14 +2024,23 @@
   .offer-row .offer-discount.none { display: none; } // "—" sem desconto so ocupa espaco a toa
   .offer-row .store-logo { width: 20px; height: 20px; }
 
+  // max-width fixo em 100px pra TODAS as linhas cortava nomes como "Instant Gaming"/"Microsoft
+  // Store" mesmo quando a linha nao tinha desconto e sobrava espaco de sobra (o desconto e o que
+  // mais ocupa espaco). :has() (ja usado em game-card.scss) distingue os 2 casos: linha SEM
+  // desconto visivel ganha bem mais espaco pro nome (110px); COM desconto, o orcamento aperta
+  // (discount+riscado+atual juntos passam de 170px), entao o nome precisa ficar mais compacto
+  // (80px) pra garantir que nunca estoura, mesmo se um dia aparecer uma loja de nome longo com
+  // desconto.
   .offer-store {
     order: 1;
     gap: 6px;
     flex: 0 1 auto;
-    max-width: 100px;
+    max-width: 110px;
 
     span { min-width: 0; flex: 1; }
   }
+
+  .offer-row:has(.offer-discount:not(.none)) .offer-store { max-width: 95px; }
 
   .offer-discount { order: 2; flex-shrink: 0; font-size: 12px; }
   // .price-original/.price-current SAO REUSADAS no preco do heroi (.hero-best-price-row) — sem
