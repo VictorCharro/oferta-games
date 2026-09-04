@@ -647,6 +647,12 @@
 // Conquistas" nos ~310px uteis de um celular comum sem cortar nem cortar.
 @media (max-width: 480px) {
   .detail-tabs {
+    // As 4 abas, do tamanho natural do proprio texto, nao preenchiam a largura do bloco —
+    // sobrava um vao vazio do lado direito (medido: quase 69px). space-between espalha as 4
+    // uniformemente ocupando o bloco inteiro (1a encostada na esquerda, ultima na direita), sem
+    // afetar o encolhimento em telas ainda mais estreitas (isso continua vindo do flex-shrink de
+    // cada botao, nao do container).
+    justify-content: space-between;
     gap: 2px;
     padding: 0 6px;
 
@@ -1978,10 +1984,6 @@
   margin-left: 0;
 }
 
-.offer-row-quebra {
-  display: none;
-}
-
 .offer-cta {
   font-size: 13px;
   color: var(--color-purple);
@@ -2042,44 +2044,33 @@
   // (discount+riscado+atual juntos passam de 170px), entao o nome precisa ficar mais compacto
   // (80px) pra garantir que nunca estoura, mesmo se um dia aparecer uma loja de nome longo com
   // desconto.
-  .offer-store {
+  // .offer-store-group (novo wrapper no HTML) e o item flex de verdade agora — .offer-store e o
+  // selo de cupom vivem DENTRO dele, empilhados via flex-direction:column, sem precisar forcar
+  // quebra de linha no .offer-row com hacks de espacador (tentativa anterior: 2 spans vazios com
+  // flex-basis:100% pra "quebrar" antes/depois do selo — funcionava isolado mas ficava fragil e
+  // gerava espacamento inconsistente numa pagina real com varias linhas de cupom seguidas).
+  .offer-row .price-current .voucher-badge { display: none; }
+  .offer-store-group {
     order: 1;
-    gap: 6px;
-    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
     max-width: 110px;
+  }
+
+  .offer-row:has(.offer-discount:not(.none)) .offer-store-group { max-width: 95px; }
+
+  .offer-store {
+    gap: 6px;
+    max-width: 100%;
 
     span { min-width: 0; flex: 1; }
   }
 
-  .offer-row:has(.offer-discount:not(.none)) .offer-store { max-width: 95px; }
+  .offer-row .offer-store-voucher { display: block; max-width: 100%; }
 
-  // Achado real (usuario testando): o cupom (dentro de .price-current, que fica no canto
-  // direito) as vezes nao cabia do lado do preco e a linha inteira ia parar embaixo, desalinhada
-  // com o resto — o cupom "flutuava" sem relacao visual clara com nada. O ORIGINAL (nested dentro
-  // de .price-current) nao da pra reposicionar so com CSS pra ficar embaixo do NOME DA LOJA — ele
-  // vive dentro de outro elemento, fora do fluxo do .offer-row. Por isso existe uma 2a copia no
-  // HTML (.offer-store-voucher, escondida em desktop por padrao — ver regra base), so pra mobile:
-  // o original some daqui, a copia aparece numa linha propria logo abaixo do nome da loja.
-  //
-  // .offer-row-quebra e um span vazio que existe SO pra forcar a quebra de linha: um item flex
-  // com flex-basis:100% garante a quebra, mas tambem vira o TAMANHO do proprio item nesse eixo —
-  // nao da pra "quebrar a linha" com um item E manter esse MESMO item compacto ao mesmo tempo
-  // (testado: max-width por cima do flex-basis:100% tira o esticado mas tira a quebra tambem,
-  // o navegador reconsidera se cabe na linha atual usando o tamanho ja limitado). Com um
-  // espacador invisivel (altura 0, sem conteudo) levando o flex-basis:100%, o selo que vem
-  // DEPOIS dele fica livre pra ter o proprio tamanho natural, ja começando numa linha nova.
-  //
-  // Precisa de DOIS espacadores (um antes, outro depois do selo) — so um isolava o selo numa
-  // linha propria, mas deixava desconto/precos ainda competindo por espaco NESSA MESMA linha
-  // (testado: o preco atual acabava sobrando pra uma QUARTA linha, sozinho). Como os 2
-  // compartilham a mesma classe, uso seletor de irmao adjacente (+) pra dar o "order" certo pra
-  // cada um sem precisar de 2 classes diferentes no HTML.
-  .offer-row .price-current .voucher-badge { display: none; }
-  .offer-store + .offer-row-quebra { display: block; order: 2; flex-basis: 100%; height: 0; }
-  .offer-row .offer-store-voucher { display: block; order: 3; margin: 2px 0 0; }
-  .offer-store-voucher + .offer-row-quebra { display: block; order: 4; flex-basis: 100%; height: 0; }
-
-  .offer-discount { order: 5; flex-shrink: 0; font-size: 12px; }
+  .offer-discount { order: 2; flex-shrink: 0; font-size: 12px; }
   // .price-original/.price-current SAO REUSADAS no preco do heroi (.hero-best-price-row) — sem
   // escopar em ".offer-row", essas regras de order/margin-left:auto vazavam pra la tambem,
   // baguncando o preco do topo (achado depois de comparar com o mockup: o "R$ 121,99" riscado
@@ -2089,13 +2080,13 @@
   // vem GRUDADOS um no outro, ambos empurrados pro canto direito como um grupo so. Antes so o
   // preco atual tinha auto, entao ele ia sozinho pro canto e o riscado ficava preso lá atrás,
   // do lado esquerdo perto da loja — o proprio usuario notou que parecia errado.
-  .offer-row .price-original { order: 6; flex-shrink: 0; margin-left: auto; font-size: 12px; }
-  .offer-row .price-current { order: 7; flex-shrink: 0; font-size: 14px; }
+  .offer-row .price-original { order: 3; flex-shrink: 0; margin-left: auto; font-size: 12px; }
+  .offer-row .price-current { order: 4; flex-shrink: 0; font-size: 14px; }
 
   // !important: ".offer-row > span:not(:first-child) { text-align:center }" (regra do layout de
   // tabela em desktop, mais acima) tem mais especificidade que um ".offer-cta" sozinho por causa
   // do ":not(:first-child)" — sem isto o "Ver oferta" ficava centralizado em vez de na direita.
-  .offer-cta { order: 8; flex-basis: 100%; text-align: right !important; }
+  .offer-cta { order: 5; flex-basis: 100%; text-align: right !important; }
 }
 
 .dlc-section {

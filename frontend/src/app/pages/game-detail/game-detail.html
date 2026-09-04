@@ -161,21 +161,22 @@
           <span></span>
         </div>
         <a *ngFor="let offer of game.offers" class="offer-row" [href]="offer.url" target="_blank" rel="noopener">
-          <span class="offer-store">
-            <img class="store-logo" [src]="storeLogo(offer.storeName)" [alt]="offer.storeName" />
-            <span>{{ offer.storeName }}</span>
+          <!-- Agrupador novo: em mobile (ver @media) vira uma coluna (nome em cima, cupom
+               embaixo) sem precisar de hacks de "forcar quebra de linha" — e UM item flex so do
+               .offer-row, o empilhamento acontece TODO por dentro dele. Em desktop e transparente
+               (nao tem estilo proprio, so existe pra poder agrupar): o grid de 6 colunas nem
+               percebe diferenca, .offer-store continua sendo o 1o item visual de sempre. -->
+          <span class="offer-store-group">
+            <span class="offer-store">
+              <img class="store-logo" [src]="storeLogo(offer.storeName)" [alt]="offer.storeName" />
+              <span>{{ offer.storeName }}</span>
+            </span>
+            <!-- So aparece em mobile — mesmo cupom que ja aparece junto do preco em desktop,
+                 repetido aqui pra poder ficar embaixo do nome da loja nessa largura (o original,
+                 dentro de .price-current, nao da pra mover so com CSS pra ca porque fica aninhado
+                 dentro de outro elemento). -->
+            <span class="voucher-badge offer-store-voucher" *ngIf="offer.voucherCode" [title]="'Use o cupom ' + offer.voucherCode + ' no carrinho da loja pra garantir esse preço'">Cupom {{ offer.voucherCode }}</span>
           </span>
-          <!-- So aparece em mobile (ver @media em game-detail.scss) — mesmo cupom que ja aparece
-               junto do preco em desktop, repetido aqui pra poder ficar embaixo do nome da loja
-               nessa largura (o original, dentro de .price-current, nao da pra mover so com CSS
-               porque fica aninhado dentro de outro elemento, fora do fluxo do proprio .offer-row).
-               Os 2 spans vazios (antes E depois do selo) forcam a quebra de linha nos dois lados
-               (flex-basis:100%, escondidos) — sem o segundo, o selo ficaria numa linha propria mas
-               ainda "roubando" espaco de desconto/precos, que sobrariam pra outra linha ainda —
-               ver comentario na regra .offer-row-quebra no scss. -->
-          <span class="offer-row-quebra" *ngIf="offer.voucherCode" aria-hidden="true"></span>
-          <span class="voucher-badge offer-store-voucher" *ngIf="offer.voucherCode" [title]="'Use o cupom ' + offer.voucherCode + ' no carrinho da loja pra garantir esse preço'">Cupom {{ offer.voucherCode }}</span>
-          <span class="offer-row-quebra" *ngIf="offer.voucherCode" aria-hidden="true"></span>
           <span class="offer-platforms">
             <span *ngFor="let platform of platforms(offer.storeName, offer.url)" class="platform-chip" [title]="platform.name">
               <img [src]="platform.logo" [alt]="platform.name" />
