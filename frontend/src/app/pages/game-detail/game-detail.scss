@@ -641,6 +641,22 @@
   }
 }
 
+// Usuario pediu pra sempre ver as 4 abas inteiras, sem precisar arrastar (o overflow-x:auto
+// acima continua como rede de seguranca pra telas ainda mais estreitas). Encolhendo gap e
+// padding das abas + o font-size (herdado do body, ~15px) da pra encaixar "Preços/Sobre/Review/
+// Conquistas" nos ~310px uteis de um celular comum sem cortar nem cortar.
+@media (max-width: 480px) {
+  .detail-tabs {
+    gap: 2px;
+    padding: 0 6px;
+
+    button {
+      padding: 0 6px;
+      font-size: 13px;
+    }
+  }
+}
+
 .offers-section {
   h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
 }
@@ -2008,10 +2024,18 @@
   // escopar em ".offer-row", essas regras de order/margin-left:auto vazavam pra la tambem,
   // baguncando o preco do topo (achado depois de comparar com o mockup: o "R$ 121,99" riscado
   // tinha ido pra esquerda e o preco atual virado gigante, empurrado pro canto oposto).
-  .offer-row .price-original { order: 3; flex-shrink: 0; font-size: 12px; }
-  .offer-row .price-current { order: 4; flex-shrink: 0; margin-left: auto; font-size: 14px; }
+  //
+  // margin-left:auto vai no PRIMEIRO dos dois precos (nao no atual sozinho) — assim os dois
+  // vem GRUDADOS um no outro, ambos empurrados pro canto direito como um grupo so. Antes so o
+  // preco atual tinha auto, entao ele ia sozinho pro canto e o riscado ficava preso lá atrás,
+  // do lado esquerdo perto da loja — o proprio usuario notou que parecia errado.
+  .offer-row .price-original { order: 3; flex-shrink: 0; margin-left: auto; font-size: 12px; }
+  .offer-row .price-current { order: 4; flex-shrink: 0; font-size: 14px; }
 
-  .offer-cta { order: 5; flex-basis: 100%; text-align: right; }
+  // !important: ".offer-row > span:not(:first-child) { text-align:center }" (regra do layout de
+  // tabela em desktop, mais acima) tem mais especificidade que um ".offer-cta" sozinho por causa
+  // do ":not(:first-child)" — sem isto o "Ver oferta" ficava centralizado em vez de na direita.
+  .offer-cta { order: 5; flex-basis: 100%; text-align: right !important; }
 }
 
 .dlc-section {
