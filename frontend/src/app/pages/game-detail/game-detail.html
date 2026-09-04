@@ -165,6 +165,17 @@
             <img class="store-logo" [src]="storeLogo(offer.storeName)" [alt]="offer.storeName" />
             <span>{{ offer.storeName }}</span>
           </span>
+          <!-- So aparece em mobile (ver @media em game-detail.scss) — mesmo cupom que ja aparece
+               junto do preco em desktop, repetido aqui pra poder ficar embaixo do nome da loja
+               nessa largura (o original, dentro de .price-current, nao da pra mover so com CSS
+               porque fica aninhado dentro de outro elemento, fora do fluxo do proprio .offer-row).
+               Os 2 spans vazios (antes E depois do selo) forcam a quebra de linha nos dois lados
+               (flex-basis:100%, escondidos) — sem o segundo, o selo ficaria numa linha propria mas
+               ainda "roubando" espaco de desconto/precos, que sobrariam pra outra linha ainda —
+               ver comentario na regra .offer-row-quebra no scss. -->
+          <span class="offer-row-quebra" *ngIf="offer.voucherCode" aria-hidden="true"></span>
+          <span class="voucher-badge offer-store-voucher" *ngIf="offer.voucherCode" [title]="'Use o cupom ' + offer.voucherCode + ' no carrinho da loja pra garantir esse preço'">Cupom {{ offer.voucherCode }}</span>
+          <span class="offer-row-quebra" *ngIf="offer.voucherCode" aria-hidden="true"></span>
           <span class="offer-platforms">
             <span *ngFor="let platform of platforms(offer.storeName, offer.url)" class="platform-chip" [title]="platform.name">
               <img [src]="platform.logo" [alt]="platform.name" />
