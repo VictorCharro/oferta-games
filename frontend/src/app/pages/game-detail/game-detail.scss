@@ -2014,7 +2014,13 @@
   .precos-split.com-grafico .offer-row {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    // flex-start, nao center: linhas com cupom tem o .offer-store-group mais alto (nome + selo
+    // empilhados) que os outros itens (desconto/precos, uma linha so). Com center, esse grupo
+    // mais alto ficava centralizado na altura da linha inteira e o NOME (topo do grupo) subia,
+    // saindo da mesma altura do desconto/preco ao lado — o usuario notou o nome "subindo" nas
+    // linhas com cupom. flex-start alinha todo mundo pelo topo, entao o nome fica sempre na
+    // mesma altura, com cupom ou sem, e so o selo (quando existe) sobra pra baixo.
+    align-items: flex-start;
     gap: 6px 6px;
     padding: 14px 16px;
   }
