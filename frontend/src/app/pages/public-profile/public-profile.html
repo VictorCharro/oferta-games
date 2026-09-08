@@ -142,7 +142,7 @@
       <img src="biblioteca.png" alt="" /><div><strong>{{ profile.totalJogosBiblioteca ?? '--' }}</strong><span>Jogos na biblioteca</span></div>
     </div>
     <div class="profile-strip-item">
-      <img src="horas-jogadas.png" alt="" /><div><strong>{{ profile.totalMinutos != null ? hours(profile.totalMinutos) : '--' }}</strong><span>Horas jogadas</span></div>
+      <img src="horas-jogadas.png" alt="" /><div><strong>{{ profile.totalMinutos != null ? hoursOnly(profile.totalMinutos) : '--' }}</strong><span>Horas jogadas</span></div>
     </div>
     <div class="profile-strip-item">
       <img src="conquistas.png" alt="" /><div><strong>{{ profile.conquistasDesbloqueadas ?? '--' }}</strong><span>Conquistas desbloqueadas</span></div>

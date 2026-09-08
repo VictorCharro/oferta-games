@@ -239,7 +239,13 @@
   // hero-banner e position:absolute;inset:0 por padrao (cobre a altura toda do hero, que no
   // desktop e definida pelo conteudo ao lado). Em mobile vira um bloco normal de altura fixa —
   // e ESSA altura que da o tamanho da "faixa" que o avatar depois sobrepoe.
-  .hero-banner { position: relative; inset: auto; height: 92px; }
+  //
+  // Achado real (usuario testando): com 92px a foto do banner ficava aparentando "cortada" —
+  // o editor de recorte (onde o usuario ajusta zoom/posicao) mostra uma previa bem mais alta
+  // (min(45vh, 280px), nao mudou pra mobile), entao o enquadramento que a pessoa via ao editar
+  // nao batia com a fatia bem mais fina que sobrava depois nesses 92px. 120px reduz esse
+  // descompasso sem voltar a gastar tanta altura quanto o design antigo.
+  .hero-banner { position: relative; inset: auto; height: 120px; }
 
   .refresh-profile, .edit-layout, .edit-banner { top: 8px; }
   .refresh-profile { right: 8px; width: 32px; height: 32px; font-size: 18px; }
@@ -256,7 +262,7 @@
     // (overflow:hidden do .public-hero).
     margin-top: 12px;
   }
-  .public-hero:has(.hero-banner) .public-main { margin-top: -34px; }
+  .public-hero:has(.hero-banner) .public-main { margin-top: -40px; }
 
   .avatar { width: 72px; height: 72px; font-size: 28px; border-width: 3px; box-shadow: none; }
   .avatar-action { padding: 6px 10px; font-size: 11px; }

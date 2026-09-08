@@ -984,6 +984,14 @@ export class PublicProfile implements OnInit, OnDestroy {
     return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
   }
 
+  // So pro card "Horas jogadas" do topo do perfil — "3906h 34m" quebrava em 2 linhas nesse
+  // numero grande (23px bold) na largura estreita do card em mobile. Os cards de jogo (que usam
+  // hours() acima, em fonte bem menor) nao tem esse problema, entao mantem minutos.
+  hoursOnly(minutes: number | null): string {
+    if (minutes == null) return '';
+    return `${Math.round(minutes / 60)}h`;
+  }
+
   icon(game: PerfilPublico['biblioteca'][number]): string {
     return game.iconeHash
       ? `https://media.steampowered.com/steamcommunity/public/images/apps/${game.appId}/${game.iconeHash}.jpg`

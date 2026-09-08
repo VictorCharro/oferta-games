@@ -226,7 +226,10 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
   app-public-profile .profile-strip-item:nth-child(even) { border-right: 0; }
   app-public-profile .profile-strip-item { border-bottom: 1px solid var(--border-color); }
   app-public-profile .profile-strip-item.platforms-strip { grid-column: 1 / -1; border-right: 0; border-bottom: 0; }
-  app-public-profile .profile-game-grid, app-public-profile .profile-game-grid.grid-medio, app-public-profile .profile-game-grid.grid-largo, app-public-profile .profile-game-grid.grid-completo { grid-template-columns: 1fr; }
+  // Pedido do usuario: 2 cards por linha em celular (nao 1) — os cards de jogo ja sao
+  // compactos o bastante (imagem 16:9 + titulo/horas por cima, ver .profile-game-card) pra
+  // caber 2 lado a lado mesmo numa tela estreita.
+  app-public-profile .profile-game-grid, app-public-profile .profile-game-grid.grid-medio, app-public-profile .profile-game-grid.grid-largo, app-public-profile .profile-game-grid.grid-completo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .badge-discount {
