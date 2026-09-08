@@ -269,7 +269,11 @@
     // (overflow:hidden do .public-hero).
     margin-top: 12px;
   }
-  .public-hero:has(.hero-banner) .public-main { margin-top: -40px; }
+  // Achado real (usuario testando): com -40px o avatar (72px) so overlapava os 40px de cima da
+  // banner, sobrando 32px dele (e o nome/handle inteiros, alinhados ao centro dele) pendurados
+  // BAIXO da banner, na area escura lisa — parecia deslocado. -60px sobe o bloco inteiro bem mais
+  // pra dentro da banner (so ~12px do avatar continuam abaixo dela).
+  .public-hero:has(.hero-banner) .public-main { margin-top: -60px; }
 
   .avatar { width: 72px; height: 72px; font-size: 28px; border-width: 3px; box-shadow: none; }
   .avatar-action { padding: 6px 10px; font-size: 11px; }
