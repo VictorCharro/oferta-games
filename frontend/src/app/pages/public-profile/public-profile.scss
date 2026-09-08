@@ -240,12 +240,16 @@
   // desktop e definida pelo conteudo ao lado). Em mobile vira um bloco normal de altura fixa —
   // e ESSA altura que da o tamanho da "faixa" que o avatar depois sobrepoe.
   //
-  // Achado real (usuario testando): com 92px a foto do banner ficava aparentando "cortada" —
-  // o editor de recorte (onde o usuario ajusta zoom/posicao) mostra uma previa bem mais alta
-  // (min(45vh, 280px), nao mudou pra mobile), entao o enquadramento que a pessoa via ao editar
-  // nao batia com a fatia bem mais fina que sobrava depois nesses 92px. 120px reduz esse
-  // descompasso sem voltar a gastar tanta altura quanto o design antigo.
-  .hero-banner { position: relative; inset: auto; height: 120px; }
+  // Achado real (usuario testando, 2 rodadas): tanto com 92px quanto com 120px fixos a foto do
+  // banner continuava "cortada" — a causa de verdade nao era o numero em si, e o editor de
+  // recorte (.banner-crop-preview, onde a pessoa ajusta zoom/posicao) usar uma PROPORCAO
+  // DIFERENTE da exibicao final. altura fixa em px, numa largura de tela que varia, muda a
+  // proporcao exibida a cada aparelho — nunca ia bater direito com o que a pessoa viu ao editar.
+  // aspect-ratio resolve pela raiz: display E editor (ver .banner-crop-preview mobile abaixo)
+  // usam a MESMA proporcao, entao o que a pessoa enquadra e exatamente o que aparece depois,
+  // em qualquer largura de celular.
+  .hero-banner { position: relative; inset: auto; height: auto; aspect-ratio: 3 / 1; }
+  .block-image-crop-preview.banner-crop-preview { height: auto; aspect-ratio: 3 / 1; }
 
   .refresh-profile, .edit-layout, .edit-banner { top: 8px; }
   .refresh-profile { right: 8px; width: 32px; height: 32px; font-size: 18px; }
@@ -253,7 +257,10 @@
   .edit-banner { right: 88px; height: 32px; font-size: 12px; }
 
   .public-main {
-    align-items: flex-end;
+    // center (nao mais flex-end): com o avatar bem maior que o bloco de nome/handle, alinhar
+    // pela base deixava o nome "flutuando" perto do fundo do avatar em vez de acompanhar o
+    // meio dele — pedido do usuario pra ficar mais alinhado.
+    align-items: center;
     gap: 12px;
     padding: 0 16px;
     // So sobrepoe o avatar na banner quando ela existe (*ngIf="profile.bannerUrl") — sem banner,
@@ -266,7 +273,6 @@
 
   .avatar { width: 72px; height: 72px; font-size: 28px; border-width: 3px; box-shadow: none; }
   .avatar-action { padding: 6px 10px; font-size: 11px; }
-  .identity { padding-bottom: 4px; }
   .identity h1 { font-size: 19px; }
   .identity p, .bio-btn { margin-top: 8px; }
 
