@@ -442,6 +442,18 @@
     padding: 8px;
   }
 
+  // Achado real (usuario testando com DevTools num aparelho MAIOR — 430px, iPhone 14 Pro Max):
+  // o nome do usuario ao lado do avatar (".avatar-name") nunca tinha regra nenhuma pra mobile,
+  // sempre ficou visivel em qualquer largura. Passou despercebido a sessao inteira porque todo
+  // teste anterior foi feito DESLOGADO — nesse estado a topbar mostra "Entrar"/"Criar conta" no
+  // lugar do avatar+nome, que por acaso cabe bem melhor. Logado, hamburguer+logo+lupa+tema+sino+
+  // avatar(36px)+"Victor" juntos passam da largura da topbar em telas de celular maiores,
+  // fazendo o texto vazar pra fora da tela (sem nada pra rolar ate ele — e position:fixed,
+  // simplesmente fica cortado pelo proprio limite da janela). So o circulo do avatar fica visivel
+  // — padrao comum de app mobile (nome so aparece dentro do menu que abre ao tocar).
+  .avatar-name { display: none; }
+  .avatar { gap: 0; padding: 6px; }
+
   // Achado real (usuario testando em aparelho): painel tinha width:350px fixo, position:absolute
   // ancorado em right:0 do botao de sino — que nao fica na borda direita da tela (o avatar ainda
   // sobra a direita dele), entao o painel de 350px "vazava" pra fora da tela pela esquerda numa
