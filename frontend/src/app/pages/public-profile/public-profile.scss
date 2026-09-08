@@ -229,7 +229,41 @@
 }
 
 @media (max-width: 650px) {
-  .public-main { align-items: flex-start; flex-direction: column; }
+  // Redesenho do topo do perfil pra mobile (mockup aprovado antes de implementar): banner vira
+  // uma faixa curta (like capa de rede social) com o avatar sobreposto por cima dela, nome/handle
+  // ao lado do avatar em vez de empilhado embaixo. Antes o avatar ficava fixo em 150px (quase
+  // metade da largura de um celular) sozinho acima do nome, gastando bastante altura vertical
+  // sem necessidade.
+  .public-hero { padding: 0; }
+
+  // hero-banner e position:absolute;inset:0 por padrao (cobre a altura toda do hero, que no
+  // desktop e definida pelo conteudo ao lado). Em mobile vira um bloco normal de altura fixa —
+  // e ESSA altura que da o tamanho da "faixa" que o avatar depois sobrepoe.
+  .hero-banner { position: relative; inset: auto; height: 92px; }
+
+  .refresh-profile, .edit-layout, .edit-banner { top: 8px; }
+  .refresh-profile { right: 8px; width: 32px; height: 32px; font-size: 18px; }
+  .edit-layout { right: 46px; width: 32px; height: 32px; font-size: 16px; }
+  .edit-banner { right: 88px; height: 32px; font-size: 12px; }
+
+  .public-main {
+    align-items: flex-end;
+    gap: 12px;
+    padding: 0 16px;
+    // So sobrepoe o avatar na banner quando ela existe (*ngIf="profile.bannerUrl") — sem banner,
+    // .public-hero e so o fundo em degrade, sem uma "faixa" de 92px pra sobrepor; um perfil sem
+    // banner com esse mesmo negative margin cortaria o topo do avatar contra a borda do card
+    // (overflow:hidden do .public-hero).
+    margin-top: 12px;
+  }
+  .public-hero:has(.hero-banner) .public-main { margin-top: -34px; }
+
+  .avatar { width: 72px; height: 72px; font-size: 28px; border-width: 3px; box-shadow: none; }
+  .avatar-action { padding: 6px 10px; font-size: 11px; }
+  .identity { padding-bottom: 4px; }
+  .identity h1 { font-size: 19px; }
+  .identity p, .bio-btn { margin-top: 8px; }
+
   .size-pequeno, .size-medio, .size-largo { grid-column: 1 / -1; }
   .gameplay-grid, .profile-stats, .profile-grid, .library-content, .games, .profile-favorite-list, .library-controls { grid-template-columns: 1fr; }
   .block-content-fields { grid-template-columns: 1fr; }

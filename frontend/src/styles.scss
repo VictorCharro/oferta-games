@@ -217,9 +217,15 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
 }
 
 @media (max-width: 620px) {
-  app-public-profile .profile-stat-strip { grid-template-columns: 1fr; }
-  app-public-profile .profile-strip-item { border-right: 0; border-bottom: 1px solid var(--border-color); }
-  app-public-profile .profile-strip-item:last-child { border-bottom: 0; }
+  // Mockup aprovado: estatisticas ficam em grade 2x2 compacta ate em celular estreito, em vez de
+  // colapsar pra 1 coluna (5 linhas cheias empilhadas — "Jogos na biblioteca" sozinho ocupando a
+  // largura toda so pra mostrar "264" era desperdicio de altura). "Plataformas conectadas" (o
+  // ultimo item, que so tem sentido ocupando a linha toda) ganha grid-column:1/-1 pra nao sobrar
+  // sozinho numa celula de meia largura quando o total de itens for impar.
+  app-public-profile .profile-strip-item:nth-child(odd) { border-right: 1px solid var(--border-color); }
+  app-public-profile .profile-strip-item:nth-child(even) { border-right: 0; }
+  app-public-profile .profile-strip-item { border-bottom: 1px solid var(--border-color); }
+  app-public-profile .profile-strip-item.platforms-strip { grid-column: 1 / -1; border-right: 0; border-bottom: 0; }
   app-public-profile .profile-game-grid, app-public-profile .profile-game-grid.grid-medio, app-public-profile .profile-game-grid.grid-largo, app-public-profile .profile-game-grid.grid-completo { grid-template-columns: 1fr; }
 }
 
