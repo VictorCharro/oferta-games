@@ -264,6 +264,17 @@
   .identity h1 { font-size: 19px; }
   .identity p, .bio-btn { margin-top: 8px; }
 
+  // As 4 abas (Resumo/Jogos favoritos/Coleções/Biblioteca) nao tinham nenhuma protecao contra
+  // espaco apertado — sem white-space:nowrap elas nao vazavam pra fora da tela, mas "Jogos
+  // favoritos" (o rotulo mais longo) quebrava em 2 linhas, deixando essa aba mais alta que as
+  // outras 3 (que ficam de 1 linha so) e a barra toda com visual torto. gap menor + padding menor
+  // libera espaco suficiente pra tudo caber numa linha so nos ~311px uteis de um celular comum.
+  // flex-shrink (o padrao do navegador) + min-width:0 + ellipsis: se ainda faltar espaco numa
+  // tela mais estreita que o normal, a aba encolhe e corta com "…" em vez de voltar a quebrar
+  // em 2 linhas ou vazar pra fora da tela — mesma tecnica ja usada nas abas do game-detail.
+  .tabs { gap: 4px; padding: 0 6px; }
+  .tabs button { padding: 0 6px; font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
   .size-pequeno, .size-medio, .size-largo { grid-column: 1 / -1; }
   .gameplay-grid, .profile-stats, .profile-grid, .library-content, .games, .profile-favorite-list, .library-controls { grid-template-columns: 1fr; }
   .block-content-fields { grid-template-columns: 1fr; }
