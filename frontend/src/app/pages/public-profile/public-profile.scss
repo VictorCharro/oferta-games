@@ -229,51 +229,32 @@
 }
 
 @media (max-width: 650px) {
-  // Redesenho do topo do perfil pra mobile (mockup aprovado antes de implementar): banner vira
-  // uma faixa curta (like capa de rede social) com o avatar sobreposto por cima dela, nome/handle
-  // ao lado do avatar em vez de empilhado embaixo. Antes o avatar ficava fixo em 150px (quase
-  // metade da largura de um celular) sozinho acima do nome, gastando bastante altura vertical
-  // sem necessidade.
-  .public-hero { padding: 0; }
-
-  // hero-banner e position:absolute;inset:0 por padrao (cobre a altura toda do hero, que no
-  // desktop e definida pelo conteudo ao lado). Em mobile vira um bloco normal de altura fixa —
-  // e ESSA altura que da o tamanho da "faixa" que o avatar depois sobrepoe.
+  // Redesenho do topo do perfil pra mobile (mockup aprovado antes de implementar): avatar menor
+  // ao lado do nome/handle em vez de empilhado embaixo (antes o avatar ficava fixo em 150px,
+  // quase metade da largura de um celular, sozinho acima do nome).
   //
-  // Achado real (usuario testando, 2 rodadas): tanto com 92px quanto com 120px fixos a foto do
-  // banner continuava "cortada" — a causa de verdade nao era o numero em si, e o editor de
-  // recorte (.banner-crop-preview, onde a pessoa ajusta zoom/posicao) usar uma PROPORCAO
-  // DIFERENTE da exibicao final. altura fixa em px, numa largura de tela que varia, muda a
-  // proporcao exibida a cada aparelho — nunca ia bater direito com o que a pessoa viu ao editar.
-  // aspect-ratio resolve pela raiz: display E editor (ver .banner-crop-preview mobile abaixo)
-  // usam a MESMA proporcao, entao o que a pessoa enquadra e exatamente o que aparece depois,
-  // em qualquer largura de celular.
-  .hero-banner { position: relative; inset: auto; height: auto; aspect-ratio: 3 / 1; }
-  .block-image-crop-preview.banner-crop-preview { height: auto; aspect-ratio: 3 / 1; }
+  // Achado real (usuario comparando com o desktop): a primeira versao mobile trocava a estrutura
+  // inteira — banner virava uma "faixa" de altura fixa (fora do fluxo) com o avatar sobreposto
+  // por cima via margin-top negativo. Isso deixava o bloco avatar+nome com aparencia "descolada"
+  // da banner, exigindo varias rodadas de ajuste fino de altura/overlap que nunca ficavam tao
+  // limpas quanto o desktop. O desktop NUNCA faz esse tipo de overlap: .hero-banner e
+  // position:absolute;inset:0 (cobre a altura inteira do .public-hero, que por sua vez tem
+  // padding e a altura dele e definida pelo proprio conteudo — avatar + nome), e .public-main
+  // fica por cima (z-index:1) simplesmente centralizado dentro desse padding. Reduzindo aqui so
+  // os tamanhos (padding, avatar, fonte) sem mudar a estrutura, o mobile fica com o mesmo efeito
+  // "flutuando integrado na banner" do desktop, sem overlap manual nenhum.
+  .public-hero { padding: 20px 16px; }
+
+  // Preview do editor de recorte tambem menor em mobile, pra ficar mais proximo da altura real
+  // que a banner vai ter (padding menor + avatar menor = hero mais baixo que no desktop).
+  .block-image-crop-preview.banner-crop-preview { height: min(40vh, 190px); }
 
   .refresh-profile, .edit-layout, .edit-banner { top: 8px; }
   .refresh-profile { right: 8px; width: 32px; height: 32px; font-size: 18px; }
   .edit-layout { right: 46px; width: 32px; height: 32px; font-size: 16px; }
   .edit-banner { right: 88px; height: 32px; font-size: 12px; }
 
-  .public-main {
-    // center (nao mais flex-end): com o avatar bem maior que o bloco de nome/handle, alinhar
-    // pela base deixava o nome "flutuando" perto do fundo do avatar em vez de acompanhar o
-    // meio dele — pedido do usuario pra ficar mais alinhado.
-    align-items: center;
-    gap: 12px;
-    padding: 0 16px;
-    // So sobrepoe o avatar na banner quando ela existe (*ngIf="profile.bannerUrl") — sem banner,
-    // .public-hero e so o fundo em degrade, sem uma "faixa" de 92px pra sobrepor; um perfil sem
-    // banner com esse mesmo negative margin cortaria o topo do avatar contra a borda do card
-    // (overflow:hidden do .public-hero).
-    margin-top: 12px;
-  }
-  // Achado real (usuario testando): com -40px o avatar (72px) so overlapava os 40px de cima da
-  // banner, sobrando 32px dele (e o nome/handle inteiros, alinhados ao centro dele) pendurados
-  // BAIXO da banner, na area escura lisa — parecia deslocado. -60px sobe o bloco inteiro bem mais
-  // pra dentro da banner (so ~12px do avatar continuam abaixo dela).
-  .public-hero:has(.hero-banner) .public-main { margin-top: -60px; }
+  .public-main { gap: 12px; }
 
   .avatar { width: 72px; height: 72px; font-size: 28px; border-width: 3px; box-shadow: none; }
   .avatar-action { padding: 6px 10px; font-size: 11px; }
