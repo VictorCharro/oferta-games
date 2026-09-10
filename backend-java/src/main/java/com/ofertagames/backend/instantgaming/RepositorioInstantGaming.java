@@ -23,6 +23,12 @@ import org.springframework.stereotype.Repository;
  *
  * <p>Consequencia pratica: mudanca na regra de gravacao de oferta ou de historico precisa ser
  * aplicada <b>nos dois lugares</b>.
+ *
+ * <p><b>Excecao de banco dentro desta classe:</b> {@code instant_gaming_scan_cursor} (cursor da
+ * varredura) ficou no Supabase — nunca fez parte da migracao do catalogo (so
+ * games/game_details/game_achievements/offers/price_history/instant_gaming_catalog foram). Por
+ * isso {@link #buscarUltimoIdEscaneado} e {@link #avancarCursor} usam o {@code jdbc} (Supabase,
+ * default), enquanto todo o resto da classe usa {@code jdbcCatalogo}.
  */
 @Repository
 class RepositorioInstantGaming {
@@ -31,9 +37,11 @@ class RepositorioInstantGaming {
       "CASE WHEN g.rank IS NOT NULL AND g.rank <= 2000 THEN 0 ELSE 1 END ASC, g.rank ASC NULLS LAST, ";
 
   private final JdbcClient jdbc;
+  private final JdbcClient jdbcCatalogo;
 
-  RepositorioInstantGaming(@Qualifier("catalogo") JdbcClient jdbc) {
+  RepositorioInstantGaming(JdbcClient jdbc, @Qualifier("catalogo") JdbcClient jdbcCatalogo) {
     this.jdbc = jdbc;
+    this.jdbcCatalogo = jdbcCatalogo;
   }
 
   int buscarUltimoIdEscaneado() {
@@ -49,7 +57,7 @@ class RepositorioInstantGaming {
   }
 
   void salvarNoCatalogo(int idProduto, String titulo, String tituloNormalizado, String url) {
-    jdbc.sql("""
+    jdbcCatalogo.sql("""
         INSERT INTO instant_gaming_catalog (product_id, title, normalized_title, url, discovered_at)
         VALUES (:id, :titulo, :tituloNormalizado, :url, now())
         ON CONFLICT (product_id) DO UPDATE
@@ -74,7 +82,7 @@ class RepositorioInstantGaming {
    *     {@code GeradorSlug.porTitulo}, senao nunca casa
    */
   Optional<String> buscarUrlUnica(String tituloNormalizado) {
-    List<String> urls = jdbc.sql("SELECT url FROM instant_gaming_catalog WHERE normalized_title = :titulo LIMIT 2")
+    List<String> urls = jdbcCatalogo.sql("SELECT url FROM instant_gaming_catalog WHERE normalized_title = :titulo LIMIT 2")
         .param("titulo", tituloNormalizado)
         .query(String.class)
         .list();
@@ -82,7 +90,7 @@ class RepositorioInstantGaming {
   }
 
   long contarPendentesCasamento() {
-    return jdbc.sql("""
+    return jdbcCatalogo.sql("""
         SELECT COUNT(*)
         FROM games g
         WHERE g.instant_gaming_url IS NULL
@@ -94,7 +102,7 @@ class RepositorioInstantGaming {
   }
 
   List<JogoParaCasar> listarPendentesCasamento(int limite) {
-    return jdbc.sql("""
+    return jdbcCatalogo.sql("""
         SELECT g.id, g.title
         FROM games g
         WHERE g.instant_gaming_url IS NULL
@@ -109,11 +117,11 @@ class RepositorioInstantGaming {
   }
 
   long contarCatalogoDescoberto() {
-    return jdbc.sql("SELECT COUNT(*) FROM instant_gaming_catalog").query(Long.class).single();
+    return jdbcCatalogo.sql("SELECT COUNT(*) FROM instant_gaming_catalog").query(Long.class).single();
   }
 
   long contarCasados() {
-    return jdbc.sql("""
+    return jdbcCatalogo.sql("""
         SELECT COUNT(*)
         FROM games g
         WHERE g.instant_gaming_url IS NOT NULL
@@ -125,14 +133,14 @@ class RepositorioInstantGaming {
   }
 
   void salvarMatch(long jogoId, String url) {
-    jdbc.sql("UPDATE games SET instant_gaming_url = :url WHERE id = :id")
+    jdbcCatalogo.sql("UPDATE games SET instant_gaming_url = :url WHERE id = :id")
         .param("url", url)
         .param("id", jogoId)
         .update();
   }
 
   List<JogoParaAtualizarPreco> listarPendentesAtualizacaoPreco(int limite) {
-    return jdbc.sql("""
+    return jdbcCatalogo.sql("""
         SELECT id, instant_gaming_url
         FROM games
         WHERE instant_gaming_url IS NOT NULL
@@ -145,7 +153,7 @@ class RepositorioInstantGaming {
   }
 
   void salvarPreco(long jogoId, BigDecimal preco, String moeda, String url) {
-    jdbc.sql("""
+    jdbcCatalogo.sql("""
         INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)
         VALUES (:jogoId, 'instant_gaming', 'Instant Gaming', :preco, NULL, :moeda, :url, now())
         ON CONFLICT (game_id, source, store_name) DO UPDATE
@@ -156,7 +164,7 @@ class RepositorioInstantGaming {
         .param("moeda", moeda)
         .param("url", url)
         .update();
-    jdbc.sql("UPDATE games SET last_instant_gaming_sync_at = now() WHERE id = :id")
+    jdbcCatalogo.sql("UPDATE games SET last_instant_gaming_sync_at = now() WHERE id = :id")
         .param("id", jogoId)
         .update();
     registrarHistoricoDePreco(jogoId);
@@ -170,10 +178,10 @@ class RepositorioInstantGaming {
    * poderia continuar sendo anunciado como a melhor oferta do jogo.
    */
   void removerOferta(long jogoId) {
-    jdbc.sql("DELETE FROM offers WHERE game_id = :jogoId AND source = 'instant_gaming'")
+    jdbcCatalogo.sql("DELETE FROM offers WHERE game_id = :jogoId AND source = 'instant_gaming'")
         .param("jogoId", jogoId)
         .update();
-    jdbc.sql("UPDATE games SET last_instant_gaming_sync_at = now() WHERE id = :id")
+    jdbcCatalogo.sql("UPDATE games SET last_instant_gaming_sync_at = now() WHERE id = :id")
         .param("id", jogoId)
         .update();
     registrarHistoricoDePreco(jogoId);
@@ -188,7 +196,7 @@ class RepositorioInstantGaming {
    * o preco.
    */
   private void registrarHistoricoDePreco(long jogoId) {
-    jdbc.sql("""
+    jdbcCatalogo.sql("""
         INSERT INTO price_history (game_id, price)
         SELECT atual.game_id, atual.preco
         FROM (
@@ -214,7 +222,7 @@ class RepositorioInstantGaming {
   }
 
   Optional<String> buscarInstantGamingUrl(long jogoId) {
-    return jdbc.sql("SELECT instant_gaming_url FROM games WHERE id = :id")
+    return jdbcCatalogo.sql("SELECT instant_gaming_url FROM games WHERE id = :id")
         .param("id", jogoId)
         .query(String.class)
         .optional();
