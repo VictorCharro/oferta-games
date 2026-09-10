@@ -12,6 +12,12 @@ services:
     image: postgres:17-alpine
     container_name: oferta-games-catalogo-db
     restart: unless-stopped
+    # Docker limita /dev/shm a 64MB por padrao - pouco pra Postgres sob varias queries
+    # concorrentes com hash/sort grandes (ex: /api/deals/top, que agrega o catalogo inteiro).
+    # Ja causou "could not resize shared memory segment: No space left on device" sob carga real
+    # (varias pessoas acessando ao mesmo tempo apos o site voltar do ar). 256MB da folga generosa
+    # pro tamanho atual do catalogo (~430MB de dados).
+    shm_size: '256mb'
     environment:
       POSTGRES_DB: catalogo
       POSTGRES_USER: catalogo
