@@ -26,6 +26,19 @@ import org.springframework.transaction.PlatformTransactionManager;
  * <p>O DataSource do Supabase continua {@code @Primary}: e o que a maioria dos repositorios usa
  * (todo mundo que injeta {@code JdbcClient}/{@code JdbcTemplate} sem qualifier). Só quem mexe em
  * catalogo usa os beans qualificados com {@code "catalogo"}.
+ *
+ * <p><b>Cuidado que ja causou um bug em producao:</b> os beans {@code JdbcClient}/
+ * {@code JdbcTemplate}/{@code PlatformTransactionManager} do Supabase sao declarados aqui
+ * EXPLICITAMENTE (com {@code @Primary}), em vez de deixar a autoconfiguracao do Spring Boot criar
+ * o bean default sozinha. Declarar SO o bean do catalogo (com {@code @Qualifier}, sem
+ * {@code @Primary}) nao basta: a autoconfiguracao do Spring Boot para {@code JdbcClient} (e para
+ * o {@code PlatformTransactionManager}) tem {@code @ConditionalOnMissingBean} — como o bean do
+ * catalogo ja existe, a autoconfiguracao desiste de criar o bean default, e o unico
+ * {@code JdbcClient} que sobra no contexto (o do catalogo) acaba injetado em TODO MUNDO, inclusive
+ * quem nunca pediu qualifier nenhum. Foi exatamente isso que quebrou {@code EstadoColeta} logo
+ * apos a migracao (tentou rodar {@code UPDATE coleta_status} — tabela que continua no Supabase —
+ * contra o banco de catalogo). Declarando os dois pares aqui, explicitamente, elimina essa
+ * dependencia fragil de como a autoconfiguracao decide se cria ou nao o bean default.
  */
 @Configuration
 public class ConfiguracaoBancoDados {
@@ -42,15 +55,33 @@ public class ConfiguracaoBancoDados {
   }
 
   @Bean
+  @Primary
+  JdbcClient jdbcClient(DataSource fonteDados) {
+    return JdbcClient.create(fonteDados);
+  }
+
+  @Bean
   @Qualifier("catalogo")
   JdbcClient jdbcClientCatalogo(@Qualifier("catalogo") DataSource fonteDadosCatalogo) {
     return JdbcClient.create(fonteDadosCatalogo);
   }
 
   @Bean
+  @Primary
+  JdbcTemplate jdbcTemplate(DataSource fonteDados) {
+    return new JdbcTemplate(fonteDados);
+  }
+
+  @Bean
   @Qualifier("catalogo")
   JdbcTemplate jdbcTemplateCatalogo(@Qualifier("catalogo") DataSource fonteDadosCatalogo) {
     return new JdbcTemplate(fonteDadosCatalogo);
+  }
+
+  @Bean
+  @Primary
+  PlatformTransactionManager transactionManager(DataSource fonteDados) {
+    return new DataSourceTransactionManager(fonteDados);
   }
 
   @Bean
