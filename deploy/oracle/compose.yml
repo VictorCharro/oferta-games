@@ -1,11 +1,37 @@
 name: oferta-games
 
 services:
+  # Postgres so pro catalogo (games/game_details/game_achievements/offers/price_history/
+  # instant_gaming_catalog) - migrado do Supabase free (cota de 500MB estourando) porque essas
+  # tabelas sao 90% do banco e nao tem FK com auth.users (nao guardam dado de usuario nenhum).
+  # Auth, sessao e as tabelas ligadas a usuario (favoritos, perfil, avaliacoes) continuam no
+  # Supabase - la o cascade delete de auth.users continua funcionando.
+  # Sem "ports:" de proposito: so acessivel pela rede interna do compose (backend), nunca exposto
+  # pro host nem pra internet.
+  catalogo-db:
+    image: postgres:17-alpine
+    container_name: oferta-games-catalogo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: catalogo
+      POSTGRES_USER: catalogo
+      POSTGRES_PASSWORD: ${CATALOGO_DB_PASSWORD}
+    volumes:
+      - catalogo_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalogo -d catalogo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build:
       context: ../../backend-java
     container_name: oferta-games-backend
     restart: unless-stopped
+    depends_on:
+      catalogo-db:
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -33,3 +59,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  catalogo_db_data:
