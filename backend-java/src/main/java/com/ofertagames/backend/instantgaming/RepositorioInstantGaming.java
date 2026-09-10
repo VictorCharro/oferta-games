@@ -7,6 +7,7 @@ import com.ofertagames.backend.comum.VariacaoPrecoRelevante;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -31,7 +32,7 @@ class RepositorioInstantGaming {
 
   private final JdbcClient jdbc;
 
-  RepositorioInstantGaming(JdbcClient jdbc) {
+  RepositorioInstantGaming(@Qualifier("catalogo") JdbcClient jdbc) {
     this.jdbc = jdbc;
   }
 

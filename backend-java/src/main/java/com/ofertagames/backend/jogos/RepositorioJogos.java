@@ -21,6 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -54,7 +55,10 @@ public class RepositorioJogos {
   private final JdbcTemplate jdbcTemplate;
   private final ObjectMapper objectMapper;
 
-  RepositorioJogos(JdbcClient jdbc, JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+  RepositorioJogos(
+      @Qualifier("catalogo") JdbcClient jdbc,
+      @Qualifier("catalogo") JdbcTemplate jdbcTemplate,
+      ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.jdbcTemplate = jdbcTemplate;
     this.objectMapper = objectMapper;
@@ -709,7 +713,7 @@ public class RepositorioJogos {
    * {@code instant_gaming}) sobrevivem. Transacional, entao nunca deixa o jogo sem oferta nenhuma
    * caso a insercao falhe.
    */
-  @Transactional
+  @Transactional("transactionManagerCatalogo")
   public int substituirOfertasItad(long jogoId, List<OfertaParaSalvar> ofertas) {
     jdbc.sql("DELETE FROM offers WHERE game_id = :jogoId AND source = 'itad'")
         .param("jogoId", jogoId)
@@ -724,7 +728,7 @@ public class RepositorioJogos {
    * <p>Cuidado ao chamar: um jogo presente no mapa com lista vazia tem as ofertas ITAD apagadas e
    * nenhuma inserida no lugar — e assim que um jogo delistado perde as ofertas.
    */
-  @Transactional
+  @Transactional("transactionManagerCatalogo")
   public int substituirOfertasItadEmLote(Map<Long, List<OfertaParaSalvar>> ofertasPorJogo) {
     if (ofertasPorJogo.isEmpty()) {
       return 0;
@@ -1138,7 +1142,7 @@ public class RepositorioJogos {
         .update();
   }
 
-  @Transactional
+  @Transactional("transactionManagerCatalogo")
   public void salvarConquistas(long jogoId, List<ConquistaParaSalvar> conquistas) {
     if (conquistas.isEmpty()) {
       return;

@@ -6,6 +6,7 @@ import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.JogosBloqueados;
 import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -17,7 +18,7 @@ import org.springframework.stereotype.Repository;
 public class RepositorioDescontos {
   private final JdbcClient jdbc;
 
-  RepositorioDescontos(JdbcClient jdbc) {
+  RepositorioDescontos(@Qualifier("catalogo") JdbcClient jdbc) {
     this.jdbc = jdbc;
   }
 
