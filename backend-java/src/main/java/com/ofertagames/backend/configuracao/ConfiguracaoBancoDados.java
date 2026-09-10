@@ -45,13 +45,19 @@ public class ConfiguracaoBancoDados {
   @Bean
   @Primary
   DataSource fonteDados() {
-    return criarDataSource("DATABASE_URL", "oferta-games-pool");
+    // 5 conexoes e o teto que o Supabase free/pooler comporta - nao da pra subir isso sem
+    // upgrade de plano.
+    return criarDataSource("DATABASE_URL", "oferta-games-pool", 5);
   }
 
   @Bean
   @Qualifier("catalogo")
   DataSource fonteDadosCatalogo() {
-    return criarDataSource("CATALOG_DATABASE_URL", "oferta-games-catalogo-pool");
+    // Postgres self-hosted na VM, sem limite de plano - 5 sequer bastava pro trafego real
+    // (queries da Home concorrentes + jobs de sincronizacao agendados esgotavam o pool em minutos,
+    // ver incidente de 2026-09-10: "Connection is not available, request timed out"). 20 da folga
+    // real; a VM tem RAM de sobra pra isso.
+    return criarDataSource("CATALOG_DATABASE_URL", "oferta-games-catalogo-pool", 20);
   }
 
   @Bean
@@ -90,7 +96,7 @@ public class ConfiguracaoBancoDados {
     return new DataSourceTransactionManager(fonteDadosCatalogo);
   }
 
-  private static DataSource criarDataSource(String variavelAmbiente, String nomePool) {
+  private static DataSource criarDataSource(String variavelAmbiente, String nomePool, int tamanhoPool) {
     String urlBanco = System.getenv(variavelAmbiente);
     if (urlBanco == null || urlBanco.isBlank()) {
       throw new IllegalStateException(variavelAmbiente + " nao configurada");
@@ -105,12 +111,17 @@ public class ConfiguracaoBancoDados {
     config.setJdbcUrl(urlJdbc);
     config.setUsername(credenciais[0]);
     config.setPassword(credenciais[1]);
-    config.setMaximumPoolSize(5);
+    config.setMaximumPoolSize(tamanhoPool);
     config.setMinimumIdle(0);
     // O pooler Supavisor em modo transaction (porta 6543) não suporta prepared statements. O
     // Postgres direto da VM (catalogo) nao usa pooler nenhum, mas manter a mesma flag não tem
     // custo nenhum nele.
     config.addDataSourceProperty("prepareThreshold", "0");
+    // Detecta conexao presa (nao devolvida ao pool) e loga stack trace de quem pegou ela -
+    // adicionado depois do incidente de pool exhaustion de 2026-09-10 pra ter diagnostico
+    // concreto se acontecer de novo, em vez de so ver "pool esgotado" sem saber qual codigo
+    // segurou a conexao.
+    config.setLeakDetectionThreshold(20000);
     config.setPoolName(nomePool);
     return new HikariDataSource(config);
   }
