@@ -317,10 +317,6 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.message = '';
   }
 
-  get temColecaoWishlistSteam(): boolean {
-    return !!this.profile?.colecoes.some(c => c.origemSistema);
-  }
-
   async alternarMostrarWishlistSteam(mostrar: boolean) {
     if (!this.isOwner || !this.profile) return;
     const anterior = this.profile.mostrarWishlistSteam;

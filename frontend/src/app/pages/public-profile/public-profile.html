@@ -498,7 +498,7 @@
     <div class="panel-heading">
       <h2>Coleções</h2>
       <div class="panel-heading-actions">
-        <label *ngIf="isOwner && editingCollections && temColecaoWishlistSteam" class="wishlist-visibility-toggle">
+        <label *ngIf="isOwner && editingCollections && profile.temColecaoWishlistSteam" class="wishlist-visibility-toggle">
           <input type="checkbox" [checked]="profile.mostrarWishlistSteam" (change)="alternarMostrarWishlistSteam($any($event.target).checked)" />
           Mostrar lista de desejos Steam
         </label>

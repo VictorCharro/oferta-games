@@ -94,11 +94,14 @@ class ServicoPerfis {
     List<FavoritoPerfilJogo> favoritos = dono || perfil.mostrarFavoritos() ? favoritosPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
     List<ColecaoPerfil> colecoesBrutas = dono || perfil.mostrarColecoes() ? colecoesPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
     // A wishlist da Steam tem toggle proprio (dentro do Organizar da aba Colecoes, nao em
-    // Privacidade) - so filtra pra visitante; o dono sempre ve a propria wishlist, mesmo
-    // escondida, pra poder reativar o toggle.
-    List<ColecaoPerfil> colecoes = dono
-        ? colecoesBrutas
-        : colecoesBrutas.stream().filter(c -> !c.origemSistema() || perfil.mostrarWishlistSteam()).toList();
+    // Privacidade). Desmarcado, some pra todo mundo, inclusive o dono - ele ve exatamente o que
+    // um visitante veria. O checkbox continua visivel de qualquer forma (fica no cabecalho do
+    // painel, nao dentro do card da colecao) usando temColecaoWishlistSteam, calculado ANTES
+    // desse filtro, pra saber se existe uma wishlist mesmo com ela escondida.
+    boolean temColecaoWishlistSteam = colecoesBrutas.stream().anyMatch(ColecaoPerfil::origemSistema);
+    List<ColecaoPerfil> colecoes = colecoesBrutas.stream()
+        .filter(c -> !c.origemSistema() || perfil.mostrarWishlistSteam())
+        .toList();
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
     List<AtividadePerfil> atividadeRecente = mostrarAtividades ? carregarAtividades(perfil.usuarioId()) : List.of();
     boolean mostrarPlataforma = dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca();
@@ -117,7 +120,7 @@ class ServicoPerfis {
         favoritos,
         colecoes,
         atividadeRecente,
-        perfil.mostrarAtividades(), blocosPublicos(perfil, dono), perfil.mostrarWishlistSteam());
+        perfil.mostrarAtividades(), blocosPublicos(perfil, dono), perfil.mostrarWishlistSteam(), temColecaoWishlistSteam);
   }
 
   ResultadoAtualizacao solicitarAtualizacao(String handle, String visitanteId) {
@@ -171,7 +174,11 @@ class ServicoPerfis {
   record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY,
       String bannerUrl, double bannerZoom, int bannerPosicaoX, int bannerPosicaoY,
       Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long jogosPlatinados, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<ColecaoPerfil> colecoes, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos,
-      // So tem efeito de verdade pro visitante (esconde a colecao "Lista de Desejos (Steam)");
-      // o dono sempre le esse valor pra saber o estado atual do proprio checkbox no Organizar.
-      boolean mostrarWishlistSteam) {}
+      // mostrarWishlistSteam: esconde a colecao "Lista de Desejos (Steam)" de TODO MUNDO quando
+      // false, inclusive o dono (ele ve exatamente o que um visitante veria). O dono le esse
+      // valor pra saber o estado atual do proprio checkbox no Organizar.
+      // temColecaoWishlistSteam: existe uma colecao de wishlist pra esse usuario, independente
+      // do toggle acima - o frontend usa isso pra decidir se mostra o checkbox (que precisa
+      // continuar visivel mesmo com a colecao escondida, senao ninguem reativaria).
+      boolean mostrarWishlistSteam, boolean temColecaoWishlistSteam) {}
 }
