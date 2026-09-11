@@ -80,6 +80,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
   textColorMenuBlockId: string | null = null;
   globalColorMenuOpen = false;
+  addBlockMenuOpen = false;
   globalBackgroundColor = '#121a2a';
   globalTextColor = '#f5f7fb';
   blockImageEditingId: string | null = null;
@@ -218,6 +219,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.editorSelectOpen = null;
       this.textColorMenuBlockId = null;
       this.globalColorMenuOpen = false;
+      this.addBlockMenuOpen = false;
     }
   }
 
@@ -226,6 +228,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.editorSelectOpen = null;
     this.textColorMenuBlockId = null;
     this.globalColorMenuOpen = false;
+    this.addBlockMenuOpen = false;
   }
 
   isEditorSelectOpen(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
@@ -269,13 +272,37 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.layoutDraft = structuredClone(this.profile.blocos?.length ? this.profile.blocos : this.defaultBlocks());
     this.editingLayout = true;
     this.globalColorMenuOpen = false;
+    this.addBlockMenuOpen = false;
   }
 
-  cancelLayoutEdit() { this.editingLayout = false; this.layoutDraft = []; this.globalColorMenuOpen = false; }
+  cancelLayoutEdit() { this.editingLayout = false; this.layoutDraft = []; this.globalColorMenuOpen = false; this.addBlockMenuOpen = false; }
+
+  toggleAddBlockMenu(event: MouseEvent) {
+    event.stopPropagation();
+    this.addBlockMenuOpen = !this.addBlockMenuOpen;
+    this.editorSelectOpen = null;
+    this.textColorMenuBlockId = null;
+    this.globalColorMenuOpen = false;
+  }
+
+  // Bloqueia de novo o que ja foi adicionado (favoritos/biblioteca/atividade/platinados/wishlist
+  // sao unicos por perfil - ver addBlock) e a wishlist quando o dono nao tem uma pra mostrar.
+  addBlockOptionDisabled(tipo: PerfilBloco['tipo']): boolean {
+    if (tipo === 'wishlist' && !this.profile?.temColecaoWishlistSteam) return true;
+    return ['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist'].includes(tipo)
+      && this.layoutDraft.some(block => block.tipo === tipo);
+  }
+
+  addBlockFromMenu(tipo: PerfilBloco['tipo']) {
+    if (this.addBlockOptionDisabled(tipo)) return;
+    this.addBlock(tipo);
+    this.addBlockMenuOpen = false;
+  }
 
   toggleGlobalColorMenu(event: MouseEvent) {
     event.stopPropagation();
     this.globalColorMenuOpen = !this.globalColorMenuOpen;
+    this.addBlockMenuOpen = false;
     this.editorSelectOpen = null;
     this.textColorMenuBlockId = null;
   }
@@ -532,9 +559,9 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   addBlock(tipo: PerfilBloco['tipo']) {
-    if (['favoritos', 'biblioteca', 'atividade', 'platinados'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
+    if (['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
     const id = `custom-${crypto.randomUUID()}`;
-    this.layoutDraft.push({ id: ['favoritos', 'biblioteca', 'atividade', 'platinados'].includes(tipo) ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
+    this.layoutDraft.push({ id: ['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist'].includes(tipo) ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
   }
 
   removeBlock(index: number) { this.layoutDraft.splice(index, 1); this.layoutDraft.forEach((block, position) => block.posicao = position); }
@@ -927,6 +954,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       biblioteca: 'Biblioteca',
       atividade: 'Atividade recente',
       platinados: 'Platinados',
+      wishlist: 'Lista de Desejos (Steam)',
       texto: 'Texto',
       imagem: 'Imagem',
       links: 'Links',
@@ -935,6 +963,14 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   favoritePreview(block: PerfilBloco) {
     return this.profile?.favoritos.slice(0, this.previewLimit(block.tamanho)) || [];
+  }
+
+  // Sem estado proprio - reusa a colecao de sistema da wishlist (ver "Colecoes de sistema" no
+  // backend), a mesma que aparece na aba Colecoes. Vazio quando o dono ainda nao conectou Steam
+  // ou nao tem wishlist populada, ou quando o toggle "Mostrar lista de desejos Steam" esta off.
+  wishlistPreview(block: PerfilBloco) {
+    const colecao = this.profile?.colecoes.find(c => c.origemSistema);
+    return colecao?.jogos.slice(0, this.previewLimit(block.tamanho)) || [];
   }
 
   libraryPreview(block: PerfilBloco) {

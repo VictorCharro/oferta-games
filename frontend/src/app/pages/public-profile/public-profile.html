@@ -196,9 +196,22 @@
         <span>Arraste os blocos, ajuste a aparência e salve quando terminar.</span>
       </div>
       <div class="editor-heading-add">
-        <button type="button" (click)="addBlock('favoritos')">Jogos favoritos</button><button type="button" (click)="addBlock('biblioteca')">Biblioteca</button><button type="button" (click)="addBlock('atividade')">Atividade</button><button type="button" (click)="addBlock('platinados')">Platinados</button><button type="button" (click)="addBlock('texto')">Texto</button
-        ><button type="button" (click)="addBlock('imagem')">Imagem</button
-        ><button type="button" (click)="addBlock('links')">Links</button>
+        <div class="editor-custom-select" [class.open]="addBlockMenuOpen">
+          <button type="button" class="editor-select-trigger" (click)="toggleAddBlockMenu($event)" [attr.aria-expanded]="addBlockMenuOpen">
+            <span>Adicionar</span><span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <div *ngIf="addBlockMenuOpen" class="editor-select-menu opens-up" role="listbox" aria-label="Adicionar bloco">
+            <button type="button" [disabled]="addBlockOptionDisabled('favoritos')" (click)="addBlockFromMenu('favoritos')">Jogos favoritos</button>
+            <button type="button" [disabled]="addBlockOptionDisabled('biblioteca')" (click)="addBlockFromMenu('biblioteca')">Biblioteca</button>
+            <button type="button" [disabled]="addBlockOptionDisabled('atividade')" (click)="addBlockFromMenu('atividade')">Atividade</button>
+            <button type="button" [disabled]="addBlockOptionDisabled('platinados')" (click)="addBlockFromMenu('platinados')">Platinados</button>
+            <button type="button" *ngIf="profile.temColecaoWishlistSteam" [disabled]="addBlockOptionDisabled('wishlist')" (click)="addBlockFromMenu('wishlist')">Lista de Desejos (Steam)</button>
+            <div class="editor-menu-divider"></div>
+            <button type="button" (click)="addBlockFromMenu('texto')">Texto</button>
+            <button type="button" (click)="addBlockFromMenu('imagem')">Imagem</button>
+            <button type="button" (click)="addBlockFromMenu('links')">Links</button>
+          </div>
+        </div>
       </div>
       <div class="editor-heading-actions">
         <div class="editor-custom-select global-color-select" [class.open]="globalColorMenuOpen">
@@ -390,6 +403,18 @@
             </article>
           </div>
           <ng-template #noLibraryPreview><div class="empty-panel"><h3>Biblioteca vazia</h3><p>Nenhum jogo sincronizado para exibir.</p></div></ng-template></ng-container
+        ><ng-container *ngSwitchCase="'wishlist'"
+          ><div class="panel-heading">
+            <h2 *ngIf="!editingLayout">{{ block.titulo || 'Lista de Desejos (Steam)' }}</h2>
+            <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Lista de Desejos (Steam)" />
+            <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="activeTab = 'colecoes'">Ver lista</button>
+          </div>
+          <div *ngIf="wishlistPreview(block).length; else noWishlistPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
+            <article *ngFor="let game of wishlistPreview(block)" class="profile-game-card">
+              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><div class="game-card-info"><h3>{{ game.titulo }}</h3><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></div></a>
+            </article>
+          </div>
+          <ng-template #noWishlistPreview><div class="empty-panel"><h3>Nenhum jogo na wishlist</h3></div></ng-template></ng-container
         ><ng-container *ngSwitchCase="'platinados'"
           ><div class="panel-heading">
             <h2 *ngIf="!editingLayout">{{ block.titulo || 'Platinados' }}</h2>

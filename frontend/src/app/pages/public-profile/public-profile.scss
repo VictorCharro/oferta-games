@@ -117,6 +117,12 @@
 .editor-select-menu { position: absolute; top: calc(100% + 5px); left: 0; min-width: 150px; padding: 5px; border: 1px solid var(--border-color); border-radius: 7px; background: var(--bg-card); box-shadow: 0 14px 30px rgba(0, 0, 0, .35); }
 .editor-select-menu button { width: 100%; min-height: 34px; padding: 7px 8px; display: flex; align-items: center; justify-content: space-between; border: 0; border-radius: 5px; background: transparent; color: var(--text-secondary); cursor: pointer; font: inherit; font-size: 12px; text-align: left; }
 .editor-select-menu button:hover, .editor-select-menu button.selected { background: rgba(41, 168, 224, .12); color: var(--color-purple); font-weight: 700; }
+.editor-select-menu button:disabled { color: var(--text-muted); cursor: not-allowed; opacity: .5; }
+.editor-select-menu button:disabled:hover { background: transparent; color: var(--text-muted); font-weight: 400; }
+// A barra "Modo de edicao" (onde fica o botao Adicionar) e fixa no rodape da tela - um menu que
+// abre pra baixo sairia da tela. Mesma tecnica de .global-color-menu, que ja resolvia isso pro
+// seletor de cores.
+.editor-select-menu.opens-up { top: auto; bottom: calc(100% + 5px); }
 .palette-trigger { min-width: 0; width: 40px; justify-content: center; font-size: 15px; line-height: 1; }
 .global-color-menu { top: auto; bottom: calc(100% + 5px); right: 0; left: auto; min-width: 220px; display: flex; flex-direction: column; gap: 6px; }
 .global-color-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 8px; color: var(--text-secondary); font-size: 12px; }
