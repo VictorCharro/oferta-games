@@ -45,6 +45,10 @@ export class PublicProfile implements OnInit, OnDestroy {
   criandoColecao = false;
   renomeandoColecaoId: number | null = null;
   renomearColecaoNome = '';
+  // Colecoes vem recolhidas por padrao (mostram so o nome + contagem) - listas grandes deixavam a
+  // aba "infinita". Guardado por id, nao por referencia do objeto: a lista e recarregada inteira
+  // (objetos novos) apos qualquer alteracao, mas o id continua o mesmo.
+  private readonly colecoesExpandidas = new Set<number>();
   gerenciandoColecao: ColecaoPerfil | null = null;
   fonteGerenciar: 'biblioteca' | 'catalogo' = 'biblioteca';
   buscaGerenciar = '';
@@ -313,6 +317,23 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.message = '';
   }
 
+  get temColecaoWishlistSteam(): boolean {
+    return !!this.profile?.colecoes.some(c => c.origemSistema);
+  }
+
+  async alternarMostrarWishlistSteam(mostrar: boolean) {
+    if (!this.isOwner || !this.profile) return;
+    const anterior = this.profile.mostrarWishlistSteam;
+    this.profile.mostrarWishlistSteam = mostrar;
+    try {
+      await this.perfis.atualizarMostrarWishlistSteam(mostrar);
+    } catch {
+      this.profile.mostrarWishlistSteam = anterior;
+      this.message = 'Nao foi possivel salvar essa preferencia.';
+    }
+    this.cdr.detectChanges();
+  }
+
   async criarColecao() {
     const nome = this.novaColecaoNome.trim();
     if (!this.isOwner || !nome || this.criandoColecao) return;
@@ -349,6 +370,21 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.message = 'Nao foi possivel renomear a colecao.';
     }
     this.cdr.detectChanges();
+  }
+
+  // Coleções de sistema (wishlist da Steam) sempre no topo, o resto na ordem que veio do backend.
+  get colecoesOrdenadas(): ColecaoPerfil[] {
+    if (!this.profile) return [];
+    return [...this.profile.colecoes].sort((a, b) => Number(b.origemSistema) - Number(a.origemSistema));
+  }
+
+  colecaoExpandida(colecao: ColecaoPerfil): boolean {
+    return this.colecoesExpandidas.has(colecao.id);
+  }
+
+  toggleColecaoExpandida(colecao: ColecaoPerfil) {
+    if (this.colecoesExpandidas.has(colecao.id)) this.colecoesExpandidas.delete(colecao.id);
+    else this.colecoesExpandidas.add(colecao.id);
   }
 
   async excluirColecao(colecao: ColecaoPerfil) {

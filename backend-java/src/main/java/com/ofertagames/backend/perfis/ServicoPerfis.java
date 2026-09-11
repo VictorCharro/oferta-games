@@ -69,6 +69,10 @@ class ServicoPerfis {
 
   List<RepositorioBlocosPerfil.BlocoPerfil> blocos(String usuarioId) { return blocos.listar(usuarioId); }
 
+  void atualizarMostrarWishlistSteam(String usuarioId, boolean mostrar) {
+    perfis.atualizarMostrarWishlistSteam(usuarioId, mostrar);
+  }
+
   void salvarBlocos(String usuarioId, List<RepositorioBlocosPerfil.BlocoPerfil> entrada) {
     if (entrada == null || entrada.size() > 20) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantidade de blocos invalida");
     for (RepositorioBlocosPerfil.BlocoPerfil bloco : entrada) {
@@ -88,7 +92,13 @@ class ServicoPerfis {
     List<ServicoConexoesSteam.JogoBibliotecaSteam> jogosXbox = mostrarBiblioteca ? xbox.biblioteca(perfil.usuarioId()) : List.of();
     List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = java.util.stream.Stream.concat(jogosSteam.stream(), jogosXbox.stream()).toList();
     List<FavoritoPerfilJogo> favoritos = dono || perfil.mostrarFavoritos() ? favoritosPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
-    List<ColecaoPerfil> colecoes = dono || perfil.mostrarColecoes() ? colecoesPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
+    List<ColecaoPerfil> colecoesBrutas = dono || perfil.mostrarColecoes() ? colecoesPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
+    // A wishlist da Steam tem toggle proprio (dentro do Organizar da aba Colecoes, nao em
+    // Privacidade) - so filtra pra visitante; o dono sempre ve a propria wishlist, mesmo
+    // escondida, pra poder reativar o toggle.
+    List<ColecaoPerfil> colecoes = dono
+        ? colecoesBrutas
+        : colecoesBrutas.stream().filter(c -> !c.origemSistema() || perfil.mostrarWishlistSteam()).toList();
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
     List<AtividadePerfil> atividadeRecente = mostrarAtividades ? carregarAtividades(perfil.usuarioId()) : List.of();
     boolean mostrarPlataforma = dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca();
@@ -107,7 +117,7 @@ class ServicoPerfis {
         favoritos,
         colecoes,
         atividadeRecente,
-        perfil.mostrarAtividades(), blocosPublicos(perfil, dono));
+        perfil.mostrarAtividades(), blocosPublicos(perfil, dono), perfil.mostrarWishlistSteam());
   }
 
   ResultadoAtualizacao solicitarAtualizacao(String handle, String visitanteId) {
@@ -160,5 +170,8 @@ class ServicoPerfis {
   record ResultadoAtualizacao(String status, String usuarioId) {}
   record PerfilPublico(String handle, String nomeExibicao, String bio, String avatarUrl, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY,
       String bannerUrl, double bannerZoom, int bannerPosicaoX, int bannerPosicaoY,
-      Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long jogosPlatinados, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<ColecaoPerfil> colecoes, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos) {}
+      Long totalMinutos, Long conquistasDesbloqueadas, Long conquistasTotal, Long jogosPlatinados, Long totalJogosBiblioteca, List<String> plataformasConectadas, List<ServicoConexoesSteam.JogoBibliotecaSteam> biblioteca, List<FavoritoPerfilJogo> favoritos, List<ColecaoPerfil> colecoes, List<AtividadePerfil> atividades, boolean mostrarAtividades, List<RepositorioBlocosPerfil.BlocoPerfil> blocos,
+      // So tem efeito de verdade pro visitante (esconde a colecao "Lista de Desejos (Steam)");
+      // o dono sempre le esse valor pra saber o estado atual do proprio checkbox no Organizar.
+      boolean mostrarWishlistSteam) {}
 }

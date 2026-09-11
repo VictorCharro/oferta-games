@@ -44,6 +44,13 @@ public class ControladorPerfis {
   @PutMapping("/me/banner")
   void atualizarBanner(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody ServicoPerfis.EntradaBanner entrada) { perfis.atualizarBanner(usuario(autorizacao), entrada); }
 
+  @PutMapping("/me/wishlist-steam")
+  void atualizarMostrarWishlistSteam(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody EntradaMostrarWishlistSteam entrada) {
+    perfis.atualizarMostrarWishlistSteam(usuario(autorizacao), entrada.mostrar());
+  }
+
+  record EntradaMostrarWishlistSteam(boolean mostrar) {}
+
   @GetMapping("/me/blocos")
   java.util.List<RepositorioBlocosPerfil.BlocoPerfil> blocos(@RequestHeader(value = "Authorization", required = false) String autorizacao) { return perfis.blocos(usuario(autorizacao)); }
 

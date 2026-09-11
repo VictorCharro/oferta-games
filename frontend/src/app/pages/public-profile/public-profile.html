@@ -497,9 +497,15 @@
   <section class="panel collections-panel" *ngIf="activeTab === 'colecoes'">
     <div class="panel-heading">
       <h2>Coleções</h2>
-      <button *ngIf="isOwner" type="button" class="panel-link" [class.editing]="editingCollections" (click)="toggleCollectionsEdit()">
-        {{ editingCollections ? 'Concluir' : 'Organizar' }}
-      </button>
+      <div class="panel-heading-actions">
+        <label *ngIf="isOwner && editingCollections && temColecaoWishlistSteam" class="wishlist-visibility-toggle">
+          <input type="checkbox" [checked]="profile.mostrarWishlistSteam" (change)="alternarMostrarWishlistSteam($any($event.target).checked)" />
+          Mostrar lista de desejos Steam
+        </label>
+        <button *ngIf="isOwner" type="button" class="panel-link" [class.editing]="editingCollections" (click)="toggleCollectionsEdit()">
+          {{ editingCollections ? 'Concluir' : 'Organizar' }}
+        </button>
+      </div>
     </div>
 
     <div *ngIf="isOwner && editingCollections" class="collection-create">
@@ -516,7 +522,7 @@
     </div>
 
     <div *ngIf="profile.colecoes.length; else semColecoes" class="collection-list">
-      <article *ngFor="let colecao of profile.colecoes" class="collection-item">
+      <article *ngFor="let colecao of colecoesOrdenadas" class="collection-item">
         <div class="collection-heading">
           <ng-container *ngIf="renomeandoColecaoId === colecao.id; else tituloColecao">
             <input
@@ -530,8 +536,11 @@
             <button type="button" class="ghost-btn" (click)="cancelarRenomearColecao()">Cancelar</button>
           </ng-container>
           <ng-template #tituloColecao>
-            <h3>{{ colecao.nome }}</h3>
-            <span class="collection-count">{{ colecao.jogos.length }} {{ colecao.jogos.length === 1 ? 'jogo' : 'jogos' }}</span>
+            <button type="button" class="collection-toggle" (click)="toggleColecaoExpandida(colecao)" [attr.aria-expanded]="colecaoExpandida(colecao)">
+              <span class="collection-chevron" [class.expanded]="colecaoExpandida(colecao)">›</span>
+              <h3>{{ colecao.nome }}</h3>
+              <span class="collection-count">{{ colecao.jogos.length }} {{ colecao.jogos.length === 1 ? 'jogo' : 'jogos' }}</span>
+            </button>
             <span *ngIf="colecao.origemSistema" class="collection-badge" title="Sincronizada automaticamente com sua wishlist da Steam">Sincronizada com a Steam</span>
             <div *ngIf="isOwner && editingCollections && !colecao.origemSistema" class="collection-actions">
               <button type="button" class="panel-link" (click)="abrirGerenciarJogos(colecao)">Gerenciar jogos</button>
@@ -541,14 +550,16 @@
           </ng-template>
         </div>
 
-        <div *ngIf="colecao.jogos.length; else colecaoVazia" class="profile-game-grid grid-completo">
-          <article *ngFor="let game of colecao.jogos" class="profile-game-card">
-            <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else colecaoCatalogDetail"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #colecaoCatalogDetail><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template></div></a>
-          </article>
-        </div>
-        <ng-template #colecaoVazia>
-          <p class="collection-empty">Nenhum jogo nesta coleção ainda.</p>
-        </ng-template>
+        <ng-container *ngIf="colecaoExpandida(colecao)">
+          <div *ngIf="colecao.jogos.length; else colecaoVazia" class="profile-game-grid grid-completo">
+            <article *ngFor="let game of colecao.jogos" class="profile-game-card">
+              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else colecaoCatalogDetail"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #colecaoCatalogDetail><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template></div></a>
+            </article>
+          </div>
+          <ng-template #colecaoVazia>
+            <p class="collection-empty">Nenhum jogo nesta coleção ainda.</p>
+          </ng-template>
+        </ng-container>
       </article>
     </div>
 
