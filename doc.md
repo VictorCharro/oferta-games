@@ -14,7 +14,8 @@ O produto tambem tem contas, Jogos Monitorados para alertas de preco, perfis pub
 |---|---|---|
 | Frontend | Angular 21 + TypeScript | Vercel |
 | Backend | Java 21 + Spring Boot 3 | Oracle Always Free via Docker |
-| Banco e Auth | PostgreSQL + Supabase Auth + Storage | Supabase |
+| Banco de catalogo | PostgreSQL 17 (self-hosted) | Container Docker na propria VM Oracle |
+| Banco de conta/perfil + Auth + Storage | PostgreSQL + Supabase Auth + Storage | Supabase |
 | Precos | ITAD API | Consumida pelo backend |
 | Perfil gamer | Steam OpenID + Steam Web API | Consumida pelo backend |
 
@@ -24,7 +25,7 @@ URLs de producao atuais:
 - Backend Oracle temporario: `https://api.163.176.220.243.sslip.io`
 - Health check Oracle: `https://api.163.176.220.243.sslip.io/actuator/health`
 
-O banco usa o transaction pooler do Supabase. A conversao da `DATABASE_URL` para JDBC e feita pelo backend, com `prepareThreshold=0`, pois prepared statements persistentes nao sao compativeis com esse modo do Supavisor.
+**Dois bancos desde 10/09/2026** (ver "Migracao do catalogo pra fora do Supabase" em "Deploy e Operacao"): `DATABASE_URL` continua Supabase (conta, perfis, favoritos, Auth) e usa o transaction pooler dele — a conversao pra JDBC e feita pelo backend, com `prepareThreshold=0`, pois prepared statements persistentes nao sao compativeis com esse modo do Supavisor. `CATALOG_DATABASE_URL` e o Postgres novo, self-hosted na VM (games/game_details/game_achievements/offers/price_history/instant_gaming_catalog) — conexao direta, sem pooler, `sslmode=disable` (rede interna do Docker compose, sem TLS configurado no container).
 
 ## Deploy e Operacao
 
@@ -34,7 +35,9 @@ O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de 
 
 | Variavel | Obrigatoria | Uso |
 |---|---:|---|
-| `DATABASE_URL` | sim | PostgreSQL Supabase pelo pooler |
+| `DATABASE_URL` | sim | PostgreSQL Supabase pelo pooler (conta, perfis, favoritos) |
+| `CATALOG_DATABASE_URL` | sim | PostgreSQL self-hosted na VM (catalogo) — `?sslmode=disable`, sem pooler |
+| `CATALOGO_DB_PASSWORD` | sim | Senha do usuario `catalogo` no Postgres self-hosted; usada tambem pelo `compose.yml` pra subir o container |
 | `SUPABASE_URL` | sim | Validacao de tokens Supabase |
 | `SUPABASE_ANON_KEY` | sim | Validacao de tokens Supabase |
 | `ITAD_API_KEY` | sim | Coleta e refresh de ofertas |
@@ -64,6 +67,26 @@ O workflow `.github/workflows/deploy-oracle.yml` atualiza o backend na VM por SS
 ```
 
 O script conecta na VM, atualiza o `master`, recria somente o container do backend e valida o health check. A chave da VM usada para baixar o repositorio continua somente leitura.
+
+### Migracao do catalogo pra fora do Supabase (10/09/2026)
+
+O banco Supabase free (cota de 500MB) bateu 89% de uso (442MB) mesmo depois da limpeza de 01/09/2026 — as tabelas de catalogo (`games`/`game_details`/`game_achievements`/`offers`/`price_history`/`instant_gaming_catalog`) sao 90%+ do banco e crescem organicamente pelos jobs de sincronizacao (nao e bug, e o catalogo funcionando). Como nao guardam dado de usuario (sem FK com `auth.users`), foram movidas pra um Postgres 17 self-hosted, container `catalogo-db` no mesmo `compose.yml` do backend, na VM Oracle — sem cota, sem porta exposta pro host (so acessivel pela rede interna do Docker compose). Banco caiu pra 15MB no Supabase.
+
+**Auth e tudo ligado a usuario continuam 100% no Supabase** (favoritos, perfis, avaliacoes, notificacoes, conexoes Steam/Xbox) — inclusive o cascade delete de `auth.users` pra esses dados, que so funciona porque estao no mesmo Postgres que o Auth. Ver "Schema Relevante" abaixo pra saber qual tabela mora em qual banco.
+
+`ConfiguracaoBancoDados` sobe dois `DataSource`/`JdbcClient`/`JdbcTemplate`/`PlatformTransactionManager` — o do Supabase e `@Primary` (usado por quem nao pede qualifier), o do catalogo e qualificado `"catalogo"`. Sete repositorios so usam catalogo (`RepositorioJogos`, `RepositorioDescontos`, boa parte de `RepositorioInstantGaming`); cinco fazem JOIN entre tabela de usuario e tabela de catalogo e foram reescritos pra buscar nos dois bancos e juntar em Java (`RepositorioFavoritos`, `RepositorioFavoritosPerfil`, `RepositorioAtividadesPerfil`, `RepositorioColecoesPerfil`, `RepositorioNotificacoes`) — perderam a garantia de integridade referencial entre as duas pontas (ex: nada impede um `favorites.game_id` apontar pra um jogo que nao existe mais no catalogo), mas o app nunca deleta jogos do catalogo (so upsert), entao isso e teorico ate hoje.
+
+**Backup**: o Supabase faz backup sozinho; o Postgres novo nao. `deploy/oracle/backup-catalogo.sh` roda via cron diario (ver `deploy/oracle/README-catalogo-db.md` pra configurar e pra restaurar do zero) — sem isso, um `catalogo-db` novo sobe saudavel mas **vazio**, e toda query de catalogo quebra com "relation games does not exist" sem aviso nenhum antes disso.
+
+**Quatro bugs reais surgiram nas primeiras horas em producao** (nenhum deles apareceu na verificacao manual antes do deploy — so sob trafego/jobs reais):
+
+1. Declarar so o `JdbcClient`/`PlatformTransactionManager` do catalogo (com `@Qualifier`, sem `@Primary`) fez a autoconfiguracao do Spring Boot desistir de criar o bean default do Supabase (`@ConditionalOnMissingBean`) — o unico `JdbcClient` restante no contexto (o do catalogo) foi injetado em todo mundo sem qualifier, inclusive `EstadoColeta` (tentou rodar `UPDATE coleta_status`, tabela que ficou no Supabase, contra o catalogo). Fix: declarar os dois pares explicitamente, nunca depender da autoconfiguracao condicional quando ha mais de um `DataSource`.
+2. `pg_restore -t <tabela>` copiou tabela+dados mas nao as sequences de auto-incremento (`games_id_seq`, `offers_id_seq`, `price_history_id_seq`, `game_achievements_id_seq`) nem os `DEFAULT nextval(...)` das colunas `id` — invisivel ate o primeiro INSERT sem id explicito (a sincronizacao de precos agendada), que travava com "null value in column id" e derrubava o backend em loop. Fix: recriar as 4 sequences a partir do `MAX(id)` atual de cada tabela.
+3. `catalogo-db` usava o `shm_size` padrao do Docker (64MB) — insuficiente pra queries com hash/sort grande (`/api/deals/top`, `DISTINCT ON` + `LATERAL` no catalogo inteiro) sob varias requisicoes concorrentes, chegando a "could not resize shared memory segment: No space left on device" quando o trafego voltou de uma vez apos o site sair do ar. Fix: `shm_size: '256mb'` no `compose.yml`.
+4. `RepositorioInstantGaming` foi movido inteiro pro datasource do catalogo, mas `instant_gaming_scan_cursor` (cursor da varredura) nunca fez parte da migracao — ficou no Supabase. So `buscarUltimoIdEscaneado`/`avancarCursor` usam `jdbc` (Supabase); o resto da classe usa `jdbcCatalogo`.
+5. Pool do catalogo com `maximumPoolSize=5` (numero herdado do dimensionamento pro Supabase free/pooler) esgotou sob trafego real (varias queries da Home concorrentes + o job de sincronizacao brigando pelas mesmas 5 conexoes) — `SQLTransientConnectionException: Connection is not available`. Sem teto de plano nesse Postgres, subido pra 20; `leakDetectionThreshold=20000` ligado nos dois pools pra qualquer vazamento futuro logar a stack trace de quem segurou a conexao.
+
+**Limitacao de capacidade conhecida, nao um bug**: a VM Oracle tem so **1 vCPU**. Testar com ~30 requisicoes pesadas simultaneas (fora do padrao real de trafego) derruba o unico nucleo (load average > 8) e faz ate leituras simples darem timeout por alguns minutos, ate a fila esvaziar sozinha. Se o trafego real crescer, isso pode virar gargalo genuino — nao ha acao tomada por enquanto, sem gatilho real ainda.
 
 ### Testes e CI (10/08/2026)
 
@@ -237,7 +260,9 @@ Ao adicionar uma nova loja ou excecao, garantir que ela seja filtrada em catalog
 
 ## Schema Relevante
 
-### Catalogo
+Desde 10/09/2026 (ver "Migracao do catalogo pra fora do Supabase" em "Deploy e Operacao"), **"Catalogo" abaixo mora no Postgres self-hosted da VM** (`CATALOG_DATABASE_URL`); todo o resto continua no Supabase (`DATABASE_URL`), junto do Auth.
+
+### Catalogo (Postgres self-hosted na VM)
 
 ```text
 games
@@ -263,8 +288,22 @@ game_achievements
   icon_url, icon_gray_url, global_percent, position
   UNIQUE (game_id, api_name)
 
+price_history
+  id, game_id (FK games), price, captured_at
+  -- so grava uma linha quando o menor preco do jogo (MIN entre as ofertas) mudou desde a
+  -- ultima linha gravada, nao a cada sincronizacao (ver "Historico de precos" abaixo)
+
+instant_gaming_catalog
+  product_id (PK), title, normalized_title, url, discovered_at
+```
+
+`game_id` em `offers`/`game_details`/`game_achievements`/`price_history` referencia `games(id)` **dentro do proprio Postgres do catalogo** (FK preservada, ja que as duas pontas moraram juntas). Ja `game_id`/`game_reviews.game_id` em tabelas do lado Supabase (abaixo) sao so um `bigint` solto, sem FK de banco pro catalogo — a integridade referencial entre os dois bancos e garantida so pela aplicacao (o app nunca deleta jogo, so upsert).
+
+### Catalogo, mas ficaram no Supabase (tem FK com `auth.users` ou sao operacionais)
+
+```text
 game_reviews
-  id, game_id (FK games), user_id (FK auth.users), rating (1-5), comentario
+  id, game_id (bigint, sem FK — id do catalogo), user_id (FK auth.users), rating (1-5), comentario
   created_at, updated_at
   UNIQUE (game_id, user_id)
 
@@ -275,13 +314,20 @@ game_review_votes
 sync_locks
   name, locked_until
 
-price_history
-  id, game_id (FK games), price, captured_at
-  -- so grava uma linha quando o menor preco do jogo (MIN entre as ofertas) mudou desde a
-  -- ultima linha gravada, nao a cada sincronizacao (ver "Historico de precos" abaixo)
+coleta_status
+  tipo, em_execucao, inicio_atual, ultima_conclusao, ultima_duracao_ms
+  jogos_atualizados, ofertas_atualizadas, ultimo_erro
+  -- status/contadores dos jobs de coleta (ver "/admin/coleta"); EstadoColeta
+  -- ainda escreve aqui (Supabase), mesmo com o catalogo em outro banco
+  -- (foi exatamente essa mistura que causou o bug #1 da migracao de 10/09/2026)
+
+instant_gaming_scan_cursor
+  id (sempre true), last_scanned_id
+  -- unica excecao dentro de RepositorioInstantGaming: nao fez parte da migracao,
+  -- ficou no Supabase (ver "Migracao do catalogo pra fora do Supabase")
 ```
 
-### Conta, monitoramento e notificacoes
+### Conta, monitoramento e notificacoes (Supabase)
 
 ```text
 favorites
