@@ -71,6 +71,38 @@ class ClienteSteamWeb {
     return jogos;
   }
 
+  /**
+   * Wishlist do usuario, appIds na ordem "adicionado mais recente primeiro".
+   *
+   * <p>Sem chave (usada em {@code validarChave} nas outras chamadas) — {@code IWishlistService}
+   * funciona sem key. Perfil com wishlist privada (configuracao separada da privacidade geral do
+   * perfil Steam) devolve {@code response} vazio, sem erro — tratado igual a lista vazia, nunca
+   * lanca excecao (mesmo padrao das outras chamadas de sincronizacao desse cliente).
+   */
+  List<Integer> buscarWishlist(String steamId) {
+    Map<String, Object> resposta = restClient.get()
+        .uri(uri -> uri.path("/IWishlistService/GetWishlist/v1/")
+            .queryParam("steamid", steamId)
+            .build())
+        .retrieve()
+        .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+    Map<?, ?> response = resposta == null ? null : comoMapa(resposta.get("response"));
+    List<?> itens = response == null ? List.of() : comoLista(response.get("items"));
+
+    List<ItemWishlist> ordenados = new ArrayList<>();
+    for (Object item : itens) {
+      Map<?, ?> mapa = comoMapa(item);
+      if (mapa == null) continue;
+      Integer appId = comoInteiro(mapa.get("appid"));
+      if (appId == null) continue;
+      ordenados.add(new ItemWishlist(appId, comoInteiro(mapa.get("date_added"), 0)));
+    }
+    ordenados.sort((a, b) -> Integer.compare(b.dataAdicionado(), a.dataAdicionado()));
+    return ordenados.stream().map(ItemWishlist::appId).toList();
+  }
+
+  private record ItemWishlist(int appId, int dataAdicionado) {}
+
   ConquistasSteam buscarConquistas(String steamId, int appId) {
     validarChave();
     try {

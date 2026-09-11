@@ -55,6 +55,8 @@ public class ControladorColecoesPerfil {
   ResponseEntity<?> renomear(@RequestHeader(value = "Authorization", required = false) String autorizacao, @PathVariable long colecaoId, @RequestBody(required = false) RequisicaoColecao requisicao) {
     Optional<String> usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
     if (usuarioId.isEmpty()) return naoAutenticado();
+    ResponseEntity<?> bloqueio = verificarEditavel(usuarioId.get(), colecaoId);
+    if (bloqueio != null) return bloqueio;
     String nome = normalizarNome(requisicao == null ? null : requisicao.nome());
     if (nome == null) return ResponseEntity.badRequest().body(Map.of("error", "Informe um nome de ate " + MAXIMO_CARACTERES_NOME + " caracteres"));
     if (!colecoes.renomear(usuarioId.get(), colecaoId, nome)) return colecaoNaoEncontrada();
@@ -65,6 +67,8 @@ public class ControladorColecoesPerfil {
   ResponseEntity<?> excluir(@RequestHeader(value = "Authorization", required = false) String autorizacao, @PathVariable long colecaoId) {
     Optional<String> usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
     if (usuarioId.isEmpty()) return naoAutenticado();
+    ResponseEntity<?> bloqueio = verificarEditavel(usuarioId.get(), colecaoId);
+    if (bloqueio != null) return bloqueio;
     if (!colecoes.excluir(usuarioId.get(), colecaoId)) return colecaoNaoEncontrada();
     return ResponseEntity.ok(Map.of("ok", true));
   }
@@ -73,7 +77,8 @@ public class ControladorColecoesPerfil {
   ResponseEntity<?> adicionarItem(@RequestHeader(value = "Authorization", required = false) String autorizacao, @PathVariable long colecaoId, @RequestBody(required = false) RequisicaoItemColecao requisicao) {
     Optional<String> usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
     if (usuarioId.isEmpty()) return naoAutenticado();
-    if (!colecoes.pertenceAoUsuario(usuarioId.get(), colecaoId)) return colecaoNaoEncontrada();
+    ResponseEntity<?> bloqueio = verificarEditavel(usuarioId.get(), colecaoId);
+    if (bloqueio != null) return bloqueio;
     if (requisicao == null) return ResponseEntity.badRequest().body(Map.of("error", "Informe slug ou steamAppId"));
     if (colecoes.contarItens(colecaoId) >= MAXIMO_ITENS) {
       return ResponseEntity.badRequest().body(Map.of("error", "Limite de " + MAXIMO_ITENS + " jogos por colecao atingido"));
@@ -100,7 +105,8 @@ public class ControladorColecoesPerfil {
   ResponseEntity<?> removerJogo(@RequestHeader(value = "Authorization", required = false) String autorizacao, @PathVariable long colecaoId, @PathVariable String slug) {
     Optional<String> usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
     if (usuarioId.isEmpty()) return naoAutenticado();
-    if (!colecoes.pertenceAoUsuario(usuarioId.get(), colecaoId)) return colecaoNaoEncontrada();
+    ResponseEntity<?> bloqueio = verificarEditavel(usuarioId.get(), colecaoId);
+    if (bloqueio != null) return bloqueio;
     Optional<Long> jogoId = jogos.buscarIdPorSlug(slug);
     if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
     colecoes.removerJogo(usuarioId.get(), colecaoId, jogoId.get());
@@ -111,7 +117,8 @@ public class ControladorColecoesPerfil {
   ResponseEntity<?> removerSteam(@RequestHeader(value = "Authorization", required = false) String autorizacao, @PathVariable long colecaoId, @PathVariable int appId) {
     Optional<String> usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
     if (usuarioId.isEmpty()) return naoAutenticado();
-    if (!colecoes.pertenceAoUsuario(usuarioId.get(), colecaoId)) return colecaoNaoEncontrada();
+    ResponseEntity<?> bloqueio = verificarEditavel(usuarioId.get(), colecaoId);
+    if (bloqueio != null) return bloqueio;
     colecoes.removerSteam(usuarioId.get(), colecaoId, appId);
     return ResponseEntity.ok(Map.of("ok", true));
   }
@@ -119,6 +126,18 @@ public class ControladorColecoesPerfil {
   // 404 tambem quando a colecao existe mas e de outro usuario: nao revela a existencia dela.
   private static ResponseEntity<?> colecaoNaoEncontrada() {
     return ResponseEntity.status(404).body(Map.of("error", "Colecao nao encontrada"));
+  }
+
+  // null quando a colecao e do usuario e pode ser editada; senao devolve a resposta que o
+  // endpoint deve retornar direto (404 se nao e do usuario, 400 se e uma colecao de sistema
+  // como a wishlist da Steam - travada, so muda sincronizando com a Steam).
+  private ResponseEntity<?> verificarEditavel(String usuarioId, long colecaoId) {
+    Optional<String> origem = colecoes.origemDaColecao(usuarioId, colecaoId);
+    if (origem.isEmpty()) return colecaoNaoEncontrada();
+    if (!"usuario".equals(origem.get())) {
+      return ResponseEntity.badRequest().body(Map.of("error", "Esta lista e sincronizada automaticamente e nao pode ser editada manualmente"));
+    }
+    return null;
   }
 
   private static ResponseEntity<?> naoAutenticado() {

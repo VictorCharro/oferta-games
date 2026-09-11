@@ -36,11 +36,12 @@ public class RepositorioColecoesPerfil {
 
   public List<ColecaoPerfil> listarPorUsuario(String usuarioId) {
     Map<Long, List<FavoritoPerfilJogo>> jogosPorColecao = agruparItens(usuarioId);
-    return jdbc.sql("SELECT id, name FROM profile_collections WHERE user_id = CAST(:usuarioId AS uuid) ORDER BY position ASC, created_at ASC")
+    return jdbc.sql("SELECT id, name, origem FROM profile_collections WHERE user_id = CAST(:usuarioId AS uuid) ORDER BY position ASC, created_at ASC")
         .param("usuarioId", usuarioId)
         .query((rs, linha) -> {
           long id = rs.getLong("id");
-          return new ColecaoPerfil(id, rs.getString("name"), jogosPorColecao.getOrDefault(id, List.of()));
+          boolean origemSistema = !"usuario".equals(rs.getString("origem"));
+          return new ColecaoPerfil(id, rs.getString("name"), origemSistema, jogosPorColecao.getOrDefault(id, List.of()));
         })
         .list();
   }
@@ -203,6 +204,20 @@ public class RepositorioColecoesPerfil {
         .single();
   }
 
+  /**
+   * {@code empty} quando a colecao nao existe ou nao e do usuario (controller trata os dois casos
+   * como 404, pra nao revelar a existencia dela). Quando presente, {@code "usuario"} ou o nome de
+   * uma origem de sistema (hoje so {@code "steam_wishlist"}) — o controller bloqueia
+   * renomear/excluir/adicionar/remover item quando a origem nao e {@code "usuario"}.
+   */
+  public Optional<String> origemDaColecao(String usuarioId, long colecaoId) {
+    return jdbc.sql("SELECT origem FROM profile_collections WHERE id = :colecaoId AND user_id = CAST(:usuarioId AS uuid)")
+        .param("colecaoId", colecaoId)
+        .param("usuarioId", usuarioId)
+        .query(String.class)
+        .optional();
+  }
+
   public int contarColecoes(String usuarioId) {
     return jdbc.sql("SELECT COUNT(*) FROM profile_collections WHERE user_id = CAST(:usuarioId AS uuid)")
         .param("usuarioId", usuarioId)
@@ -263,6 +278,68 @@ public class RepositorioColecoesPerfil {
         .param("usuarioId", usuarioId)
         .param("appId", appId)
         .update() > 0;
+  }
+
+  /**
+   * Id da colecao de sistema do usuario para a {@code origem} dada (ex: {@code "steam_wishlist"}),
+   * criando com o nome padrao se ainda nao existir. So existe uma por usuario por origem
+   * (indice unico parcial {@code profile_collections_wishlist_unica}).
+   */
+  public long buscarOuCriarColecaoSistema(String usuarioId, String origem, String nomePadrao) {
+    Optional<Long> existente = jdbc.sql("SELECT id FROM profile_collections WHERE user_id = CAST(:usuarioId AS uuid) AND origem = :origem")
+        .param("usuarioId", usuarioId)
+        .param("origem", origem)
+        .query(Long.class)
+        .optional();
+    if (existente.isPresent()) {
+      return existente.get();
+    }
+    return jdbc.sql("""
+        INSERT INTO profile_collections (user_id, name, origem, position)
+        VALUES (CAST(:usuarioId AS uuid), :nome, :origem,
+          (SELECT COALESCE(MAX(position), -1) + 1 FROM profile_collections WHERE user_id = CAST(:usuarioId AS uuid)))
+        RETURNING id
+        """)
+        .param("usuarioId", usuarioId)
+        .param("nome", nomePadrao)
+        .param("origem", origem)
+        .query(Long.class)
+        .single();
+  }
+
+  /**
+   * Reconcilia os itens de uma colecao de sistema pra ficarem exatamente iguais a
+   * {@code gameIdsNaOrdem} (posicao = indice na lista): insere os que faltam, atualiza a posicao
+   * dos que ja existem e remove os que sairam da lista (ex: jogo comprado ou removido da wishlist
+   * real). Unico lugar do backend que faz DELETE em {@code profile_collection_items} fora de um
+   * pedido explicito do dono — seguro porque e escopado a uma colecao de sistema so, nunca a uma
+   * colecao criada manualmente (ver {@link #origemDaColecao}).
+   */
+  public void sincronizarItensSistema(long colecaoId, String usuarioId, List<Long> gameIdsNaOrdem) {
+    // Lista tipicamente pequena (dezenas de itens - wishlist de uma pessoa), entao um loop de
+    // upserts individuais e simples e rapido o bastante; nao precisa de batch de verdade aqui.
+    for (int posicao = 0; posicao < gameIdsNaOrdem.size(); posicao++) {
+      jdbc.sql("""
+          INSERT INTO profile_collection_items (collection_id, user_id, game_id, position)
+          VALUES (:colecaoId, CAST(:usuarioId AS uuid), :jogoId, :posicao)
+          ON CONFLICT (collection_id, game_id) WHERE game_id IS NOT NULL
+            DO UPDATE SET position = EXCLUDED.position
+          """)
+          .param("colecaoId", colecaoId)
+          .param("usuarioId", usuarioId)
+          .param("jogoId", gameIdsNaOrdem.get(posicao))
+          .param("posicao", posicao)
+          .update();
+    }
+    jdbc.sql("""
+        DELETE FROM profile_collection_items
+        WHERE collection_id = :colecaoId
+          AND game_id IS NOT NULL
+          AND game_id NOT IN (:gameIds)
+        """)
+        .param("colecaoId", colecaoId)
+        .param("gameIds", gameIdsNaOrdem.isEmpty() ? List.of(-1L) : gameIdsNaOrdem)
+        .update();
   }
 
   private record ItemColecao(long colecaoId, FavoritoPerfilJogo jogo) {}

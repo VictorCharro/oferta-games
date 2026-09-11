@@ -1,6 +1,8 @@
 package com.ofertagames.backend.conexoes;
 
 import com.ofertagames.backend.atividadesperfil.RepositorioAtividadesPerfil;
+import com.ofertagames.backend.colecoesperfil.RepositorioColecoesPerfil;
+import com.ofertagames.backend.jogos.RepositorioJogos;
 import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
 import java.net.URLEncoder;
@@ -41,10 +43,15 @@ public class ServicoConexoesSteam {
   private static final String IDENTIFICADOR_SELECT = "http://specs.openid.net/auth/2.0/identifier_select";
   private static final Pattern STEAM_ID = Pattern.compile("^https?://steamcommunity\\.com/openid/id/(\\d+)/?$");
 
+  private static final String NOME_COLECAO_WISHLIST = "Lista de Desejos (Steam)";
+  private static final String ORIGEM_COLECAO_WISHLIST = "steam_wishlist";
+
   private final RepositorioConexoesSteam conexoes;
   private final ClienteSteamWeb steam;
   private final ServicoSteam steamLoja;
   private final RepositorioAtividadesPerfil atividades;
+  private final RepositorioColecoesPerfil colecoes;
+  private final RepositorioJogos jogos;
   private final RestClient restClient;
   private final String urlFrontend;
   private final String urlBackend;
@@ -54,6 +61,8 @@ public class ServicoConexoesSteam {
       ClienteSteamWeb steam,
       ServicoSteam steamLoja,
       RepositorioAtividadesPerfil atividades,
+      RepositorioColecoesPerfil colecoes,
+      RepositorioJogos jogos,
       RestClient.Builder restClientBuilder,
       @Value("${app.steam.frontend-url}") String urlFrontend,
       @Value("${app.public-backend-url:}") String urlBackend
@@ -62,6 +71,8 @@ public class ServicoConexoesSteam {
     this.steam = steam;
     this.steamLoja = steamLoja;
     this.atividades = atividades;
+    this.colecoes = colecoes;
+    this.jogos = jogos;
     this.restClient = restClientBuilder.build();
     this.urlFrontend = removerBarraFinal(urlFrontend);
     this.urlBackend = removerBarraFinal(urlBackend);
@@ -112,6 +123,34 @@ public class ServicoConexoesSteam {
       conexoes.registrarErro(usuarioId, mensagemErro(erro));
       throw erro;
     }
+    // Falha na wishlist nunca derruba a sincronizacao da biblioteca (que ja teve sucesso acima) -
+    // erro isolado, so logado em steam_connections.last_error.
+    try {
+      sincronizarWishlist(usuarioId, conexao.steamId());
+    } catch (RuntimeException erro) {
+      conexoes.registrarErro(usuarioId, "Wishlist: " + mensagemErro(erro));
+    }
+  }
+
+  /**
+   * Cria (se ainda nao existir) e atualiza a colecao automatica "Lista de Desejos (Steam)" -
+   * reflete a wishlist real, travada pra edicao manual (ver {@code origem} em
+   * {@code profile_collections}). So entram jogos ja descobertos no nosso catalogo (casados por
+   * {@code steam_app_id}); os demais ficam de fora ate serem descobertos, sem erro.
+   *
+   * <p>Roda dentro de {@link #sincronizarBiblioteca} (mesma cadencia: conexao inicial, botao
+   * manual e solicitacao publica) — nao existe um job agendado separado so pra wishlist.
+   */
+  private void sincronizarWishlist(String usuarioId, String steamId) {
+    if (!steam.configurada()) return;
+    java.util.List<Integer> appIdsNaWishlist = steam.buscarWishlist(steamId);
+    java.util.Map<Integer, Long> idsPorAppId = jogos.buscarIdsPorSteamAppIds(appIdsNaWishlist);
+    java.util.List<Long> gameIdsNaOrdem = appIdsNaWishlist.stream()
+        .map(idsPorAppId::get)
+        .filter(java.util.Objects::nonNull)
+        .toList();
+    long colecaoId = colecoes.buscarOuCriarColecaoSistema(usuarioId, ORIGEM_COLECAO_WISHLIST, NOME_COLECAO_WISHLIST);
+    colecoes.sincronizarItensSistema(colecaoId, usuarioId, gameIdsNaOrdem);
   }
 
   int sincronizarConquistas(int limitePorUsuario) {

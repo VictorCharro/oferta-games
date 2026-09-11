@@ -532,7 +532,8 @@
           <ng-template #tituloColecao>
             <h3>{{ colecao.nome }}</h3>
             <span class="collection-count">{{ colecao.jogos.length }} {{ colecao.jogos.length === 1 ? 'jogo' : 'jogos' }}</span>
-            <div *ngIf="isOwner && editingCollections" class="collection-actions">
+            <span *ngIf="colecao.origemSistema" class="collection-badge" title="Sincronizada automaticamente com sua wishlist da Steam">Sincronizada com a Steam</span>
+            <div *ngIf="isOwner && editingCollections && !colecao.origemSistema" class="collection-actions">
               <button type="button" class="panel-link" (click)="abrirGerenciarJogos(colecao)">Gerenciar jogos</button>
               <button type="button" class="panel-link" (click)="iniciarRenomearColecao(colecao)">Renomear</button>
               <button type="button" class="panel-link danger" (click)="excluirColecao(colecao)">Excluir</button>

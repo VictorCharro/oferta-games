@@ -529,6 +529,32 @@ public class RepositorioJogos {
 
   private record SlugPorAppId(int steamAppId, String slug) {}
 
+  // Usado pra sincronizar a colecao automatica de wishlist da Steam (ver ServicoConexoesSteam):
+  // cruza os appIds da wishlist com o catalogo pra saber o game_id de cada um. AppId sem entrada
+  // no catalogo (jogo ainda nao descoberto) simplesmente nao aparece no resultado.
+  public Map<Integer, Long> buscarIdsPorSteamAppIds(List<Integer> appIds) {
+    if (appIds.isEmpty()) {
+      return Map.of();
+    }
+    List<IdPorAppId> linhas = jdbc.sql("""
+        SELECT steam_app_id, id
+        FROM games
+        WHERE steam_app_id IN (:appIds)
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("games"), JogosBloqueados.filtroSql("games")))
+        .param("appIds", appIds)
+        .query((rs, linha) -> new IdPorAppId(rs.getInt("steam_app_id"), rs.getLong("id")))
+        .list();
+    Map<Integer, Long> resultado = new HashMap<>();
+    for (IdPorAppId linha : linhas) {
+      resultado.put(linha.steamAppId(), linha.id());
+    }
+    return resultado;
+  }
+
+  private record IdPorAppId(int steamAppId, long id) {}
+
   public void salvarOferta(OfertaParaSalvar oferta) {
     if (lojaBloqueada(oferta.loja())) {
       return;
