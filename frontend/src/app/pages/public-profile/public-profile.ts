@@ -310,11 +310,23 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.message = '';
   }
 
-  toggleCollectionsEdit() {
+  async toggleCollectionsEdit() {
+    const estavaEditando = this.editingCollections;
     this.editingCollections = !this.editingCollections;
     this.renomeandoColecaoId = null;
     this.novaColecaoNome = '';
     this.message = '';
+    // Ao clicar "Concluir": o toggle "Mostrar lista de desejos Steam" muda a visibilidade no
+    // /api/perfis/{handle} (visao publica), nao no /api/profile-collections (usado pelo
+    // CRUD de colecoes) - sem recarregar por esse caminho, a colecao escondida continuava
+    // aparecendo pro dono ate um F5.
+    if (estavaEditando && !this.editingCollections && this.profile) {
+      try {
+        const atualizado = await this.perfis.publico(this.profile.handle);
+        this.profile.colecoes = atualizado.colecoes;
+      } catch { /* mantem a lista atual se o reload falhar */ }
+      this.cdr.detectChanges();
+    }
   }
 
   async alternarMostrarWishlistSteam(mostrar: boolean) {
