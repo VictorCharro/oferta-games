@@ -123,7 +123,12 @@ class ClienteSteamWeb {
         if (conquista == null || !Integer.valueOf(1).equals(comoInteiro(conquista.get("achieved")))) continue;
         String identificador = comoTexto(conquista.get("apiname"));
         if (identificador == null || identificador.isBlank()) continue;
-        detalhes.add(new ConquistaSteam(identificador, formatarNomeConquista(identificador), comoInteiro(conquista.get("unlocktime"), 0)));
+        // A resposta ja vem com o nome oficial em pt-BR (a chamada usa l=brazilian) - so caia no
+        // nome derivado do api_name quando a Steam nao mandar "name". Antes derivava sempre, e
+        // conquista com api_name generico virava titulo lixo tipo "New achievement 334 3".
+        String nomeOficial = comoTexto(conquista.get("name"));
+        String titulo = nomeOficial != null && !nomeOficial.isBlank() ? nomeOficial : formatarNomeConquista(identificador);
+        detalhes.add(new ConquistaSteam(identificador, titulo, comoInteiro(conquista.get("unlocktime"), 0)));
       }
       return new ConquistasSteam(detalhes, conquistas.size());
     } catch (RuntimeException erro) {

@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ import org.springframework.web.client.RestClient;
  */
 @Service
 public class ServicoConexoesSteam {
+  private static final Logger log = LoggerFactory.getLogger(ServicoConexoesSteam.class);
   private static final String URL_OPENID = "https://steamcommunity.com/openid/login";
   private static final String IDENTIFICADOR_SELECT = "http://specs.openid.net/auth/2.0/identifier_select";
   private static final Pattern STEAM_ID = Pattern.compile("^https?://steamcommunity\\.com/openid/id/(\\d+)/?$");
@@ -244,6 +247,21 @@ public class ServicoConexoesSteam {
         jogos.buscarConquistasDoCatalogo(
             recentes.stream().map(RepositorioConexoesSteam.ConquistaRecente::appId).distinct().toList(),
             recentes.stream().map(RepositorioConexoesSteam.ConquistaRecente::apiName).distinct().toList());
+
+    // Conquista sem linha no catalogo = catalogo desatualizado pra esse jogo. Devolve ele pra fila
+    // de coleta (best-effort: e leitura de perfil, nao pode quebrar por causa disso) pro icone
+    // aparecer na proxima passada do backfill. O proprio marcarConquistasDesatualizadas tem o
+    // corte de 7 dias que impede re-enfileirar a cada visita.
+    try {
+      java.util.List<Integer> semCatalogo = recentes.stream()
+          .filter(conquista -> !doCatalogo.containsKey(conquista.appId() + "|" + conquista.apiName()))
+          .map(RepositorioConexoesSteam.ConquistaRecente::appId)
+          .distinct()
+          .toList();
+      jogos.marcarConquistasDesatualizadas(semCatalogo);
+    } catch (RuntimeException erro) {
+      log.warn("Nao foi possivel marcar conquistas desatualizadas: {}", erro.getMessage());
+    }
 
     return recentes.stream()
         .map(conquista -> {
