@@ -77,8 +77,13 @@ class ServicoPerfis {
     if (entrada == null || entrada.size() > 20) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantidade de blocos invalida");
     // "conquistas" (sem sufixo) e um tipo aposentado, filtrado em blocosPublicos - o bloco novo de
     // conquistas recentes usa "conquistas-recentes" de proposito, pra nao cair naquele filtro.
+    //
+    // view_mode tem vocabulario POR TIPO de bloco (a coluna e "modo de visualizacao do bloco"):
+    // blocos de jogos usam cards|lista, bloco de imagem usa proporcao|redimensionar. O valor so e
+    // lido pelo tipo correspondente, entao um valor de outro vocabulario e inerte - por isso a
+    // validacao aqui aceita o conjunto todo em vez de cruzar com o tipo.
     for (RepositorioBlocosPerfil.BlocoPerfil bloco : entrada) {
-      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("favoritos", "biblioteca", "atividade", "platinados", "wishlist", "conquistas-recentes", "mais-jogados", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$")) || (bloco.visualizacao() != null && !Set.of("cards", "lista").contains(bloco.visualizacao()))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
+      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("favoritos", "biblioteca", "atividade", "platinados", "wishlist", "conquistas-recentes", "mais-jogados", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$")) || (bloco.visualizacao() != null && !Set.of("cards", "lista", "proporcao", "redimensionar").contains(bloco.visualizacao()))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
     }
     blocos.substituir(usuarioId, entrada);
   }

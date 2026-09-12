@@ -103,6 +103,9 @@ app-public-profile .gradient-color-control input[type="color"] { width: 52px; he
 app-public-profile .gradient-arrow { padding-bottom: 7px; color: var(--text-muted); }
 app-public-profile .profile-favorite-item a > div { min-width: 0; }
 app-public-profile .profile-favorite-item h3 { display: -webkit-box; overflow: hidden; margin: 0 0 5px; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 14px; line-height: 1.25; text-overflow: ellipsis; }
+/* Coluna flex pro conteudo (galeria/lista) poder crescer e ocupar a altura do bloco, que vem
+   esticada pelo grid da linha. Sem isso a galeria tem altura propria e sobra vazio embaixo. */
+app-public-profile .profile-block { display: flex; flex-direction: column; }
 app-public-profile .profile-block.size-pequeno { min-height: 138px; padding: 16px; }
 app-public-profile .profile-block.size-pequeno.stat-block { display: flex; align-items: center; }
 app-public-profile .profile-block.size-pequeno h2 { margin-bottom: 10px; font-size: 16px; }
@@ -185,8 +188,17 @@ app-public-profile .platform-icons img {
   object-fit: contain;
 }
 
-app-public-profile .profile-game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-app-public-profile .profile-game-grid.grid-pequeno { grid-template-columns: minmax(0, 1fr); }
+/* flex:1 + grid-auto-rows:1fr fazem a galeria ocupar a altura que sobra no bloco e dividir entre
+   as linhas de cards. E o que resolve o buraco sem depender de ter jogo suficiente pra preencher:
+   o card e aspect-ratio 16/9 com a capa em object-fit:cover, entao quando a linha estica ele so
+   recorta um pouco mais da imagem - nada distorce. Antes o card tinha altura fixa pela proporcao
+   e todo espaco extra do bloco virava vazio embaixo (medido: 263px num bloco pequeno). */
+app-public-profile .profile-game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; flex: 1; grid-auto-rows: 1fr; }
+/* 2 colunas tambem no pequeno: com 1 coluna o bloco virava um card unico gigante (o pequeno
+   ocupa 4/12 do grid, ~340px, e cabem 2 capas de ~165px lado a lado - mais largas que os cards
+   de 200px da home). A regra da faixa toda passa a ser "2 linhas de cards em qualquer tamanho;
+   o tamanho decide so quantas colunas" - ver previewLimit em public-profile.ts. */
+app-public-profile .profile-game-grid.grid-pequeno { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 app-public-profile .profile-game-grid.grid-medio { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 app-public-profile .profile-game-grid.grid-largo { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 app-public-profile .profile-game-grid.grid-completo { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -201,6 +213,11 @@ app-public-profile .profile-game-card {
   /* Eleva de leve no hover; a borda acende em ciano pra dar o retorno sem precisar de glow forte. */
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
+/* Dentro de um bloco do perfil a altura quem manda e a linha do grid (grid-auto-rows:1fr), nao a
+   proporcao: com aspect-ratio fixo o card nao esticava e o espaco sobrando so migrava pro vao
+   entre as linhas. A capa e object-fit:cover, entao o card mais alto recorta mais imagem e
+   continua sem distorcer. Fora dos blocos (aba Biblioteca) o 16/9 segue valendo. */
+app-public-profile .profile-block .profile-game-card { aspect-ratio: auto; height: 100%; }
 app-public-profile .profile-game-card:hover { border-color: rgba(41, 168, 224, .55); box-shadow: 0 10px 24px rgba(5, 9, 18, .5); transform: translateY(-2px); }
 app-public-profile .profile-game-card > a { display: block; width: 100%; height: 100%; color: inherit; text-decoration: none; }
 app-public-profile .profile-game-card > a > img { width: 100%; height: 100%; object-fit: cover; transition: transform .18s ease; }
@@ -262,6 +279,10 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
   // compactos o bastante (imagem 16:9 + titulo/horas por cima, ver .profile-game-card) pra
   // caber 2 lado a lado mesmo numa tela estreita.
   app-public-profile .profile-game-grid, app-public-profile .profile-game-grid.grid-medio, app-public-profile .profile-game-grid.grid-largo, app-public-profile .profile-game-grid.grid-completo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  // Aqui os blocos empilham (um por linha), entao nenhum vizinho forca altura e nao ha buraco pra
+  // preencher: o card volta pro 16/9 desenhado em vez de esticar e ficar achatado (media 134x67).
+  app-public-profile .profile-game-grid { grid-auto-rows: auto; }
+  app-public-profile .profile-block .profile-game-card { aspect-ratio: 16 / 9; height: auto; }
 }
 
 .badge-discount {

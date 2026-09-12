@@ -50,9 +50,8 @@
       <button *ngIf="isOwner && editingLayout" type="button" class="hero-btn" (click)="cancelLayoutEdit()" title="Sair do modo de edição">
         <span aria-hidden="true">✕</span> Sair da edição
       </button>
-      <a *ngIf="isOwner" class="hero-btn icon-only" routerLink="/configuracoes" title="Configurações" aria-label="Configurações">
-        <img src="configuracoes.png" alt="" />
-      </a>
+      <!-- Sem atalho de Configuracoes aqui: o acesso e so pelo dropdown do usuario na topbar, pra
+           nao ter dois caminhos pra mesma tela no mesmo canto. -->
       <button
         type="button"
         class="hero-btn icon-only"
@@ -288,6 +287,23 @@
           <div *ngIf="isEditorSelectOpen(block, 'tamanho')" class="editor-select-menu" role="listbox" aria-label="Tamanho do bloco">
             <button *ngFor="let option of sizeOptions" type="button" [class.selected]="block.tamanho === option.value" (click)="selectEditorOption(block, 'tamanho', option.value)">
               <span>{{ option.label }}</span><span *ngIf="block.tamanho === option.value" class="option-check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+        </div>
+        <!-- Ajuste da imagem: so faz sentido no bloco de imagem, entao entra ao lado de tamanho e
+             fundo apenas nele. Mesmo componente .editor-custom-select dos outros dois. -->
+        <div *ngIf="block.tipo === 'imagem'" class="editor-custom-select" [class.open]="isEditorSelectOpen(block, 'ajusteImagem')">
+          <button type="button" class="editor-select-trigger" (click)="toggleEditorSelect($event, block, 'ajusteImagem')" [attr.aria-expanded]="isEditorSelectOpen(block, 'ajusteImagem')">
+            <span>{{ selectedEditorOption(block, 'ajusteImagem') }}</span><span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <div *ngIf="isEditorSelectOpen(block, 'ajusteImagem')" class="editor-select-menu ajuste-imagem-menu" role="listbox" aria-label="Ajuste da imagem">
+            <p class="editor-menu-titulo">Ajuste da imagem</p>
+            <button *ngFor="let option of ajusteImagemOptions" type="button" [class.selected]="ajusteImagem(block) === option.value" (click)="selectEditorOption(block, 'ajusteImagem', option.value)">
+              <span class="ajuste-opcao">
+                <span>{{ option.label }}</span>
+                <small>{{ option.value === 'proporcao' ? 'mostra a imagem inteira; pode sobrar espaço' : 'recorta para preencher o bloco' }}</small>
+              </span>
+              <span *ngIf="ajusteImagem(block) === option.value" class="option-check" aria-hidden="true">✓</span>
             </button>
           </div>
         </div>
@@ -546,7 +562,28 @@
             <h2 *ngIf="!editingLayout && block.titulo">{{ block.titulo }}</h2>
             <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Titulo (opcional)" />
           </div>
-          <div *ngIf="blockImageUrl(block); else emptyImage" class="custom-image-frame" #imgFrame><img class="custom-image" [src]="blockImageUrl(block)" alt="Imagem do perfil" (load)="onCustomImageLoad($event, block)" [ngStyle]="blockImageStyle(block, imgFrame)" /></div>
+          <!-- Dica de tamanho: o quadro depende da largura do bloco e da altura da linha do grid,
+               entao o numero e medido do proprio bloco (ver medirTamanhoIdeal), nao fixo. -->
+          <p *ngIf="editingLayout && block.tipo === 'imagem'" class="dica-imagem">
+            <span class="dica-icone" aria-hidden="true">i</span>
+            <span *ngIf="ajusteImagem(block) === 'proporcao'">
+              A imagem aparece inteira. Para preencher esta área sem sobra, use
+              <strong *ngIf="tamanhoIdealImagem(block)">{{ tamanhoIdealImagem(block) }}</strong>
+              <strong *ngIf="!tamanhoIdealImagem(block)">a proporção do bloco</strong>.
+            </span>
+            <span *ngIf="ajusteImagem(block) === 'redimensionar'">
+              A imagem é recortada para preencher o bloco inteiro. Nada de espaço sobrando, mas as
+              bordas podem sair do quadro.
+            </span>
+          </p>
+          <div
+            *ngIf="blockImageUrl(block); else emptyImage"
+            class="custom-image-frame"
+            [class.preenche]="ajusteImagem(block) === 'redimensionar'"
+            [ngStyle]="estiloQuadroImagem(block)"
+            [attr.data-bloco-id]="block.id"
+            #imgFrame
+          ><img class="custom-image" [src]="blockImageUrl(block)" alt="Imagem do perfil" (load)="onCustomImageLoad($event, block)" [ngStyle]="blockImageStyle(block, imgFrame)" /></div>
           <ng-template #emptyImage><p>Adicione uma imagem no modo de edição.</p></ng-template></ng-container
         ><ng-container *ngSwitchCase="'links'"
           ><h2>{{ block.titulo || 'Links' }}</h2>

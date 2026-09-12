@@ -8,13 +8,16 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth';
 import { ColecaoPerfil, ConquistaRecente, PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
-import { TIPOS_UNICOS, blocosPadrao, novoBloco, visualizacaoDoBloco } from '../../services/perfil-blocos';
+import { TIPOS_UNICOS, ajusteImagemDoBloco, blocosPadrao, novoBloco, visualizacaoDoBloco } from '../../services/perfil-blocos';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
 import { ConexoesSteamService, JogoBibliotecaSteam } from '../../services/conexoes-steam';
 import { GameService, GameSummary } from '../../services/game';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { supabase } from '../../services/supabase';
 import { SeoService } from '../../services/seo';
+
+/** Campos do bloco que a barra de edicao inline expoe num select proprio. */
+type CampoEditor = 'tamanho' | 'tipoFundo' | 'ajusteImagem';
 
 @Component({
   selector: 'app-public-profile',
@@ -85,7 +88,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   private bannerFile: File | null = null;
   private bannerDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
   private bannerPointerId: number | null = null;
-  editorSelectOpen: { blockId: string; campo: 'tamanho' | 'tipoFundo' } | null = null;
+  editorSelectOpen: { blockId: string; campo: CampoEditor } | null = null;
   textColorMenuBlockId: string | null = null;
   globalColorMenuOpen = false;
   addBlockMenuOpen = false;
@@ -107,6 +110,11 @@ export class PublicProfile implements OnInit, OnDestroy {
   private blockImageDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
   private blockImagePointerId: number | null = null;
   private readonly customImageNaturalSize = new Map<string, { width: number; height: number }>();
+  private readonly tamanhoIdealPorBloco = new Map<string, string>();
+  readonly ajusteImagemOptions = [
+    { value: 'proporcao', label: 'Manter proporção' },
+    { value: 'redimensionar', label: 'Redimensionar' },
+  ];
   readonly sizeOptions = [
     { value: 'pequeno', label: 'Pequeno' },
     { value: 'medio', label: 'Médio' },
@@ -252,18 +260,19 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.addBlockMenuOpen = false;
   }
 
-  isEditorSelectOpen(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
+  isEditorSelectOpen(block: PerfilBloco, campo: CampoEditor) {
     return this.editorSelectOpen?.blockId === block.id && this.editorSelectOpen.campo === campo;
   }
 
-  toggleEditorSelect(event: MouseEvent, block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
+  toggleEditorSelect(event: MouseEvent, block: PerfilBloco, campo: CampoEditor) {
     event.stopPropagation();
     this.editorSelectOpen = this.isEditorSelectOpen(block, campo) ? null : { blockId: block.id, campo };
     this.textColorMenuBlockId = null;
   }
 
-  selectEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo', value: string) {
+  selectEditorOption(block: PerfilBloco, campo: CampoEditor, value: string) {
     if (campo === 'tamanho') block.tamanho = value as PerfilBloco['tamanho'];
+    else if (campo === 'ajusteImagem') block.visualizacao = value as PerfilBloco['visualizacao'];
     else {
       block.tipoFundo = value as PerfilBloco['tipoFundo'];
       if (value === 'cor' && !block.valorFundo?.match(/^#[0-9a-fA-F]{6}$/)) block.valorFundo = '#121a2a';
@@ -282,10 +291,47 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.editorSelectOpen = { blockId: block.id, campo: 'tipoFundo' };
   }
 
-  selectedEditorOption(block: PerfilBloco, campo: 'tamanho' | 'tipoFundo') {
-    const options = campo === 'tamanho' ? this.sizeOptions : this.backgroundOptions;
-    const value = campo === 'tamanho' ? block.tamanho : block.tipoFundo;
+  selectedEditorOption(block: PerfilBloco, campo: CampoEditor) {
+    const options = campo === 'tamanho' ? this.sizeOptions : campo === 'ajusteImagem' ? this.ajusteImagemOptions : this.backgroundOptions;
+    const value = campo === 'tamanho' ? block.tamanho : campo === 'ajusteImagem' ? this.ajusteImagem(block) : block.tipoFundo;
     return options.find(option => option.value === value)?.label || '';
+  }
+
+  ajusteImagem(block: PerfilBloco): 'proporcao' | 'redimensionar' {
+    return ajusteImagemDoBloco(block);
+  }
+
+  /**
+   * Proporcao do quadro no modo "manter proporcao": a da propria imagem, pra ela aparecer inteira.
+   * Vazio ate a imagem carregar (quando `onCustomImageLoad` grava o tamanho natural) e no modo
+   * "redimensionar", onde o quadro estica pela altura do bloco em vez de seguir a imagem.
+   */
+  estiloQuadroImagem(block: PerfilBloco): Record<string, string> {
+    if (this.ajusteImagem(block) === 'redimensionar') return {};
+    const natural = this.customImageNaturalSize.get(block.id);
+    if (!natural?.width || !natural?.height) return {};
+    return { 'aspect-ratio': `${natural.width} / ${natural.height}` };
+  }
+
+  /**
+   * Tamanho recomendado da imagem pra ela preencher a area sem sobrar espaco, em px reais (2x da
+   * area, pra nao ficar borrada em tela retina). Calculado a partir do quadro renderizado e
+   * guardado num Map: ler layout direto do template rodaria a cada ciclo de deteccao de mudanca
+   * e devolveria valor diferente no meio do ciclo (NG0100).
+   */
+  tamanhoIdealImagem(block: PerfilBloco): string {
+    return this.tamanhoIdealPorBloco.get(block.id) || '';
+  }
+
+  private medirTamanhoIdeal(block: PerfilBloco, quadro: HTMLElement | null) {
+    const bloco = quadro?.closest('.profile-block') as HTMLElement | null;
+    if (!quadro || !bloco) return;
+    const estilo = getComputedStyle(bloco);
+    const largura = quadro.clientWidth;
+    // Altura que o quadro teria preenchendo o bloco: do topo dele ate o fim da area util.
+    const altura = bloco.getBoundingClientRect().bottom - parseFloat(estilo.paddingBottom) - quadro.getBoundingClientRect().top;
+    if (largura < 40 || altura < 40) return;
+    this.tamanhoIdealPorBloco.set(block.id, `${Math.round(largura * 2)} × ${Math.round(altura * 2)} px`);
   }
 
   startLayoutEdit() {
@@ -683,6 +729,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   onCustomImageLoad(event: Event, block: PerfilBloco) {
     const img = event.target as HTMLImageElement;
     this.customImageNaturalSize.set(block.id, { width: img.naturalWidth, height: img.naturalHeight });
+    this.medirTamanhoIdeal(block, img.parentElement);
   }
 
   blockImageStyle(block: PerfilBloco, frame: HTMLElement): Record<string, string> {
@@ -802,6 +849,12 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   @HostListener('window:resize')
   onWindowResize() {
+    // A area do bloco muda com a largura da janela, entao a dica de tamanho ideal remede junto.
+    document.querySelectorAll('.custom-image-frame').forEach(quadro => {
+      const id = (quadro as HTMLElement).dataset['blocoId'];
+      const bloco = id ? this.visibleBlocks.find(b => b.id === id) : null;
+      if (bloco) this.medirTamanhoIdeal(bloco, quadro as HTMLElement);
+    });
     this.cdr.detectChanges();
   }
 
@@ -952,8 +1005,21 @@ export class PublicProfile implements OnInit, OnDestroy {
     return blocosPadrao();
   }
 
+  /**
+   * Quantos cards de jogo o bloco mostra, calibrado pra TODO bloco ficar com mais ou menos a
+   * mesma altura (~515px) — no perfil so a largura muda com o tamanho, a altura e uniforme,
+   * porque o grid estica os blocos da linha pela altura do mais alto.
+   *
+   * <p>Cada tamanho tem largura de coluna diferente, e capa 16/9 significa que coluna mais
+   * estreita da card mais baixo: no pequeno a linha de cards mede ~112px, no medio ~145px. Por
+   * isso o pequeno leva 4 linhas (8 cards) e o medio 3 (6 cards) pra chegar na mesma altura —
+   * nao e o mesmo numero pra todos, e o numero que iguala a altura.
+   *
+   * <p>Antes eram 1/4/6/8 e o pequeno era o pior caso: 1 card unico gigante, com metade do bloco
+   * vazio ao lado de qualquer bloco em lista.
+   */
   previewLimit(size: PerfilBloco['tamanho']): number {
-    return { pequeno: 1, medio: 4, largo: 6, completo: 8 }[size];
+    return { pequeno: 8, medio: 6, largo: 9, completo: 12 }[size];
   }
 
   // Itens de atividade sao linhas de texto compactas, nao cards em grade:
@@ -1026,9 +1092,11 @@ export class PublicProfile implements OnInit, OnDestroy {
     return this.profile?.conquistasRecentes.slice(0, this.achievementPreviewLimit(block.tamanho)) || [];
   }
 
-  // Cabem mais que cards de jogo: cada conquista e uma linha compacta (icone 40px + 2 linhas).
+  // Cabem mais que cards de jogo: cada conquista e uma linha compacta (icone 40px + 2 linhas),
+  // ~56px por item. Calibrado pra mesma altura-alvo do previewLimit (~515px): com 5 itens o
+  // bloco medio media 403px e ficava baixo demais ao lado dos outros.
   private achievementPreviewLimit(size: PerfilBloco['tamanho']): number {
-    return { pequeno: 3, medio: 5, largo: 8, completo: 12 }[size];
+    return { pequeno: 7, medio: 7, largo: 10, completo: 14 }[size];
   }
 
   /** "há 2h", "há 3 dias" — a data vem em ISO do backend. */

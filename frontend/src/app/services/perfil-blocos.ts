@@ -11,18 +11,25 @@ export interface DescricaoBloco {
   tipo: PerfilBloco['tipo'];
   titulo: string;
   descricao: string;
+  /** Emoji de fallback, usado quando o tipo nao tem arquivo de icone proprio. */
   icone: string;
+  /**
+   * Arquivo em `public/`, quando existe um icone nosso pro tipo. Sao os mesmos arquivos que os
+   * paineis do perfil e a faixa de estatisticas usam, de proposito: o bloco na lista do editor
+   * fica com a mesma cara que ele tem no perfil.
+   */
+  arquivo?: string;
 }
 
 /** Ordem usada na "Biblioteca de Blocos" e no dropdown "Adicionar". */
 export const CATALOGO_BLOCOS: DescricaoBloco[] = [
-  { tipo: 'platinados', titulo: 'Jogos Platinados', descricao: 'Jogos com 100% das conquistas', icone: '🏆' },
-  { tipo: 'favoritos', titulo: 'Jogos Favoritos', descricao: 'Seus jogos marcados como favoritos', icone: '❤️' },
-  { tipo: 'conquistas-recentes', titulo: 'Conquistas Recentes', descricao: 'Ultimas conquistas desbloqueadas', icone: '🏅' },
-  { tipo: 'mais-jogados', titulo: 'Mais Jogados', descricao: 'Ranking por horas na biblioteca', icone: '⏱️' },
-  { tipo: 'biblioteca', titulo: 'Biblioteca', descricao: 'Jogos das plataformas conectadas', icone: '🎮' },
-  { tipo: 'wishlist', titulo: 'Lista de Desejos (Steam)', descricao: 'Sincronizada com a wishlist da Steam', icone: '⭐' },
-  { tipo: 'atividade', titulo: 'Atividade Recente', descricao: 'O que voce andou jogando', icone: '📡' },
+  { tipo: 'platinados', titulo: 'Jogos Platinados', descricao: 'Jogos com 100% das conquistas', icone: '🏆', arquivo: 'trofeu.png' },
+  { tipo: 'favoritos', titulo: 'Jogos Favoritos', descricao: 'Seus jogos marcados como favoritos', icone: '❤️', arquivo: 'favorito.png' },
+  { tipo: 'conquistas-recentes', titulo: 'Conquistas Recentes', descricao: 'Ultimas conquistas desbloqueadas', icone: '🏅', arquivo: 'conquistas.png' },
+  { tipo: 'mais-jogados', titulo: 'Mais Jogados', descricao: 'Ranking por horas na biblioteca', icone: '⏱️', arquivo: 'horas-jogadas.png' },
+  { tipo: 'biblioteca', titulo: 'Biblioteca', descricao: 'Jogos das plataformas conectadas', icone: '🎮', arquivo: 'biblioteca.png' },
+  { tipo: 'wishlist', titulo: 'Lista de Desejos (Steam)', descricao: 'Sincronizada com a wishlist da Steam', icone: '⭐', arquivo: 'steam-modo-escuro.png' },
+  { tipo: 'atividade', titulo: 'Atividade Recente', descricao: 'O que voce andou jogando', icone: '📡', arquivo: 'jogos-monitorados-modo-escuro.png' },
   { tipo: 'texto', titulo: 'Texto', descricao: 'Um texto livre sobre voce', icone: '📝' },
   { tipo: 'imagem', titulo: 'Imagem', descricao: 'Uma imagem sua ou de um jogo', icone: '🖼️' },
   { tipo: 'links', titulo: 'Links', descricao: 'Links para suas redes', icone: '🔗' },
@@ -49,7 +56,18 @@ export const TIPOS_COM_VISUALIZACAO: PerfilBloco['tipo'][] = ['favoritos'];
  * jogos na coluna estreita do Figma), o resto nasceu como card com capa.
  */
 export function visualizacaoDoBloco(bloco: PerfilBloco): 'cards' | 'lista' {
-  return bloco.visualizacao ?? (bloco.tipo === 'favoritos' ? 'lista' : 'cards');
+  return bloco.visualizacao === 'lista' || bloco.visualizacao === 'cards'
+    ? bloco.visualizacao
+    : (bloco.tipo === 'favoritos' ? 'lista' : 'cards');
+}
+
+/**
+ * Como o bloco de imagem preenche a area: 'proporcao' mostra a imagem inteira (pode sobrar
+ * espaco, e a dica no editor diz o tamanho ideal) e 'redimensionar' recorta pra ocupar o bloco
+ * todo. Padrao 'proporcao': recortar sem pedir mexe na imagem que a pessoa escolheu.
+ */
+export function ajusteImagemDoBloco(bloco: PerfilBloco): 'proporcao' | 'redimensionar' {
+  return bloco.visualizacao === 'redimensionar' ? 'redimensionar' : 'proporcao';
 }
 
 export function blocosPadrao(): PerfilBloco[] {
