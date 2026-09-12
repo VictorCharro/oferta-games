@@ -78,7 +78,7 @@ O banco Supabase free (cota de 500MB) bateu 89% de uso (442MB) mesmo depois da l
 
 **Backup**: o Supabase faz backup sozinho; o Postgres novo nao. `deploy/oracle/backup-catalogo.sh` roda via cron diario (ver `deploy/oracle/README-catalogo-db.md` pra configurar e pra restaurar do zero) — sem isso, um `catalogo-db` novo sobe saudavel mas **vazio**, e toda query de catalogo quebra com "relation games does not exist" sem aviso nenhum antes disso.
 
-**Quatro bugs reais surgiram nas primeiras horas em producao** (nenhum deles apareceu na verificacao manual antes do deploy — so sob trafego/jobs reais):
+**Cinco bugs reais surgiram nas primeiras horas em producao** (nenhum deles apareceu na verificacao manual antes do deploy — so sob trafego/jobs reais):
 
 1. Declarar so o `JdbcClient`/`PlatformTransactionManager` do catalogo (com `@Qualifier`, sem `@Primary`) fez a autoconfiguracao do Spring Boot desistir de criar o bean default do Supabase (`@ConditionalOnMissingBean`) — o unico `JdbcClient` restante no contexto (o do catalogo) foi injetado em todo mundo sem qualifier, inclusive `EstadoColeta` (tentou rodar `UPDATE coleta_status`, tabela que ficou no Supabase, contra o catalogo). Fix: declarar os dois pares explicitamente, nunca depender da autoconfiguracao condicional quando ha mais de um `DataSource`.
 2. `pg_restore -t <tabela>` copiou tabela+dados mas nao as sequences de auto-incremento (`games_id_seq`, `offers_id_seq`, `price_history_id_seq`, `game_achievements_id_seq`) nem os `DEFAULT nextval(...)` das colunas `id` — invisivel ate o primeiro INSERT sem id explicito (a sincronizacao de precos agendada), que travava com "null value in column id" e derrubava o backend em loop. Fix: recriar as 4 sequences a partir do `MAX(id)` atual de cada tabela.
@@ -199,7 +199,7 @@ Dois jobs novos em `ServicoSincronizacao`/`AgendadorColetas`, ambos dependem de 
 
 - **Detalhes** (`coletarDetalhesJogos`, ~15min): reaproveita a mesma chamada `appdetails` do job de metadados Steam, solicitando `l=brazilian&cc=br`, e extrai descricao curta, generos, desenvolvedores, publicadoras, data de lancamento e screenshots; complementa com `store.steampowered.com/appreviews/{appid}` (nota, positivas, negativas). Grava em `game_details` (1 linha por jogo, upsert). Jogos sem detalhes entram imediatamente na fila; dados existentes com mais de 30 dias sao atualizados novamente.
 - **Conquistas de catalogo** (`coletarConquistasCatalogo`, ~3h — schema e % global mudam devagar): `ISteamUserStats/GetSchemaForGame/v2` (precisa de `STEAM_WEB_API_KEY`, chamado com `l=brazilian` desde 19/07/2026 — antes vinha em ingles por faltar esse parametro) mesclado com `ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2` (publico). Grava em `game_achievements` (upsert por `api_name`). Nao tem relacao com `conexoes/AgendadorConquistasSteam`, que sincroniza as conquistas *desbloqueadas por um usuario logado* — este job novo e catalogo-wide, sem usuario.
-  - Historico de backlog: em 19/07/2026 `game_achievements` foi zerada em producao pra reprocessar tudo em portugues (fix do `l=brazilian`) e o job foi acelerado ate zerar (concluido, revertido de volta pro ritmo normal). Em 31/07/2026 o fix do regex de `/agecheck/app/` em `ServicoSteam` (ver "Metadados Steam de catalogo" abaixo) liberou `steam_app_id` de centenas de jogos que antes ficavam bloqueados pra sempre, dobrando o backlog pendente de ~769 para ~1724; o job foi acelerado de novo e revertido em 01/08/2026 de volta pro ritmo normal (`LIMITE_CONQUISTAS_CATALOGO=15` a cada 3h).
+  - Historico de backlog: em 19/07/2026 `game_achievements` foi zerada em producao pra reprocessar tudo em portugues (fix do `l=brazilian`) e o job foi acelerado ate zerar (concluido, revertido de volta pro ritmo normal). Em 31/07/2026 o fix do regex de `/agecheck/app/` em `ServicoSteam` (ver "Metadados Steam de catalogo" abaixo) liberou `steam_app_id` de centenas de jogos que antes ficavam bloqueados pra sempre, dobrando o backlog pendente de ~769 para ~1724; o job foi acelerado de novo e revertido em 01/08/2026 de volta pro ritmo normal. **Hoje (12/09/2026) esse job so roda pelo botao de admin** — a varredura agendada esta desligada desde 01/09/2026 (ver "Conquistas sao coletadas sob demanda"); os valores atuais sao `LIMITE_CONQUISTAS_CATALOGO = 250` por rodada e `steam-achievements-delay-ms` 30min, usados quando a varredura e disparada manualmente.
   - **Bug corrigido em 09/08/2026**: jogos sem nenhuma conquista real na Steam (`GetSchemaForGame` retorna vazio) nunca geravam linha em `game_achievements`, entao ficavam pendentes pra sempre e eram reconsultados em todo ciclo — como a fila ordena por `id ASC`, esses jogos entupiam o inicio dela e o job (so 15 jogos por rodada, a cada 3h) gastava a rodada inteira reconferindo os mesmos jogos sem nunca sobrar espaco pro resto do backlog, mesmo com milhares de jogos genuinamente pendentes. Adicionada `games.achievements_checked_at`: `ServicoCatalogo.preencherConquistas` marca o jogo como verificado mesmo quando o esquema vem vazio, e `listarPendentesConquistas`/`contarPendentesConquistas` passam a excluir quem ja foi checado. O backlog acumulado ate a correcao (12k+ jogos) ainda precisa ser processado no ritmo normal (ou acelerado manualmente se for preciso drenar mais rapido).
 - Endpoints novos, independentes de `/api/games/{slug}` (usado pela aba Precos, que nao mudou): `GET /api/games/{slug}/detalhes` (404 se ainda nao sincronizado) e `GET /api/games/{slug}/conquistas` (lista vazia se nao houver).
 - Disparo manual: `POST /api/admin/coleta/detalhes` e `POST /api/admin/coleta/conquistas-catalogo` (mesmo padrao de auth de admin dos demais tipos).
@@ -404,6 +404,7 @@ profile_activities
 profile_blocks
   user_id, block_id, block_type, title, content, position, size
   visible, background_type, background_value, overlay_opacity, text_color
+  view_mode
 ```
 
 `profile_blocks.visible` era gravado como `true` fixo enquanto nenhuma tela expunha o campo. Desde o toggle **Ativo/Oculto** do editor de blocos (11/09/2026) ele grava a escolha do dono — e um controle de layout ("nao quero esse bloco no perfil agora"), nao de privacidade: a privacidade continua sendo do perfil como um todo e dos controles gerais de dados.
@@ -448,8 +449,9 @@ Arquivos em `backend-java/sql/`:
 32. `20260822_historico_precos.sql`
 33. `20260910_colecao_wishlist_steam.sql`
 34. `20260911_mostrar_wishlist_steam.sql`
+35. `20260912_view_mode_blocos.sql`
 
-As migrations 1 a 34 ja foram aplicadas ao projeto Supabase de producao. A 33 adiciona `profile_collections.origem` e o indice unico parcial da wishlist (ver "Colecoes de sistema" na API HTTP); precisa ser aplicada antes do deploy do backend que sincroniza a wishlist, senao `GET /api/profile-collections` quebra (coluna `origem` inexistente). A 34 adiciona `profiles.show_steam_wishlist` (default `true`), usada pelo toggle de visibilidade da wishlist; precisa ser aplicada antes do deploy do backend que le/escreve essa coluna. A 28 adiciona `game_details.dlc_steam_app_ids` (ver "Plataformas e DLCs"). A 29 cria `coleta_status`, usada por `EstadoColeta` pra persistir o status dos jobs de coleta entre deploys; precisa ser aplicada antes do deploy do backend que passou a le-la/escreve-la, senao `/admin/coleta` quebra com erro 500. A 30 adiciona `games.achievements_checked_at` (ver "Detalhes e conquistas de catalogo"). A 31 adiciona `games.last_manual_refresh_at`, usada pelo cooldown do refresh manual (ver acima). A 24 cria `profile_platinum_order` para a ordem manual dos platinados Steam (arrastar no bloco do perfil). A 25 adiciona `offers.voucher_code`. A 26 cria `xbox_connections` (fluxo OAuth "Xbox App" da OpenXBL). A 27 cria `xbox_library_games` (upsert-only) e depois adiciona `minutes_played`; precisa ser aplicada antes do deploy do backend que sincroniza biblioteca Xbox. A migration 21 marcou 408 detalhes existentes como antigos em 18/07/2026 para a fila substitui-los gradualmente pelo conteudo pt-BR, sem apagar o texto atual durante o processamento. Em outro ambiente, executar as migrations estruturais em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500. A migration 22 adiciona `cover_url`/`cover_synced_at` a `steam_library_games` para guardar a capa real de cada jogo (resolvida via appdetails, ja que a Steam mudou o CDN das capas pra um caminho com hash imprevisivel em `shared.akamai.steamstatic.com`); precisa ser aplicada antes do deploy do backend que preenche/le essas colunas. A migration 23 adiciona `instant_gaming_url`/`last_instant_gaming_sync_at` a `games` e cria `instant_gaming_catalog`/`instant_gaming_scan_cursor` (ver secao "Instant Gaming" acima); precisa ser aplicada antes do deploy do backend que usa essas tabelas/colunas. A migration 32 cria `price_history` (ver "Historico de precos" acima); precisa ser aplicada antes do deploy do backend que grava/le essa tabela.
+As migrations 1 a 35 ja foram aplicadas ao projeto Supabase de producao. A 35 adiciona `profile_blocks.view_mode` (`cards`/`lista`/`NULL`), usada pela opcao "Visualizacao" do editor de blocos; precisa ser aplicada antes do deploy do backend que le/grava essa coluna, senao `GET /api/perfis/{handle}` e `GET /api/perfis/me/blocos` quebram (coluna inexistente). A 33 adiciona `profile_collections.origem` e o indice unico parcial da wishlist (ver "Colecoes de sistema" na API HTTP); precisa ser aplicada antes do deploy do backend que sincroniza a wishlist, senao `GET /api/profile-collections` quebra (coluna `origem` inexistente). A 34 adiciona `profiles.show_steam_wishlist` (default `true`), usada pelo toggle de visibilidade da wishlist; precisa ser aplicada antes do deploy do backend que le/escreve essa coluna. A 28 adiciona `game_details.dlc_steam_app_ids` (ver "Plataformas e DLCs"). A 29 cria `coleta_status`, usada por `EstadoColeta` pra persistir o status dos jobs de coleta entre deploys; precisa ser aplicada antes do deploy do backend que passou a le-la/escreve-la, senao `/admin/coleta` quebra com erro 500. A 30 adiciona `games.achievements_checked_at` (ver "Detalhes e conquistas de catalogo"). A 31 adiciona `games.last_manual_refresh_at`, usada pelo cooldown do refresh manual (ver acima). A 24 cria `profile_platinum_order` para a ordem manual dos platinados Steam (arrastar no bloco do perfil). A 25 adiciona `offers.voucher_code`. A 26 cria `xbox_connections` (fluxo OAuth "Xbox App" da OpenXBL). A 27 cria `xbox_library_games` (upsert-only) e depois adiciona `minutes_played`; precisa ser aplicada antes do deploy do backend que sincroniza biblioteca Xbox. A migration 21 marcou 408 detalhes existentes como antigos em 18/07/2026 para a fila substitui-los gradualmente pelo conteudo pt-BR, sem apagar o texto atual durante o processamento. Em outro ambiente, executar as migrations estruturais em ordem antes de publicar o backend. Em especial, a coluna `profile_activities.detail` e obrigatoria para atividade recente detalhada; se ela estiver ausente, a rota de perfil pode retornar HTTP 500. A migration do banner (15) precisa ser aplicada antes do deploy do backend que a usa: o backend seleciona `banner_url`/`banner_zoom`/`banner_position_x`/`banner_position_y` em toda consulta de perfil, entao sem essas colunas qualquer pagina de perfil (propria ou publica) quebra com erro 500. A migration 16 adiciona `position` aos favoritos e tambem precisa ser aplicada antes do deploy do backend que ordena por essa coluna. A 17 cria as colecoes e adiciona `profiles.show_collections`, lido em toda consulta de perfil: sem ela, qualquer pagina de perfil quebra com 500. A migration 22 adiciona `cover_url`/`cover_synced_at` a `steam_library_games` para guardar a capa real de cada jogo (resolvida via appdetails, ja que a Steam mudou o CDN das capas pra um caminho com hash imprevisivel em `shared.akamai.steamstatic.com`); precisa ser aplicada antes do deploy do backend que preenche/le essas colunas. A migration 23 adiciona `instant_gaming_url`/`last_instant_gaming_sync_at` a `games` e cria `instant_gaming_catalog`/`instant_gaming_scan_cursor` (ver secao "Instant Gaming" acima); precisa ser aplicada antes do deploy do backend que usa essas tabelas/colunas. A migration 32 cria `price_history` (ver "Historico de precos" acima); precisa ser aplicada antes do deploy do backend que grava/le essa tabela.
 
 O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos e seus fundos. Cada usuario so pode gravar na propria pasta. As politicas RLS de `SELECT`, `INSERT`, `UPDATE` e `DELETE` foram aplicadas ao projeto novo em 15/07/2026; sem elas o Storage retorna HTTP 400 nos uploads. Limite de upload de imagem no frontend: 2 MB, JPG/PNG/WebP. Blocos de imagem e fundos tambem aceitam URL externa `http(s)`.
 
@@ -493,6 +495,8 @@ O bucket publico `avatars` do Supabase Storage guarda avatar, imagens dos blocos
 - `PUT /api/perfis/me/banner`
 - `PUT /api/perfis/me/wishlist-steam` — `{ mostrar: boolean }`, ver "Colecoes de sistema"
 - `GET|PUT /api/perfis/me/blocos`
+  - o `GET` devolve **todos** os blocos do dono, inclusive os ocultos, e e a fonte da pagina `/perfil/blocos`. Nao trocar por `GET /api/perfis/{handle}`: aquele filtra os ocultos e o "Salvar" (que substitui a lista inteira) apagaria o bloco escondido.
+  - o `PUT` valida tipo, tamanho, `tipoFundo`, opacidade (0-85), cores `#RRGGBB` e `visualizacao` (`cards`/`lista`/null), no maximo 20 blocos.
 - `GET /api/perfis/{handle}`
 - `POST /api/perfis/{handle}/atualizar`
   - qualquer visitante pode pedir atualizacao Steam publica; cada perfil aceita uma solicitacao a cada 10 minutos.
@@ -539,6 +543,7 @@ Toda rota exige token e valida que a colecao e do usuario autenticado; colecao d
 - `POST /api/conexoes/xbox/sincronizar`
 - `GET /api/admin/coleta` — status de todos os 7 jobs (precos, steam, detalhes, conquistas-catalogo, instant-gaming-escaneamento/casamento/precos) e as filas correspondentes (`fila`, `pendentesDetalhes`, `pendentesConquistas`, `filaInstantGaming`).
 - `POST /api/admin/coleta/{tipo}` — dispara qualquer um dos 7 tipos manualmente, mesmo padrao de auth de admin (`precos`, `steam`, `detalhes`, `conquistas-catalogo`, `instant-gaming-escaneamento`, `instant-gaming-casamento`, `instant-gaming-precos`).
+- `POST /api/admin/jogos/{slug}/preencher-tudo` — botao "Preencher tudo agora": roda os tres passos da Steam pra um jogo so, na hora (metadados **forcados** + detalhes + conquistas). Sobrescreve capa/`steam_app_id` existentes de proposito — serve pra corrigir dado errado. O mesmo `ServicoCatalogo.preencherTudoDoJogo` roda automaticamente quando aparece conquista desbloqueada fora do catalogo (ver "Recoleta de jogo live-service").
 - `GET /actuator/health`
 - `GET /sitemap.xml`, `GET /sitemap-estatico.xml`, `GET /sitemap-jogos-{pagina}.xml` — publicos, sem auth (ver "SEO (SSR), sitemap e headers de seguranca" acima).
 
@@ -553,7 +558,8 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - `/jogo/:slug` mostra ofertas e atualizacao individual.
 - `/monitorados` mostra a lista de precos acompanhados. `/favoritos` redireciona por compatibilidade.
 - `/perfil` e uma ponte autenticada: resolve/cria o handle e redireciona para a URL canonica.
-- `/:handle` e a pagina publica do perfil. As rotas de produto sao reservadas e nao podem ser handles.
+- `/perfil/blocos` e o editor de blocos do perfil (autenticado). Declarada **antes** de `/:handle` no `app-routing-module`, senao "perfil" seria capturado como handle.
+- `/:handle` e a pagina publica do perfil. Aceita `?editor=1`, que faz o dono entrar direto no modo de edicao inline (usado pelo ajuste de imagem, ver "Pagina Editar Blocos"). As rotas de produto sao reservadas e nao podem ser handles.
 - Toda mudanca de rota deve iniciar no topo. A pagina publica observa mudancas de `handle` e descarta respostas de requisicoes antigas para nao manter o perfil anterior na tela.
 
 ### Mapa de paginas
@@ -569,7 +575,8 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 | **Gratuitos** | Mostrar ofertas com preco zero. | Itens com link invalido ou filtrados por `JogosBloqueados` nao devem aparecer. |
 | **Login** | Autenticar por Supabase Auth. | Nao usa sidebar nem topbar. Depois do login, a navegacao volta ao fluxo normal do aplicativo. |
 | **Configuracoes** (`/configuracoes`) | Centralizar opcoes da conta. | Abas separadas: Conta, Conexoes, Preferencias e Privacidade. Nao misturar assuntos entre abas. Preferencias afetam home/catalogo; Privacidade afeta o perfil publico; Conexoes concentra Steam e Xbox. |
-| **Perfil proprio** (`/perfil` -> `/:handle`) | Personalizar e visualizar o perfil do usuario. | `/perfil` redireciona para o handle canonico. O dono pode editar bio, foto, layout, blocos e pedir atualizacao Steam. A pagina canonica e a mesma que visitantes veem, com controles extras apenas para o dono. |
+| **Perfil proprio** (`/perfil` -> `/:handle`) | Personalizar e visualizar o perfil do usuario. | `/perfil` redireciona para o handle canonico. O dono pode editar bio, foto e pedir atualizacao Steam ali; ordem/visibilidade/tamanho dos blocos ficam em `/perfil/blocos`. A pagina canonica e a mesma que visitantes veem, com controles extras apenas para o dono. |
+| **Editar Blocos** (`/perfil/blocos`) | Organizar os blocos do perfil. | Aberta pelo botao "Editar perfil" do cabecalho. Lista reordenavel com toggle Ativo/Oculto, menu por bloco (tamanho, visualizacao, cores, conteudo de texto/links) e Biblioteca de Blocos. A aba "Visualizar Perfil" e uma previa real do rascunho, renderizando o proprio `app-public-profile`. |
 | **Perfil publico** (`/:handle`) | Compartilhar biblioteca e perfil gamer. | Respeita privacidade geral e dos dados escolhidos. Mostra uma faixa fixa com biblioteca, horas, conquistas desbloqueadas, jogos platinados (so quando ha algum) e icones das plataformas conectadas; abaixo, mostra Resumo, Jogos favoritos, Colecoes e Biblioteca quando liberados. Nunca mostra e-mail, UUID, Jogos Monitorados ou controles de edicao a visitantes. |
 | **Administracao de coleta** (`/admin/coleta`) | Acompanhar e disparar jobs internos. | Exclusiva do UID administrador. Abas horizontais agrupam os 7 jobs (Precos e Steam / Detalhes e Conquistas / Instant Gaming), cada uma com seus cards de status e sua propria fila; permite disparar coleta manual em segundo plano, mas nao substitui o scheduler. |
 
@@ -605,6 +612,19 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - **Bug corrigido (01/08/2026)**: `avatarDisplayStyle`/`bannerDisplayStyle` (o avatar/banner exibidos na pagina, visiveis atras do backdrop semi-transparente/desfocado do modal de ajuste) usavam as mesmas variaveis (`avatarZoom`/`avatarPositionX/Y`, `bannerZoom`/`bannerPositionX/Y`) que o rascunho ao vivo do crop, entao arrastar pra reposicionar fazia a imagem de fundo "piscar" atras do modal a cada movimento do mouse. Agora esses dois metodos sempre leem o zoom/posicao ja salvos em `profile.*`, nunca o rascunho.
 - A primeira sincronizacao Steam gera somente os resumos. Nas posteriores, novos jogos e conquistas viram atividades individuais.
 - A atividade recente e publica por padrao, salvo escolha do dono na privacidade.
+- **Favorito da Steam leva pro nosso catalogo, nao pra loja da Steam** (12/09/2026). `favoriteUrl()` usa `/jogo/{slug}` quando o item tem slug e cai na Steam quando nao tem; `RepositorioFavoritosPerfil.listarPorUsuario` montava os favoritos Steam com `slug` null fixo, entao **nenhum** favorito Steam ficava no site. Agora cruza os `app_id` com `games.steam_app_id` no banco do catalogo (mesmo cruzamento que a biblioteca ja fazia via `RepositorioJogos.buscarSlugsPorSteamAppIds`). Feito no repositorio, nao no `ServicoPerfis`, pra valer nos dois consumidores: o payload do perfil publico e o `GET /api/perfis/favoritos` que o dono usa. `steamAppId` continua preenchido, entao o card segue mostrando horas e percentual de conquistas. Favorito de jogo que nao existe no catalogo continua indo pra Steam (e o caso de Path of Exile 2 e GTA V Legacy, por exemplo).
+
+### Redesign visual do perfil (11-12/09/2026)
+
+Baseado em dois mockups do Figma, evoluindo o que existia em vez de reescrever — os componentes, tokens e dados sao os mesmos.
+
+- **Cabecalho** (`.public-hero`): o banner cobre o card inteiro com um gradiente escuro a 95deg pra garantir contraste do texto (antes era uma faixa 5:1 separada); avatar de 124px com anel ciano e glow discreto; acoes do dono (`.hero-actions`) num canto: "Editar perfil" (vai pra `/perfil/blocos`), engrenagem pra `/configuracoes` e ↻ de atualizar. Os dois botoes redondos so tem glifo, sem rotulo, entao levam tamanho proprio (20-21px) — herdando o `font-size` do `.hero-btn` ficavam ilegiveis.
+- **Faixa de estatisticas** (`.profile-stat-strip`): um card unico com celulas divididas, cada uma com o icone num tile arredondado. Afinada de 88px pra **60px** de altura em 12/09/2026 (numero 19px, rotulo 11px, tile 32px): e um resumo de leitura rapida e competia com o cabecalho. Os numeros usam `font-variant-numeric: tabular-nums` pra faixa nao mudar de largura quando um valor passa de 3 pra 4 digitos. "Plataformas conectadas" usa a mesma estrutura das outras celulas (valor em cima, rotulo embaixo), com os icones no lugar do numero — antes era o unico item invertido e ficava fora da linha de base.
+- **Abas** com icone SVG inline (nao PNG): o icone precisa acompanhar a cor da aba ativa/inativa, e so `currentColor` faz isso sem duplicar arquivo.
+- **Paineis** com icone no titulo e link "Ver todos ›" no canto.
+- O layout inicial de quem nunca mexeu nos blocos coloca Platinados (`largo`, 8/12) e Favoritos (`pequeno`, 4/12) lado a lado, fechando uma linha do grid de 12 colunas.
+
+`public-profile.scss` passou do budget de 26 kB (29,2 kB) e o build emite aviso — igual `game-detail.scss`, que ja estourava antes. Aviso, nao erro.
 
 ### Pagina "Editar Blocos" (/perfil/blocos) (11/09/2026)
 
@@ -612,11 +632,17 @@ O botao **Editar perfil** do cabecalho do perfil nao abre mais o modo de edicao 
 
 O menu `⋮` de um bloco de jogos tambem tem **Visualização: Lista compacta / Cards com capa** (12/09/2026), persistida em `profile_blocks.view_mode`. Hoje so o bloco de favoritos tem as duas visualizacoes desenhadas (`TIPOS_COM_VISUALIZACAO` em `services/perfil-blocos.ts`); os demais blocos de jogos so existem como card. O limite de itens acompanha o modo: em cards vale o `previewLimit` normal (1/4/6/8), em lista cabem mais (5/6/8/10), porque cada item e uma linha e nao uma capa.
 
+**Ocultar um bloco tira ele do perfil pra todo mundo, inclusive o dono** (12/09/2026), mesma regra do toggle da wishlist — o dono precisa ver o perfil como os outros veem. Filtrado nos dois lados: `ServicoPerfis.blocosPublicos` no backend e `PublicProfile.visibleBlocks` no frontend. Dois bugs foram corrigidos juntos aqui: (1) `RepositorioBlocosPerfil.substituir` gravava `visible = true` fixo, entao o toggle nunca persistia; (2) depois de persistir, nada filtrava na exibicao, e o bloco oculto continuava desenhado.
+
+Por isso o editor **le os blocos de `GET /me/blocos`, nao do payload publico** (`perfis.publico`): o publico agora filtra os ocultos, e carregar dali faria o proximo "Salvar" — que substitui a lista inteira — apagar de vez o bloco que o dono so quis esconder. O `publico()` continua sendo chamado, mas so pra alimentar as regras de "tem dado pra mostrar?" da Biblioteca de Blocos (`temColecaoWishlistSteam`, `conquistasRecentes`, `biblioteca`).
+
 A aba **Visualizar Perfil** e uma previa de verdade, nao um link: renderiza o proprio `app-public-profile` com dois inputs novos, `previewHandle` e `previewBlocos`. Nesse modo o componente ignora a rota, nao mexe no SEO, nao consulta `/me` e fica com `isOwner = false` — o dono ve exatamente o que um visitante veria, ja com o rascunho nao salvo (blocos ocultos somem, tamanhos novos valem). A previa fica **fora** do container de `max-width: 1280px` da pagina: o perfil real ocupa a largura inteira do `<main>`, e limitar a previa encolhia os cards e criava sobra vertical nos blocos, ou seja, a previa mentia sobre o resultado.
 
 O modo de edicao inline descrito abaixo continua existindo, mas so pro ajuste de imagem dos blocos (que exige o bloco ja renderizado pra arrastar/dar zoom). Ele e aberto pelo item "Ajustar imagem no perfil" do menu `⋮` de um bloco de imagem, que navega pra `/{handle}?editor=1` — o `queryParam` `editor=1` faz o perfil entrar direto em `startLayoutEdit()` quando quem abre e o dono.
 
-### Editor de perfil
+### Editor de perfil (modo inline)
+
+> **Leia antes:** desde 11/09/2026 este modo **nao e mais o caminho normal**. O botao "Editar perfil" leva pra `/perfil/blocos` (secao acima), e o inline so e alcancado por `/{handle}?editor=1`, usado pelo ajuste de imagem de bloco. O texto abaixo descreve o que ele faz quando aberto; parte das funcoes (ordem, visibilidade, tamanho, visualizacao, cores, conteudo de texto/links) tambem existe — e e o caminho preferido — na pagina nova. O que **so** existe aqui: recorte/enquadramento de imagem, gradiente de fundo e o atalho de cor global. Mover o recorte de imagem pra um modal na pagina nova e o passo que permitiria apagar este modo por inteiro.
 
 O modo de edicao permite reorganizar blocos por arrastar e soltar, mudar tamanho, remover e adicionar blocos. Ele existe somente na aba **Resumo**: ao abrir, as abas Jogos favoritos e Biblioteca ficam indisponiveis e os comandos internos Gerenciar/Ver biblioteca somem para evitar navegacao acidental. A faixa de estatisticas logo abaixo do cabecalho e fixa, portanto nao entra no editor: mostra jogos na biblioteca, horas jogadas, somente conquistas desbloqueadas e icones das plataformas conectadas. A barra "Modo de edicao" fica fixa na parte inferior da tela (nao rola com a pagina), com os botoes Cancelar/Salvar visualmente destacados a direita, separados do seletor de adicionar bloco. Tipos suportados:
 
@@ -631,7 +657,7 @@ O painel **Platinados** e derivado da biblioteca (`profile.biblioteca` filtrado 
 
 O painel **Wishlist** (11/09/2026) e derivado da colecao de sistema da wishlist (ver "Colecoes de sistema" na API HTTP) — sem estado proprio, `wishlistPreview()` so pega `profile.colecoes.find(c => c.origemSistema)`. Sem reordenacao manual (segue a ordem da wishlist real da Steam). Visibilidade em `ServicoPerfis.blocosPublicos`: precisa de `mostrarColecoes()` (ou dono) **e** `mostrarWishlistSteam()` — esse ultimo esconde de todo mundo, inclusive o dono, mesma regra da aba Colecoes.
 
-Os quatro paineis de dados (favoritos, biblioteca, atividade, platinados) tem titulo editavel (01/08/2026), igual aos blocos personalizados de texto/links: campo de titulo no editor com o mesmo limite por tamanho (`maxTitleLength`), mostrando o nome padrao (`defaultBlockTitle`) como placeholder quando vazio. Sem titulo customizado, cai no nome padrao de sempre ("Jogos favoritos", "Biblioteca", "Atividade recente", "Platinados"). Nao ha validacao especifica no backend alem do limite de tamanho generico de `salvarBlocos` (mesma regra dos demais tipos).
+Todos os paineis de dados (favoritos, biblioteca, atividade, platinados e, desde 11/09/2026, wishlist, conquistas recentes e mais jogados) tem titulo editavel (01/08/2026), igual aos blocos personalizados de texto/links: campo de titulo no editor com o mesmo limite por tamanho (`maxTitleLength`), mostrando o nome padrao (`defaultBlockTitle`) como placeholder quando vazio. Sem titulo customizado, cai no nome padrao de sempre ("Jogos favoritos", "Biblioteca", "Atividade recente", "Platinados"). Nao ha validacao especifica no backend alem do limite de tamanho generico de `salvarBlocos` (mesma regra dos demais tipos).
 
 Cada bloco pode usar fundo padrao, cor solida, gradiente ou imagem, alem de cor de texto hexadecimal livre. Cor solida e texto aceitam seletor visual e digitacao direta de `#RRGGBB`; o gradiente e montado visualmente por duas cores, sem exigir CSS. A opcao de texto fica dentro do menu de fundo e altera somente o conteudo do card, nunca os controles do editor. A imagem de fundo e escolhida por um comando explicito e enviada ao bucket `avatars`; nao existe privacidade por bloco. Blocos personalizados de imagem abrem um editor de enquadramento antes de salvar, exibido como modal grande sobre um fundo escurecido (nao mais embutido na lista de blocos), com pre-visualizacao ampla; o ajuste e feito arrastando a imagem com o mouse/touch para posicionar e girando o scroll (ou pinca no mobile) para dar zoom, sem sliders. O zoom minimo aplica uma pequena folga (115%) sobre o enquadramento padrao para garantir espaco de arraste em qualquer direcao, independente da proporcao da imagem enviada. O enquadramento (zoom e posicao) e calculado com base no tamanho real da imagem e do quadro (nao mais via `object-position` + `transform: scale`, que ficava preso na mesma janela de corte e podia travar um dos eixos do arraste); o mesmo calculo e usado tanto no editor quanto na exibicao final do bloco no perfil, garantindo que o resultado salvo seja igual ao que o dono ajustou. Esses dados sao persistidos junto da URL em formato compativel com blocos antigos que guardavam somente a URL. O campo "Usar URL" sempre abre vazio, mesmo quando o bloco ja tem uma imagem: ele nunca preenche com a URL interna do Supabase Storage, que nao deve ser exposta ao usuario. O editor de links separa titulo e lista de URLs no mesmo padrao visual dos demais campos.
 
@@ -660,13 +686,35 @@ Os dropdowns de tamanho e fundo devem seguir o mesmo padrao visual do filtro de 
 
 ### Conquistas sao coletadas sob demanda, nao por varredura (01/09/2026)
 
-A varredura agendada (`AgendadorColetas.coletarConquistasCatalogo`) foi **removida**. Ela percorria os 39 mil jogos com `steam_app_id` a cada 2 minutos; com a fila ja esgotada, gastava CPU e chamadas a Steam pra nao achar nada. **Nao readicionar** sem reavaliar espaco em disco: `game_achievements` e a maior tabela do banco (121 MB de 361 MB).
+A varredura agendada (`AgendadorColetas.coletarConquistasCatalogo`) foi **removida**. Ela percorria os 39 mil jogos com `steam_app_id` a cada 2 minutos; com a fila ja esgotada, gastava CPU e chamadas a Steam pra nao achar nada. `game_achievements` era a maior tabela do banco (121 MB de 361 MB) e completar a fila levaria o Supabase a ~590 MB, acima da cota de 0,5 GB do plano free.
+
+> **Nota de 12/09/2026:** o argumento de cota nao vale mais — o catalogo saiu do Supabase e mora num Postgres proprio na VM, sem cota (ver "Migracao do catalogo pra fora do Supabase"). Medido hoje na VM: banco do catalogo **443 MB**, `game_achievements` **118 MB**, disco em 17 GB de 48 GB (35%). Espaco deixou de ser o gargalo; readicionar a varredura hoje e uma decisao de CPU (**1 vCPU**, que ja caiu sob carga real) e de volume de chamadas a Steam. **Continua desligada** por enquanto: os dois gatilhos sob demanda abaixo cobrem os casos que importam. O comentario no `AgendadorColetas` ainda cita a cota do Supabase — e a razao historica, nao a atual.
 
 `ServicoSincronizacao.sincronizarRodadaConquistasCatalogo` continua existindo e o botao **"conquistas-catalogo" do painel de admin ainda dispara a varredura manualmente**, pra quando fizer sentido (por exemplo, depois de uma entrada grande de jogos novos no catalogo).
 
 **O gatilho e abrir a pagina do jogo**, via `GET /api/games/{slug}/conquistas`, que a pagina ja chamava. Nao e o botao "Atualizar precos": a aba "Conquistas" so aparece quando ja ha conquistas gravadas (`*ngIf="temConquistas"`), entao quem abre um jogo sem elas nao ve aba nenhuma e nao teria motivo pra imaginar que atualizar precos faria uma surgir — a coleta so aconteceria por acidente.
 
-**Cada jogo e consultado uma vez.** Quem garante e `games.achievements_checked_at`, carimbado inclusive quando a Steam devolve esquema vazio. Sem ele, os 25.750 jogos que a Steam confirmou nao ter conquista seriam reconsultados a cada visita.
+**Cada jogo e consultado uma vez.** Quem garante sao *duas* condicoes, ambas necessarias, em `listarPendentesConquistas`/`contarPendentesConquistas`/`precisaColetarConquistas`:
+
+1. `achievements_checked_at IS NULL` — o carimbo e gravado quando a Steam devolve **esquema vazio**, e e o que tira da fila os 25.750 jogos que a Steam confirmou nao ter conquista nenhuma.
+2. `NOT EXISTS (SELECT 1 FROM game_achievements WHERE game_id = g.id)` — e o que tira da fila o jogo coletado **com sucesso**, porque `RepositorioJogos.salvarConquistas` **nao** carimba `achievements_checked_at` no caminho de sucesso.
+
+**Nao remova a condicao 2 achando que e redundante.** Isso foi feito em 12/09/2026 e quebrou: 13.614 jogos que ja tinham conquistas voltaram a ser considerados pendentes, e como `precisaColetarConquistas` usa a mesma condicao, **toda visita a pagina de um jogo ja coletado disparava uma nova busca do esquema na Steam**. Revertido no mesmo dia.
+
+### Recoleta de jogo live-service (12/09/2026)
+
+Jogo que recebe conquista nova depois da nossa coleta (Dead by Daylight e afins) ficava desatualizado pra sempre: as duas condicoes acima, de proposito, nunca trazem de volta um jogo ja coletado. O sintoma aparecia no bloco **Conquistas recentes** do perfil — a conquista desbloqueada nao tinha linha em `game_achievements`, entao vinha sem icone e com nome derivado do `api_name` ("New achievement 334 3"). Medido na epoca: DBD tinha 303 conquistas no catalogo e 311 no esquema da Steam.
+
+O gatilho e `ServicoConexoesSteam.conquistasRecentes`: quando alguma conquista recente **nao tem linha no catalogo**, ele chama `ServicoConquistasSobDemanda.agendarPreenchimentoCompleto(appIds)`, que roda `ServicoCatalogo.preencherTudoDoJogo` — exatamente o que o botao de admin "Preencher tudo agora" faz (metadados Steam forcados + detalhes + conquistas). Refaz o jogo inteiro e nao so as conquistas porque quem ganhou conquista nova normalmente tambem tem capa/descricao/review novos.
+
+Nao passa pela fila de `listarPendentesConquistas` — aquela fila e so pra jogo que nunca foi coletado. Dois freios, porque o gatilho e leitura de perfil e repete muito:
+
+- a trava `emAndamento` (`Set<Long>` concorrente, compartilhada com a coleta por pagina de jogo), pra visitas simultaneas nao duplicarem o trabalho;
+- **intervalo minimo de 12h por jogo** (`INTERVALO_MINIMO`, cache em memoria por `steam_app_id`). Necessario porque conquista oculta/removida nao existe nem no esquema da Steam: sem o intervalo, jogo assim seria refeito em cada visita ao perfil, pra sempre. Reiniciar o backend limpa o cache e libera um preenchimento extra por jogo — barato e aceitavel.
+
+Roda no `executorColetaManual`, fora da requisicao, e nunca lanca: e efeito colateral de uma leitura.
+
+**Nome da conquista tambem tinha bug** (12/09/2026): `GetPlayerAchievements` ja e chamado com `l=brazilian` e devolve o nome oficial no campo `name`, mas `ClienteSteamWeb.buscarConquistas` ignorava o campo e derivava o titulo do `api_name` **sempre**. Conquista de `api_name` generico virava titulo lixo. Agora usa `name` e so cai no derivado se a Steam nao mandar. O titulo fica gravado em `steam_user_achievements.title` e e reescrito na proxima sincronizacao (o upsert tem `SET title = EXCLUDED.title`); na exibicao, `conquistasRecentes` prefere o `display_name` do catalogo, entao o preenchimento completo tambem conserta o nome sem depender de resync.
 
 **A coleta roda fora da requisicao** e a resposta traz `coletando: true` quando a lista veio vazia *porque a coleta acabou de ser disparada* — e nao porque o jogo nao tem conquistas. So nesse caso o frontend reconsulta, uma vez, 5s depois (`game-detail.ts`, `carregarConquistas`). Sem esse sinal a alternativa seria tentar de novo em todo jogo de lista vazia: uma requisicao desperdicada por visita, na maioria dos jogos.
 
@@ -730,6 +778,7 @@ Detalhes que nao sao obvios:
 
 - **Protecao de senha vazada desligada** no Supabase Auth — toggle no painel, cruza a senha escolhida com a base do HaveIBeenPwned. E do lado do Supabase, nao do codigo.
 - **Rate limiting nao cobre login**, porque o login nao passa pelo backend (ver acima).
+- **A pagina de perfil em branco no `ng serve`** (dev local): recarregar direto numa URL `/{handle}` (F5) renderiza so o esqueleto de loading, com o estado do componente correto e `cdr.detectChanges()` sem efeito — artefato de hidratacao do dev server. Reproduzido no HEAD sem nenhuma alteracao local, e **nao acontece em producao**. Pra testar local, entre por outra pagina e navegue clicando. Nao investigado a fundo por nao afetar producao.
 
 ## Estrutura de Codigo
 
@@ -761,9 +810,11 @@ frontend/src/
     components/          sidebar, topbar, cards e carrosseis
     guards/               auth.guard
     pages/                home, catalog, game-detail, profile, settings,
+                          public-profile, editar-blocos (/perfil/blocos),
                           favorites/monitorados, login, search e outras
     services/             API, Auth, Supabase, tema, preferencias,
-                          favoritos, favoritos pessoais, perfis e SEO
+                          favoritos, favoritos pessoais, perfis,
+                          perfil-blocos (metadados dos blocos) e SEO
 ```
 
 Convencao obrigatoria no backend: classes, pacotes, metodos e variaveis em portugues. Marcas e contratos JSON podem manter termos externos, por exemplo ITAD, Steam, Bearer, `coverUrl` e `minPrice`.
@@ -783,6 +834,8 @@ O objetivo e que quem abre um arquivo pela primeira vez entenda **por que** ele 
   - **decisao deliberada que parece bug** — sempre com o porque (ex: upsert em vez de DELETE+INSERT por causa do cascade; `prepareThreshold=0` por causa do pooler do Supabase).
 
 **Nao documentar:** getters/setters, `record`, DTOs, construtores triviais e CRUD direto cujo nome ja diz tudo (`remover(usuarioId, jogoId)`). Javadoc que so repete a assinatura e ruido e nao deve ser adicionado.
+
+**Clausula SQL sem comentario nao e clausula redundante.** Licao de 12/09/2026: o `NOT EXISTS` das consultas de pendencia de conquistas foi removido como "redundante" porque o carimbo `achievements_checked_at` parecia cobrir o caso. Nao cobria — o carimbo so e gravado quando o esquema da Steam vem vazio, entao era o `NOT EXISTS` que tirava da fila o jogo coletado com sucesso. Resultado: 13.614 jogos voltaram a ser considerados pendentes e cada visita a pagina de um jogo ja coletado refazia a busca do esquema na Steam. Antes de remover uma condicao que "parece" duplicada, cheque quem grava a outra ponta dela — e, ao restaurar, deixe o comentario explicando por que ela existe (foi o que foi feito).
 
 **Formato:**
 
@@ -812,12 +865,12 @@ No frontend a mesma regra vale com TSDoc (`/** ... */`), aplicada principalmente
 - Login Supabase, perfis compartilhaveis, avatar persistente, bio e privacidade geral.
 - Steam OpenID, biblioteca, horas, conquistas, favoritos pessoais e atividade recente.
 - Pagina admin de coleta protegida por UID.
-- Editor de perfil persistido com blocos (favoritos, biblioteca, atividade, platinados, texto, links, imagem), titulo editavel nos quatro paineis de dados, upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`, validado em desktop. O enquadramento de imagens de bloco aceita zoom por scroll/pinca e reposicionamento por arrasto direto na previa, em mouse ou toque.
+- Editor de perfil persistido com blocos (favoritos, biblioteca, atividade, platinados, wishlist Steam, conquistas recentes, mais jogados, texto, links, imagem), titulo editavel nos paineis de dados, upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`, validado em desktop. O enquadramento de imagens de bloco aceita zoom por scroll/pinca e reposicionamento por arrasto direto na previa, em mouse ou toque. Desde 11/09/2026 a organizacao dos blocos (ordem, visibilidade, tamanho, visualizacao, cores) vive na pagina `/perfil/blocos`, com previa real do rascunho; o modo inline ficou so pro ajuste de imagem.
 - Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada. No hover de um card da biblioteca, "Ver na Steam" sempre aparece e "Ver no catalogo" aparece quando o jogo tem uma entrada correspondente no nosso catalogo (cruzamento em lote por `steam_app_id`).
 - Instant Gaming como fonte extra de preco via scraping (sem API publica), com afiliacao propria — ver secao dedicada em "Coletas e Atualizacao de Catalogo".
 - Favoritos pessoais com ordenacao manual (arrastar e soltar, persistida) dentro do modo Organizar da aba.
 - Colecoes ("Minhas Listas"): modelo N:N, CRUD completo, aba propria no perfil e toggle de privacidade. Jogos sao adicionados por dois caminhos: o modal "Gerenciar jogos" na aba (biblioteca Steam completa + busca no catalogo) e o menu de listas na pagina do jogo (com "Criar nova lista" no topo).
-- Jogos platinados na faixa de estatisticas: contagem de jogos com 100% de conquistas, exibida so quando ha pelo menos um; respeita o toggle de conquistas. Ainda sem icone proprio (reusa `conquistas.png` em prateado).
+- Jogos platinados na faixa de estatisticas: contagem de jogos com 100% de conquistas, exibida so quando ha pelo menos um; respeita o toggle de conquistas. Usa `trofeu.png` (desde o redesign de 11/09/2026; antes reusava `conquistas.png` em prateado).
 - PostgreSQL, Auth/OAuth e Storage foram migrados para o Supabase em Sao Paulo. A Oracle usa o novo banco, executa o scheduler e expoe a API por Caddy/HTTPS. O frontend publicado na Vercel usa o mesmo projeto Supabase. O Render esta desligado; o Supabase antigo permanece somente como rollback temporario.
 - Validacao pos-migracao concluida: login Google/Discord, catalogo, perfil, avatares, blocos e scheduler confirmados funcionando na Oracle com o Supabase novo.
 - Xbox conectado via OpenXBL (OAuth "Xbox App", nao API key pessoal): login, biblioteca (progresso de conquistas e minutos jogados reais via endpoint de stats em lote) e desconexao. Sincronizacao e sempre upsert-only, nunca apaga jogos ja salvos. Biblioteca combinada Steam+Xbox na mesma lista/perfil, com filtro de plataforma na aba Biblioteca quando ha mais de uma conectada — ver secao "Steam e Xbox".
@@ -825,10 +878,13 @@ No frontend a mesma regra vale com TSDoc (`/** ... */`), aplicada principalmente
 - Favoritos e Platinados reordenaveis por arrastar direto no bloco do perfil, sem precisar entrar em "Gerenciar" — ver "Editor de perfil".
 - Filtro de lojas preferidas nas Configuracoes, aplicado automaticamente no Catalogo — ver "Home, catalogo e monitoramento".
 - Historico de preco (90 dias, grava so em mudanca) com grafico na pagina do jogo — ver "Historico de precos".
+- Perfil redesenhado (hero com banner, faixa de stats enxuta, abas com icone) + pagina `/perfil/blocos` com previa real do rascunho, toggle Ativo/Oculto funcionando de ponta a ponta e escolha de visualizacao (lista/cards) nos favoritos — ver "Redesign visual do perfil" e "Pagina Editar Blocos".
+- Favorito da Steam no perfil linkando pro nosso catalogo quando o jogo existe nele — ver "Perfil publico e privado".
+- Recoleta automatica de jogo live-service quando aparece conquista desbloqueada fora do catalogo, rodando o mesmo "Preencher tudo agora" do admin — ver "Recoleta de jogo live-service".
 
 ### Em validacao
 
-- O layout mobile do editor de perfil ainda nao e responsivo e nao esta sendo trabalhado por enquanto (prioridade e desktop).
+- O modo de edicao **inline** do perfil (hoje so o ajuste de imagem de bloco) continua sem layout mobile e nao esta sendo trabalhado — prioridade e desktop. A pagina `/perfil/blocos`, que substituiu ele na organizacao dos blocos, **e** responsiva (testada em 390×844: coluna unica, biblioteca e dica abaixo da lista, linha do bloco quebrando com o texto em linha propria).
 
 ### Planejado
 
@@ -836,6 +892,7 @@ No frontend a mesma regra vale com TSDoc (`/** ... */`), aplicada principalmente
    - Filtro por ano de lancamento/genero segue inviavel: `games` nao guarda esses campos. Dependeria de coluna nova + backfill via ITAD/Steam.
 2. Melhorar a pagina de administracao/observabilidade de coletas e erros ITAD/Steam.
 3. Xbox: reordenar platinados por arrastar ainda nao persiste pra itens Xbox (so Steam). Favoritar/link externo tambem continuam Steam-only nos cards de biblioteca.
+   - Perfil/editor de blocos: mover o recorte de imagem pro editor novo e apagar o modo inline; avisar de rascunho nao salvo ao sair de `/perfil/blocos` (`CanDeactivate`); permitir arrastar blocos direto na previa; trazer gradiente e cor global pro menu `⋮`; desenhar a visualizacao em lista pros outros blocos de jogos (`TIPOS_COM_VISUALIZACAO`).
 4. Integrar Eneba depois de aprovar afiliacao. Instant Gaming ja implementada por scraping (ver secao propria) — melhorar cobertura da varredura (o catalogo pode ter jogos com id acima do que ja foi varrido) e considerar guardar `regular_price` se a pagina deles passar a expor desconto de forma confiavel.
 5. Melhorar observabilidade operacional da Oracle: uso de memoria, erros do scheduler e status da API.
 6. Depois de alguns dias de estabilidade, exportar um ultimo backup e excluir o projeto Supabase antigo.
@@ -844,7 +901,7 @@ No frontend a mesma regra vale com TSDoc (`/** ... */`), aplicada principalmente
 
 1. Conferir `git status --short` e nunca reverter mudancas do usuario.
 2. Para frontend: `cd frontend; npm.cmd run build`.
-3. Para backend: `cd backend-java; mvn -q -DskipTests package` quando Maven estiver disponivel.
+3. Para backend: `cd backend-java; mvn -o test` (63 testes hoje). Nao ha `mvn` no PATH desta maquina nem `mvnw` no repo, mas existe um Maven baixado pelo wrapper em `%USERPROFILE%\.m2\wrapper\dists\apache-maven-3.9.11-bin\<hash>\apache-maven-3.9.11\bin\mvn.cmd` — da pra chamar por esse caminho e rodar o build/test localmente, sem depender so do CI.
 4. Conferir se uma migration nova precisa ser aplicada no Supabase antes do deploy.
 5. Conferir CORS quando uma rota `PUT`, `PATCH` ou `POST` nova for adicionada.
 6. Validar em producao: catalogo, detalhes, monitorados, perfil proprio, perfil anonimo e conexao Steam/Xbox quando afetados.
