@@ -8,16 +8,13 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth';
 import { ColecaoPerfil, ConquistaRecente, PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
-import { TIPOS_UNICOS, ajusteImagemDoBloco, blocosPadrao, novoBloco, visualizacaoDoBloco } from '../../services/perfil-blocos';
+import { TIPOS_COM_VISUALIZACAO, TIPOS_UNICOS, ajusteImagemDoBloco, blocosPadrao, novoBloco, visualizacaoDoBloco } from '../../services/perfil-blocos';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
 import { ConexoesSteamService, JogoBibliotecaSteam } from '../../services/conexoes-steam';
 import { GameService, GameSummary } from '../../services/game';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { supabase } from '../../services/supabase';
 import { SeoService } from '../../services/seo';
-
-/** Campos do bloco que a barra de edicao inline expoe num select proprio. */
-type CampoEditor = 'tamanho' | 'tipoFundo' | 'ajusteImagem';
 
 @Component({
   selector: 'app-public-profile',
@@ -89,8 +86,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   private bannerFile: File | null = null;
   private bannerDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
   private bannerPointerId: number | null = null;
-  editorSelectOpen: { blockId: string; campo: CampoEditor } | null = null;
-  textColorMenuBlockId: string | null = null;
+  blockMenuAberto: string | null = null;
   globalColorMenuOpen = false;
   addBlockMenuOpen = false;
   globalBackgroundColor = '#121a2a';
@@ -246,57 +242,44 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
-    if (!(event.target as HTMLElement).closest('.editor-custom-select')) {
-      this.editorSelectOpen = null;
-      this.textColorMenuBlockId = null;
+    const alvo = event.target as HTMLElement;
+    if (!alvo.closest('.editor-custom-select')) {
       this.globalColorMenuOpen = false;
       this.addBlockMenuOpen = false;
     }
+    // O menu do bloco fecha ao clicar fora dele (o proprio menu para o clique no template).
+    if (!alvo.closest('.block-menu-wrap')) this.blockMenuAberto = null;
   }
 
   @HostListener('document:keydown.escape')
   closeEditorSelects() {
-    this.editorSelectOpen = null;
-    this.textColorMenuBlockId = null;
     this.globalColorMenuOpen = false;
     this.addBlockMenuOpen = false;
+    this.blockMenuAberto = null;
   }
 
-  isEditorSelectOpen(block: PerfilBloco, campo: CampoEditor) {
-    return this.editorSelectOpen?.blockId === block.id && this.editorSelectOpen.campo === campo;
+  /**
+   * Menu "..." do bloco no editor inline. Substituiu a barra de controles que ficava empilhada
+   * acima do bloco — mesma organizacao do menu da pagina /perfil/blocos.
+   */
+  isBlockMenuOpen(block: PerfilBloco) {
+    return this.blockMenuAberto === block.id;
   }
 
-  toggleEditorSelect(event: MouseEvent, block: PerfilBloco, campo: CampoEditor) {
+  toggleBlockMenu(event: MouseEvent, block: PerfilBloco) {
     event.stopPropagation();
-    this.editorSelectOpen = this.isEditorSelectOpen(block, campo) ? null : { blockId: block.id, campo };
-    this.textColorMenuBlockId = null;
+    this.blockMenuAberto = this.isBlockMenuOpen(block) ? null : block.id;
   }
 
-  selectEditorOption(block: PerfilBloco, campo: CampoEditor, value: string) {
-    if (campo === 'tamanho') block.tamanho = value as PerfilBloco['tamanho'];
-    else if (campo === 'ajusteImagem') block.visualizacao = value as PerfilBloco['visualizacao'];
-    else {
-      block.tipoFundo = value as PerfilBloco['tipoFundo'];
-      if (value === 'cor' && !block.valorFundo?.match(/^#[0-9a-fA-F]{6}$/)) block.valorFundo = '#121a2a';
-      if (value === 'gradiente' && !block.valorFundo?.startsWith('linear-gradient')) block.valorFundo = 'linear-gradient(135deg, #0ea5e9, #312e81)';
-    }
-    this.editorSelectOpen = null;
+  fecharMenuDoBloco() {
+    this.blockMenuAberto = null;
   }
 
-  isTextColorMenuOpen(block: PerfilBloco) {
-    return this.textColorMenuBlockId === block.id;
-  }
-
-  toggleTextColorMenu(event: MouseEvent, block: PerfilBloco) {
-    event.stopPropagation();
-    this.textColorMenuBlockId = this.isTextColorMenuOpen(block) ? null : block.id;
-    this.editorSelectOpen = { blockId: block.id, campo: 'tipoFundo' };
-  }
-
-  selectedEditorOption(block: PerfilBloco, campo: CampoEditor) {
-    const options = campo === 'tamanho' ? this.sizeOptions : campo === 'ajusteImagem' ? this.ajusteImagemOptions : this.backgroundOptions;
-    const value = campo === 'tamanho' ? block.tamanho : campo === 'ajusteImagem' ? this.ajusteImagem(block) : block.tipoFundo;
-    return options.find(option => option.value === value)?.label || '';
+  /** Troca o tipo de fundo, semeando uma cor/gradiente inicial pra escolha nao cair em vazio. */
+  definirFundo(block: PerfilBloco, value: string) {
+    block.tipoFundo = value as PerfilBloco['tipoFundo'];
+    if (value === 'cor' && !block.valorFundo?.match(/^#[0-9a-fA-F]{6}$/)) block.valorFundo = '#121a2a';
+    if (value === 'gradiente' && !block.valorFundo?.startsWith('linear-gradient')) block.valorFundo = 'linear-gradient(135deg, #0ea5e9, #312e81)';
   }
 
   ajusteImagem(block: PerfilBloco): 'proporcao' | 'redimensionar' {
@@ -337,9 +320,8 @@ export class PublicProfile implements OnInit, OnDestroy {
   toggleAddBlockMenu(event: MouseEvent) {
     event.stopPropagation();
     this.addBlockMenuOpen = !this.addBlockMenuOpen;
-    this.editorSelectOpen = null;
-    this.textColorMenuBlockId = null;
     this.globalColorMenuOpen = false;
+    this.blockMenuAberto = null;
   }
 
   // Bloqueia de novo o que ja foi adicionado (favoritos/biblioteca/atividade/platinados/wishlist
@@ -362,8 +344,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     event.stopPropagation();
     this.globalColorMenuOpen = !this.globalColorMenuOpen;
     this.addBlockMenuOpen = false;
-    this.editorSelectOpen = null;
-    this.textColorMenuBlockId = null;
+    this.blockMenuAberto = null;
   }
 
   // Aplica de uma vez em todos os blocos do rascunho; nao fica salvo como preferencia global,
@@ -1075,6 +1056,11 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   visualizacaoBloco(block: PerfilBloco): 'cards' | 'lista' {
     return visualizacaoDoBloco(block);
+  }
+
+  /** Blocos de jogos que tem lista compacta e cards desenhados (ver TIPOS_COM_VISUALIZACAO). */
+  temVisualizacao(block: PerfilBloco): boolean {
+    return TIPOS_COM_VISUALIZACAO.includes(block.tipo);
   }
 
   // "Mais jogados" nao tem dado proprio: e a mesma biblioteca (Steam + Xbox) ordenada por horas.

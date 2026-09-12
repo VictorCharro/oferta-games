@@ -273,103 +273,112 @@
       class="panel profile-block"
       [class]="'size-' + block.tamanho"
       [class.custom-text-color]="!!block.corTexto"
-      [class.editor-open]="isEditorSelectOpen(block, 'tamanho') || isEditorSelectOpen(block, 'tipoFundo') || isTextColorMenuOpen(block)"
+      [class.editor-open]="isBlockMenuOpen(block)"
       [ngStyle]="blockStyle(block)"
       cdkDrag
       [cdkDragDisabled]="!editingLayout"
     >
+      <!-- Barra do bloco em modo de edicao: so a alca de arrastar e um botao de tres pontinhos.
+           Antes todos os controles ficavam empilhados aqui em cima do bloco (selects, seletores
+           de cor, botoes de imagem e, em texto/links, um formulario inteiro) - ocupava mais
+           altura que o proprio conteudo do bloco. Agora seguem a mesma organizacao do editor
+           novo (/perfil/blocos): tudo dentro do menu, em secoes. -->
       <div *ngIf="editingLayout" class="block-editor">
         <span cdkDragHandle aria-label="Arrastar bloco" title="Arrastar bloco">↕</span>
-        <div class="editor-custom-select" [class.open]="isEditorSelectOpen(block, 'tamanho')">
-          <button type="button" class="editor-select-trigger" (click)="toggleEditorSelect($event, block, 'tamanho')" [attr.aria-expanded]="isEditorSelectOpen(block, 'tamanho')">
-            <span>{{ selectedEditorOption(block, 'tamanho') }}</span><span class="select-chevron" aria-hidden="true"></span>
-          </button>
-          <div *ngIf="isEditorSelectOpen(block, 'tamanho')" class="editor-select-menu" role="listbox" aria-label="Tamanho do bloco">
-            <button *ngFor="let option of sizeOptions" type="button" [class.selected]="block.tamanho === option.value" (click)="selectEditorOption(block, 'tamanho', option.value)">
-              <span>{{ option.label }}</span><span *ngIf="block.tamanho === option.value" class="option-check" aria-hidden="true">✓</span>
+        <div class="block-menu-wrap">
+          <button type="button" class="block-menu-btn" (click)="toggleBlockMenu($event, block)" [attr.aria-expanded]="isBlockMenuOpen(block)" aria-label="Opções do bloco" title="Opções do bloco">⋮</button>
+          <div *ngIf="isBlockMenuOpen(block)" class="block-menu" (click)="$event.stopPropagation()">
+            <p class="block-menu-titulo">Tamanho</p>
+            <button *ngFor="let option of sizeOptions" type="button" class="block-menu-opcao" [class.selecionada]="block.tamanho === option.value" (click)="block.tamanho = $any(option.value)">
+              {{ option.label }}
             </button>
-          </div>
-        </div>
-        <!-- Ajuste da imagem: so faz sentido no bloco de imagem, entao entra ao lado de tamanho e
-             fundo apenas nele. Mesmo componente .editor-custom-select dos outros dois. -->
-        <div *ngIf="block.tipo === 'imagem'" class="editor-custom-select" [class.open]="isEditorSelectOpen(block, 'ajusteImagem')">
-          <button type="button" class="editor-select-trigger" (click)="toggleEditorSelect($event, block, 'ajusteImagem')" [attr.aria-expanded]="isEditorSelectOpen(block, 'ajusteImagem')">
-            <span>{{ selectedEditorOption(block, 'ajusteImagem') }}</span><span class="select-chevron" aria-hidden="true"></span>
-          </button>
-          <div *ngIf="isEditorSelectOpen(block, 'ajusteImagem')" class="editor-select-menu ajuste-imagem-menu" role="listbox" aria-label="Ajuste da imagem">
-            <p class="editor-menu-titulo">Ajuste da imagem</p>
-            <button *ngFor="let option of ajusteImagemOptions" type="button" [class.selected]="ajusteImagem(block) === option.value" (click)="selectEditorOption(block, 'ajusteImagem', option.value)">
-              <span class="ajuste-opcao">
-                <span>{{ option.label }}</span>
-                <small>{{ option.value === 'proporcao' ? 'mostra a imagem inteira; pode sobrar espaço' : 'recorta para preencher o bloco' }}</small>
-              </span>
-              <span *ngIf="ajusteImagem(block) === option.value" class="option-check" aria-hidden="true">✓</span>
-            </button>
-          </div>
-        </div>
-        <div class="editor-custom-select" [class.open]="isEditorSelectOpen(block, 'tipoFundo')">
-          <button type="button" class="editor-select-trigger" (click)="toggleEditorSelect($event, block, 'tipoFundo')" [attr.aria-expanded]="isEditorSelectOpen(block, 'tipoFundo')">
-            <span>{{ selectedEditorOption(block, 'tipoFundo') }}</span><span class="select-chevron" aria-hidden="true"></span>
-          </button>
-          <div *ngIf="isEditorSelectOpen(block, 'tipoFundo')" class="editor-select-menu" role="listbox" aria-label="Fundo do bloco">
-            <button *ngFor="let option of backgroundOptions" type="button" [class.selected]="block.tipoFundo === option.value" (click)="selectEditorOption(block, 'tipoFundo', option.value)">
-              <span>{{ option.label }}</span><span *ngIf="block.tipoFundo === option.value" class="option-check" aria-hidden="true">✓</span>
-            </button>
-            <div class="editor-menu-divider"></div>
-            <button type="button" class="text-color-option" [class.text-open]="isTextColorMenuOpen(block)" (click)="toggleTextColorMenu($event, block)" [attr.aria-expanded]="isTextColorMenuOpen(block)">
-              <span>Texto</span><span class="color-preview" [style.background]="block.corTexto || '#f5f7fb'"></span><span class="select-chevron" aria-hidden="true"></span>
-            </button>
-            <div *ngIf="isTextColorMenuOpen(block)" class="text-color-inline" role="group" aria-label="Cor do texto">
-              <div class="color-control">
-                <input type="color" [ngModel]="block.corTexto || '#f5f7fb'" (ngModelChange)="block.corTexto = $event" aria-label="Selecionar cor do texto" />
-                <input type="text" [ngModel]="block.corTexto || ''" (ngModelChange)="setTextColor(block, $event)" maxlength="7" pattern="#[0-9a-fA-F]{6}" placeholder="#F5F7FB" aria-label="Cor do texto em hexadecimal" />
+
+            <ng-container *ngIf="temVisualizacao(block)">
+              <p class="block-menu-titulo">Visualização</p>
+              <button type="button" class="block-menu-opcao" [class.selecionada]="visualizacaoBloco(block) === 'lista'" (click)="block.visualizacao = 'lista'">Lista compacta</button>
+              <button type="button" class="block-menu-opcao" [class.selecionada]="visualizacaoBloco(block) === 'cards'" (click)="block.visualizacao = 'cards'">Cards com capa</button>
+            </ng-container>
+
+            <ng-container *ngIf="block.tipo === 'imagem'">
+              <p class="block-menu-titulo">Ajuste da imagem</p>
+              <button *ngFor="let option of ajusteImagemOptions" type="button" class="block-menu-opcao" [class.selecionada]="ajusteImagem(block) === option.value" (click)="block.visualizacao = $any(option.value)">
+                <span class="opcao-texto">
+                  <span>{{ option.label }}</span>
+                  <small>{{ option.value === 'proporcao' ? 'mostra a imagem inteira; pode sobrar espaço' : 'recorta para preencher o bloco' }}</small>
+                </span>
+              </button>
+
+              <p class="block-menu-titulo">Imagem</p>
+              <input #contentImageInput class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" (change)="onBlockImageSelected($event, block)" />
+              <button type="button" class="block-menu-opcao" (click)="contentImageInput.click()">{{ blockImageUrl(block) ? 'Trocar imagem' : 'Escolher imagem' }}</button>
+              <button type="button" class="block-menu-opcao" (click)="toggleBlockImageUrlInput(block, 'conteudo')">Usar URL</button>
+              <div *ngIf="isBlockImageUrlInputOpen(block, 'conteudo')" class="block-menu-campo-url">
+                <input [(ngModel)]="blockImageUrlDraft" placeholder="https://exemplo.com/imagem.jpg" aria-label="URL da imagem" />
+                <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'conteudo')">Continuar</button>
               </div>
-              <button *ngIf="block.corTexto" type="button" class="reset-text-color" (click)="block.corTexto = null">Texto padrão</button>
+              <button *ngIf="blockImageUrl(block)" type="button" class="block-menu-opcao" (click)="startBlockImageEdit(block); fecharMenuDoBloco()">Ajustar enquadramento</button>
+            </ng-container>
+
+            <ng-container *ngIf="block.tipo === 'texto' || block.tipo === 'links'">
+              <p class="block-menu-titulo">Conteúdo</p>
+              <label class="block-menu-campo">
+                <span>Título <small>{{ (block.titulo || '').length }}/{{ maxTitleLength(block) }}</small></span>
+                <input [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Título" />
+              </label>
+              <label class="block-menu-campo">
+                <span>{{ block.tipo === 'links' ? 'Links' : 'Texto' }} <small>{{ (block.conteudo || '').length }}/{{ maxContentLength(block) }}</small></span>
+                <textarea
+                  rows="4"
+                  [(ngModel)]="block.conteudo"
+                  [maxlength]="maxContentLength(block)"
+                  [placeholder]="block.tipo === 'links' ? 'Nome - exemplo.com (uma linha por link)' : 'Conteúdo'"
+                ></textarea>
+              </label>
+              <p *ngIf="block.tipo === 'links'" class="block-menu-dica">Um link por linha: nome - endereco.com</p>
+            </ng-container>
+
+            <p class="block-menu-titulo">Fundo</p>
+            <button *ngFor="let option of backgroundOptions" type="button" class="block-menu-opcao" [class.selecionada]="block.tipoFundo === option.value" (click)="definirFundo(block, option.value)">
+              {{ option.label }}
+            </button>
+
+            <div *ngIf="block.tipoFundo === 'cor'" class="block-menu-cor">
+              <span>Cor do fundo</span>
+              <input type="color" [ngModel]="block.valorFundo || '#121a2a'" (ngModelChange)="block.valorFundo = $event" aria-label="Selecionar cor de fundo" />
             </div>
+            <ng-container *ngIf="block.tipoFundo === 'gradiente'">
+              <div class="block-menu-cor">
+                <span>Cor inicial</span>
+                <input type="color" [ngModel]="gradientColors(block)[0]" (ngModelChange)="setGradientColor(block, 0, $event)" aria-label="Cor inicial do gradiente" />
+              </div>
+              <div class="block-menu-cor">
+                <span>Cor final</span>
+                <input type="color" [ngModel]="gradientColors(block)[1]" (ngModelChange)="setGradientColor(block, 1, $event)" aria-label="Cor final do gradiente" />
+              </div>
+            </ng-container>
+            <ng-container *ngIf="block.tipoFundo === 'imagem'">
+              <input #backgroundImageInput class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" (change)="onBlockImageSelected($event, block, 'fundo')" />
+              <button type="button" class="block-menu-opcao" (click)="backgroundImageInput.click()">{{ block.valorFundo ? 'Trocar imagem de fundo' : 'Escolher imagem de fundo' }}</button>
+              <button type="button" class="block-menu-opcao" (click)="toggleBlockImageUrlInput(block, 'fundo')">Usar URL</button>
+              <div *ngIf="isBlockImageUrlInputOpen(block, 'fundo')" class="block-menu-campo-url">
+                <input [(ngModel)]="blockImageUrlDraft" placeholder="https://exemplo.com/imagem.jpg" aria-label="URL da imagem de fundo" />
+                <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'fundo')">Usar URL</button>
+              </div>
+            </ng-container>
+
+            <div class="block-menu-cor">
+              <span>Cor do texto</span>
+              <input type="color" [ngModel]="block.corTexto || '#f5f7fb'" (ngModelChange)="setTextColor(block, $event)" aria-label="Cor do texto do bloco" />
+            </div>
+            <button type="button" class="block-menu-opcao" (click)="block.tipoFundo = 'padrao'; block.valorFundo = null; block.corTexto = null">Voltar ao padrão</button>
+
+            <button type="button" class="block-menu-opcao perigo" (click)="removeBlock(i); fecharMenuDoBloco()">Remover bloco</button>
           </div>
         </div>
-        <div *ngIf="block.tipoFundo === 'cor'" class="color-control">
-          <input type="color" [ngModel]="block.valorFundo || '#121a2a'" (ngModelChange)="block.valorFundo = $event" aria-label="Selecionar cor de fundo" />
-          <input type="text" [(ngModel)]="block.valorFundo" maxlength="7" pattern="#[0-9a-fA-F]{6}" placeholder="#121A2A" aria-label="Cor de fundo em hexadecimal" />
-        </div>
-        <div *ngIf="block.tipoFundo === 'gradiente'" class="gradient-color-control">
-          <label><span>Cor inicial</span><input type="color" [ngModel]="gradientColors(block)[0]" (ngModelChange)="setGradientColor(block, 0, $event)" aria-label="Cor inicial do gradiente" /></label>
-          <span class="gradient-arrow" aria-hidden="true">&#8594;</span>
-          <label><span>Cor final</span><input type="color" [ngModel]="gradientColors(block)[1]" (ngModelChange)="setGradientColor(block, 1, $event)" aria-label="Cor final do gradiente" /></label>
-        </div>
-        <ng-container *ngIf="block.tipoFundo === 'imagem'">
-          <input #backgroundImageInput class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" (change)="onBlockImageSelected($event, block, 'fundo')" />
-          <button type="button" class="image-picker-button" (click)="backgroundImageInput.click()">{{ block.valorFundo ? 'Trocar imagem de fundo' : 'Escolher imagem de fundo' }}</button>
-          <button type="button" class="image-picker-button" (click)="toggleBlockImageUrlInput(block, 'fundo')">Usar URL</button>
-          <div *ngIf="isBlockImageUrlInputOpen(block, 'fundo')" class="block-image-url-input">
-            <input [(ngModel)]="blockImageUrlDraft" placeholder="https://exemplo.com/imagem.jpg" aria-label="URL da imagem de fundo" />
-            <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'fundo')">Usar URL</button>
-          </div>
-        </ng-container>
-        <div *ngIf="block.tipo === 'texto' || block.tipo === 'links'" class="block-content-fields">
-          <label>
-            <span>Titulo do bloco <small>{{ (block.titulo || '').length }}/{{ maxTitleLength(block) }}</small></span>
-            <input [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Titulo" />
-          </label>
-          <label>
-            <span>{{ block.tipo === 'links' ? 'Links' : 'Conteudo' }} <small>{{ (block.conteudo || '').length }}/{{ maxContentLength(block) }}</small></span>
-            <textarea
-              [(ngModel)]="block.conteudo"
-              [maxlength]="maxContentLength(block)"
-              [placeholder]="block.tipo === 'links' ? 'Nome - exemplo.com (uma linha por link)' : 'Conteudo'"
-            ></textarea>
-          </label>
-          <small *ngIf="block.tipo === 'links'">Use um link por linha: nome - endereco.com</small>
-        </div>
+
+        <!-- Fora do menu de proposito: o recorte e um modal e precisa continuar aberto depois
+             que o menu fecha. -->
         <ng-container *ngIf="block.tipo === 'imagem'">
-          <input #contentImageInput class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" (change)="onBlockImageSelected($event, block)" />
-          <button type="button" class="image-picker-button" (click)="contentImageInput.click()">{{ blockImageUrl(block) ? 'Trocar imagem' : 'Escolher imagem' }}</button>
-          <button type="button" class="image-picker-button" (click)="toggleBlockImageUrlInput(block, 'conteudo')">Usar URL</button>
-          <div *ngIf="isBlockImageUrlInputOpen(block, 'conteudo')" class="block-image-url-input">
-            <input [(ngModel)]="blockImageUrlDraft" placeholder="https://exemplo.com/imagem.jpg" aria-label="URL da imagem" />
-            <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'conteudo')">Continuar</button>
-          </div>
-          <button *ngIf="blockImageUrl(block)" type="button" class="image-picker-button" (click)="startBlockImageEdit(block)">Ajustar enquadramento</button>
           <div *ngIf="isEditingBlockImage(block)" class="block-image-crop-backdrop" (click)="cancelBlockImageEdit()">
             <div class="block-image-crop-editor" (click)="$event.stopPropagation()">
               <h3>Ajustar imagem</h3>
@@ -393,7 +402,6 @@
             </div>
           </div>
         </ng-container>
-        <button type="button" (click)="removeBlock(i)">Remover</button>
       </div>
       <ng-container [ngSwitch]="block.tipo"
         ><ng-container *ngSwitchCase="'favoritos'"
