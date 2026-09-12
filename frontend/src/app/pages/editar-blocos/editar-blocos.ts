@@ -59,10 +59,12 @@ export class EditarBlocos implements OnInit {
         return;
       }
       this.handle = proprio.handle;
-      const perfil = await this.perfis.publico(proprio.handle);
+      // publico() so alimenta as regras de "tem dado pra mostrar?" da biblioteca de blocos; os
+      // blocos vem de meusBlocos(), que traz tambem os ocultos (o publico filtra eles).
+      const [perfil, meus] = await Promise.all([this.perfis.publico(proprio.handle), this.perfis.meusBlocos()]);
       this.perfil = perfil;
       // Mesma limpeza do perfil: tipos aposentados saem, corTexto vira null explicito.
-      const salvos = (perfil.blocos || [])
+      const salvos = (meus || [])
         .filter(bloco => !['resumo_favoritos', 'horas', 'conquistas'].includes(bloco.tipo as string))
         .map(bloco => ({ ...bloco, corTexto: bloco.corTexto ?? null, visualizacao: bloco.visualizacao ?? null }));
       this.blocos = salvos.length ? salvos : blocosPadrao();

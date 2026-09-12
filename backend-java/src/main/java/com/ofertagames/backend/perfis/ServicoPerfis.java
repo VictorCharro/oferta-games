@@ -164,6 +164,10 @@ class ServicoPerfis {
 
   private List<RepositorioBlocosPerfil.BlocoPerfil> blocosPublicos(RepositorioPerfis.Perfil perfil, boolean dono) {
     return blocos.listar(perfil.usuarioId()).stream()
+        // Bloco marcado como Oculto no editor sai do perfil pra TODO MUNDO, inclusive o dono
+        // (mesma regra do toggle da wishlist): o dono precisa ver o perfil como os outros veem.
+        // O editor nao usa este metodo - ele le GET /me/blocos, que traz os ocultos tambem.
+        .filter(RepositorioBlocosPerfil.BlocoPerfil::visivel)
         .filter(bloco -> !Set.of("resumo_favoritos", "horas", "conquistas").contains(bloco.tipo()))
         .filter(bloco -> dono || !"favoritos".equals(bloco.tipo()) || perfil.mostrarFavoritos())
         .filter(bloco -> dono || !"biblioteca".equals(bloco.tipo()) || perfil.mostrarBiblioteca())

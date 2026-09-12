@@ -228,7 +228,9 @@ export class PublicProfile implements OnInit, OnDestroy {
     // No preview os blocos vem do rascunho do editor, e os ocultos somem (e o que o visitante ve).
     if (this.previewBlocos) return [...this.previewBlocos].filter(block => block.visivel).sort((a, b) => a.posicao - b.posicao);
     const blocks = this.editingLayout ? this.layoutDraft : this.profile?.blocos || [];
-    return [...blocks].sort((a, b) => a.posicao - b.posicao);
+    // O backend ja filtra os ocultos em blocosPublicos; filtra aqui tambem pra nao depender do
+    // servidor (e porque no modo de edicao inline os blocos vem do rascunho, nao da API).
+    return [...blocks].filter(block => block.visivel).sort((a, b) => a.posicao - b.posicao);
   }
 
   @HostListener('document:click', ['$event'])

@@ -27,6 +27,10 @@ export class PerfisService {
   async atualizarAvatar(avatarUrl: string, zoom: number, posicaoX: number, posicaoY: number): Promise<void> { await firstValueFrom(this.http.put(`${this.api}/me/avatar`, { avatarUrl, zoom, posicaoX, posicaoY }, { headers: await this.headers() })); }
   async atualizarBanner(bannerUrl: string, zoom: number, posicaoX: number, posicaoY: number): Promise<void> { await firstValueFrom(this.http.put(`${this.api}/me/banner`, { bannerUrl, zoom, posicaoX, posicaoY }, { headers: await this.headers() })); }
   async atualizarMostrarWishlistSteam(mostrar: boolean): Promise<void> { await firstValueFrom(this.http.put(`${this.api}/me/wishlist-steam`, { mostrar }, { headers: await this.headers() })); }
+  // Fonte do editor de blocos: devolve TODOS os blocos do dono, inclusive os ocultos - o payload
+  // publico (`publico()`) filtra os invisiveis, e usar ele no editor faria o proximo "Salvar"
+  // apagar de vez o bloco que o dono so quis esconder.
+  async meusBlocos(): Promise<PerfilBloco[]> { return firstValueFrom(this.http.get<PerfilBloco[]>(`${this.api}/me/blocos`, { headers: await this.headers() })); }
   async salvarBlocos(blocos: PerfilBloco[]): Promise<void> { await firstValueFrom(this.http.put(`${this.api}/me/blocos`, blocos, { headers: await this.headers() })); }
   async publico(handle: string): Promise<PerfilPublico> { return firstValueFrom(this.http.get<PerfilPublico>(`${this.api}/${encodeURIComponent(handle)}`, { headers: await this.optionalHeaders() })); }
   async atualizarPublico(handle: string): Promise<{ status: 'agendada' | 'aguarde' | 'sem_conexao' }> { return firstValueFrom(this.http.post<{ status: 'agendada' | 'aguarde' | 'sem_conexao' }>(`${this.api}/${encodeURIComponent(handle)}/atualizar`, {}, { headers: await this.optionalHeaders() })); }
