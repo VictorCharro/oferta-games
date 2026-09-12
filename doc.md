@@ -68,6 +68,24 @@ O workflow `.github/workflows/deploy-oracle.yml` atualiza o backend na VM por SS
 
 O script conecta na VM, atualiza o `master`, recria somente o container do backend e valida o health check. A chave da VM usada para baixar o repositorio continua somente leitura.
 
+### Deploy sem derrubar o site (12/09/2026)
+
+Sintoma relatado: depois de publicar, o site demorava muito pra voltar e as vezes nao carregava. **Cinco causas independentes**, todas achadas medindo a VM — e as duas ultimas so apareceram porque o resultado real foi conferido em vez de confiar no "deploy verde".
+
+1. **Todo push recriava o container do backend**, mesmo commit so de frontend (`docker compose up -d --build` recria sempre; provado por `--dry-run`, que mostra `catalogo-db`/`caddy` como `Running` e `backend` como `Recreate`). Como o site e SSR, a Vercel precisa da API pra renderizar: API fora = **pagina em branco**, nao "dado faltando". Agora a VM decide pelo que mudou, e `build` + `up -d` no lugar de `up -d --build`.
+2. **A referencia do "ja publicado" era o checkout, nao a imagem.** Um deploy que morre no meio deixa a VM no commit novo com a imagem velha; o proximo comparava HEAD-antes com HEAD-depois, via "backend nao mudou" e pulava. Agora existe o marcador `.deployed-sha`, gravado **so no fim** de um deploy bem sucedido (ignorado no git, vive so na VM).
+3. **Trava de coleta orfa.** Deploy no meio de uma coleta deixava `sync_locks` preso ate o lease de 30 min expirar, e **toda** coleta era pulada nesse intervalo (caso real: trava tomada as 20:33:43, container recriado 35s depois, precos/steam/detalhes pulados). `ServicoExecucaoColeta` ganhou `@PreDestroy` que devolve a trava — so se for esta instancia que a tomou, porque liberar a de outro processo permitiria duas coletas simultaneas.
+4. **O script do deploy era engolido pelo proprio stdin.** Ele ia pra VM por `bash -s` e o `docker compose exec -T` do reload do Caddy consumiu o resto: o deploy parava ali, nunca publicava o backend e **saia com sucesso**. Agora vai como arquivo pra `/tmp` e roda de la.
+5. **`CMD ["sh","-c","java ..."]` deixava o shell como PID 1**, e o shell nao repassa SIGTERM: o Java so morria no SIGKILL. Ou seja, `server.shutdown: graceful`, `stop_grace_period` e o `@PreDestroy` eram **configuracao inerte**. O log denunciava (`INFO 8 ---` = java no PID 8). Com `exec` no CMD o java vira PID 1; confirmado depois: `INFO 1 ---` e "Commencing graceful shutdown" / "Graceful shutdown complete" no log.
+
+**O que o deploy faz hoje** (`.github/workflows/deploy-oracle.yml`): compara `.deployed-sha` com o commit novo e toma **duas decisoes separadas** — recriar o backend (mudou `backend-java/` ou `compose.yml`, ou `workflow_dispatch`, ou container fora do ar) e mexer no Caddy (mudou o `Caddyfile`). No fim, um passo confere a API pela URL publica (ate 100s), validando Caddy + TLS + backend de uma vez; era o que teria pego a causa 4 na hora.
+
+**Caddyfile e recriado, nao recarregado.** Ele entra por bind mount de *arquivo*, que aponta pro inode; `git pull` escreve um arquivo novo e renomeia, entao o container continua vendo o antigo e um `caddy reload` rele o arquivo velho (aconteceu: host com a config nova, container sem). Recriar custa ~1s e so acontece quando o Caddyfile muda; os certificados ficam no volume `caddy_data`.
+
+**O proxy segura a requisicao durante o restart.** `lb_try_duration 25s` no `reverse_proxy`: enquanto o backend sobe, o Caddy espera em vez de devolver 502 na hora. So vale pra falha de **conexao**, quando nada foi enviado ainda, entao POST/PUT nao correm risco de rodar duas vezes. Medido num restart controlado: **nenhuma requisicao falhou**, e o pior caso foi uma que levou **11,7s** e respondeu 200 — antes, aquela janela virava 502 e, com SSR, pagina em branco.
+
+**Delays iniciais do scheduler contam a partir do boot**, entao cada deploy reiniciava esse relogio e jogava a coleta de precos (a mais pesada) 60s depois de subir, com a JVM fria, no unico vCPU — load chegou a **10,68**. Escalonados pra 4min (precos), 8min (steam) e 11min (detalhes).
+
 ### Migracao do catalogo pra fora do Supabase (10/09/2026)
 
 O banco Supabase free (cota de 500MB) bateu 89% de uso (442MB) mesmo depois da limpeza de 01/09/2026 — as tabelas de catalogo (`games`/`game_details`/`game_achievements`/`offers`/`price_history`/`instant_gaming_catalog`) sao 90%+ do banco e crescem organicamente pelos jobs de sincronizacao (nao e bug, e o catalogo funcionando). Como nao guardam dado de usuario (sem FK com `auth.users`), foram movidas pra um Postgres 17 self-hosted, container `catalogo-db` no mesmo `compose.yml` do backend, na VM Oracle — sem cota, sem porta exposta pro host (so acessivel pela rede interna do Docker compose). Banco caiu pra 15MB no Supabase.
