@@ -18,13 +18,18 @@
   min-height: 188px;
   padding: 26px 32px;
   margin-bottom: 16px;
-  overflow: hidden;
+  // SEM overflow: hidden aqui. Ele existia so pra cortar o banner nos cantos arredondados, e
+  // isso agora e o proprio .hero-banner que faz (overflow + o mesmo border-radius). Com o
+  // overflow no card, o dropdown do "Editar perfil" era cortado na borda de baixo e a segunda
+  // opcao ficava ilegivel.
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   background: var(--bg-card);
 }
 
-.hero-banner { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+// O border-radius aqui e o que mantem os cantos do card arredondados sobre a imagem, agora que o
+// .public-hero nao corta mais nada (ver o comentario la).
+.hero-banner { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: var(--border-radius); }
 .hero-banner img { position: absolute; }
 .hero-banner::after { position: absolute; inset: 0; background: linear-gradient(95deg, rgba(8, 13, 24, .93) 0%, rgba(8, 13, 24, .82) 34%, rgba(8, 13, 24, .45) 68%, rgba(8, 13, 24, .2) 100%); content: ''; }
 .hero-banner.sem-imagem { background: linear-gradient(120deg, rgba(41, 168, 224, .26), rgba(8, 13, 24, .4) 45%, rgba(8, 13, 24, .8)), var(--bg-card); }
