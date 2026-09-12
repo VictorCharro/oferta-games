@@ -302,18 +302,6 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   /**
-   * Proporcao do quadro no modo "manter proporcao": a da propria imagem, pra ela aparecer inteira.
-   * Vazio ate a imagem carregar (quando `onCustomImageLoad` grava o tamanho natural) e no modo
-   * "redimensionar", onde o quadro estica pela altura do bloco em vez de seguir a imagem.
-   */
-  estiloQuadroImagem(block: PerfilBloco): Record<string, string> {
-    if (this.ajusteImagem(block) === 'redimensionar') return {};
-    const natural = this.customImageNaturalSize.get(block.id);
-    if (!natural?.width || !natural?.height) return {};
-    return { 'aspect-ratio': `${natural.width} / ${natural.height}` };
-  }
-
-  /**
    * Tamanho recomendado da imagem pra ela preencher a area sem sobrar espaco, em px reais (2x da
    * area, pra nao ficar borrada em tela retina). Calculado a partir do quadro renderizado e
    * guardado num Map: ler layout direto do template rodaria a cada ciclo de deteccao de mudanca
@@ -735,7 +723,10 @@ export class PublicProfile implements OnInit, OnDestroy {
   blockImageStyle(block: PerfilBloco, frame: HTMLElement): Record<string, string> {
     const image = this.blockImageData(block);
     const natural = this.customImageNaturalSize.get(block.id);
-    return this.coverStyle(frame?.clientWidth || 0, frame?.clientHeight || 0, natural?.width || 0, natural?.height || 0, image.zoom, image.positionX, image.positionY);
+    return this.coverStyle(
+      frame?.clientWidth || 0, frame?.clientHeight || 0, natural?.width || 0, natural?.height || 0,
+      image.zoom, image.positionX, image.positionY,
+      this.ajusteImagem(block) === 'proporcao' ? 'contain' : 'cover');
   }
 
   isEditingBlockImage(block: PerfilBloco) {
@@ -858,18 +849,24 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  private coverGeometry(frameW: number, frameH: number, naturalW: number, naturalH: number, zoom: number) {
+  // ajuste 'cover' (padrao) preenche o quadro e recorta o excesso; 'contain' cabe inteira dentro
+  // dele, sobrando faixa nas laterais ou em cima/embaixo. O quadro em si nao muda de tamanho nos
+  // dois casos - e o que mantem a altura do bloco independente da imagem.
+  private coverGeometry(frameW: number, frameH: number, naturalW: number, naturalH: number, zoom: number, ajuste: 'cover' | 'contain' = 'cover') {
     if (!frameW || !frameH || !naturalW || !naturalH) return { width: 0, height: 0, maxOffsetX: 0, maxOffsetY: 0 };
-    const scale = Math.max(frameW / naturalW, frameH / naturalH) * Math.max(zoom, 1);
+    const proporcional = ajuste === 'contain'
+      ? Math.min(frameW / naturalW, frameH / naturalH)
+      : Math.max(frameW / naturalW, frameH / naturalH);
+    const scale = proporcional * Math.max(zoom, 1);
     const width = naturalW * scale;
     const height = naturalH * scale;
     return { width, height, maxOffsetX: Math.max(0, (width - frameW) / 2), maxOffsetY: Math.max(0, (height - frameH) / 2) };
   }
 
-  private coverStyle(frameW: number, frameH: number, naturalW: number, naturalH: number, zoom: number, positionX: number, positionY: number): Record<string, string> {
-    const geo = this.coverGeometry(frameW, frameH, naturalW, naturalH, zoom);
+  private coverStyle(frameW: number, frameH: number, naturalW: number, naturalH: number, zoom: number, positionX: number, positionY: number, ajuste: 'cover' | 'contain' = 'cover'): Record<string, string> {
+    const geo = this.coverGeometry(frameW, frameH, naturalW, naturalH, zoom, ajuste);
     if (!geo.width || !geo.height) {
-      return { width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${positionX}% ${positionY}%` };
+      return { width: '100%', height: '100%', objectFit: ajuste, objectPosition: `${positionX}% ${positionY}%` };
     }
     const offsetX = ((positionX - 50) / 50) * geo.maxOffsetX;
     const offsetY = ((positionY - 50) / 50) * geo.maxOffsetY;

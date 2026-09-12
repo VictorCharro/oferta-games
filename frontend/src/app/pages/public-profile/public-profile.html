@@ -576,11 +576,12 @@
               bordas podem sair do quadro.
             </span>
           </p>
+          <!-- O quadro preenche a altura do bloco nos DOIS modos: quem muda e a imagem dentro
+               dele (cover recorta, contain cabe inteira). Se o quadro seguisse a proporcao da
+               imagem, uma foto em pe esticaria o bloco e quebraria a altura uniforme da linha. -->
           <div
             *ngIf="blockImageUrl(block); else emptyImage"
-            class="custom-image-frame"
-            [class.preenche]="ajusteImagem(block) === 'redimensionar'"
-            [ngStyle]="estiloQuadroImagem(block)"
+            class="custom-image-frame preenche"
             [attr.data-bloco-id]="block.id"
             #imgFrame
           ><img class="custom-image" [src]="blockImageUrl(block)" alt="Imagem do perfil" (load)="onCustomImageLoad($event, block)" [ngStyle]="blockImageStyle(block, imgFrame)" /></div>
