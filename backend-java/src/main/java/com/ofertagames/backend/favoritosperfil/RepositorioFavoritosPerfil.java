@@ -67,7 +67,7 @@ public class RepositorioFavoritosPerfil {
               d.minPrice(), d.regularPrice(), f.favoritedAt())));
     }
 
-    itens.addAll(jdbc.sql("""
+    List<FavoritoSteamBruto> favoritosSteam = jdbc.sql("""
         SELECT
           b.app_id AS steam_app_id,
           b.title,
@@ -84,24 +84,30 @@ public class RepositorioFavoritosPerfil {
         WHERE f.user_id = CAST(:usuarioId AS uuid)
         """)
         .param("usuarioId", usuarioId)
-        .query((rs, linha) -> {
-          int posicao = rs.getInt("position");
-          String favoritedAt = rs.getString("favorited_at");
-          return new ItemComOrdem(posicao, favoritedAt, new FavoritoPerfilJogo(
-              null,
-              rs.getObject("steam_app_id", Integer.class),
-              rs.getString("title"),
-              rs.getString("cover_url"),
-              rs.getString("icon_hash"),
-              null,
-              rs.getObject("playtime_minutes", Integer.class),
-              rs.getObject("unlocked_count", Integer.class),
-              rs.getObject("total_count", Integer.class),
-              null,
-              null,
-              favoritedAt));
-        })
-        .list());
+        .query((rs, linha) -> new FavoritoSteamBruto(
+            rs.getInt("steam_app_id"),
+            rs.getString("title"),
+            rs.getString("cover_url"),
+            rs.getString("icon_hash"),
+            rs.getObject("playtime_minutes", Integer.class),
+            rs.getObject("unlocked_count", Integer.class),
+            rs.getObject("total_count", Integer.class),
+            rs.getInt("position"),
+            rs.getString("favorited_at")))
+        .list();
+
+    // Favorito da Steam que existe no nosso catalogo ganha o slug: no perfil o card leva pro
+    // /jogo/{slug} em vez da loja da Steam. Sem isso todo favorito Steam saia do site (o slug
+    // vinha null fixo aqui) - o mesmo cruzamento que a biblioteca ja fazia via
+    // RepositorioJogos.buscarSlugsPorSteamAppIds, mas feito aqui pra valer pro dono e pro visitante.
+    Map<Integer, String> slugsPorAppId = buscarSlugsPorSteamAppIds(
+        favoritosSteam.stream().map(FavoritoSteamBruto::steamAppId).distinct().toList());
+
+    for (FavoritoSteamBruto f : favoritosSteam) {
+      itens.add(new ItemComOrdem(f.position(), f.favoritedAt(), new FavoritoPerfilJogo(
+          slugsPorAppId.get(f.steamAppId()), f.steamAppId(), f.title(), f.coverUrl(), f.iconHash(),
+          null, f.playtimeMinutes(), f.unlockedCount(), f.totalCount(), null, null, f.favoritedAt())));
+    }
 
     return itens.stream()
         .sorted((a, b) -> a.position() != b.position()
@@ -110,6 +116,28 @@ public class RepositorioFavoritosPerfil {
         .map(ItemComOrdem::item)
         .toList();
   }
+
+  private Map<Integer, String> buscarSlugsPorSteamAppIds(List<Integer> appIds) {
+    if (appIds.isEmpty()) {
+      return Map.of();
+    }
+    Map<Integer, String> resultado = new HashMap<>();
+    jdbcCatalogo.sql("""
+        SELECT steam_app_id, slug
+        FROM games
+        WHERE steam_app_id IN (:appIds)
+          %s
+          %s
+        """.formatted(ConteudosNaoJogos.filtroSql("games"), JogosBloqueados.filtroSql("games")))
+        .param("appIds", appIds)
+        .query((rs, linha) -> resultado.put(rs.getInt("steam_app_id"), rs.getString("slug")))
+        .list();
+    return resultado;
+  }
+
+  private record FavoritoSteamBruto(
+      int steamAppId, String title, String coverUrl, String iconHash, Integer playtimeMinutes,
+      Integer unlockedCount, Integer totalCount, int position, String favoritedAt) {}
 
   private Map<Long, DadosJogoCatalogo> buscarDadosCatalogo(List<Long> ids) {
     if (ids.isEmpty()) {
