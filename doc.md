@@ -406,7 +406,9 @@ profile_blocks
   visible, background_type, background_value, overlay_opacity, text_color
 ```
 
-Apesar da coluna `profile_blocks.visible` existir por compatibilidade, nao ha privacidade por secao: a privacidade e sempre do perfil como um todo e dos controles gerais de dados.
+`profile_blocks.visible` era gravado como `true` fixo enquanto nenhuma tela expunha o campo. Desde o toggle **Ativo/Oculto** do editor de blocos (11/09/2026) ele grava a escolha do dono — e um controle de layout ("nao quero esse bloco no perfil agora"), nao de privacidade: a privacidade continua sendo do perfil como um todo e dos controles gerais de dados.
+
+`profile_blocks.view_mode` (12/09/2026) guarda a visualizacao escolhida pro bloco: `cards` (capa grande) ou `lista` (linha compacta). `NULL` = padrao do tipo — hoje so o bloco de favoritos tem as duas desenhadas, e ele nasce em `lista`.
 
 ## Migrations Supabase
 
@@ -607,6 +609,8 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 ### Pagina "Editar Blocos" (/perfil/blocos) (11/09/2026)
 
 O botao **Editar perfil** do cabecalho do perfil nao abre mais o modo de edicao inline: ele leva pra `/perfil/blocos` (`EditarBlocos`, lazy, atras do `authGuard`). A pagina lista os blocos numerados com alca de arraste (`cdkDropList`), setas cima/baixo, toggle **Ativo/Oculto** (`bloco.visivel`) e um menu `⋮` com tamanho, cores de fundo/texto, "voltar ao padrao" e remover. Blocos de **texto** e **links** editam titulo e conteudo no proprio menu. Do lado direito ficam a **Biblioteca de Blocos** (um card por tipo, desabilitado quando o tipo e unico e ja esta em uso, ou quando nao ha dado pra mostrar) e o card de dica. Os metadados de tipo (titulo padrao, descricao, icone, tipos unicos, layout inicial) vivem em `services/perfil-blocos.ts`, compartilhados com o perfil — `PublicProfile.defaultBlocks()` so delega pra `blocosPadrao()`.
+
+O menu `⋮` de um bloco de jogos tambem tem **Visualização: Lista compacta / Cards com capa** (12/09/2026), persistida em `profile_blocks.view_mode`. Hoje so o bloco de favoritos tem as duas visualizacoes desenhadas (`TIPOS_COM_VISUALIZACAO` em `services/perfil-blocos.ts`); os demais blocos de jogos so existem como card. O limite de itens acompanha o modo: em cards vale o `previewLimit` normal (1/4/6/8), em lista cabem mais (5/6/8/10), porque cada item e uma linha e nao uma capa.
 
 A aba **Visualizar Perfil** e uma previa de verdade, nao um link: renderiza o proprio `app-public-profile` com dois inputs novos, `previewHandle` e `previewBlocos`. Nesse modo o componente ignora a rota, nao mexe no SEO, nao consulta `/me` e fica com `isOwner = false` — o dono ve exatamente o que um visitante veria, ja com o rascunho nao salvo (blocos ocultos somem, tamanhos novos valem). A previa fica **fora** do container de `max-width: 1280px` da pagina: o perfil real ocupa a largura inteira do `<main>`, e limitar a previa encolhia os cards e criava sobra vertical nos blocos, ou seja, a previa mentia sobre o resultado.
 

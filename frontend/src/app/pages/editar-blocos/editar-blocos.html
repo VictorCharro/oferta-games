@@ -82,6 +82,12 @@
                 {{ tamanho.rotulo }}
               </button>
 
+              <ng-container *ngIf="temVisualizacao(bloco)">
+                <p class="menu-titulo">Visualização</p>
+                <button type="button" class="menu-opcao" [class.selecionada]="visualizacao(bloco) === 'lista'" (click)="definirVisualizacao(bloco, 'lista')">Lista compacta</button>
+                <button type="button" class="menu-opcao" [class.selecionada]="visualizacao(bloco) === 'cards'" (click)="definirVisualizacao(bloco, 'cards')">Cards com capa</button>
+              </ng-container>
+
               <ng-container *ngIf="editavelNaPagina(bloco)">
                 <p class="menu-titulo">Conteúdo</p>
                 <input class="menu-campo" type="text" [(ngModel)]="bloco.titulo" placeholder="Título do bloco" />

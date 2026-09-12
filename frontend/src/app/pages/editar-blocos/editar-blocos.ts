@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
-import { CATALOGO_BLOCOS, DescricaoBloco, TIPOS_UNICOS, blocosPadrao, descricaoBloco, novoBloco } from '../../services/perfil-blocos';
+import { CATALOGO_BLOCOS, DescricaoBloco, TIPOS_COM_VISUALIZACAO, TIPOS_UNICOS, blocosPadrao, descricaoBloco, novoBloco, visualizacaoDoBloco } from '../../services/perfil-blocos';
 import { PublicProfile } from '../public-profile/public-profile';
 import { SeoService } from '../../services/seo';
 
@@ -64,7 +64,7 @@ export class EditarBlocos implements OnInit {
       // Mesma limpeza do perfil: tipos aposentados saem, corTexto vira null explicito.
       const salvos = (perfil.blocos || [])
         .filter(bloco => !['resumo_favoritos', 'horas', 'conquistas'].includes(bloco.tipo as string))
-        .map(bloco => ({ ...bloco, corTexto: bloco.corTexto ?? null }));
+        .map(bloco => ({ ...bloco, corTexto: bloco.corTexto ?? null, visualizacao: bloco.visualizacao ?? null }));
       this.blocos = salvos.length ? salvos : blocosPadrao();
     } catch {
       this.erro = 'Não foi possível carregar seus blocos.';
@@ -72,6 +72,18 @@ export class EditarBlocos implements OnInit {
       this.loading = false;
       this.cdr.detectChanges();
     }
+  }
+
+  temVisualizacao(bloco: PerfilBloco): boolean {
+    return TIPOS_COM_VISUALIZACAO.includes(bloco.tipo);
+  }
+
+  visualizacao(bloco: PerfilBloco): 'cards' | 'lista' {
+    return visualizacaoDoBloco(bloco);
+  }
+
+  definirVisualizacao(bloco: PerfilBloco, modo: 'cards' | 'lista') {
+    bloco.visualizacao = modo;
   }
 
   /** Texto e links tem conteudo editavel aqui mesmo; imagem precisa do recorte sobre o bloco renderizado. */

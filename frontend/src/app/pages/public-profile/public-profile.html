@@ -386,8 +386,34 @@
             <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Jogos favoritos" />
             <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">{{ isOwner ? 'Gerenciar' : 'Ver favoritos' }}</button>
           </div>
+          <!-- Duas visualizacoes do mesmo bloco (bloco.visualizacao, escolhida em /perfil/blocos):
+               lista compacta (padrao) ou card com capa, igual aos outros blocos de jogos. Arrastar
+               pra reordenar funciona nas duas. -->
           <div
-            *ngIf="profile.favoritos.length; else noFav"
+            *ngIf="profile.favoritos.length && visualizacaoBloco(block) === 'cards'"
+            [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]"
+            cdkDropList
+            [cdkDropListDisabled]="!isOwner || !editingLayout"
+            (cdkDropListDropped)="dropFavorite($event)"
+          >
+            <article *ngFor="let game of favoritePreview(block)" class="profile-game-card" cdkDrag [cdkDragDisabled]="!isOwner || !editingLayout">
+              <span *ngIf="isOwner && editingLayout" class="favorite-drag-handle" cdkDragHandle aria-label="Arrastar para reordenar" title="Arrastar para reordenar">↕</span>
+              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"
+                ><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div
+                ><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span
+                ><div class="game-card-info">
+                  <h3>{{ game.titulo }}</h3>
+                  <ng-container *ngIf="game.steamAppId != null; else favoriteCardCatalogInfo"
+                    ><span>{{ hours(game.minutosJogadas) }} jogadas</span
+                    ><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small
+                  ></ng-container>
+                  <ng-template #favoriteCardCatalogInfo><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template>
+                </div>
+              </a>
+            </article>
+          </div>
+          <div
+            *ngIf="profile.favoritos.length && visualizacaoBloco(block) === 'lista'"
             class="profile-favorite-list"
             [class.organizando]="editingLayout"
             cdkDropList
@@ -411,9 +437,7 @@
               <img *ngIf="game.steamAppId != null" class="favorite-platform" src="store-logos/steam.svg" alt="Steam" title="Steam" />
             </article>
           </div>
-          <ng-template #noFav
-            ><div class="empty-panel"><h3>Nenhum jogo favorito ainda</h3></div></ng-template
-          ></ng-container
+          <div *ngIf="!profile.favoritos.length" class="empty-panel"><h3>Nenhum jogo favorito ainda</h3></div></ng-container
         ><ng-container *ngSwitchCase="'biblioteca'"
           ><div class="panel-heading"><h2 *ngIf="!editingLayout">{{ block.titulo || 'Biblioteca' }}</h2><input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Biblioteca" /><button *ngIf="!editingLayout" type="button" class="panel-link" (click)="openLibrary()">Ver biblioteca</button></div>
           <div *ngIf="libraryPreview(block).length; else noLibraryPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">

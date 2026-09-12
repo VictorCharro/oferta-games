@@ -8,7 +8,7 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth';
 import { ColecaoPerfil, PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
-import { blocosPadrao } from '../../services/perfil-blocos';
+import { TIPOS_UNICOS, blocosPadrao, novoBloco, visualizacaoDoBloco } from '../../services/perfil-blocos';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
 import { ConexoesSteamService, JogoBibliotecaSteam } from '../../services/conexoes-steam';
 import { GameService, GameSummary } from '../../services/game';
@@ -182,7 +182,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       profile.blocos = profile.blocos?.length
         ? profile.blocos
             .filter(block => !['resumo_favoritos', 'horas', 'conquistas'].includes(block.tipo as string))
-            .map(block => ({ ...block, corTexto: block.corTexto ?? null }))
+            .map(block => ({ ...block, corTexto: block.corTexto ?? null, visualizacao: block.visualizacao ?? null }))
         : this.defaultBlocks();
       this.profile = profile;
       if (!this.previewHandle) this.seo.set({
@@ -579,9 +579,8 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   addBlock(tipo: PerfilBloco['tipo']) {
-    if (['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist', 'conquistas-recentes', 'mais-jogados'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
-    const id = `custom-${crypto.randomUUID()}`;
-    this.layoutDraft.push({ id: ['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist', 'conquistas-recentes', 'mais-jogados'].includes(tipo) ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
+    if (TIPOS_UNICOS.includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
+    this.layoutDraft.push(novoBloco(tipo, this.layoutDraft.length));
   }
 
   removeBlock(index: number) { this.layoutDraft.splice(index, 1); this.layoutDraft.forEach((block, position) => block.posicao = position); }
@@ -987,8 +986,15 @@ export class PublicProfile implements OnInit, OnDestroy {
   // linhas na altura que um card grande ocuparia - num bloco pequeno (coluna estreita do Figma)
   // o certo e mostrar ~5 jogos, nao 1.
   favoritePreview(block: PerfilBloco) {
-    const limite = { pequeno: 5, medio: 6, largo: 8, completo: 10 }[block.tamanho];
+    // Em cards cada jogo ocupa uma capa inteira, entao cabem menos que na lista compacta.
+    const limite = this.visualizacaoBloco(block) === 'cards'
+      ? this.previewLimit(block.tamanho)
+      : { pequeno: 5, medio: 6, largo: 8, completo: 10 }[block.tamanho];
     return this.profile?.favoritos.slice(0, limite) || [];
+  }
+
+  visualizacaoBloco(block: PerfilBloco): 'cards' | 'lista' {
+    return visualizacaoDoBloco(block);
   }
 
   // "Mais jogados" nao tem dado proprio: e a mesma biblioteca (Steam + Xbox) ordenada por horas.

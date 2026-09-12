@@ -37,9 +37,24 @@ export function descricaoBloco(tipo: PerfilBloco['tipo']): DescricaoBloco {
  * Layout inicial de quem nunca mexeu nos blocos. largo (8/12) + pequeno (4/12) fecham uma
  * linha do grid: platinados a esquerda e favoritos na coluna da direita, como no Figma.
  */
+/**
+ * Por enquanto so o bloco de favoritos tem as duas visualizacoes desenhadas (lista compacta e
+ * card com capa). Os outros blocos de jogos so existem como card - quando a lista deles for
+ * desenhada, basta entrar nesta lista.
+ */
+export const TIPOS_COM_VISUALIZACAO: PerfilBloco['tipo'][] = ['favoritos'];
+
+/**
+ * Modo efetivo quando o dono nunca escolheu: favoritos nasceu como lista compacta (cabem mais
+ * jogos na coluna estreita do Figma), o resto nasceu como card com capa.
+ */
+export function visualizacaoDoBloco(bloco: PerfilBloco): 'cards' | 'lista' {
+  return bloco.visualizacao ?? (bloco.tipo === 'favoritos' ? 'lista' : 'cards');
+}
+
 export function blocosPadrao(): PerfilBloco[] {
   const bloco = (id: string, tipo: PerfilBloco['tipo'], posicao: number, tamanho: PerfilBloco['tamanho']): PerfilBloco =>
-    ({ id, tipo, titulo: null, conteudo: null, posicao, tamanho, visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
+    ({ id, tipo, titulo: null, conteudo: null, posicao, tamanho, visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null, visualizacao: null });
   return [
     bloco('platinados', 'platinados', 0, 'largo'),
     bloco('favoritos', 'favoritos', 1, 'pequeno'),
@@ -63,5 +78,6 @@ export function novoBloco(tipo: PerfilBloco['tipo'], posicao: number): PerfilBlo
     valorFundo: null,
     opacidade: 0,
     corTexto: null,
+    visualizacao: null,
   };
 }
