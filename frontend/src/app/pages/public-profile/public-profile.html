@@ -481,8 +481,9 @@
           </div>
           <ul *ngIf="conquistasPreview(block).length; else noAchievements" class="achievement-list">
             <li *ngFor="let conquista of conquistasPreview(block)" class="achievement-item">
-              <!-- (error) tambem cai no 🏅: conquista recem-criada costuma vir no esquema da Steam
-                   com a arte ainda nao publicada, e a URL responde 404 em todos os CDNs deles. -->
+              <!-- (error) tambem cai no 🏅, nao so iconeUrl null: rede de seguranca pra icone que
+                   404 no CDN da Steam. Foi assim que apareceu o caso do caminho legado de
+                   community_assets (ver IconeConquista), que quebrava so as conquistas novas. -->
               <img
                 *ngIf="temIconeConquista(conquista); else achievementFallback"
                 [src]="conquista.iconeUrl"
