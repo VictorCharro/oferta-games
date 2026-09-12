@@ -44,8 +44,12 @@ jobs:
           # alguma coisa na mao).
           FORCAR: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
         run: |
+          # O script vai pra VM como ARQUIVO e roda de la, nao por stdin do 'bash -s'. Com stdin,
+          # qualquer comando que leia a entrada padrao (docker compose exec, por exemplo) engole o
+          # resto do script: aconteceu de verdade em 12/09/2026 - o deploy parou logo depois do
+          # reload do Caddy, nunca publicou o backend e mesmo assim saiu com sucesso.
           ssh -i ~/.ssh/id_oracle -o StrictHostKeyChecking=accept-new ubuntu@"$ORACLE_HOST" \
-            "FORCAR=$FORCAR bash -s" <<'REMOTO'
+            'cat > /tmp/deploy-oferta-games.sh' <<'REMOTO'
           set -euo pipefail
           cd /opt/oferta-games
 
@@ -53,16 +57,17 @@ jobs:
           git pull --ff-only origin master
           DEPOIS=$(git rev-parse HEAD)
 
-          # O Caddyfile e bind mount: o arquivo novo ja esta dentro do container, mas o Caddy so
-          # passa a usar depois de um reload (que e gracioso - nao derruba conexao). Por isso ele
-          # tem decisao propria, separada da do backend: mudar so o proxy nao precisa reiniciar a
-          # API.
+          # O proxy tem decisao propria, separada da do backend: mudar so o Caddyfile nao precisa
+          # reiniciar a API, e vice-versa.
           if [ -n "$(git diff --name-only "$ANTES" "$DEPOIS" -- deploy/oracle/Caddyfile)" ]; then
-            echo "Caddyfile mudou: validando e recarregando."
-            docker compose -f deploy/oracle/compose.yml exec -T caddy \
-              caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-            docker compose -f deploy/oracle/compose.yml exec -T caddy \
-              caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+            # Recria o container em vez de recarregar: o Caddyfile entra por bind mount de
+            # ARQUIVO, que aponta pro inode. O git pull escreve um arquivo novo e renomeia, entao
+            # o container continua vendo o antigo e um 'caddy reload' rele o arquivo velho - foi o
+            # que aconteceu em 12/09/2026 (host com a config nova, container sem). Recriar custa
+            # ~1s de indisponibilidade e so acontece quando o Caddyfile muda, que e raro. Os
+            # certificados ficam no volume caddy_data, entao nada e reemitido.
+            echo "Caddyfile mudou: recriando o Caddy."
+            docker compose -f deploy/oracle/compose.yml up -d --force-recreate caddy
           fi
 
           # Recria o backend quando: foi pedido na mao, o container nao esta de pe, ou mudou algo
@@ -90,3 +95,20 @@ jobs:
           docker compose -f deploy/oracle/compose.yml up -d
           docker compose -f deploy/oracle/compose.yml ps
           REMOTO
+
+          ssh -i ~/.ssh/id_oracle ubuntu@"$ORACLE_HOST" "FORCAR=$FORCAR bash /tmp/deploy-oferta-games.sh"
+
+      # Confere que a API voltou. Sem isso um deploy que fez so metade do trabalho sai verde - ja
+      # aconteceu (ver o comentario do passo acima). Checa pela URL publica, entao valida o
+      # caminho inteiro: Caddy, TLS e backend.
+      - name: Verificar que a API respondeu
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 10 https://api.163.176.220.243.sslip.io/actuator/health > /dev/null; then
+              echo "API respondendo (tentativa $i)."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "API nao respondeu em 100s apos o deploy."
+          exit 1
