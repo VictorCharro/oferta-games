@@ -75,8 +75,10 @@ class ServicoPerfis {
 
   void salvarBlocos(String usuarioId, List<RepositorioBlocosPerfil.BlocoPerfil> entrada) {
     if (entrada == null || entrada.size() > 20) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantidade de blocos invalida");
+    // "conquistas" (sem sufixo) e um tipo aposentado, filtrado em blocosPublicos - o bloco novo de
+    // conquistas recentes usa "conquistas-recentes" de proposito, pra nao cair naquele filtro.
     for (RepositorioBlocosPerfil.BlocoPerfil bloco : entrada) {
-      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("favoritos", "biblioteca", "atividade", "platinados", "wishlist", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
+      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("favoritos", "biblioteca", "atividade", "platinados", "wishlist", "conquistas-recentes", "mais-jogados", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
     }
     blocos.substituir(usuarioId, entrada);
   }
@@ -102,6 +104,10 @@ class ServicoPerfis {
     List<ColecaoPerfil> colecoes = colecoesBrutas.stream()
         .filter(c -> !c.origemSistema() || perfil.mostrarWishlistSteam())
         .toList();
+    // Mesmo toggle dos contadores de conquista da faixa de estatisticas: quem esconde conquistas
+    // nao deve expor quais foram as ultimas.
+    List<ServicoConexoesSteam.ConquistaRecenteSteam> conquistasRecentes =
+        dono || perfil.mostrarConquistas() ? steam.conquistasRecentes(perfil.usuarioId(), 12) : List.of();
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
     List<AtividadePerfil> atividadeRecente = mostrarAtividades ? carregarAtividades(perfil.usuarioId()) : List.of();
     boolean mostrarPlataforma = dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca();
@@ -120,7 +126,8 @@ class ServicoPerfis {
         favoritos,
         colecoes,
         atividadeRecente,
-        perfil.mostrarAtividades(), blocosPublicos(perfil, dono), perfil.mostrarWishlistSteam(), temColecaoWishlistSteam);
+        perfil.mostrarAtividades(), blocosPublicos(perfil, dono), perfil.mostrarWishlistSteam(), temColecaoWishlistSteam,
+        conquistasRecentes);
   }
 
   ResultadoAtualizacao solicitarAtualizacao(String handle, String visitanteId) {
@@ -168,6 +175,11 @@ class ServicoPerfis {
         // proprio show_steam_wishlist - esse ultimo esconde de TODO MUNDO, inclusive o dono
         // (mesma regra da colecao na aba Colecoes, ver "Colecoes de sistema").
         .filter(bloco -> !"wishlist".equals(bloco.tipo()) || ((dono || perfil.mostrarColecoes()) && perfil.mostrarWishlistSteam()))
+        // Mesmo toggle da lista de conquistas recentes no PerfilPublico (e dos contadores da
+        // faixa de estatisticas): esconder conquistas esconde o bloco tambem.
+        .filter(bloco -> dono || !"conquistas-recentes".equals(bloco.tipo()) || perfil.mostrarConquistas())
+        // "Mais jogados" e so a biblioteca ordenada por horas: segue o toggle da biblioteca.
+        .filter(bloco -> dono || !"mais-jogados".equals(bloco.tipo()) || perfil.mostrarBiblioteca())
         .toList();
   }
 
@@ -184,5 +196,8 @@ class ServicoPerfis {
       // temColecaoWishlistSteam: existe uma colecao de wishlist pra esse usuario, independente
       // do toggle acima - o frontend usa isso pra decidir se mostra o checkbox (que precisa
       // continuar visivel mesmo com a colecao escondida, senao ninguem reativaria).
-      boolean mostrarWishlistSteam, boolean temColecaoWishlistSteam) {}
+      boolean mostrarWishlistSteam, boolean temColecaoWishlistSteam,
+      // Ultimas conquistas com nome e icone do catalogo (ver ServicoConexoesSteam.conquistasRecentes);
+      // vazio quando o perfil esconde conquistas ou nao tem Steam conectada.
+      List<ServicoConexoesSteam.ConquistaRecenteSteam> conquistasRecentes) {}
 }

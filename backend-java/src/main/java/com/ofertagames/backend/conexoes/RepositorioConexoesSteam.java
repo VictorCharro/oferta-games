@@ -299,6 +299,37 @@ class RepositorioConexoesSteam {
 
   private record ConquistaComData(String apiName, Instant desbloqueadaEm) {}
 
+  /**
+   * Ultimas conquistas desbloqueadas pelo usuario, mais recentes primeiro, ja com o nome do jogo
+   * (da biblioteca). Sem o icone: ele mora em {@code game_achievements}, no banco de catalogo —
+   * quem cruza os dois e {@link ServicoConexoesSteam#conquistasRecentes}.
+   *
+   * <p>Ignora linha sem {@code unlocked_at}: a Steam devolve {@code unlocktime = 0} pra conquista
+   * antiga sem data registrada, e ela apareceria como "desbloqueada agora" no topo da lista.
+   */
+  List<ConquistaRecente> listarConquistasRecentes(String usuarioId, int limite) {
+    return jdbc.sql("""
+        SELECT c.app_id, c.api_name, c.title, c.unlocked_at, b.title AS titulo_jogo
+        FROM steam_user_achievements c
+        LEFT JOIN steam_library_games b ON b.user_id = c.user_id AND b.app_id = c.app_id
+        WHERE c.user_id = CAST(:usuarioId AS uuid) AND c.unlocked_at IS NOT NULL
+        ORDER BY c.unlocked_at DESC
+        LIMIT :limite
+        """)
+        .param("usuarioId", usuarioId)
+        .param("limite", limite)
+        .query((rs, linha) -> new ConquistaRecente(
+            rs.getInt("app_id"),
+            rs.getString("api_name"),
+            rs.getString("title"),
+            rs.getString("titulo_jogo"),
+            null,
+            rs.getTimestamp("unlocked_at").toInstant()))
+        .list();
+  }
+
+  record ConquistaRecente(int appId, String apiName, String titulo, String tituloJogo, String iconeUrl, Instant desbloqueadaEm) {}
+
   void salvarConquistasDetalhadas(String usuarioId, int appId, List<ClienteSteamWeb.ConquistaSteam> conquistas) {
     for (ClienteSteamWeb.ConquistaSteam conquista : conquistas) {
       jdbc.sql("""

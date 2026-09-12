@@ -1,0 +1,143 @@
+<section class="blocos-page">
+ <div class="blocos-topo">
+  <header class="blocos-header">
+    <span class="header-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="3.2" />
+        <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z" />
+      </svg>
+    </span>
+    <div class="header-text">
+      <h1>Editar Blocos</h1>
+      <p>Escolha o que aparece no seu perfil, em que ordem e de que tamanho.</p>
+    </div>
+  </header>
+
+  <nav class="segmented" *ngIf="handle">
+    <button type="button" [class.ativo]="aba === 'blocos'" (click)="aba = 'blocos'">Blocos do Perfil</button>
+    <button type="button" [class.ativo]="aba === 'preview'" (click)="aba = 'preview'">Visualizar Perfil</button>
+  </nav>
+
+  <p class="aviso" *ngIf="erro">{{ erro }}</p>
+
+  <div class="blocos-skeleton" *ngIf="loading">
+    <span class="loading-line"></span><span class="loading-line short"></span>
+  </div>
+ </div>
+
+  <!-- A previa fica FORA do container estreito da pagina: o perfil de verdade ocupa a largura
+       inteira do <main>, entao limitar aqui encolheria os cards e a previa mentiria. -->
+  <section class="preview" *ngIf="!loading && !erro && aba === 'preview'">
+    <div class="preview-barra">
+      <p class="preview-aviso">
+        <span aria-hidden="true">👁</span>
+        Prévia de como seu perfil fica com as mudanças atuais — ainda não salvas. Blocos ocultos não aparecem aqui.
+      </p>
+      <div class="acoes">
+        <button type="button" class="btn-secundario" (click)="aba = 'blocos'">Voltar aos blocos</button>
+        <button type="button" class="btn-primario" (click)="salvar()" [disabled]="saving">
+          {{ saving ? 'Salvando...' : 'Salvar' }}
+        </button>
+        <span class="mensagem" *ngIf="message">{{ message }}</span>
+      </div>
+    </div>
+    <app-public-profile [previewHandle]="handle" [previewBlocos]="blocos"></app-public-profile>
+  </section>
+
+  <div class="blocos-layout" *ngIf="!loading && !erro && aba === 'blocos'">
+    <div class="coluna-lista">
+      <div class="lista-topo">
+        <h2>Blocos do Perfil</h2>
+        <span class="contagem">{{ blocos.length }} blocos · {{ totalAtivos }} ativos</span>
+      </div>
+
+      <div class="lista" cdkDropList (cdkDropListDropped)="drop($event)">
+        <article class="bloco-linha" *ngFor="let bloco of blocos; let i = index" cdkDrag [class.inativo]="!bloco.visivel">
+          <span class="alca" cdkDragHandle aria-hidden="true">⠿</span>
+          <span class="numero">{{ i + 1 }}</span>
+          <span class="bloco-icone" aria-hidden="true">{{ descricao(bloco).icone }}</span>
+
+          <div class="bloco-texto">
+            <strong>{{ tituloDoBloco(bloco) }}</strong>
+            <small>{{ descricao(bloco).descricao }} · {{ rotuloTamanho(bloco) }}</small>
+          </div>
+
+          <button type="button" class="toggle" [class.on]="bloco.visivel" (click)="alternarVisivel(bloco)"
+                  [attr.aria-pressed]="bloco.visivel" [attr.aria-label]="'Mostrar ' + tituloDoBloco(bloco)">
+            <span class="knob"></span>
+          </button>
+          <span class="toggle-rotulo">{{ bloco.visivel ? 'Ativo' : 'Oculto' }}</span>
+
+          <div class="setas">
+            <button type="button" (click)="mover(i, -1)" [disabled]="i === 0" aria-label="Mover para cima">▲</button>
+            <button type="button" (click)="mover(i, 1)" [disabled]="i === blocos.length - 1" aria-label="Mover para baixo">▼</button>
+          </div>
+
+          <div class="menu-wrap">
+            <button type="button" class="menu-btn" (click)="toggleMenu(bloco)" aria-label="Mais opções">⋮</button>
+            <div class="menu" *ngIf="menuAbertoId === bloco.id">
+              <p class="menu-titulo">Tamanho</p>
+              <button type="button" class="menu-opcao" *ngFor="let tamanho of tamanhos"
+                      [class.selecionada]="bloco.tamanho === tamanho.valor" (click)="definirTamanho(bloco, tamanho.valor)">
+                {{ tamanho.rotulo }}
+              </button>
+
+              <ng-container *ngIf="editavelNaPagina(bloco)">
+                <p class="menu-titulo">Conteúdo</p>
+                <input class="menu-campo" type="text" [(ngModel)]="bloco.titulo" placeholder="Título do bloco" />
+                <textarea class="menu-campo" rows="3" [(ngModel)]="bloco.conteudo"
+                          [placeholder]="bloco.tipo === 'links' ? 'Nome|https://... (um por linha)' : 'Escreva algo sobre você'"></textarea>
+              </ng-container>
+
+              <a class="menu-opcao" *ngIf="bloco.tipo === 'imagem'"
+                 [routerLink]="['/', handle]" [queryParams]="{ editor: 1 }">Ajustar imagem no perfil ›</a>
+
+              <p class="menu-titulo">Cores</p>
+              <label class="menu-cor">
+                Fundo
+                <input type="color" [value]="bloco.valorFundo || '#121a2a'" (input)="definirCorFundo(bloco, $any($event.target).value)" />
+              </label>
+              <label class="menu-cor">
+                Texto
+                <input type="color" [value]="bloco.corTexto || '#f5f7fb'" (input)="definirCorTexto(bloco, $any($event.target).value)" />
+              </label>
+              <button type="button" class="menu-opcao" (click)="limparFundo(bloco); limparCorTexto(bloco)">Voltar ao padrão</button>
+
+              <button type="button" class="menu-opcao perigo" (click)="remover(i)">Remover bloco</button>
+            </div>
+          </div>
+        </article>
+
+        <p class="vazio" *ngIf="!blocos.length">Nenhum bloco ainda — escolha um na biblioteca ao lado.</p>
+      </div>
+
+      <div class="acoes">
+        <button type="button" class="btn-secundario" [routerLink]="['/', handle]">Cancelar</button>
+        <button type="button" class="btn-primario" (click)="salvarEVoltar()" [disabled]="saving">
+          {{ saving ? 'Salvando...' : 'Salvar e ver perfil' }}
+        </button>
+        <span class="mensagem" *ngIf="message">{{ message }}</span>
+      </div>
+    </div>
+
+    <aside class="coluna-lateral">
+      <section class="card biblioteca">
+        <h2>Biblioteca de Blocos</h2>
+        <button type="button" class="bloco-card" *ngFor="let item of catalogo"
+                [disabled]="indisponivel(item.tipo)" (click)="adicionar(item.tipo)">
+          <span class="bloco-icone" aria-hidden="true">{{ item.icone }}</span>
+          <span class="bloco-card-texto">
+            <strong>{{ item.titulo }}</strong>
+            <small>{{ item.descricao }}</small>
+          </span>
+          <span class="mais" aria-hidden="true">+</span>
+        </button>
+      </section>
+
+      <section class="card dica">
+        <h2>💡 Dica</h2>
+        <p>Arraste pela alça <span aria-hidden="true">⠿</span> (ou use as setas) para reordenar. Blocos "Ocultos" continuam salvos, só não aparecem para quem visita seu perfil.</p>
+      </section>
+    </aside>
+  </div>
+</section>

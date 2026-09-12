@@ -555,6 +555,40 @@ public class RepositorioJogos {
 
   private record IdPorAppId(int steamAppId, long id) {}
 
+  /**
+   * Nome oficial (pt-BR) e icone das conquistas informadas, pra enfeitar "Conquistas recentes" do
+   * perfil — o progresso do usuario mora no Supabase e so tem {@code api_name}, enquanto nome e
+   * icone estao no catalogo. Chave do mapa: {@code appId + "|" + apiName}.
+   *
+   * <p>Filtra pelas duas listas ao mesmo tempo porque o {@code api_name} nao e unico entre jogos
+   * ({@code WAKE_UP} existe em varios); o par com o {@code steam_app_id} e que identifica.
+   */
+  public Map<String, ConquistaDoCatalogo> buscarConquistasDoCatalogo(List<Integer> appIds, List<String> apiNames) {
+    if (appIds.isEmpty() || apiNames.isEmpty()) {
+      return Map.of();
+    }
+    Map<String, ConquistaDoCatalogo> resultado = new HashMap<>();
+    for (ConquistaDoCatalogo conquista : jdbc.sql("""
+        SELECT g.steam_app_id, ga.api_name, ga.display_name, ga.icon_url
+        FROM game_achievements ga
+        JOIN games g ON g.id = ga.game_id
+        WHERE g.steam_app_id IN (:appIds) AND ga.api_name IN (:apiNames)
+        """)
+        .param("appIds", appIds)
+        .param("apiNames", apiNames)
+        .query((rs, linha) -> new ConquistaDoCatalogo(
+            rs.getInt("steam_app_id"),
+            rs.getString("api_name"),
+            rs.getString("display_name"),
+            IconeConquista.expandir(rs.getString("icon_url"))))
+        .list()) {
+      resultado.put(conquista.steamAppId() + "|" + conquista.apiName(), conquista);
+    }
+    return resultado;
+  }
+
+  public record ConquistaDoCatalogo(int steamAppId, String apiName, String nome, String iconeUrl) {}
+
   public void salvarOferta(OfertaParaSalvar oferta) {
     if (lojaBloqueada(oferta.loja())) {
       return;

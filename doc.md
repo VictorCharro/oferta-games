@@ -604,12 +604,22 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - A primeira sincronizacao Steam gera somente os resumos. Nas posteriores, novos jogos e conquistas viram atividades individuais.
 - A atividade recente e publica por padrao, salvo escolha do dono na privacidade.
 
+### Pagina "Editar Blocos" (/perfil/blocos) (11/09/2026)
+
+O botao **Editar perfil** do cabecalho do perfil nao abre mais o modo de edicao inline: ele leva pra `/perfil/blocos` (`EditarBlocos`, lazy, atras do `authGuard`). A pagina lista os blocos numerados com alca de arraste (`cdkDropList`), setas cima/baixo, toggle **Ativo/Oculto** (`bloco.visivel`) e um menu `⋮` com tamanho, cores de fundo/texto, "voltar ao padrao" e remover. Blocos de **texto** e **links** editam titulo e conteudo no proprio menu. Do lado direito ficam a **Biblioteca de Blocos** (um card por tipo, desabilitado quando o tipo e unico e ja esta em uso, ou quando nao ha dado pra mostrar) e o card de dica. Os metadados de tipo (titulo padrao, descricao, icone, tipos unicos, layout inicial) vivem em `services/perfil-blocos.ts`, compartilhados com o perfil — `PublicProfile.defaultBlocks()` so delega pra `blocosPadrao()`.
+
+A aba **Visualizar Perfil** e uma previa de verdade, nao um link: renderiza o proprio `app-public-profile` com dois inputs novos, `previewHandle` e `previewBlocos`. Nesse modo o componente ignora a rota, nao mexe no SEO, nao consulta `/me` e fica com `isOwner = false` — o dono ve exatamente o que um visitante veria, ja com o rascunho nao salvo (blocos ocultos somem, tamanhos novos valem). A previa fica **fora** do container de `max-width: 1280px` da pagina: o perfil real ocupa a largura inteira do `<main>`, e limitar a previa encolhia os cards e criava sobra vertical nos blocos, ou seja, a previa mentia sobre o resultado.
+
+O modo de edicao inline descrito abaixo continua existindo, mas so pro ajuste de imagem dos blocos (que exige o bloco ja renderizado pra arrastar/dar zoom). Ele e aberto pelo item "Ajustar imagem no perfil" do menu `⋮` de um bloco de imagem, que navega pra `/{handle}?editor=1` — o `queryParam` `editor=1` faz o perfil entrar direto em `startLayoutEdit()` quando quem abre e o dono.
+
 ### Editor de perfil
 
 O modo de edicao permite reorganizar blocos por arrastar e soltar, mudar tamanho, remover e adicionar blocos. Ele existe somente na aba **Resumo**: ao abrir, as abas Jogos favoritos e Biblioteca ficam indisponiveis e os comandos internos Gerenciar/Ver biblioteca somem para evitar navegacao acidental. A faixa de estatisticas logo abaixo do cabecalho e fixa, portanto nao entra no editor: mostra jogos na biblioteca, horas jogadas, somente conquistas desbloqueadas e icones das plataformas conectadas. A barra "Modo de edicao" fica fixa na parte inferior da tela (nao rola com a pagina), com os botoes Cancelar/Salvar visualmente destacados a direita, separados do seletor de adicionar bloco. Tipos suportados:
 
-- paineis de favoritos pessoais, biblioteca, atividade, platinados (01/08/2026) e wishlist da Steam (11/09/2026);
+- paineis de favoritos pessoais, biblioteca, atividade, platinados (01/08/2026), wishlist da Steam, conquistas recentes e mais jogados (11/09/2026);
 - blocos personalizados de texto, imagem e links.
+
+**Conquistas recentes** (11/09/2026) vem pronto do backend em `PerfilPublico.conquistasRecentes` (`ServicoConexoesSteam.conquistasRecentes`, que cruza `steam_library_games` com nome/icone do catalogo). Limite proprio por tamanho (pequeno 3, medio 5, largo 8, completo 12), porque cada item e uma linha compacta e nao um card. Visibilidade pro visitante segue `mostrarConquistas()`. **Mais jogados** nao tem dado proprio: e `profile.biblioteca` ordenada por horas, e segue `mostrarBiblioteca()`.
 
 **Adicionar bloco e um dropdown, nao uma fileira de botoes (11/09/2026)**: um so seletor "Adicionar" (mesmo componente `.editor-custom-select` dos outros selects do editor) abre um menu — antes eram 7 botoes lado a lado, cada vez mais apertados a cada tipo novo (a wishlist teria sido o 8°). O menu abre **pra cima** (`.editor-select-menu.opens-up`, mesma tecnica ja usada pelo seletor de cor global 🎨): a barra "Modo de edicao" e fixa no rodape, um menu abrindo pra baixo sairia da tela. Opcoes ja adicionadas (favoritos/biblioteca/atividade/platinados/wishlist sao unicos por perfil) ficam desabilitadas em vez de somem, pra o usuario entender que ja existem; "Lista de Desejos (Steam)" so aparece na lista quando `profile.temColecaoWishlistSteam` e verdadeiro (dono tem Steam conectada com wishlist populada).
 

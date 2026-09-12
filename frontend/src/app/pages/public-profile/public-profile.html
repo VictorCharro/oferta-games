@@ -1,7 +1,7 @@
 <div class="page-content public-profile" [class.editor-mode]="editingLayout && activeTab === 'resumo'" *ngIf="profile; else pageState">
   <section class="public-hero">
-    <div class="hero-banner" *ngIf="profile.bannerUrl">
-      <img [src]="profile.bannerUrl" alt="" [ngStyle]="bannerDisplayStyle()" />
+    <div class="hero-banner" [class.sem-imagem]="!profile.bannerUrl">
+      <img *ngIf="profile.bannerUrl" [src]="profile.bannerUrl" alt="" [ngStyle]="bannerDisplayStyle()" />
     </div>
     <button
       *ngIf="isOwner && editingLayout"
@@ -41,25 +41,29 @@
         </div>
       </div>
     </div>
-    <button
-      type="button"
-      class="refresh-profile"
-      (click)="refreshProfile()"
-      [disabled]="refreshing"
-      [attr.aria-label]="refreshing ? 'Atualizando dados do perfil' : 'Atualizar dados do perfil'"
-      [title]="refreshing ? 'Atualizando dados...' : 'Atualizar dados do perfil'"
-    >
-      <span aria-hidden="true">↻</span>
-    </button>
-    <button
-      *ngIf="isOwner && activeTab === 'resumo'"
-      type="button"
-      class="edit-layout"
-      (click)="editingLayout ? cancelLayoutEdit() : startLayoutEdit()"
-      [title]="editingLayout ? 'Sair do modo de edição' : 'Editar perfil'"
-    >
-      ✎
-    </button>
+    <div class="hero-actions">
+      <!-- Editar perfil leva pro editor de blocos (/perfil/blocos). O modo de edicao inline
+           continua existindo so pro ajuste de imagem dos blocos, aberto de la por ?editor=1. -->
+      <a *ngIf="isOwner && !editingLayout" class="hero-btn" routerLink="/perfil/blocos" title="Editar perfil">
+        <span aria-hidden="true">✎</span> Editar perfil
+      </a>
+      <button *ngIf="isOwner && editingLayout" type="button" class="hero-btn" (click)="cancelLayoutEdit()" title="Sair do modo de edição">
+        <span aria-hidden="true">✕</span> Sair da edição
+      </button>
+      <a *ngIf="isOwner" class="hero-btn icon-only" routerLink="/configuracoes" title="Configurações" aria-label="Configurações">
+        <img src="configuracoes.png" alt="" />
+      </a>
+      <button
+        type="button"
+        class="hero-btn icon-only"
+        (click)="refreshProfile()"
+        [disabled]="refreshing"
+        [attr.aria-label]="refreshing ? 'Atualizando dados do perfil' : 'Atualizar dados do perfil'"
+        [title]="refreshing ? 'Atualizando dados...' : 'Atualizar dados do perfil'"
+      >
+        <span class="girando" aria-hidden="true">↻</span>
+      </button>
+    </div>
     <div class="public-main">
       <div class="avatar-editor">
         <div class="avatar">
@@ -148,7 +152,7 @@
       <img src="conquistas.png" alt="" /><div><strong>{{ profile.conquistasDesbloqueadas ?? '--' }}</strong><span>Conquistas desbloqueadas</span></div>
     </div>
     <div class="profile-strip-item" *ngIf="profile.jogosPlatinados">
-      <img src="conquistas.png" alt="" class="platinum-icon" /><div><strong>{{ profile.jogosPlatinados }}</strong><span>{{ profile.jogosPlatinados === 1 ? 'Jogo platinado' : 'Jogos platinados' }}</span></div>
+      <img src="trofeu.png" alt="" /><div><strong>{{ profile.jogosPlatinados }}</strong><span>{{ profile.jogosPlatinados === 1 ? 'Jogo platinado' : 'Jogos platinados' }}</span></div>
     </div>
     <div class="profile-strip-item platforms-strip">
       <span>Plataformas conectadas</span>
@@ -159,8 +163,11 @@
     </div>
   </section>
 
+  <!-- Icones em SVG inline (nao PNG como a sidebar): o icone precisa acompanhar a cor da aba
+       ativa (ciano) e da inativa (cinza), e so currentColor faz isso sem duplicar arquivo. -->
   <section class="tabs" aria-label="Secoes do perfil">
     <button type="button" [class.active]="activeTab === 'resumo'" (click)="activeTab = 'resumo'">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" /></svg>
       Resumo
     </button>
     <button
@@ -169,6 +176,7 @@
       (click)="activeTab = 'jogosFavoritos'"
       [disabled]="editingLayout"
     >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 4.6-7 9-7 9z" /></svg>
       Jogos favoritos
     </button>
     <button
@@ -177,6 +185,7 @@
       (click)="activeTab = 'colecoes'"
       [disabled]="editingLayout"
     >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v6H4zM13 5h7v6h-7zM4 13h7v6H4zM13 13h7v6h-7z" /></svg>
       Coleções
     </button>
     <button
@@ -185,6 +194,7 @@
       (click)="activeTab = 'biblioteca'"
       [disabled]="editingLayout"
     >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h5v16H5zM12 4h3v16h-3zM17 6l3 14" /></svg>
       Biblioteca
     </button>
   </section>
@@ -205,6 +215,7 @@
             <button type="button" [disabled]="addBlockOptionDisabled('biblioteca')" (click)="addBlockFromMenu('biblioteca')">Biblioteca</button>
             <button type="button" [disabled]="addBlockOptionDisabled('atividade')" (click)="addBlockFromMenu('atividade')">Atividade</button>
             <button type="button" [disabled]="addBlockOptionDisabled('platinados')" (click)="addBlockFromMenu('platinados')">Platinados</button>
+            <button type="button" *ngIf="profile.conquistasRecentes.length" [disabled]="addBlockOptionDisabled('conquistas-recentes')" (click)="addBlockFromMenu('conquistas-recentes')">Conquistas recentes</button>
             <button type="button" *ngIf="profile.temColecaoWishlistSteam" [disabled]="addBlockOptionDisabled('wishlist')" (click)="addBlockFromMenu('wishlist')">Lista de Desejos (Steam)</button>
             <div class="editor-menu-divider"></div>
             <button type="button" (click)="addBlockFromMenu('texto')">Texto</button>
@@ -367,25 +378,33 @@
       <ng-container [ngSwitch]="block.tipo"
         ><ng-container *ngSwitchCase="'favoritos'"
           ><div class="panel-heading">
-            <h2 *ngIf="!editingLayout">{{ block.titulo || 'Jogos favoritos' }}</h2>
+            <h2 *ngIf="!editingLayout"><img class="panel-icon" src="favorito.png" alt="" /> {{ block.titulo || 'Jogos favoritos' }}</h2>
             <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Jogos favoritos" />
             <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="activeTab = 'jogosFavoritos'">{{ isOwner ? 'Gerenciar' : 'Ver favoritos' }}</button>
           </div>
           <div
             *ngIf="profile.favoritos.length; else noFav"
-            [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]"
+            class="profile-favorite-list"
             [class.organizando]="editingLayout"
             cdkDropList
-            cdkDropListOrientation="mixed"
             [cdkDropListDisabled]="!isOwner || !editingLayout"
             (cdkDropListDropped)="dropFavorite($event)"
           >
-            <article *ngFor="let game of favoritePreview(block)" class="profile-game-card" cdkDrag [cdkDragDisabled]="!isOwner || !editingLayout">
+            <article *ngFor="let game of favoritePreview(block)" class="profile-favorite-item" cdkDrag [cdkDragDisabled]="!isOwner || !editingLayout">
               <span *ngIf="isOwner && editingLayout" class="favorite-drag-handle" cdkDragHandle aria-label="Arrastar para reordenar" title="Arrastar para reordenar">↕</span>
               <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener">
                 <img [src]="favoriteImage(game)" [alt]="game.titulo" />
-                <div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else favoriteCatalogInfo"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #favoriteCatalogInfo><span>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</span></ng-template></div>
+                <div>
+                  <h3>{{ game.titulo }}</h3>
+                  <ng-container *ngIf="game.steamAppId != null; else favoriteCatalogInfo"
+                    ><span>{{ hours(game.minutosJogadas) }} jogadas</span
+                    ><span *ngIf="favoriteAchievementProgress(game) != null" class="favorite-meta-divider">·</span
+                    ><span *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</span
+                  ></ng-container>
+                  <ng-template #favoriteCatalogInfo><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template>
+                </div>
               </a>
+              <img *ngIf="game.steamAppId != null" class="favorite-platform" src="store-logos/steam.svg" alt="Steam" title="Steam" />
             </article>
           </div>
           <ng-template #noFav
@@ -415,10 +434,40 @@
             </article>
           </div>
           <ng-template #noWishlistPreview><div class="empty-panel"><h3>Nenhum jogo na wishlist</h3></div></ng-template></ng-container
+        ><ng-container *ngSwitchCase="'mais-jogados'"
+          ><div class="panel-heading">
+            <h2 *ngIf="!editingLayout">{{ block.titulo || 'Mais jogados' }}</h2>
+            <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Mais jogados" />
+            <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="openLibrary()">Ver todos ›</button>
+          </div>
+          <div *ngIf="maisJogadosPreview(block).length; else noMaisJogados" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
+            <article *ngFor="let game of maisJogadosPreview(block)" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">
+              <a [attr.href]="game.plataforma === 'steam' ? ('https://store.steampowered.com/app/' + game.appId) : null" [attr.target]="game.plataforma === 'steam' ? '_blank' : null" rel="noopener"><img *ngIf="!capasSteamIndisponiveis.has(game.appId)" [src]="steamCover(game)" [alt]="game.titulo" (error)="tentarCapaSteamAlternativa($event, game)" /><div class="game-card-shade"></div><span class="game-platform"><img [src]="game.plataforma === 'xbox' ? 'store-logos/xbox.svg' : 'store-logos/steam.svg'" [alt]="game.plataforma" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="achievementProgress(game) != null">{{ achievementProgress(game) }}% conquistas</small></div></a>
+            </article>
+          </div>
+          <ng-template #noMaisJogados><div class="empty-panel"><h3>Biblioteca vazia</h3><p>Nenhum jogo sincronizado para exibir.</p></div></ng-template></ng-container
+        ><ng-container *ngSwitchCase="'conquistas-recentes'"
+          ><div class="panel-heading">
+            <h2 *ngIf="!editingLayout"><img class="panel-icon" src="conquistas.png" alt="" /> {{ block.titulo || 'Conquistas recentes' }}</h2>
+            <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Conquistas recentes" />
+          </div>
+          <ul *ngIf="conquistasPreview(block).length; else noAchievements" class="achievement-list">
+            <li *ngFor="let conquista of conquistasPreview(block)" class="achievement-item">
+              <img *ngIf="conquista.iconeUrl; else achievementFallback" [src]="conquista.iconeUrl" [alt]="conquista.titulo" loading="lazy" />
+              <ng-template #achievementFallback><span class="achievement-icon-fallback" aria-hidden="true">🏅</span></ng-template>
+              <div>
+                <strong>{{ conquista.titulo }}</strong>
+                <span *ngIf="conquista.tituloJogo">{{ conquista.tituloJogo }}</span>
+              </div>
+              <small>{{ tempoRelativo(conquista.desbloqueadaEm) }}</small>
+            </li>
+          </ul>
+          <ng-template #noAchievements><div class="empty-panel"><h3>Nenhuma conquista recente</h3><p>Conecte a Steam para acompanhar suas conquistas aqui.</p></div></ng-template></ng-container
         ><ng-container *ngSwitchCase="'platinados'"
           ><div class="panel-heading">
-            <h2 *ngIf="!editingLayout">{{ block.titulo || 'Platinados' }}</h2>
+            <h2 *ngIf="!editingLayout"><img class="panel-icon" src="trofeu.png" alt="" /> {{ block.titulo || 'Platinados' }}</h2>
             <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Platinados" />
+            <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="openLibrary()">Ver todos ›</button>
           </div>
           <div
             *ngIf="platinumPreview(block).length; else noPlatinumPreview"

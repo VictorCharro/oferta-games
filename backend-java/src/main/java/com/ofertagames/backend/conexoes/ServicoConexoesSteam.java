@@ -224,6 +224,38 @@ public class ServicoConexoesSteam {
    * @return mapa vazio (nunca excecao) quando o usuario nao tem Steam conectada, nunca jogou esse
    *     app id, ou nao esta logado — a pagina do jogo entao mostra tudo bloqueado e 0%
    */
+  /**
+   * Ultimas conquistas desbloqueadas, ja com nome oficial e icone vindos do catalogo.
+   *
+   * <p>Cruza os dois bancos: o progresso do usuario ({@code steam_user_achievements}) esta no
+   * Supabase e so guarda {@code api_name}; nome em pt-BR e icone estao em
+   * {@code game_achievements}, no Postgres do catalogo. Conquista cujo jogo ainda nao foi
+   * detalhado no catalogo entra mesmo assim, com o nome derivado do {@code api_name} e sem icone
+   * — melhor um item sem imagem do que a lista ficar com buraco.
+   *
+   * @return lista vazia (nunca excecao) quando nao ha Steam conectada ou nenhuma conquista com
+   *     data registrada
+   */
+  public java.util.List<ConquistaRecenteSteam> conquistasRecentes(String usuarioId, int limite) {
+    java.util.List<RepositorioConexoesSteam.ConquistaRecente> recentes = conexoes.listarConquistasRecentes(usuarioId, limite);
+    if (recentes.isEmpty()) return java.util.List.of();
+
+    java.util.Map<String, RepositorioJogos.ConquistaDoCatalogo> doCatalogo =
+        jogos.buscarConquistasDoCatalogo(
+            recentes.stream().map(RepositorioConexoesSteam.ConquistaRecente::appId).distinct().toList(),
+            recentes.stream().map(RepositorioConexoesSteam.ConquistaRecente::apiName).distinct().toList());
+
+    return recentes.stream()
+        .map(conquista -> {
+          RepositorioJogos.ConquistaDoCatalogo catalogo = doCatalogo.get(conquista.appId() + "|" + conquista.apiName());
+          String nome = catalogo != null && catalogo.nome() != null && !catalogo.nome().isBlank() ? catalogo.nome() : conquista.titulo();
+          return new ConquistaRecenteSteam(
+              conquista.appId(), nome, conquista.tituloJogo(),
+              catalogo == null ? null : catalogo.iconeUrl(), conquista.desbloqueadaEm());
+        })
+        .toList();
+  }
+
   public java.util.Map<String, java.time.Instant> conquistasDesbloqueadas(String usuarioId, int appId) {
     return conexoes.conquistasDesbloqueadasComData(usuarioId, appId);
   }
@@ -374,6 +406,15 @@ public class ServicoConexoesSteam {
       return new JogoBibliotecaSteam(appId, titulo, minutosJogadas, iconeHash, conquistasDesbloqueadas, conquistasTotal, capaUrl, catalogSlug, platinumPosition, plataforma);
     }
   }
+
+  /**
+   * DTO publico porque {@link RepositorioConexoesSteam} e package-private: e assim que o pacote
+   * {@code perfis} enxerga essas conquistas (mesmo motivo de {@link JogoBibliotecaSteam}).
+   *
+   * <p>{@code iconeUrl} pode ser {@code null} quando o jogo ainda nao tem conquistas detalhadas no
+   * catalogo — o frontend cai num placeholder nesse caso.
+   */
+  public record ConquistaRecenteSteam(int appId, String titulo, String tituloJogo, String iconeUrl, java.time.Instant desbloqueadaEm) {}
 
   static class ConexaoSteamNaoEncontradaException extends RuntimeException {}
   static class UrlBackendNaoConfiguradaException extends RuntimeException {}

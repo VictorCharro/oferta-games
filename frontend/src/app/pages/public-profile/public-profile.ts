@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -8,6 +8,7 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth';
 import { ColecaoPerfil, PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
+import { blocosPadrao } from '../../services/perfil-blocos';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
 import { ConexoesSteamService, JogoBibliotecaSteam } from '../../services/conexoes-steam';
 import { GameService, GameSummary } from '../../services/game';
@@ -22,6 +23,12 @@ import { SeoService } from '../../services/seo';
   styleUrl: './public-profile.scss',
 })
 export class PublicProfile implements OnInit, OnDestroy {
+  // Modo preview: a pagina /perfil/blocos embute este mesmo componente pra mostrar como o perfil
+  // vai ficar com o rascunho de blocos, antes de salvar. Com previewHandle setado o componente
+  // ignora a rota, nao mexe no SEO e se comporta como visitante (sem nenhum chrome de edicao).
+  @Input() previewHandle = '';
+  @Input() previewBlocos: PerfilBloco[] | null = null;
+
   profile: PerfilPublico | null = null;
   missing = false;
   loading = true;
@@ -128,6 +135,10 @@ export class PublicProfile implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    if (this.previewHandle) {
+      void this.loadProfile(this.previewHandle);
+      return;
+    }
     this.routeSub = this.route.paramMap.subscribe(params => {
       void this.loadProfile(params.get('handle') || '');
     });
@@ -136,7 +147,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
     clearTimeout(this.buscaCatalogoTimer);
-    this.seo.reset();
+    if (!this.previewHandle) this.seo.reset();
   }
 
   private async loadProfile(handle: string) {
@@ -166,6 +177,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       profile.favoritos ??= [];
       profile.colecoes ??= [];
       profile.atividades ??= [];
+      profile.conquistasRecentes ??= [];
       profile.plataformasConectadas ??= [];
       profile.blocos = profile.blocos?.length
         ? profile.blocos
@@ -173,7 +185,7 @@ export class PublicProfile implements OnInit, OnDestroy {
             .map(block => ({ ...block, corTexto: block.corTexto ?? null }))
         : this.defaultBlocks();
       this.profile = profile;
-      this.seo.set({
+      if (!this.previewHandle) this.seo.set({
         title: `Perfil de ${profile.nomeExibicao}`,
         description: profile.bio?.trim() || `Veja a biblioteca e os jogos favoritos de ${profile.nomeExibicao} no Oferta Games.`,
         image: profile.avatarUrl,
@@ -188,11 +200,15 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.bannerPositionY = profile.bannerPosicaoY ?? 50;
 
       try {
-        const own = await this.perfis.proprio();
+        // No preview o dono ve exatamente o que um visitante veria, entao nem consulta o /me.
+        const own = this.previewHandle ? null : await this.perfis.proprio();
         if (request !== this.profileRequest) return;
         this.isOwner = Boolean(own?.handle && own.handle === this.profile?.handle);
         this.ownerAvatar = this.isOwner ? this.auth.avatarUrl : '';
         if (this.isOwner && this.profile) this.profile.favoritos = await this.profileFavorites.load();
+        // ?editor=1: o editor de blocos manda pra ca quando o dono quer ajustar a imagem de um
+        // bloco, que so da pra recortar em cima do bloco ja renderizado.
+        if (this.isOwner && this.route.snapshot.queryParamMap.get('editor') === '1') this.startLayoutEdit();
       } catch {
         if (request !== this.profileRequest) return;
         this.isOwner = false;
@@ -209,6 +225,8 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   get visibleBlocks(): PerfilBloco[] {
+    // No preview os blocos vem do rascunho do editor, e os ocultos somem (e o que o visitante ve).
+    if (this.previewBlocos) return [...this.previewBlocos].filter(block => block.visivel).sort((a, b) => a.posicao - b.posicao);
     const blocks = this.editingLayout ? this.layoutDraft : this.profile?.blocos || [];
     return [...blocks].sort((a, b) => a.posicao - b.posicao);
   }
@@ -289,7 +307,9 @@ export class PublicProfile implements OnInit, OnDestroy {
   // sao unicos por perfil - ver addBlock) e a wishlist quando o dono nao tem uma pra mostrar.
   addBlockOptionDisabled(tipo: PerfilBloco['tipo']): boolean {
     if (tipo === 'wishlist' && !this.profile?.temColecaoWishlistSteam) return true;
-    return ['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist'].includes(tipo)
+    if (tipo === 'conquistas-recentes' && !this.profile?.conquistasRecentes.length) return true;
+    if (tipo === 'mais-jogados' && !this.profile?.biblioteca.length) return true;
+    return ['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist', 'conquistas-recentes', 'mais-jogados'].includes(tipo)
       && this.layoutDraft.some(block => block.tipo === tipo);
   }
 
@@ -559,9 +579,9 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   addBlock(tipo: PerfilBloco['tipo']) {
-    if (['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
+    if (['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist', 'conquistas-recentes', 'mais-jogados'].includes(tipo) && this.layoutDraft.some(block => block.tipo === tipo)) return;
     const id = `custom-${crypto.randomUUID()}`;
-    this.layoutDraft.push({ id: ['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist'].includes(tipo) ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
+    this.layoutDraft.push({ id: ['favoritos', 'biblioteca', 'atividade', 'platinados', 'wishlist', 'conquistas-recentes', 'mais-jogados'].includes(tipo) ? tipo : id, tipo, titulo: tipo === 'texto' ? 'Novo texto' : tipo === 'imagem' ? 'Imagem' : tipo === 'links' ? 'Links' : null, conteudo: tipo === 'texto' ? 'Escreva algo sobre você.' : '', posicao: this.layoutDraft.length, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null });
   }
 
   removeBlock(index: number) { this.layoutDraft.splice(index, 1); this.layoutDraft.forEach((block, position) => block.posicao = position); }
@@ -922,12 +942,12 @@ export class PublicProfile implements OnInit, OnDestroy {
     return this.normalizarUrlLink(endereco);
   }
 
+  // Layout de quem nunca editou o perfil. A ordem segue a hierarquia do redesign: destaque visual
+  // primeiro (platinados em cards grandes), depois as listas compactas (favoritos e conquistas)
+  // lado a lado, e por fim biblioteca e atividade. Quem ja salvou blocos mantem o que montou.
+  // Compartilhado com a pagina /perfil/blocos (services/perfil-blocos.ts).
   private defaultBlocks(): PerfilBloco[] {
-    return [
-      { id: 'favoritos', tipo: 'favoritos', titulo: null, conteudo: null, posicao: 0, tamanho: 'largo', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
-      { id: 'biblioteca', tipo: 'biblioteca', titulo: null, conteudo: null, posicao: 1, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
-      { id: 'atividade', tipo: 'atividade', titulo: null, conteudo: null, posicao: 2, tamanho: 'medio', visivel: true, tipoFundo: 'padrao', valorFundo: null, opacidade: 0, corTexto: null },
-    ];
+    return blocosPadrao();
   }
 
   previewLimit(size: PerfilBloco['tamanho']): number {
@@ -955,14 +975,53 @@ export class PublicProfile implements OnInit, OnDestroy {
       atividade: 'Atividade recente',
       platinados: 'Platinados',
       wishlist: 'Lista de Desejos (Steam)',
+      'conquistas-recentes': 'Conquistas recentes',
+      'mais-jogados': 'Mais jogados',
       texto: 'Texto',
       imagem: 'Imagem',
       links: 'Links',
     }[block.tipo];
   }
 
+  // Limite proprio (maior que previewLimit): favoritos viraram lista compacta, e cabem varias
+  // linhas na altura que um card grande ocuparia - num bloco pequeno (coluna estreita do Figma)
+  // o certo e mostrar ~5 jogos, nao 1.
   favoritePreview(block: PerfilBloco) {
-    return this.profile?.favoritos.slice(0, this.previewLimit(block.tamanho)) || [];
+    const limite = { pequeno: 5, medio: 6, largo: 8, completo: 10 }[block.tamanho];
+    return this.profile?.favoritos.slice(0, limite) || [];
+  }
+
+  // "Mais jogados" nao tem dado proprio: e a mesma biblioteca (Steam + Xbox) ordenada por horas.
+  maisJogadosPreview(block: PerfilBloco) {
+    if (!this.profile) return [];
+    return [...this.profile.biblioteca]
+      .sort((a, b) => (b.minutosJogadas || 0) - (a.minutosJogadas || 0))
+      .slice(0, this.previewLimit(block.tamanho));
+  }
+
+  // A lista ja vem pronta do backend (nome e icone cruzados com o catalogo, ver
+  // ServicoConexoesSteam.conquistasRecentes) - aqui so corta pelo tamanho do bloco.
+  conquistasPreview(block: PerfilBloco) {
+    return this.profile?.conquistasRecentes.slice(0, this.achievementPreviewLimit(block.tamanho)) || [];
+  }
+
+  // Cabem mais que cards de jogo: cada conquista e uma linha compacta (icone 40px + 2 linhas).
+  private achievementPreviewLimit(size: PerfilBloco['tamanho']): number {
+    return { pequeno: 3, medio: 5, largo: 8, completo: 12 }[size];
+  }
+
+  /** "há 2h", "há 3 dias" — a data vem em ISO do backend. */
+  tempoRelativo(iso: string): string {
+    const minutos = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (minutos < 60) return minutos <= 1 ? 'agora há pouco' : `há ${minutos} min`;
+    const horas = Math.round(minutos / 60);
+    if (horas < 24) return `há ${horas}h`;
+    const dias = Math.round(horas / 24);
+    if (dias < 30) return dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
+    const meses = Math.round(dias / 30);
+    if (meses < 12) return meses === 1 ? 'há 1 mês' : `há ${meses} meses`;
+    const anos = Math.round(meses / 12);
+    return anos === 1 ? 'há 1 ano' : `há ${anos} anos`;
   }
 
   // Sem estado proprio - reusa a colecao de sistema da wishlist (ver "Colecoes de sistema" no

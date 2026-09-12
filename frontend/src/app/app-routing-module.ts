@@ -24,6 +24,7 @@ const routes: Routes = [
   { path: 'gratuitos', component: FreeGames },
   { path: 'login', loadComponent: () => import('./pages/login/login').then(m => m.Login) },
   { path: 'perfil', canActivate: [authGuard], loadComponent: () => import('./pages/profile/profile').then(m => m.Profile) },
+  { path: 'perfil/blocos', canActivate: [authGuard], loadComponent: () => import('./pages/editar-blocos/editar-blocos').then(m => m.EditarBlocos) },
   { path: 'configuracoes', canActivate: [authGuard], loadComponent: () => import('./pages/settings/settings').then(m => m.Settings) },
   { path: 'monitorados', canActivate: [authGuard], component: Favorites },
   { path: 'admin/coleta', canActivate: [adminGuard], loadComponent: () => import('./pages/admin-coleta/admin-coleta').then(m => m.AdminColeta) },
