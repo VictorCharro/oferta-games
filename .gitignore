@@ -55,3 +55,6 @@ backend/node_modules/
 
 ### Claude Code (config pessoal, pode conter segredos em permissões) ###
 .claude/settings.local.json
+
+# Marcador do commit publicado, gravado pelo deploy na VM (ver deploy-oracle.yml).
+.deployed-sha

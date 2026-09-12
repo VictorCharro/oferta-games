@@ -53,13 +53,21 @@ jobs:
           set -euo pipefail
           cd /opt/oferta-games
 
-          ANTES=$(git rev-parse HEAD)
+          # A referencia e o que ESTA PUBLICADO (marcador gravado no fim de um deploy bem
+          # sucedido), nao o HEAD do checkout: o git pull pode ter trazido um commit de backend
+          # que nunca virou imagem - foi o que aconteceu em 12/09/2026, quando um deploy falhou no
+          # meio, deixou a VM no commit novo com a imagem velha, e o deploy seguinte comparou
+          # HEAD-antes com HEAD-depois, viu "nada de backend mudou" e pulou. Sem marcador, trata
+          # como primeiro deploy e publica.
+          MARCADOR=.deployed-sha
+          PUBLICADO=$(cat "$MARCADOR" 2>/dev/null || true)
           git pull --ff-only origin master
           DEPOIS=$(git rev-parse HEAD)
+          ANTES=${PUBLICADO:-}
 
           # O proxy tem decisao propria, separada da do backend: mudar so o Caddyfile nao precisa
           # reiniciar a API, e vice-versa.
-          if [ -n "$(git diff --name-only "$ANTES" "$DEPOIS" -- deploy/oracle/Caddyfile)" ]; then
+          if [ -z "$ANTES" ] || [ -n "$(git diff --name-only "$ANTES" "$DEPOIS" -- deploy/oracle/Caddyfile)" ]; then
             # Recria o container em vez de recarregar: o Caddyfile entra por bind mount de
             # ARQUIVO, que aponta pro inode. O git pull escreve um arquivo novo e renomeia, entao
             # o container continua vendo o antigo e um 'caddy reload' rele o arquivo velho - foi o
@@ -75,6 +83,8 @@ jobs:
           MOTIVO=""
           if [ "$FORCAR" = "1" ]; then
             MOTIVO="deploy manual"
+          elif [ -z "$ANTES" ]; then
+            MOTIVO="sem marcador do que esta publicado"
           elif [ -z "$(docker ps --filter name=^oferta-games-backend$ --filter status=running -q)" ]; then
             MOTIVO="container fora do ar"
           elif [ -n "$(git diff --name-only "$ANTES" "$DEPOIS" -- backend-java/ deploy/oracle/compose.yml)" ]; then
@@ -85,15 +95,18 @@ jobs:
             echo "Backend inalterado entre $ANTES e $DEPOIS - container mantido no ar."
             echo "Reiniciar a API a cada push de frontend derruba o SSR da Vercel por alguns"
             echo "segundos e ainda mata a coleta em andamento, entao so se mexe quando precisa."
-            exit 0
+          else
+            echo "Publicando backend ($MOTIVO)."
+            # build separado do up: com a imagem inalterada o 'up -d' deixa o container em paz, e
+            # o '--build' embutido recriava mesmo sem mudanca nenhuma.
+            docker compose -f deploy/oracle/compose.yml build backend
+            docker compose -f deploy/oracle/compose.yml up -d
+            docker compose -f deploy/oracle/compose.yml ps
           fi
 
-          echo "Publicando backend ($MOTIVO)."
-          # build separado do up: com a imagem inalterada o 'up -d' deixa o container em paz, e o
-          # '--build' embutido recriava mesmo sem mudanca nenhuma.
-          docker compose -f deploy/oracle/compose.yml build backend
-          docker compose -f deploy/oracle/compose.yml up -d
-          docker compose -f deploy/oracle/compose.yml ps
+          # So grava o marcador no fim: com set -e, qualquer falha acima deixa o marcador no
+          # commit anterior e o proximo deploy refaz o trabalho em vez de pular achando que ja foi.
+          echo "$DEPOIS" > "$MARCADOR"
           REMOTO
 
           ssh -i ~/.ssh/id_oracle ubuntu@"$ORACLE_HOST" "FORCAR=$FORCAR bash /tmp/deploy-oferta-games.sh"
