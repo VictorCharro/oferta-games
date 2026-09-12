@@ -130,6 +130,16 @@
 // a altura do bloco nao depender da imagem. min-height:0 porque flex item nao encolhe abaixo do
 // conteudo sem isso. Quem diferencia os modos e o object-fit da imagem (ver blockImageStyle).
 .custom-image-frame.preenche { flex: 1; height: auto; min-height: 0; }
+// Dropdown do "Editar perfil" (as duas formas de editar). Mesmo desenho do menu do bloco.
+.hero-menu-wrap { position: relative; }
+.hero-chevron { width: 6px; height: 6px; margin-left: 1px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+.hero-menu { position: absolute; top: calc(100% + 7px); right: 0; z-index: 30; width: 268px; display: flex; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card); box-shadow: 0 16px 34px rgba(0, 0, 0, .45); }
+.hero-menu-opcao { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); cursor: pointer; font: inherit; text-align: left; }
+.hero-menu-opcao:hover { background: var(--bg-card-hover); }
+.hero-menu-opcao strong { color: var(--text-primary); font-size: 13px; font-weight: 700; }
+.hero-menu-opcao:hover strong { color: var(--color-purple); }
+.hero-menu-opcao small { color: var(--text-muted); font-size: 11px; line-height: 1.35; }
+
 // Menu "..." do bloco (editor inline). Estrutura igual a do menu da pagina /perfil/blocos, so
 // que ancorado no bloco: secoes com titulo, opcoes em lista e campos quando o tipo pede.
 .block-menu-wrap { position: relative; margin-left: auto; }

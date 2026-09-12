@@ -87,6 +87,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   private bannerDrag: { startX: number; startY: number; startPosX: number; startPosY: number } | null = null;
   private bannerPointerId: number | null = null;
   blockMenuAberto: string | null = null;
+  menuEdicaoAberto = false;
   globalColorMenuOpen = false;
   addBlockMenuOpen = false;
   globalBackgroundColor = '#121a2a';
@@ -249,6 +250,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     }
     // O menu do bloco fecha ao clicar fora dele (o proprio menu para o clique no template).
     if (!alvo.closest('.block-menu-wrap')) this.blockMenuAberto = null;
+    if (!alvo.closest('.hero-menu-wrap')) this.menuEdicaoAberto = false;
   }
 
   @HostListener('document:keydown.escape')
@@ -256,6 +258,18 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.globalColorMenuOpen = false;
     this.addBlockMenuOpen = false;
     this.blockMenuAberto = null;
+    this.menuEdicaoAberto = false;
+  }
+
+  toggleMenuEdicao(event: MouseEvent) {
+    event.stopPropagation();
+    this.menuEdicaoAberto = !this.menuEdicaoAberto;
+  }
+
+  /** "Editar na pagina": o modo inline, sem sair do perfil. */
+  editarNaPagina() {
+    this.menuEdicaoAberto = false;
+    this.startLayoutEdit();
   }
 
   /**

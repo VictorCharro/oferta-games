@@ -123,17 +123,17 @@
         <button type="button" class="btn-primario" (click)="salvarEVoltar()" [disabled]="saving">
           {{ saving ? 'Salvando...' : 'Salvar e ver perfil' }}
         </button>
-        <!-- Entrada pro editor inline: mexer nos blocos vendo a pagina de verdade, em tempo real.
-             E o unico lugar com recorte de imagem, gradiente e cor global. -->
+        <!-- A outra forma de editar: mexer nos blocos vendo a pagina de verdade, em tempo real.
+             O mesmo par de opcoes aparece no "Editar perfil" do cabecalho do perfil. -->
         <button type="button" class="btn-secundario btn-modo-antigo" (click)="abrirModoAntigo()" [disabled]="saving">
-          Modo antigo de edição
+          Editar na página
         </button>
         <span class="mensagem" *ngIf="message">{{ message }}</span>
       </div>
 
       <div class="aviso-rascunho" *ngIf="confirmandoModoAntigo">
         <p>
-          Você tem alterações que ainda não foram salvas. O modo antigo abre o perfil como ele está
+          Você tem alterações que ainda não foram salvas. A edição na página abre o perfil como ele está
           salvo hoje, então essas mudanças seriam perdidas.
         </p>
         <div class="aviso-acoes">

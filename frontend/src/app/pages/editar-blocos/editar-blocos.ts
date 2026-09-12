@@ -217,10 +217,10 @@ export class EditarBlocos implements OnInit {
   }
 
   /**
-   * Abre o perfil no modo de edicao inline (`?editor=1`), onde o dono mexe nos blocos vendo a
-   * pagina de verdade. E o unico lugar com recorte de imagem, gradiente e cor global.
+   * Abre o perfil no modo de edicao na pagina (`?editor=1`), onde o dono mexe nos blocos vendo
+   * o perfil de verdade. E o unico lugar com recorte de imagem, gradiente e cor global.
    *
-   * <p>Sair daqui abandona o rascunho (o modo antigo le o que esta salvo), entao com alteracao
+   * <p>Sair daqui abandona o rascunho (a edicao na pagina le o que esta salvo), entao com alteracao
    * pendente pergunta antes em vez de perder o trabalho silenciosamente.
    */
   abrirModoAntigo() {

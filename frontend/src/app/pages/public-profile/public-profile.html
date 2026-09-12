@@ -42,11 +42,25 @@
       </div>
     </div>
     <div class="hero-actions">
-      <!-- Editar perfil leva pro editor de blocos (/perfil/blocos). O modo de edicao inline
-           continua existindo so pro ajuste de imagem dos blocos, aberto de la por ?editor=1. -->
-      <a *ngIf="isOwner && !editingLayout" class="hero-btn" routerLink="/perfil/blocos" title="Editar perfil">
-        <span aria-hidden="true">✎</span> Editar perfil
-      </a>
+      <!-- Existem dois editores, e os dois sao legitimos: a pagina organiza melhor (lista,
+           biblioteca de blocos, previa) e a edicao na pagina mostra o resultado ao vivo. Em vez
+           de eleger um e esconder o outro, o botao abre as duas opcoes. -->
+      <div *ngIf="isOwner && !editingLayout" class="hero-menu-wrap">
+        <button type="button" class="hero-btn" (click)="toggleMenuEdicao($event)" [attr.aria-expanded]="menuEdicaoAberto" title="Editar perfil">
+          <span aria-hidden="true">✎</span> Editar perfil
+          <span class="hero-chevron" aria-hidden="true"></span>
+        </button>
+        <div *ngIf="menuEdicaoAberto" class="hero-menu" (click)="$event.stopPropagation()">
+          <a class="hero-menu-opcao" routerLink="/perfil/blocos" (click)="menuEdicaoAberto = false">
+            <strong>Organizar blocos</strong>
+            <small>lista com arrastar, biblioteca de blocos e prévia</small>
+          </a>
+          <button type="button" class="hero-menu-opcao" (click)="editarNaPagina()">
+            <strong>Editar na página</strong>
+            <small>mexe direto no perfil e vê o resultado na hora</small>
+          </button>
+        </div>
+      </div>
       <button *ngIf="isOwner && editingLayout" type="button" class="hero-btn" (click)="cancelLayoutEdit()" title="Sair do modo de edição">
         <span aria-hidden="true">✕</span> Sair da edição
       </button>
