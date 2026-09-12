@@ -152,7 +152,9 @@
     color: var(--color-purple);
     background: color-mix(in srgb, var(--color-purple) 15%, transparent);
   }
-  .bloco-icone { font-size: 1.1rem; }
+  // img e emoji ocupam a mesma caixa, senao a lista perde o alinhamento entre um tipo e outro.
+  .bloco-icone { flex: 0 0 20px; width: 20px; height: 20px; object-fit: contain; }
+  .bloco-icone.emoji { display: grid; place-items: center; font-size: 1.05rem; }
 
   .bloco-texto {
     display: flex;
@@ -370,6 +372,25 @@
   &:hover { color: var(--text-primary); background: var(--bg-card-hover); }
 }
 
+// Empurrado pra direita, longe de Cancelar/Salvar: leva pra outra tela, nao e acao do formulario.
+.btn-modo-antigo {
+  margin-left: auto;
+
+  &:disabled { opacity: .6; cursor: default; }
+}
+
+.aviso-rascunho {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border-radius: var(--border-radius-sm);
+  background: color-mix(in srgb, var(--color-yellow) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-yellow) 38%, transparent);
+
+  p { margin: 0 0 10px; font-size: .82rem; color: var(--text-secondary); }
+
+  .aviso-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+}
+
 .coluna-lateral {
   display: flex;
   flex-direction: column;
@@ -409,7 +430,8 @@
   &:hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-purple) 45%, transparent); }
   &:disabled { opacity: .4; cursor: default; }
 
-  .bloco-icone { font-size: 1.05rem; }
+  .bloco-icone { flex: 0 0 20px; width: 20px; height: 20px; object-fit: contain; }
+  .bloco-icone.emoji { display: grid; place-items: center; font-size: 1rem; }
   .bloco-card-texto {
     display: flex;
     flex-direction: column;

@@ -55,7 +55,8 @@
         <article class="bloco-linha" *ngFor="let bloco of blocos; let i = index" cdkDrag [class.inativo]="!bloco.visivel">
           <span class="alca" cdkDragHandle aria-hidden="true">⠿</span>
           <span class="numero">{{ i + 1 }}</span>
-          <span class="bloco-icone" aria-hidden="true">{{ descricao(bloco).icone }}</span>
+          <img *ngIf="descricao(bloco).arquivo; else iconeEmoji" class="bloco-icone" [src]="descricao(bloco).arquivo" alt="" />
+          <ng-template #iconeEmoji><span class="bloco-icone emoji" aria-hidden="true">{{ descricao(bloco).icone }}</span></ng-template>
 
           <div class="bloco-texto">
             <strong>{{ tituloDoBloco(bloco) }}</strong>
@@ -122,7 +123,26 @@
         <button type="button" class="btn-primario" (click)="salvarEVoltar()" [disabled]="saving">
           {{ saving ? 'Salvando...' : 'Salvar e ver perfil' }}
         </button>
+        <!-- Entrada pro editor inline: mexer nos blocos vendo a pagina de verdade, em tempo real.
+             E o unico lugar com recorte de imagem, gradiente e cor global. -->
+        <button type="button" class="btn-secundario btn-modo-antigo" (click)="abrirModoAntigo()" [disabled]="saving">
+          Modo antigo de edição
+        </button>
         <span class="mensagem" *ngIf="message">{{ message }}</span>
+      </div>
+
+      <div class="aviso-rascunho" *ngIf="confirmandoModoAntigo">
+        <p>
+          Você tem alterações que ainda não foram salvas. O modo antigo abre o perfil como ele está
+          salvo hoje, então essas mudanças seriam perdidas.
+        </p>
+        <div class="aviso-acoes">
+          <button type="button" class="btn-primario" (click)="salvarEAbrirModoAntigo()" [disabled]="saving">
+            {{ saving ? 'Salvando...' : 'Salvar e abrir' }}
+          </button>
+          <button type="button" class="btn-secundario" (click)="irParaModoAntigo()">Abrir sem salvar</button>
+          <button type="button" class="btn-secundario" (click)="confirmandoModoAntigo = false">Voltar</button>
+        </div>
       </div>
     </div>
 
@@ -131,7 +151,8 @@
         <h2>Biblioteca de Blocos</h2>
         <button type="button" class="bloco-card" *ngFor="let item of catalogo"
                 [disabled]="indisponivel(item.tipo)" (click)="adicionar(item.tipo)">
-          <span class="bloco-icone" aria-hidden="true">{{ item.icone }}</span>
+          <img *ngIf="item.arquivo; else iconeCatalogoEmoji" class="bloco-icone" [src]="item.arquivo" alt="" />
+          <ng-template #iconeCatalogoEmoji><span class="bloco-icone emoji" aria-hidden="true">{{ item.icone }}</span></ng-template>
           <span class="bloco-card-texto">
             <strong>{{ item.titulo }}</strong>
             <small>{{ item.descricao }}</small>

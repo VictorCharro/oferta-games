@@ -24,6 +24,9 @@ export class EditarBlocos implements OnInit {
   aba: 'blocos' | 'preview' = 'blocos';
   loading = true;
   saving = false;
+  confirmandoModoAntigo = false;
+  /** Como os blocos estavam na ultima carga/salvamento, pra saber se ha rascunho pendente. */
+  private snapshotSalvo = '';
   erro = '';
   message = '';
   handle = '';
@@ -68,6 +71,7 @@ export class EditarBlocos implements OnInit {
         .filter(bloco => !['resumo_favoritos', 'horas', 'conquistas'].includes(bloco.tipo as string))
         .map(bloco => ({ ...bloco, corTexto: bloco.corTexto ?? null, visualizacao: bloco.visualizacao ?? null }));
       this.blocos = salvos.length ? salvos : blocosPadrao();
+      this.snapshotSalvo = JSON.stringify(this.blocos);
     } catch {
       this.erro = 'Não foi possível carregar seus blocos.';
     } finally {
@@ -193,6 +197,7 @@ export class EditarBlocos implements OnInit {
     this.renumerar();
     try {
       await this.perfis.salvarBlocos(this.blocos);
+      this.snapshotSalvo = JSON.stringify(this.blocos);
       this.message = 'Blocos salvos.';
     } catch {
       this.message = 'Não foi possível salvar os blocos.';
@@ -204,5 +209,35 @@ export class EditarBlocos implements OnInit {
   async salvarEVoltar() {
     await this.salvar();
     if (this.message === 'Blocos salvos.') void this.router.navigate(['/', this.handle]);
+  }
+
+  /** Ha rascunho nao salvo? Comparacao por serializacao: a lista e pequena (max 20 blocos). */
+  get temRascunho(): boolean {
+    return this.snapshotSalvo !== '' && JSON.stringify(this.blocos) !== this.snapshotSalvo;
+  }
+
+  /**
+   * Abre o perfil no modo de edicao inline (`?editor=1`), onde o dono mexe nos blocos vendo a
+   * pagina de verdade. E o unico lugar com recorte de imagem, gradiente e cor global.
+   *
+   * <p>Sair daqui abandona o rascunho (o modo antigo le o que esta salvo), entao com alteracao
+   * pendente pergunta antes em vez de perder o trabalho silenciosamente.
+   */
+  abrirModoAntigo() {
+    if (this.temRascunho) {
+      this.confirmandoModoAntigo = true;
+      return;
+    }
+    this.irParaModoAntigo();
+  }
+
+  async salvarEAbrirModoAntigo() {
+    await this.salvar();
+    if (this.message === 'Blocos salvos.') this.irParaModoAntigo();
+  }
+
+  irParaModoAntigo() {
+    this.confirmandoModoAntigo = false;
+    void this.router.navigate(['/', this.handle], { queryParams: { editor: 1 } });
   }
 }
