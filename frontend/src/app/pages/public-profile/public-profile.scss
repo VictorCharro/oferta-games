@@ -190,7 +190,13 @@
 .activity-item.muted { opacity: .72; }
 .activity-list .activity-item + .activity-item { border-top: 1px solid var(--border-color); }
 .library-list-panel { min-height: 360px; }
-.library-controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.library-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+// Chip do filtro "so platinados" (vem do Ver todos daquele bloco). Ciano porque e um filtro
+// ativo, nao um controle neutro como os selects do lado.
+.library-chip { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border: 1px solid var(--color-purple); border-radius: 999px; background: rgba(41, 168, 224, .12); color: var(--color-purple); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.library-chip:hover { background: rgba(41, 168, 224, .2); }
+.library-chip img { width: 15px; height: 15px; object-fit: contain; }
+.library-chip span { color: var(--text-secondary); font-size: 13px; }
 .library-controls input { flex: 1 1 220px; min-width: 0; }
 .library-controls select { flex: 0 0 170px; }
 .library-controls input, .library-controls select { height: 38px; box-sizing: border-box; padding: 0 11px; border: 1px solid var(--border-color); border-radius: 7px; background: var(--bg-input); color: var(--text-primary); font: inherit; font-size: 13px; }

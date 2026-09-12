@@ -520,7 +520,9 @@
           ><div class="panel-heading">
             <h2 *ngIf="!editingLayout"><img class="panel-icon" src="trofeu.png" alt="" /> {{ block.titulo || 'Platinados' }}</h2>
             <input *ngIf="editingLayout" class="block-title-inline" [(ngModel)]="block.titulo" [maxlength]="maxTitleLength(block)" placeholder="Platinados" />
-            <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="openLibrary()">Ver todos ›</button>
+            <!-- Abre a Biblioteca ja filtrada nos platinados: "ver todos" do bloco de platinados
+                 levando pra biblioteca inteira era o oposto do que o bloco mostra. -->
+            <button *ngIf="!editingLayout" type="button" class="panel-link" (click)="openLibrary(true)">Ver todos ›</button>
           </div>
           <div
             *ngIf="platinumPreview(block).length; else noPlatinumPreview"
@@ -805,6 +807,11 @@
         <option value="conquistas">Mais conquistas</option>
         <option value="nome">Nome</option>
       </select>
+      <!-- Chip em vez de filtro escondido: sem ele a lista simplesmente apareceria curta e
+           pareceria que a biblioteca encolheu. Clicar remove o filtro. -->
+      <button *ngIf="librarySoPlatinados" type="button" class="library-chip" (click)="librarySoPlatinados = false" title="Mostrar a biblioteca inteira">
+        <img src="trofeu.png" alt="" /> Só platinados <span aria-hidden="true">✕</span>
+      </button>
     </div>
     <div class="profile-game-grid grid-completo library-gallery" *ngIf="libraryGames.length; else emptyLibrary">
       <article *ngFor="let game of libraryGames" class="profile-game-card library-game-card" [class.cover-unavailable]="capasSteamIndisponiveis.has(game.appId)">

@@ -48,6 +48,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   librarySearch = '';
   libraryOrder: 'tempo' | 'nome' | 'conquistas' = 'tempo';
   libraryPlatformFilter: 'todos' | 'steam' | 'xbox' = 'todos';
+  librarySoPlatinados = false;
   editingLayout = false;
   savingLayout = false;
   editingFavorites = false;
@@ -177,6 +178,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.librarySearch = '';
     this.libraryOrder = 'tempo';
     this.libraryPlatformFilter = 'todos';
+    this.librarySoPlatinados = false;
     this.activeTab = 'resumo';
     this.cdr.detectChanges();
 
@@ -1198,8 +1200,13 @@ export class PublicProfile implements OnInit, OnDestroy {
     return platform === 'xbox' ? 'xbox-modo-escuro.png' : 'steam-modo-escuro.png';
   }
 
-  openLibrary() {
+  /**
+   * Abre a aba Biblioteca. `soPlatinados` vem do "Ver todos" do bloco de Platinados: sem ele, o
+   * link levava pra biblioteca inteira, que e justamente o oposto do que o bloco mostra.
+   */
+  openLibrary(soPlatinados = false) {
     if (this.editingLayout) return;
+    this.librarySoPlatinados = soPlatinados;
     this.activeTab = 'biblioteca';
     setTimeout(() => document.querySelector('.library-list-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
@@ -1300,7 +1307,10 @@ export class PublicProfile implements OnInit, OnDestroy {
   get libraryGames(): PerfilPublico['biblioteca'] {
     if (!this.profile) return [];
     const query = this.librarySearch.trim().toLocaleLowerCase('pt-BR');
-    const games = this.profile.biblioteca.filter(game =>
+    // Mesmo critério do bloco de Platinados (ver platinumGames), pra "Ver todos" mostrar a mesma
+    // lista, só sem o corte de quantidade.
+    const base = this.librarySoPlatinados ? this.platinumGames : this.profile.biblioteca;
+    const games = base.filter(game =>
       (!query || game.titulo.toLocaleLowerCase('pt-BR').includes(query)) &&
       (this.libraryPlatformFilter === 'todos' || game.plataforma === this.libraryPlatformFilter)
     );
