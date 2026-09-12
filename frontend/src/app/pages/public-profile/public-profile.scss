@@ -34,7 +34,10 @@
 .hero-btn { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 15px; border: 1px solid rgba(41, 168, 224, .55); border-radius: 999px; background: rgba(8, 13, 24, .6); color: var(--text-primary); cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; transition: background .15s ease, border-color .15s ease; }
 .hero-btn:hover:not(:disabled) { border-color: var(--color-purple); background: rgba(41, 168, 224, .18); }
 .hero-btn img { width: 16px; height: 16px; object-fit: contain; }
-.hero-btn.icon-only { width: 38px; padding: 0; justify-content: center; }
+// Engrenagem e ↻ sao os unicos glifos do botao (sem rotulo ao lado), entao herdar o 13px do
+// texto deixava os dois pequenos demais pra enxergar dentro do circulo de 38px.
+.hero-btn.icon-only { width: 38px; padding: 0; justify-content: center; font-size: 20px; line-height: 1; }
+.hero-btn.icon-only img { width: 21px; height: 21px; }
 .hero-btn:disabled { cursor: wait; opacity: .65; }
 .hero-btn:disabled .girando { animation: profile-refresh-spin 1s linear infinite; }
 // Canto inferior direito: o superior agora e das acoes do dono (.hero-actions).
@@ -286,7 +289,8 @@
 
   .hero-actions { top: 12px; right: 12px; gap: 6px; }
   .hero-btn { height: 32px; padding: 0 11px; font-size: 12px; }
-  .hero-btn.icon-only { width: 32px; padding: 0; }
+  .hero-btn.icon-only { width: 32px; padding: 0; font-size: 17px; }
+  .hero-btn.icon-only img { width: 18px; height: 18px; }
   .edit-banner { right: 12px; bottom: 12px; height: 30px; font-size: 11px; }
 
   .block-image-crop-preview.banner-crop-preview { height: min(40vh, 190px); }
