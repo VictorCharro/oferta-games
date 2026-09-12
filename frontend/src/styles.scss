@@ -102,7 +102,11 @@ app-public-profile .profile-favorite-item h3 { display: -webkit-box; overflow: h
    (138/220/270/310px), entao trocar de Pequeno pra Completo esticava o bloco e quebrava o
    alinhamento da linha. O conteudo preenche essa altura sozinho (ver .profile-game-grid com
    flex:1 + grid-auto-rows:1fr). */
-app-public-profile { --altura-bloco: 460px; }
+/* 520px e a altura que a linha do Resumo ja tinha naturalmente antes do teto existir (medido:
+   514px). O primeiro valor escolhido, 460px, era menor que isso e encolhia o perfil na pratica -
+   o teto existe pra impedir o bloco de CRESCER (a Biblioteca em Completo chegou a 922px), nao pra
+   apertar o que ja estava bom. */
+app-public-profile { --altura-bloco: 520px; }
 app-public-profile .profile-block { display: flex; flex-direction: column; height: var(--altura-bloco); }
 /* height, nao min-height: min-height e piso, o bloco continuava crescendo com o conteudo (a
    biblioteca em Completo chegou a 922px). Com altura definida o conteudo se ajusta DENTRO dela -
