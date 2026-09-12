@@ -13,7 +13,14 @@
     </button>
     <div class="monitor-meta-menu" *ngIf="menuMetaAberto" [style.top.px]="metaMenuPos.top" [style.left.px]="metaMenuPos.left" (click)="$event.preventDefault(); $event.stopPropagation()">
       <p class="monitor-meta-title">Editar meta de preço</p>
-      <p class="monitor-meta-hint">Avisamos quando o preço chegar nesse valor.</p>
+      <!-- "Opcional" explicito: sem meta o jogo continua monitorado e o usuario recebe a
+           notificacao de "queda" quando a variacao passa do limiar de VariacaoPrecoRelevante; a
+           meta so troca isso por "meta_atingida" na travessia do valor (ver
+           RepositorioNotificacoes.registrarQueda). Sem a palavra, o campo parecia obrigatorio. -->
+      <p class="monitor-meta-hint">
+        <span class="monitor-meta-opcional">Opcional.</span>
+        Avisamos quando o preço chegar nesse valor.
+      </p>
       <div class="monitor-meta-field">
         <span>R$</span>
         <input

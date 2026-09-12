@@ -6,6 +6,15 @@
 
 .monitor-card {
   flex: 0 0 210px;
+  // Sem isto o flex-basis acima nao e respeitado: flex item com overflow:visible ganha
+  // min-width:auto (tamanho minimo automatico), e o min-content daqui e o titulo INTEIRO, porque
+  // .monitor-title usa white-space:nowrap. Resultado real no carrossel da Home: "Dying Light 2
+  // Stay Human - Reloaded Edition" esticava o card pra 308px enquanto "7 Days to Die" ficava com
+  // 210px — e, como .monitor-cover e 16/9, capa mais larga virava capa mais alta, com os cards
+  // visivelmente diferentes lado a lado. O .deal-card nao tem esse problema porque tem
+  // overflow:hidden (que tambem zera o minimo automatico); aqui o overflow:hidden nao pode
+  // existir por causa do popover de meta (ver comentario abaixo), entao a trava e esta.
+  min-width: 0;
   background: var(--bg-card);
   border-radius: var(--border-radius);
   border: 1px solid var(--border-color);
@@ -85,6 +94,12 @@
   margin-top: -4px;
   font-size: 11px;
   color: var(--text-muted);
+}
+
+// Destacado do resto da dica pra ser lido antes do campo, que e o que dava a impressao errada.
+.monitor-meta-opcional {
+  color: var(--text-secondary);
+  font-weight: 700;
 }
 
 .monitor-meta-field {
