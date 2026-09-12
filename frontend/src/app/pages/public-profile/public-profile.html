@@ -154,12 +154,16 @@
     <div class="profile-strip-item" *ngIf="profile.jogosPlatinados">
       <img src="trofeu.png" alt="" /><div><strong>{{ profile.jogosPlatinados }}</strong><span>{{ profile.jogosPlatinados === 1 ? 'Jogo platinado' : 'Jogos platinados' }}</span></div>
     </div>
+    <!-- Mesma estrutura dos outros itens (valor em cima, rotulo embaixo): aqui os icones das
+         plataformas fazem o papel do valor, pra faixa toda ficar na mesma linha de base. -->
     <div class="profile-strip-item platforms-strip">
-      <span>Plataformas conectadas</span>
-      <div *ngIf="profile.plataformasConectadas.length; else noPlatforms" class="platform-icons">
-        <img *ngFor="let platform of profile.plataformasConectadas" [src]="platformIcon(platform)" [alt]="platform === 'steam' ? 'Steam' : 'Xbox'" [title]="platform === 'steam' ? 'Steam' : 'Xbox'" />
+      <div>
+        <div *ngIf="profile.plataformasConectadas.length; else noPlatforms" class="platform-icons">
+          <img *ngFor="let platform of profile.plataformasConectadas" [src]="platformIcon(platform)" [alt]="platform === 'steam' ? 'Steam' : 'Xbox'" [title]="platform === 'steam' ? 'Steam' : 'Xbox'" />
+        </div>
+        <ng-template #noPlatforms><strong>--</strong></ng-template>
+        <span>Plataformas conectadas</span>
       </div>
-      <ng-template #noPlatforms><strong>--</strong></ng-template>
     </div>
   </section>
 
