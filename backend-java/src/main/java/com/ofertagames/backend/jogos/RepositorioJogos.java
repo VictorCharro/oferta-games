@@ -563,29 +563,6 @@ public class RepositorioJogos {
    * <p>Filtra pelas duas listas ao mesmo tempo porque o {@code api_name} nao e unico entre jogos
    * ({@code WAKE_UP} existe em varios); o par com o {@code steam_app_id} e que identifica.
    */
-  /**
-   * Devolve estes jogos pra fila de coleta de conquistas, zerando o carimbo de verificacao.
-   *
-   * <p>Usado quando aparece conquista desbloqueada que o catalogo nao conhece: jogo live-service
-   * (Dead by Daylight e afins) ganha conquista nova depois da primeira coleta, e sem recoleta o
-   * icone dela nunca chega. O corte de 7 dias e proposital: conquista oculta/removida nao existe
-   * nem no schema da Steam, entao ficaria pra sempre "faltando" e re-enfileiraria o jogo em cada
-   * visita ao perfil.
-   *
-   * @return quantos jogos foram marcados
-   */
-  public int marcarConquistasDesatualizadas(List<Integer> steamAppIds) {
-    if (steamAppIds.isEmpty()) return 0;
-    return jdbc.sql("""
-        UPDATE games
-        SET achievements_checked_at = NULL
-        WHERE steam_app_id IN (:steamAppIds)
-          AND achievements_checked_at < now() - INTERVAL '7 days'
-        """)
-        .param("steamAppIds", steamAppIds)
-        .update();
-  }
-
   public Map<String, ConquistaDoCatalogo> buscarConquistasDoCatalogo(List<Integer> appIds, List<String> apiNames) {
     if (appIds.isEmpty() || apiNames.isEmpty()) {
       return Map.of();
@@ -1075,16 +1052,20 @@ public class RepositorioJogos {
         .single();
   }
 
-  // O NOT EXISTS saiu das 3 consultas de pendencia: era redundante (quem coleta sempre carimba
-  // achievements_checked_at) e impedia recoleta - com ele, zerar o carimbo nao trazia o jogo de
-  // volta pra fila. Ver marcarConquistasDesatualizadas: jogo live-service ganha conquista nova
-  // depois da primeira coleta, e sem recoleta o icone dela nunca chega no catalogo.
+  // CUIDADO: o NOT EXISTS nao e redundante e nao pode sair daqui. salvarConquistas NAO carimba
+  // achievements_checked_at (o carimbo so acontece quando a Steam devolve esquema vazio, ver
+  // ServicoCatalogo.processarConquistas), entao e ele que tira da fila o jogo que foi coletado
+  // com sucesso. Sem ele, 13.614 jogos ja coletados voltaram pra fila e seriam recoletados a cada
+  // rodada pra sempre (regressao de 12/09/2026, corrigida no mesmo dia). Recoleta de jogo
+  // live-service nao passa por esta fila: e ServicoConquistasSobDemanda quem refaz o jogo inteiro
+  // quando aparece conquista desbloqueada que o catalogo nao conhece.
   public List<JogoDetalhesPendente> listarPendentesConquistas(int limite) {
     return jdbc.sql("""
         SELECT g.id, g.steam_app_id
         FROM games g
         WHERE g.steam_app_id IS NOT NULL
           AND g.achievements_checked_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM game_achievements ga WHERE ga.game_id = g.id)
           %s
           %s
         ORDER BY %s g.id ASC
@@ -1106,6 +1087,7 @@ public class RepositorioJogos {
   public boolean precisaColetarConquistas(long jogoId) {
     return Boolean.TRUE.equals(jdbc.sql("""
         SELECT g.achievements_checked_at IS NULL
+               AND NOT EXISTS (SELECT 1 FROM game_achievements ga WHERE ga.game_id = g.id)
         FROM games g
         WHERE g.id = :jogoId
         """)
@@ -1121,6 +1103,7 @@ public class RepositorioJogos {
         FROM games g
         WHERE g.steam_app_id IS NOT NULL
           AND g.achievements_checked_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM game_achievements ga WHERE ga.game_id = g.id)
           %s
           %s
         """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))

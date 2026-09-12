@@ -3,6 +3,7 @@ package com.ofertagames.backend.conexoes;
 import com.ofertagames.backend.atividadesperfil.RepositorioAtividadesPerfil;
 import com.ofertagames.backend.colecoesperfil.RepositorioColecoesPerfil;
 import com.ofertagames.backend.jogos.RepositorioJogos;
+import com.ofertagames.backend.jogos.ServicoConquistasSobDemanda;
 import com.ofertagames.backend.steam.DetalhesAplicativoSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
 import java.net.URLEncoder;
@@ -55,6 +56,7 @@ public class ServicoConexoesSteam {
   private final RepositorioAtividadesPerfil atividades;
   private final RepositorioColecoesPerfil colecoes;
   private final RepositorioJogos jogos;
+  private final ServicoConquistasSobDemanda conquistasSobDemanda;
   private final RestClient restClient;
   private final String urlFrontend;
   private final String urlBackend;
@@ -66,6 +68,7 @@ public class ServicoConexoesSteam {
       RepositorioAtividadesPerfil atividades,
       RepositorioColecoesPerfil colecoes,
       RepositorioJogos jogos,
+      ServicoConquistasSobDemanda conquistasSobDemanda,
       RestClient.Builder restClientBuilder,
       @Value("${app.steam.frontend-url}") String urlFrontend,
       @Value("${app.public-backend-url:}") String urlBackend
@@ -76,6 +79,7 @@ public class ServicoConexoesSteam {
     this.atividades = atividades;
     this.colecoes = colecoes;
     this.jogos = jogos;
+    this.conquistasSobDemanda = conquistasSobDemanda;
     this.restClient = restClientBuilder.build();
     this.urlFrontend = removerBarraFinal(urlFrontend);
     this.urlBackend = removerBarraFinal(urlBackend);
@@ -248,20 +252,16 @@ public class ServicoConexoesSteam {
             recentes.stream().map(RepositorioConexoesSteam.ConquistaRecente::appId).distinct().toList(),
             recentes.stream().map(RepositorioConexoesSteam.ConquistaRecente::apiName).distinct().toList());
 
-    // Conquista sem linha no catalogo = catalogo desatualizado pra esse jogo. Devolve ele pra fila
-    // de coleta (best-effort: e leitura de perfil, nao pode quebrar por causa disso) pro icone
-    // aparecer na proxima passada do backfill. O proprio marcarConquistasDesatualizadas tem o
-    // corte de 7 dias que impede re-enfileirar a cada visita.
-    try {
-      java.util.List<Integer> semCatalogo = recentes.stream()
-          .filter(conquista -> !doCatalogo.containsKey(conquista.appId() + "|" + conquista.apiName()))
-          .map(RepositorioConexoesSteam.ConquistaRecente::appId)
-          .distinct()
-          .toList();
-      jogos.marcarConquistasDesatualizadas(semCatalogo);
-    } catch (RuntimeException erro) {
-      log.warn("Nao foi possivel marcar conquistas desatualizadas: {}", erro.getMessage());
-    }
+    // Conquista sem linha no catalogo = catalogo velho pra esse jogo (tipico de live-service, que
+    // adiciona conquista depois da nossa coleta). Refaz o jogo inteiro em background, igual ao
+    // botao de admin "Preencher tudo agora" - ver ServicoConquistasSobDemanda, que cuida da trava
+    // de concorrencia e do intervalo minimo. Esta leitura nao espera nada disso.
+    java.util.List<Integer> semCatalogo = recentes.stream()
+        .filter(conquista -> !doCatalogo.containsKey(conquista.appId() + "|" + conquista.apiName()))
+        .map(RepositorioConexoesSteam.ConquistaRecente::appId)
+        .distinct()
+        .toList();
+    conquistasSobDemanda.agendarPreenchimentoCompleto(semCatalogo);
 
     return recentes.stream()
         .map(conquista -> {

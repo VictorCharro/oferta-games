@@ -1,5 +1,10 @@
 package com.ofertagames.backend.jogos;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -45,6 +50,12 @@ public class ServicoConquistasSobDemanda {
    */
   private final Set<Long> emAndamento = ConcurrentHashMap.newKeySet();
 
+  /** Intervalo minimo entre dois preenchimentos completos do mesmo jogo. */
+  private static final Duration INTERVALO_MINIMO = Duration.ofHours(12);
+
+  /** Ultimo preenchimento completo por steam_app_id (ver agendarPreenchimentoCompleto). */
+  private final Map<Integer, Instant> preenchidoEm = new ConcurrentHashMap<>();
+
   ServicoConquistasSobDemanda(
       RepositorioJogos jogos,
       ServicoCatalogo catalogo,
@@ -67,6 +78,60 @@ public class ServicoConquistasSobDemanda {
    *     vale reconsultar em alguns segundos; sem esse sinal, ele teria que ou tentar de novo em
    *     todo jogo sem conquista (a maioria, desperdicio) ou exigir um F5 do usuario.
    */
+  /**
+   * Refaz o jogo inteiro quando aparece conquista desbloqueada que o catalogo nao conhece.
+   *
+   * <p>Mesma coisa que o botao de admin "Preencher tudo agora" ({@link
+   * ServicoCatalogo#preencherTudoDoJogo}): metadados Steam (forcados), detalhes e conquistas, na
+   * ordem. E o cenario do jogo live-service — Dead by Daylight tinha 303 conquistas no catalogo e
+   * 311 na Steam, e as 8 novas apareciam no perfil sem icone. Coletar so as conquistas resolveria
+   * o icone, mas quem ganha conquista nova costuma ter ganhado capa/descricao/review novos
+   * tambem, entao vale atualizar tudo de uma vez.
+   *
+   * <p>Nao usa a fila de {@code listarPendentesConquistas}: aquela fila e so pra jogo que nunca
+   * foi coletado (ver o NOT EXISTS em {@link RepositorioJogos#listarPendentesConquistas}).
+   *
+   * <p>Dois freios, porque o gatilho e uma visita a perfil e pode repetir muito: a trava de
+   * {@code emAndamento} (compartilhada com a coleta por pagina de jogo) e um intervalo minimo por
+   * jogo. O intervalo importa porque conquista oculta/removida nao existe nem no esquema da Steam
+   * — sem ele, jogo assim seria refeito em cada visita pra sempre. O cache e em memoria: reiniciar
+   * o backend libera um preenchimento extra por jogo, o que e barato e aceitavel.
+   *
+   * <p>Nunca lanca: e efeito colateral de uma leitura de perfil.
+   */
+  public void agendarPreenchimentoCompleto(Collection<Integer> steamAppIds) {
+    try {
+      if (steamAppIds.isEmpty()) return;
+      Map<Integer, String> slugs = jogos.buscarSlugsPorSteamAppIds(List.copyOf(steamAppIds));
+      Instant agora = Instant.now();
+      for (Map.Entry<Integer, String> entrada : slugs.entrySet()) {
+        String slug = entrada.getValue();
+        if (slug == null) continue;
+        Instant ultimo = preenchidoEm.get(entrada.getKey());
+        if (ultimo != null && ultimo.isAfter(agora.minus(INTERVALO_MINIMO))) continue;
+        agendarPreenchimentoDe(entrada.getKey(), slug);
+      }
+    } catch (RuntimeException erro) {
+      log.warn("Falha agendando preenchimento completo: {}", erro.toString());
+    }
+  }
+
+  private void agendarPreenchimentoDe(int steamAppId, String slug) {
+    var jogo = jogos.buscarIdESteamAppIdPorSlug(slug).orElse(null);
+    if (jogo == null || !emAndamento.add(jogo.id())) return;
+    preenchidoEm.put(steamAppId, Instant.now());
+    executor.execute(() -> {
+      try {
+        log.info("Conquista fora do catalogo: refazendo o jogo {} (app {}) por inteiro", slug, steamAppId);
+        catalogo.preencherTudoDoJogo(slug);
+      } catch (RuntimeException erro) {
+        log.warn("Falha preenchendo tudo do jogo {}: {}", slug, erro.toString());
+      } finally {
+        emAndamento.remove(jogo.id());
+      }
+    });
+  }
+
   public boolean agendarSeNecessario(String slug) {
     try {
       var jogo = jogos.buscarIdESteamAppIdPorSlug(slug).orElse(null);
