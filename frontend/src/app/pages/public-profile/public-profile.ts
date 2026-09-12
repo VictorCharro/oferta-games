@@ -1052,7 +1052,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     // Em cards cada jogo ocupa uma capa inteira, entao cabem menos que na lista compacta.
     const limite = this.visualizacaoBloco(block) === 'cards'
       ? this.previewLimit(block.tamanho)
-      : { pequeno: 5, medio: 6, largo: 8, completo: 10 }[block.tamanho];
+      : { pequeno: 5, medio: 5, largo: 10, completo: 10 }[block.tamanho];
     return this.profile?.favoritos.slice(0, limite) || [];
   }
 
@@ -1095,7 +1095,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   // ~56px por item. Calibrado pra mesma altura-alvo do previewLimit (~515px): com 5 itens o
   // bloco medio media 403px e ficava baixo demais ao lado dos outros.
   private achievementPreviewLimit(size: PerfilBloco['tamanho']): number {
-    return { pequeno: 7, medio: 7, largo: 10, completo: 14 }[size];
+    return { pequeno: 6, medio: 5, largo: 10, completo: 10 }[size];
   }
 
   /** "há 2h", "há 3 dias" — a data vem em ISO do backend. */

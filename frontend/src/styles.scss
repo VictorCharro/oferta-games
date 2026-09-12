@@ -97,8 +97,23 @@ app-public-profile .profile-favorite-item a > div { min-width: 0; }
 app-public-profile .profile-favorite-item h3 { display: -webkit-box; overflow: hidden; margin: 0 0 5px; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 14px; line-height: 1.25; text-overflow: ellipsis; }
 /* Coluna flex pro conteudo (galeria/lista) poder crescer e ocupar a altura do bloco, que vem
    esticada pelo grid da linha. Sem isso a galeria tem altura propria e sobra vazio embaixo. */
-app-public-profile .profile-block { display: flex; flex-direction: column; }
-app-public-profile .profile-block.size-pequeno { min-height: 138px; padding: 16px; }
+/* Altura unica pra QUALQUER tamanho de bloco: mudar o tamanho move o bloco pro lado (mais
+   colunas do grid de 12), nunca pra baixo. Antes cada tamanho tinha seu proprio min-height
+   (138/220/270/310px), entao trocar de Pequeno pra Completo esticava o bloco e quebrava o
+   alinhamento da linha. O conteudo preenche essa altura sozinho (ver .profile-game-grid com
+   flex:1 + grid-auto-rows:1fr). */
+app-public-profile { --altura-bloco: 460px; }
+app-public-profile .profile-block { display: flex; flex-direction: column; height: var(--altura-bloco); }
+/* height, nao min-height: min-height e piso, o bloco continuava crescendo com o conteudo (a
+   biblioteca em Completo chegou a 922px). Com altura definida o conteudo se ajusta DENTRO dela -
+   por isso cada area de conteudo leva flex:1 + min-height:0 (sem o min-height:0 o tamanho minimo
+   automatico do flex impede encolher) e as listas cortam o excesso em vez de empurrar o bloco.
+   Nada de overflow:hidden no bloco em si: o menu "..." do editor vive dentro dele e seria
+   cortado, igual ao que acontecia com o dropdown no cabecalho. */
+app-public-profile .profile-block .profile-favorite-list,
+app-public-profile .profile-block .achievement-list { flex: 1; min-height: 0; overflow: hidden; align-content: start; }
+app-public-profile .profile-block > p { min-height: 0; overflow: auto; }
+app-public-profile .profile-block.size-pequeno { padding: 16px; }
 app-public-profile .profile-block.size-pequeno.stat-block { display: flex; align-items: center; }
 app-public-profile .profile-block.size-pequeno h2 { margin-bottom: 10px; font-size: 16px; }
 app-public-profile .profile-block.size-pequeno .editable-stat { min-height: 72px; gap: 12px; }
@@ -115,15 +130,17 @@ app-public-profile .profile-block.size-pequeno .activity-item { grid-template-co
 app-public-profile .profile-block.size-pequeno .activity-item span { min-width: 0; overflow-wrap: anywhere; }
 app-public-profile .profile-block.size-pequeno .activity-item small { display: block; padding-top: 1px; font-size: 11px; }
 app-public-profile .profile-block.size-pequeno .custom-image { max-height: 150px; }
-app-public-profile .profile-block.size-medio { min-height: 220px; }
 /* Lista de favoritos do Resumo: 1 coluna ate o tamanho medio pra a linha ter espaco e as metas
    (horas · % conquistas) caberem lado a lado; so nos blocos largos vale dividir em 2 colunas. */
 app-public-profile .profile-block.size-medio .profile-favorite-list { grid-template-columns: minmax(0, 1fr); }
 app-public-profile .profile-block.size-medio .custom-image { max-height: 260px; }
-app-public-profile .profile-block.size-largo { min-height: 270px; }
 app-public-profile .profile-block.size-largo .profile-favorite-list, app-public-profile .profile-block.size-completo .profile-favorite-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Listas tambem crescem PRO LADO com o tamanho, nunca pra baixo: a altura e fixa, entao o bloco
+   largo ganha uma segunda coluna em vez de mais linhas. No pequeno (374px) duas colunas nao
+   cabem sem espremer a capa e o texto. */
+app-public-profile .profile-block.size-pequeno .profile-favorite-list { grid-template-columns: minmax(0, 1fr); }
+app-public-profile .profile-block.size-largo .achievement-list, app-public-profile .profile-block.size-completo .achievement-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 app-public-profile .profile-block.size-largo .custom-image { max-height: 350px; }
-app-public-profile .profile-block.size-completo { min-height: 310px; }
 app-public-profile .profile-block.size-completo .custom-image { max-height: 460px; }
 
 /* Galerias dos blocos do perfil: a quantidade de jogos acompanha o tamanho escolhido. */
@@ -185,7 +202,7 @@ app-public-profile .platform-icons img {
    o card e aspect-ratio 16/9 com a capa em object-fit:cover, entao quando a linha estica ele so
    recorta um pouco mais da imagem - nada distorce. Antes o card tinha altura fixa pela proporcao
    e todo espaco extra do bloco virava vazio embaixo (medido: 263px num bloco pequeno). */
-app-public-profile .profile-game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; flex: 1; grid-auto-rows: 1fr; }
+app-public-profile .profile-game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; flex: 1; min-height: 0; grid-auto-rows: 1fr; }
 /* 2 colunas tambem no pequeno: com 1 coluna o bloco virava um card unico gigante (o pequeno
    ocupa 4/12 do grid, ~340px, e cabem 2 capas de ~165px lado a lado - mais largas que os cards
    de 200px da home). A regra da faixa toda passa a ser "2 linhas de cards em qualquer tamanho;
@@ -275,6 +292,12 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
   // preencher: o card volta pro 16/9 desenhado em vez de esticar e ficar achatado (media 134x67).
   app-public-profile .profile-game-grid { grid-auto-rows: auto; }
   app-public-profile .profile-block .profile-game-card { aspect-ratio: 16 / 9; height: auto; }
+  // Mesma razao pra soltar a altura do bloco: um por linha, ninguem pra igualar. A altura fixa de
+  // desktop aqui so cortaria conteudo (as listas tem overflow:hidden pra respeitar o teto) ou
+  // deixaria sobra num bloco curto.
+  app-public-profile .profile-block { height: auto; }
+  app-public-profile .profile-block .profile-favorite-list,
+  app-public-profile .profile-block .achievement-list { flex: none; overflow: visible; }
 }
 
 .badge-discount {
