@@ -35,6 +35,10 @@ services:
       context: ../../backend-java
     container_name: oferta-games-backend
     restart: unless-stopped
+    # Tempo pro shutdown gracioso terminar (server.shutdown: graceful, teto de 20s no Spring)
+    # antes do SIGKILL. Sem essa folga o Docker matava em 10s, cortando requisicao em andamento e
+    # impedindo o @PreDestroy de devolver a trava de coleta.
+    stop_grace_period: 30s
     depends_on:
       catalogo-db:
         condition: service_healthy

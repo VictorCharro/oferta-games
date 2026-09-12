@@ -23,12 +23,12 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      # Sempre deploya quando chega aqui (nao tenta adivinhar "mudou backend?" comparando so o
-      # ultimo commit) - um "git diff HEAD^ HEAD" ja causou um commit com mudanca real no
-      # backend ficar sem deploy: a CI daquele commit falhou (nada rodou), e o commit seguinte
-      # (so o fix da CI) nao tocava backend-java/, entao o diff dele sozinho dava "nao relevante"
-      # mesmo com o commit anterior nao-deployado esperando. git pull --ff-only na VM ja e
-      # idempotente/barato quando nao ha nada novo, entao nao ha custo real em sempre rodar.
+      # A decisao de recriar o container e tomada NA VM, comparando o commit que esta deployado
+      # com o que acabou de chegar (ver o script abaixo). Nao e o mesmo que "git diff HEAD^ HEAD",
+      # que ja falhou aqui: a CI de um commit com mudanca de backend quebrou, o commit seguinte
+      # (so o fix da CI) nao tocava backend-java/, e o diff dele sozinho dizia "nao relevante"
+      # enquanto o backend anterior seguia sem deploy. Comparando com o que ESTA RODANDO isso nao
+      # acontece - qualquer commit de backend ainda nao publicado entra na conta.
       - name: Configurar chave SSH
         env:
           ORACLE_SSH_PRIVATE_KEY_B64: ${{ secrets.ORACLE_SSH_PRIVATE_KEY_B64 }}
@@ -40,6 +40,53 @@ jobs:
       - name: Atualizar backend na VM
         env:
           ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+          # workflow_dispatch e deploy explicito: recria mesmo sem mudanca (serve pra destravar
+          # alguma coisa na mao).
+          FORCAR: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
         run: |
           ssh -i ~/.ssh/id_oracle -o StrictHostKeyChecking=accept-new ubuntu@"$ORACLE_HOST" \
-            'cd /opt/oferta-games && git pull --ff-only origin master && docker compose -f deploy/oracle/compose.yml up -d --build'
+            "FORCAR=$FORCAR bash -s" <<'REMOTO'
+          set -euo pipefail
+          cd /opt/oferta-games
+
+          ANTES=$(git rev-parse HEAD)
+          git pull --ff-only origin master
+          DEPOIS=$(git rev-parse HEAD)
+
+          # O Caddyfile e bind mount: o arquivo novo ja esta dentro do container, mas o Caddy so
+          # passa a usar depois de um reload (que e gracioso - nao derruba conexao). Por isso ele
+          # tem decisao propria, separada da do backend: mudar so o proxy nao precisa reiniciar a
+          # API.
+          if [ -n "$(git diff --name-only "$ANTES" "$DEPOIS" -- deploy/oracle/Caddyfile)" ]; then
+            echo "Caddyfile mudou: validando e recarregando."
+            docker compose -f deploy/oracle/compose.yml exec -T caddy \
+              caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+            docker compose -f deploy/oracle/compose.yml exec -T caddy \
+              caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+          fi
+
+          # Recria o backend quando: foi pedido na mao, o container nao esta de pe, ou mudou algo
+          # que entra na imagem/no servico.
+          MOTIVO=""
+          if [ "$FORCAR" = "1" ]; then
+            MOTIVO="deploy manual"
+          elif [ -z "$(docker ps --filter name=^oferta-games-backend$ --filter status=running -q)" ]; then
+            MOTIVO="container fora do ar"
+          elif [ -n "$(git diff --name-only "$ANTES" "$DEPOIS" -- backend-java/ deploy/oracle/compose.yml)" ]; then
+            MOTIVO="mudanca em backend-java/ ou compose.yml"
+          fi
+
+          if [ -z "$MOTIVO" ]; then
+            echo "Backend inalterado entre $ANTES e $DEPOIS - container mantido no ar."
+            echo "Reiniciar a API a cada push de frontend derruba o SSR da Vercel por alguns"
+            echo "segundos e ainda mata a coleta em andamento, entao so se mexe quando precisa."
+            exit 0
+          fi
+
+          echo "Publicando backend ($MOTIVO)."
+          # build separado do up: com a imagem inalterada o 'up -d' deixa o container em paz, e o
+          # '--build' embutido recriava mesmo sem mudanca nenhuma.
+          docker compose -f deploy/oracle/compose.yml build backend
+          docker compose -f deploy/oracle/compose.yml up -d
+          docker compose -f deploy/oracle/compose.yml ps
+          REMOTO

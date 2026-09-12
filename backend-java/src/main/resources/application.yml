@@ -1,9 +1,18 @@
 server:
   port: ${PORT:8080}
+  # Para de aceitar conexao nova e deixa a que esta em andamento terminar, em vez de cortar no
+  # meio. Sem isso, todo deploy gerava "Broken pipe" nos logs e erro pro visitante que estava
+  # carregando a pagina naquele segundo (o site e SSR: uma chamada cortada e a pagina inteira).
+  shutdown: graceful
 
 spring:
   application:
     name: oferta-games-backend
+  lifecycle:
+    # Teto do shutdown gracioso. Fica abaixo do stop_grace_period do compose (30s), senao o Docker
+    # mata no SIGKILL antes de a aplicacao terminar de se despedir (e a trava de coleta, liberada
+    # no @PreDestroy, nao seria devolvida).
+    timeout-per-shutdown-phase: 20s
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:4200}
@@ -14,13 +23,18 @@ app:
     scheduler:
       enabled: ${APP_SYNC_SCHEDULER_ENABLED:false}
       price-delay-ms: ${APP_SYNC_SCHEDULER_PRICE_DELAY_MS:600000}
-      price-initial-delay-ms: ${APP_SYNC_SCHEDULER_PRICE_INITIAL_DELAY_MS:60000}
+      # Os delays iniciais contam A PARTIR DO BOOT, entao cada deploy reinicia esse relogio. Com
+      # 60s a coleta de precos (a mais pesada) caia em cima da JVM ainda fria, no unico vCPU da
+      # VM, junto com a rajada de SSR que volta quando a API responde de novo - e o site ficava
+      # lento por minutos depois de publicar. 4min dao tempo de tudo assentar; os outros jobs
+      # ficam escalonados depois dele pra nao empilharem (a trava e uma so pra todos).
+      price-initial-delay-ms: ${APP_SYNC_SCHEDULER_PRICE_INITIAL_DELAY_MS:240000}
       steam-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_DELAY_MS:900000}
-      steam-initial-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_INITIAL_DELAY_MS:300000}
+      steam-initial-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_INITIAL_DELAY_MS:480000}
       steam-achievements-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_ACHIEVEMENTS_DELAY_MS:1800000}
       steam-achievements-initial-delay-ms: ${APP_SYNC_SCHEDULER_STEAM_ACHIEVEMENTS_INITIAL_DELAY_MS:600000}
       detalhes-delay-ms: ${APP_SYNC_SCHEDULER_DETALHES_DELAY_MS:900000}
-      detalhes-initial-delay-ms: ${APP_SYNC_SCHEDULER_DETALHES_INITIAL_DELAY_MS:420000}
+      detalhes-initial-delay-ms: ${APP_SYNC_SCHEDULER_DETALHES_INITIAL_DELAY_MS:660000}
   itad:
     api-key: ${ITAD_API_KEY:}
   steam:

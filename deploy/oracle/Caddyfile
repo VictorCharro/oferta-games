@@ -1,4 +1,16 @@
 {$API_DOMAIN} {
     encode zstd gzip
-    reverse_proxy backend:8080
+
+    reverse_proxy backend:8080 {
+        # Segura a requisicao enquanto o backend nao aceita conexao, em vez de devolver 502 na
+        # hora. E o que transforma um deploy em "a pagina demorou um pouco" em vez de "a pagina
+        # nao carrega": o site e SSR, entao uma chamada de API que falha derruba a renderizacao
+        # inteira na Vercel, nao so um pedaco da tela.
+        #
+        # So vale pra falha de CONEXAO (o backend subindo), quando nada foi enviado ainda - Caddy
+        # nao repete requisicao ja entregue, entao POST/PUT nao correm risco de rodar duas vezes.
+        # 25s cobre com folga o boot da aplicacao (~9s medidos) mais o start do container.
+        lb_try_duration 25s
+        lb_try_interval 500ms
+    }
 }

@@ -1,5 +1,7 @@
 package com.ofertagames.backend.sincronizacao;
 
+import jakarta.annotation.PreDestroy;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +27,8 @@ public class ServicoExecucaoColeta {
 
   private final RepositorioControleColeta controle;
   private final EstadoColeta estado;
+  /** Se esta instancia esta com a trava agora — ver liberarTravaAoParar. */
+  private final AtomicBoolean segurandoTrava = new AtomicBoolean(false);
 
   ServicoExecucaoColeta(RepositorioControleColeta controle, EstadoColeta estado) {
     this.controle = controle;
@@ -50,6 +54,7 @@ public class ServicoExecucaoColeta {
     }
 
     long inicio = System.nanoTime();
+    segurandoTrava.set(true);
     estado.iniciar(tipo);
     try {
       ResultadoRodadaColeta resultado = coleta.get();
@@ -60,6 +65,28 @@ public class ServicoExecucaoColeta {
       throw erro;
     } finally {
       controle.liberar(BLOQUEIO_COLETA);
+      segurandoTrava.set(false);
+    }
+  }
+
+  /**
+   * Devolve a trava quando a aplicacao para com uma coleta em andamento — tipico de deploy, que
+   * recria o container.
+   *
+   * <p>Sem isso a trava fica orfa ate o lease de 30 minutos expirar e <b>toda</b> coleta e pulada
+   * nesse meio tempo (caso real de 12/09/2026: deploy 35s depois de uma coleta comecar deixou
+   * precos, steam e detalhes fora do ar por meia hora). So libera se for esta instancia que a
+   * tomou: a trava e compartilhada entre instancias, e liberar a de outro processo permitiria duas
+   * coletas simultaneas — exatamente o que ela existe pra impedir.
+   */
+  @PreDestroy
+  void liberarTravaAoParar() {
+    if (!segurandoTrava.get()) return;
+    try {
+      controle.liberar(BLOQUEIO_COLETA);
+      logger.info("Trava de coleta liberada no shutdown: a coleta em andamento foi interrompida");
+    } catch (RuntimeException erro) {
+      logger.warn("Nao foi possivel liberar a trava de coleta no shutdown: {}", erro.toString());
     }
   }
 
