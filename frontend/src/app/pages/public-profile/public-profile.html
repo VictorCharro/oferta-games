@@ -481,7 +481,15 @@
           </div>
           <ul *ngIf="conquistasPreview(block).length; else noAchievements" class="achievement-list">
             <li *ngFor="let conquista of conquistasPreview(block)" class="achievement-item">
-              <img *ngIf="conquista.iconeUrl; else achievementFallback" [src]="conquista.iconeUrl" [alt]="conquista.titulo" loading="lazy" />
+              <!-- (error) tambem cai no 🏅: conquista recem-criada costuma vir no esquema da Steam
+                   com a arte ainda nao publicada, e a URL responde 404 em todos os CDNs deles. -->
+              <img
+                *ngIf="temIconeConquista(conquista); else achievementFallback"
+                [src]="conquista.iconeUrl"
+                [alt]="conquista.titulo"
+                loading="lazy"
+                (error)="aoFalharIconeConquista(conquista)"
+              />
               <ng-template #achievementFallback><span class="achievement-icon-fallback" aria-hidden="true">🏅</span></ng-template>
               <div>
                 <strong>{{ conquista.titulo }}</strong>

@@ -7,7 +7,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth';
-import { ColecaoPerfil, PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
+import { ColecaoPerfil, ConquistaRecente, PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
 import { TIPOS_UNICOS, blocosPadrao, novoBloco, visualizacaoDoBloco } from '../../services/perfil-blocos';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
 import { ConexoesSteamService, JogoBibliotecaSteam } from '../../services/conexoes-steam';
@@ -34,6 +34,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   loading = true;
   activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' | 'colecoes' = 'resumo';
   readonly capasSteamIndisponiveis = new Set<number>();
+  readonly iconesConquistaIndisponiveis = new Set<string>();
   isOwner = false;
   ownerAvatar = '';
   editingBio = false;
@@ -993,6 +994,18 @@ export class PublicProfile implements OnInit, OnDestroy {
       ? this.previewLimit(block.tamanho)
       : { pequeno: 5, medio: 6, largo: 8, completo: 10 }[block.tamanho];
     return this.profile?.favoritos.slice(0, limite) || [];
+  }
+
+  // Mesma ideia de capasSteamIndisponiveis: guarda a URL que falhou pra nao tentar de novo em
+  // cada ciclo de render e pra a linha cair no 🏅 em vez de mostrar imagem quebrada com alt.
+  temIconeConquista(conquista: ConquistaRecente): boolean {
+    return !!conquista.iconeUrl && !this.iconesConquistaIndisponiveis.has(conquista.iconeUrl);
+  }
+
+  aoFalharIconeConquista(conquista: ConquistaRecente) {
+    if (!conquista.iconeUrl) return;
+    this.iconesConquistaIndisponiveis.add(conquista.iconeUrl);
+    this.cdr.detectChanges();
   }
 
   visualizacaoBloco(block: PerfilBloco): 'cards' | 'lista' {
