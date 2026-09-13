@@ -46,6 +46,11 @@ app:
   # sitemap (que apontam pros sub-sitemaps servidos aqui, nao pro frontend). Precisa bater com o
   # dominio do `Sitemap:` em frontend/public/robots.txt.
   public-backend-url: ${PUBLIC_BACKEND_URL:}
+  # Segredo que o SSR da Vercel manda em X-SSR-Token pra nao dividir o limite por IP com todos os
+  # visitantes (ver FiltroLimiteRequisicoes, issue #21). O MESMO valor precisa estar na Vercel
+  # (variavel SSR_API_TOKEN). Vazio desliga a isencao, sem quebrar nada.
+  ssr:
+    token: ${SSR_API_TOKEN:}
   supabase:
     url: ${SUPABASE_URL:}
     anon-key: ${SUPABASE_ANON_KEY:}

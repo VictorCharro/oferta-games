@@ -120,4 +120,68 @@ class FiltroLimiteRequisicoesTest {
     assertEquals(429, resposta.getStatus());
     assertNull(resposta.getHeader("Access-Control-Allow-Origin"));
   }
+
+  // ---- Token do SSR (issue #21) ----
+
+  private static final class RelogioManual extends java.time.Clock {
+    private java.time.Instant agora = java.time.Instant.parse("2026-09-13T12:00:00Z");
+    void avancar(java.time.Duration d) { agora = agora.plus(d); }
+    @Override public java.time.ZoneId getZone() { return java.time.ZoneOffset.UTC; }
+    @Override public java.time.Clock withZone(java.time.ZoneId zone) { return this; }
+    @Override public java.time.Instant instant() { return agora; }
+  }
+
+  private static int get(FiltroLimiteRequisicoes f, String ip, String token, int vezes) throws Exception {
+    int status = 0;
+    for (int i = 0; i < vezes; i++) {
+      MockHttpServletRequest requisicao = new MockHttpServletRequest("GET", "/api/games");
+      requisicao.addHeader("X-Forwarded-For", ip);
+      if (token != null) requisicao.addHeader(FiltroLimiteRequisicoes.CABECALHO_TOKEN_SSR, token);
+      MockHttpServletResponse resposta = new MockHttpServletResponse();
+      f.doFilter(requisicao, resposta, new MockFilterChain());
+      status = resposta.getStatus();
+    }
+    return status;
+  }
+
+  @Test
+  void ssrComTokenValidoNaoCaiNoBaldeDosNavegadores() throws Exception {
+    FiltroLimiteRequisicoes f = new FiltroLimiteRequisicoes(ORIGEM_PERMITIDA, "segredo", new RelogioManual());
+    // Muito acima do limite de leitura comum, do mesmo IP da Vercel.
+    assertEquals(200, get(f, "76.76.21.1", "segredo", FiltroLimiteRequisicoes.LIMITE_LEITURA + 200));
+  }
+
+  @Test
+  void tokenErradoNaoIsenta() throws Exception {
+    FiltroLimiteRequisicoes f = new FiltroLimiteRequisicoes(ORIGEM_PERMITIDA, "segredo", new RelogioManual());
+    assertEquals(429, get(f, "8.8.8.8", "chute", FiltroLimiteRequisicoes.LIMITE_LEITURA + 1));
+  }
+
+  /**
+   * Enquanto o SSR nao mandou nenhum token valido (Vercel sem a variavel), o limite dos navegadores
+   * NAO pode apertar: o SSR ainda esta no balde comum e seria derrubado.
+   */
+  @Test
+  void limiteDeNavegadorSoApertaDepoisQueOSsrProvaQueMandaOToken() throws Exception {
+    RelogioManual relogio = new RelogioManual();
+    FiltroLimiteRequisicoes f = new FiltroLimiteRequisicoes(ORIGEM_PERMITIDA, "segredo", relogio);
+
+    // Sem confirmacao: vale o limite alto de antes.
+    assertEquals(200, get(f, "10.0.0.1", null, FiltroLimiteRequisicoes.LIMITE_LEITURA_NAVEGADOR + 50));
+
+    // O SSR aparece com token: a partir daqui navegador tem limite de navegador.
+    get(f, "76.76.21.1", "segredo", 1);
+    assertEquals(200, get(f, "10.0.0.2", null, FiltroLimiteRequisicoes.LIMITE_LEITURA_NAVEGADOR));
+    assertEquals(429, get(f, "10.0.0.2", null, 1));
+
+    // O SSR some por mais de 15 min (Vercel perdeu a variavel): volta a afrouxar sozinho.
+    relogio.avancar(FiltroLimiteRequisicoes.CONFIRMACAO_SSR.plusMinutes(1));
+    assertEquals(200, get(f, "10.0.0.3", null, FiltroLimiteRequisicoes.LIMITE_LEITURA_NAVEGADOR + 50));
+  }
+
+  @Test
+  void semTokenConfiguradoNaVmCabecalhoEIgnorado() throws Exception {
+    FiltroLimiteRequisicoes f = new FiltroLimiteRequisicoes(ORIGEM_PERMITIDA, "", new RelogioManual());
+    assertEquals(429, get(f, "11.0.0.1", "", FiltroLimiteRequisicoes.LIMITE_LEITURA + 1));
+  }
 }
