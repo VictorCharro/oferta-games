@@ -112,7 +112,7 @@ class ServicoPerfis {
     // Mesmo toggle dos contadores de conquista da faixa de estatisticas: quem esconde conquistas
     // nao deve expor quais foram as ultimas.
     List<ServicoConexoesSteam.ConquistaRecenteSteam> conquistasRecentes =
-        dono || perfil.mostrarConquistas() ? steam.conquistasRecentes(perfil.usuarioId(), 12) : List.of();
+        dono || perfil.mostrarConquistas() ? steam.conquistasRecentes(perfil.usuarioId(), 20) : List.of();
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
     List<AtividadePerfil> atividadeRecente = mostrarAtividades ? carregarAtividades(perfil.usuarioId()) : List.of();
     boolean mostrarPlataforma = dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca();

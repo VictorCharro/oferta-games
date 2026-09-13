@@ -113,8 +113,17 @@ app-public-profile .profile-block { display: flex; flex-direction: column; heigh
    automatico do flex impede encolher) e as listas cortam o excesso em vez de empurrar o bloco.
    Nada de overflow:hidden no bloco em si: o menu "..." do editor vive dentro dele e seria
    cortado, igual ao que acontecia com o dropdown no cabecalho. */
+/* Listas (favoritos em lista, conquistas) PREENCHEM o bloco sozinhas: o componente entrega itens
+   de sobra e aqui so aparece o que cabe INTEIRO. Truque: coluna flex com quebra. Cada item ocupa
+   a largura de uma coluna; o que nao cabe na altura quebra pra proxima coluna, e a coluna alem da
+   ultima visivel fica fora da largura e some no overflow:hidden - nunca um item cortado ao meio.
+   Antes a contagem era fixa por tamanho e calibrada pra uma altura (460px); quando a altura
+   subiu pra 600px o bloco de conquistas ficou com 5 itens e um terco vazio. Assim qualquer
+   --altura-bloco funciona sem recalibrar. Ordem de leitura: desce a 1a coluna, depois a 2a. */
 app-public-profile .profile-block .profile-favorite-list,
-app-public-profile .profile-block .achievement-list { flex: 1; min-height: 0; overflow: hidden; align-content: start; }
+app-public-profile .profile-block .achievement-list { display: flex; flex: 1; flex-flow: column wrap; align-content: flex-start; gap: 8px 10px; min-height: 0; overflow: hidden; }
+app-public-profile .profile-block .profile-favorite-list > *,
+app-public-profile .profile-block .achievement-list > * { flex: none; width: 100%; }
 app-public-profile .profile-block > p { min-height: 0; overflow: auto; }
 app-public-profile .profile-block.size-pequeno { padding: 16px; }
 app-public-profile .profile-block.size-pequeno.stat-block { display: flex; align-items: center; }
@@ -133,16 +142,11 @@ app-public-profile .profile-block.size-pequeno .activity-item { grid-template-co
 app-public-profile .profile-block.size-pequeno .activity-item span { min-width: 0; overflow-wrap: anywhere; }
 app-public-profile .profile-block.size-pequeno .activity-item small { display: block; padding-top: 1px; font-size: 11px; }
 app-public-profile .profile-block.size-pequeno .custom-image { max-height: 150px; }
-/* Lista de favoritos do Resumo: 1 coluna ate o tamanho medio pra a linha ter espaco e as metas
-   (horas · % conquistas) caberem lado a lado; so nos blocos largos vale dividir em 2 colunas. */
-app-public-profile .profile-block.size-medio .profile-favorite-list { grid-template-columns: minmax(0, 1fr); }
 app-public-profile .profile-block.size-medio .custom-image { max-height: 260px; }
-app-public-profile .profile-block.size-largo .profile-favorite-list, app-public-profile .profile-block.size-completo .profile-favorite-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-/* Listas tambem crescem PRO LADO com o tamanho, nunca pra baixo: a altura e fixa, entao o bloco
-   largo ganha uma segunda coluna em vez de mais linhas. No pequeno (374px) duas colunas nao
-   cabem sem espremer a capa e o texto. */
-app-public-profile .profile-block.size-pequeno .profile-favorite-list { grid-template-columns: minmax(0, 1fr); }
-app-public-profile .profile-block.size-largo .achievement-list, app-public-profile .profile-block.size-completo .achievement-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Listas crescem PRO LADO com o tamanho, nunca pra baixo: pequeno/medio tem 1 coluna (374px nao
+   cabem duas capas + horas · % conquistas), largo/completo ganham a 2a coluna. */
+app-public-profile .profile-block.size-largo :is(.profile-favorite-list, .achievement-list) > *,
+app-public-profile .profile-block.size-completo :is(.profile-favorite-list, .achievement-list) > * { width: calc(50% - 5px); }
 app-public-profile .profile-block.size-largo .custom-image { max-height: 350px; }
 app-public-profile .profile-block.size-completo .custom-image { max-height: 460px; }
 
@@ -300,7 +304,10 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
   // deixaria sobra num bloco curto.
   app-public-profile .profile-block { height: auto; }
   app-public-profile .profile-block .profile-favorite-list,
-  app-public-profile .profile-block .achievement-list { flex: none; overflow: visible; }
+  app-public-profile .profile-block .achievement-list { flex: none; flex-flow: column nowrap; overflow: visible; }
+  app-public-profile .profile-block :is(.profile-favorite-list, .achievement-list) > * { width: 100% !important; }
+  // Sem altura pra limitar, a lista mostraria tudo que o componente entrega (ate 20): corta em 6.
+  app-public-profile .profile-block :is(.profile-favorite-list, .achievement-list) > :nth-child(n + 7) { display: none; }
 }
 
 .badge-discount {

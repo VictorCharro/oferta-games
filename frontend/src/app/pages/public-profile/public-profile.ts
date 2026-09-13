@@ -1052,7 +1052,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     // Em cards cada jogo ocupa uma capa inteira, entao cabem menos que na lista compacta.
     const limite = this.visualizacaoBloco(block) === 'cards'
       ? this.previewLimit(block.tamanho)
-      : { pequeno: 5, medio: 5, largo: 10, completo: 10 }[block.tamanho];
+      : this.limiteLista(block.tamanho);
     return this.profile?.favoritos.slice(0, limite) || [];
   }
 
@@ -1088,14 +1088,16 @@ export class PublicProfile implements OnInit, OnDestroy {
   // A lista ja vem pronta do backend (nome e icone cruzados com o catalogo, ver
   // ServicoConexoesSteam.conquistasRecentes) - aqui so corta pelo tamanho do bloco.
   conquistasPreview(block: PerfilBloco) {
-    return this.profile?.conquistasRecentes.slice(0, this.achievementPreviewLimit(block.tamanho)) || [];
+    return this.profile?.conquistasRecentes.slice(0, this.limiteLista(block.tamanho)) || [];
   }
 
-  // Cabem mais que cards de jogo: cada conquista e uma linha compacta (icone 40px + 2 linhas),
-  // ~56px por item. Calibrado pra mesma altura-alvo do previewLimit (~515px): com 5 itens o
-  // bloco medio media 403px e ficava baixo demais ao lado dos outros.
-  private achievementPreviewLimit(size: PerfilBloco['tamanho']): number {
-    return { pequeno: 6, medio: 5, largo: 10, completo: 10 }[size];
+  // Teto de itens das listas compactas (favoritos em lista, conquistas), NAO a quantidade exibida:
+  // quem decide quantos aparecem e o CSS, que mostra so os que cabem inteiros na altura do bloco
+  // (ver .profile-block .achievement-list em styles.scss). Aqui so precisa sobrar item pra encher
+  // - 1 coluna nos tamanhos menores, 2 nos maiores. Antes era contagem exata calibrada pra 460px,
+  // e quando a altura subiu o bloco ficou com um terco vazio.
+  private limiteLista(size: PerfilBloco['tamanho']): number {
+    return { pequeno: 12, medio: 12, largo: 20, completo: 20 }[size];
   }
 
   /** "há 2h", "há 3 dias" — a data vem em ISO do backend. */
