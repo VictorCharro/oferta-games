@@ -614,6 +614,6 @@
 </div>
 
 <div class="page-content error-state" *ngIf="!loading && !game">
-  <p>Jogo não encontrado.</p>
+  <p>{{ falhaCarregamento ? 'Não foi possível carregar este jogo agora. Tente novamente em instantes.' : 'Jogo não encontrado.' }}</p>
   <a routerLink="/catalogo" class="btn-primary" style="display:inline-block;margin-top:16px">Ver catálogo</a>
 </div>

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
+import { SeoService } from '../../services/seo';
 
 @Component({
   selector: 'app-login',
@@ -23,13 +24,19 @@ export class Login implements OnInit {
     private auth: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private seo: SeoService
   ) {}
 
   ngOnInit() {
     if (this.auth.isLoggedIn) this.router.navigate(['/']);
     this.route.queryParamMap.subscribe(p => {
       if (p.get('mode') === 'register') this.mode = 'register';
+      this.seo.set({
+        title: this.mode === 'register' ? 'Criar conta' : 'Entrar',
+        description: 'Entre ou crie sua conta no Oferta Games para monitorar preços e montar seu perfil gamer.',
+        noindex: true,
+      });
     });
   }
 

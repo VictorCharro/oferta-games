@@ -39,7 +39,9 @@ export class Search implements OnInit {
     this.seo.set({
       title: `Busca: ${this.query}`,
       description: `Resultados da busca por "${this.query}" no catálogo de jogos.`,
-      path: '/busca',
+      // Pagina de resultado de busca fora do indice: uma URL por termo digitado vira conteudo
+      // raso duplicado aos olhos do Google. O catalogo e as paginas de jogo e que devem ranquear.
+      noindex: true,
     });
     this.loading = true;
     this.searched = false;

@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, PendingTasks, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -15,6 +15,7 @@ import { GameService, GameSummary } from '../../services/game';
 import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { supabase } from '../../services/supabase';
 import { SeoService } from '../../services/seo';
+import { StatusResposta } from '../../services/status-resposta';
 
 @Component({
   selector: 'app-public-profile',
@@ -31,6 +32,10 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   profile: PerfilPublico | null = null;
   missing = false;
+  /** A API falhou (nao foi 404/400): mostra "tente de novo" e o SSR responde 503 em vez de 404. */
+  falhaCarregamento = false;
+  private readonly statusResposta = inject(StatusResposta);
+  private readonly pendingTasks = inject(PendingTasks);
   loading = true;
   activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' | 'colecoes' = 'resumo';
   readonly capasSteamIndisponiveis = new Set<number>();
@@ -147,7 +152,12 @@ export class PublicProfile implements OnInit, OnDestroy {
       return;
     }
     this.routeSub = this.route.paramMap.subscribe(params => {
-      void this.loadProfile(params.get('handle') || '');
+      // PendingTasks: o app e zoneless, e o SSR so espera o que estiver registrado ali. O
+      // loadProfile faz "await supabase.auth.getSession()" ANTES da chamada HTTP, e esse await nao
+      // e rastreado — o servidor entregava o esqueleto de carregamento, com titulo generico
+      // ("Oferta Games"), status 200 ate pra handle inexistente, e sem o card de compartilhamento
+      // do perfil (issues #22 e #26).
+      void this.pendingTasks.run(() => this.loadProfile(params.get('handle') || ''));
     });
   }
 
@@ -157,10 +167,26 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (!this.previewHandle) this.seo.reset();
   }
 
+  /**
+   * Descricao do card de compartilhamento: a bio, se existir; senao um resumo com os numeros que o
+   * perfil deixa publicos (os ocultos ja chegam null da API, entao nada escondido vaza aqui).
+   */
+  private descricaoCompartilhamento(profile: PerfilPublico): string {
+    const bio = profile.bio?.trim();
+    if (bio) return bio;
+    const partes: string[] = [];
+    if (profile.totalJogosBiblioteca) partes.push(`${profile.totalJogosBiblioteca} jogos`);
+    if (profile.totalMinutos) partes.push(`${Math.round(profile.totalMinutos / 60).toLocaleString('pt-BR')}h jogadas`);
+    if (profile.jogosPlatinados) partes.push(`${profile.jogosPlatinados} platinados`);
+    const resumo = partes.length ? `${partes.join(' · ')}. ` : '';
+    return `${resumo}Veja a biblioteca e os jogos favoritos de ${profile.nomeExibicao} no Oferta Games.`;
+  }
+
   private async loadProfile(handle: string) {
     const request = ++this.profileRequest;
     this.profile = null;
     this.missing = false;
+    this.falhaCarregamento = false;
     this.loading = true;
     this.isOwner = false;
     this.ownerAvatar = '';
@@ -194,9 +220,11 @@ export class PublicProfile implements OnInit, OnDestroy {
         : this.defaultBlocks();
       this.profile = profile;
       if (!this.previewHandle) this.seo.set({
-        title: `Perfil de ${profile.nomeExibicao}`,
-        description: profile.bio?.trim() || `Veja a biblioteca e os jogos favoritos de ${profile.nomeExibicao} no Oferta Games.`,
-        image: profile.avatarUrl,
+        // Nome + @handle: e o que aparece no card quando o dono compartilha o link no Discord ou
+        // no WhatsApp, o principal gancho social do perfil (issue #26).
+        title: `${profile.nomeExibicao} (@${profile.handle})`,
+        description: this.descricaoCompartilhamento(profile),
+        image: profile.bannerUrl || profile.avatarUrl,
         path: `/${profile.handle}`,
       });
       this.bioDraft = profile.bio || '';
@@ -221,10 +249,22 @@ export class PublicProfile implements OnInit, OnDestroy {
         if (request !== this.profileRequest) return;
         this.isOwner = false;
       }
-    } catch {
+    } catch (erro) {
       if (request !== this.profileRequest) return;
       this.missing = true;
-      this.seo.reset();
+      // 404 (nao existe/privado) e 400 (texto que nem e um handle valido, ex. /pagina.html) sao
+      // "nao encontrado"; qualquer outra falha e a API indisponivel e nao pode sair como 404.
+      const status = (erro as { status?: number })?.status;
+      this.falhaCarregamento = status !== 404 && status !== 400;
+      if (!this.previewHandle) {
+        if (this.falhaCarregamento) {
+          this.statusResposta.indisponivel();
+          this.seo.set({ title: 'Perfil indisponível', description: 'Não foi possível carregar este perfil agora.', noindex: true });
+        } else {
+          this.statusResposta.naoEncontrado();
+          this.seo.naoEncontrado();
+        }
+      }
     } finally {
       if (request !== this.profileRequest) return;
       this.loading = false;

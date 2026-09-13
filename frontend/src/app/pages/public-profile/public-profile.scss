@@ -326,8 +326,9 @@
 .library-favorite img { width: 20px; height: 20px; border-radius: 0; opacity: .72; }
 .library-favorite:hover, .library-favorite.active { border-color: var(--color-purple); background: rgba(41, 168, 224, .1); }
 .library-favorite.active img { opacity: 1; }
-.unavailable { display: grid; min-height: 50vh; place-items: center; text-align: center; }
+.unavailable { display: grid; min-height: 50vh; place-items: center; align-content: center; gap: 8px; text-align: center; }
 .unavailable p { color: var(--text-secondary); }
+.unavailable-home { display: inline-block; margin-top: 12px; }
 
 :host-context([data-theme="light"]) .public-hero { border-color: rgba(41, 168, 224, .38); background: linear-gradient(118deg, #dff5ff 0%, #eefaff 44%, #d7effc 100%); }
 :host-context([data-theme="light"]) .gameplay { border-left-color: rgba(41, 168, 224, .42); }

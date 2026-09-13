@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "start", "--prefix", "frontend"],
       "port": 4200
+    },
+    {
+      "name": "frontend-ssr-build",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["frontend/dist/frontend/server/server.mjs"],
+      "port": 4000
     }
   ]
 }

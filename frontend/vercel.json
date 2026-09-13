@@ -6,6 +6,20 @@
       "includeFiles": "dist/frontend/server/**"
     }
   },
+  "headers": [
+    {
+      "source": "/(main|polyfills|styles|chunk)-([A-Z0-9]{8}).(js|css)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/media/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/api" }
   ]

@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { SeoService } from '../../services/seo';
+import { StatusResposta } from '../../services/status-resposta';
 
 @Component({
   selector: 'app-not-found',
@@ -8,12 +9,12 @@ import { SeoService } from '../../services/seo';
   styleUrl: './not-found.scss',
 })
 export class NotFound implements OnInit {
-  constructor(private seo: SeoService) {}
+  constructor(private seo: SeoService, private statusResposta: StatusResposta) {}
 
   ngOnInit() {
-    this.seo.set({
-      title: 'Página não encontrada',
-      description: 'A página que você procura não existe ou foi removida.',
-    });
+    // Rota "**" (caminhos com mais de um segmento que nao existem). Os de um segmento caem em
+    // :handle e o perfil publico responde o 404 por la.
+    this.statusResposta.naoEncontrado();
+    this.seo.naoEncontrado();
   }
 }

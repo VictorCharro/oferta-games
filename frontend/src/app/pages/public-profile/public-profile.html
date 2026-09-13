@@ -873,7 +873,14 @@
     <span class="loading-line"></span><span class="loading-line short"></span>
   </div>
   <div class="page-content unavailable" *ngIf="!loading && missing">
-    <h1>Perfil indisponivel</h1>
-    <p>Este perfil nao existe ou nao esta publico.</p>
+    <ng-container *ngIf="!falhaCarregamento; else perfilFalhou">
+      <h1>Página não encontrada</h1>
+      <p>Este endereço não existe ou o perfil não está público.</p>
+    </ng-container>
+    <ng-template #perfilFalhou>
+      <h1>Perfil indisponível</h1>
+      <p>Não foi possível carregar este perfil agora. Tente novamente em instantes.</p>
+    </ng-template>
+    <a routerLink="/" class="btn-primary unavailable-home">Voltar ao início</a>
   </div>
 </ng-template>

@@ -50,7 +50,7 @@ export class EditarBlocos implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.seo.set({ title: 'Editar blocos do perfil', description: 'Organize os blocos que aparecem no seu perfil público.' });
+    this.seo.set({ title: 'Editar blocos do perfil', description: 'Organize os blocos que aparecem no seu perfil público.', noindex: true });
     void this.carregar();
   }
 

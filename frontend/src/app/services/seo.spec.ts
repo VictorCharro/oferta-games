@@ -40,6 +40,31 @@ describe('SeoService', () => {
     expect(meta.getTag('name="description"')?.content).not.toBe('Descrição específica do jogo.');
   });
 
+  it('define canonical só quando a página informa o path, e tira em página noindex', () => {
+    seo.set({ title: 'Jogo X', description: 'Desc', path: '/jogo/jogo-x' });
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href'))
+      .toBe('https://ofertagames.vercel.app/jogo/jogo-x');
+
+    seo.naoEncontrado();
+    expect(document.head.querySelector('link[rel="canonical"]')).toBeNull();
+    expect(meta.getTag('name="robots"')?.content).toBe('noindex');
+    expect(title.getTitle()).toBe('Página não encontrada | Oferta Games');
+
+    seo.set({ title: 'Jogo Y', description: 'Desc' });
+    expect(meta.getTag('name="robots"')).toBeNull();
+  });
+
+  it('JSON-LD escapa "<" pra um título não fechar a tag script, e set() limpa o anterior', () => {
+    seo.set({ title: 'Jogo', description: 'Desc' });
+    seo.dadosEstruturados({ name: 'Jogo </script><script>alert(1)</script>' });
+    const script = document.getElementById('seo-json-ld');
+    expect(script?.textContent).not.toContain('</script>');
+    expect(JSON.parse(script!.textContent!).name).toBe('Jogo </script><script>alert(1)</script>');
+
+    seo.set({ title: 'Outra', description: 'Desc' });
+    expect(document.getElementById('seo-json-ld')).toBeNull();
+  });
+
   it('atualiza a tag existente em vez de duplicar ao chamar set() duas vezes', () => {
     seo.set({ title: 'Primeiro', description: 'Um' });
     seo.set({ title: 'Segundo', description: 'Dois' });

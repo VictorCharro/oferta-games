@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -27,7 +27,8 @@ import { ColecaoPerfil } from '../../services/perfis';
 import { GameReviewsService, RespostaAvaliacoes } from '../../services/game-reviews';
 import { AuthService } from '../../services/auth';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
-import { SeoService } from '../../services/seo';
+import { SITE_URL, SeoService } from '../../services/seo';
+import { StatusResposta } from '../../services/status-resposta';
 
 @Component({
   selector: 'app-game-detail',
@@ -38,6 +39,9 @@ import { SeoService } from '../../services/seo';
 export class GameDetail implements OnInit, OnDestroy {
   game: GameDetailModel | null = null;
   loading = true;
+  /** A API falhou (nao foi 404): a tela diz "tente de novo" e o SSR responde 503, nao 404. */
+  falhaCarregamento = false;
+  private readonly statusResposta = inject(StatusResposta);
   refreshing = false;
   refreshMsg = '';
   cooldownSegundos = 0;
@@ -223,6 +227,7 @@ export class GameDetail implements OnInit, OnDestroy {
         this.carregandoMaisAvaliacoesSteam = false;
         this.ordenacaoAvaliacoesSteam = 'recent';
         this.loading = true;
+        this.falhaCarregamento = false;
         this.refreshing = false;
         this.refreshMsg = '';
         this.pararCooldown();
@@ -244,7 +249,12 @@ export class GameDetail implements OnInit, OnDestroy {
         this.carregarDetalhesEConquistasEReviews(slug);
         this.carregarHistoricoPrecos(slug);
       }),
-      switchMap(slug => this.gameService.getGame(slug).pipe(catchError(() => of(null))))
+      // 404 da API = jogo nao existe; qualquer outra falha (API fora, timeout) nao pode ser
+      // anunciada como "nao encontrado" — nem pro usuario, nem pro Google, nem pra CDN.
+      switchMap(slug => this.gameService.getGame(slug).pipe(catchError((erro: HttpErrorResponse) => {
+        this.falhaCarregamento = erro.status !== 404;
+        return of(null);
+      })))
     ).subscribe(data => {
       this.game = data;
       this.loading = false;
@@ -259,8 +269,13 @@ export class GameDetail implements OnInit, OnDestroy {
           image: data.coverUrl,
           path: `/jogo/${data.slug}`,
         });
+        this.seo.dadosEstruturados(this.jsonLdJogo(data));
+      } else if (this.falhaCarregamento) {
+        this.statusResposta.indisponivel();
+        this.seo.set({ title: 'Jogo indisponível', description: 'Não foi possível carregar este jogo agora.', noindex: true });
       } else {
-        this.seo.reset();
+        this.statusResposta.naoEncontrado();
+        this.seo.naoEncontrado();
       }
       this.cdr.detectChanges();
     });
@@ -857,6 +872,31 @@ export class GameDetail implements OnInit, OnDestroy {
       return `Aguarde ${minutos}:${segundos.toString().padStart(2, '0')}`;
     }
     return 'Atualizar preços';
+  }
+
+  /**
+   * Dados estruturados (schema.org) da pagina do jogo: nome, capa e a faixa de preco entre as lojas.
+   * E o que permite o Google mostrar "R$ 34,97 – R$ 210,32" direto no resultado da busca. Sem oferta,
+   * vai so o jogo (AggregateOffer sem preco e invalido).
+   */
+  private jsonLdJogo(jogo: GameDetailModel): object {
+    const precos = jogo.offers.map(o => o.price).filter(p => p != null && p >= 0);
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'VideoGame',
+      name: jogo.title,
+      url: `${SITE_URL}/jogo/${jogo.slug}`,
+      ...(jogo.coverUrl ? { image: jogo.coverUrl } : {}),
+      ...(precos.length ? {
+        offers: {
+          '@type': 'AggregateOffer',
+          priceCurrency: 'BRL',
+          lowPrice: Math.min(...precos).toFixed(2),
+          highPrice: Math.max(...precos).toFixed(2),
+          offerCount: precos.length,
+        },
+      } : {}),
+    };
   }
 
   bestPrice(offers: Offer[]): number | null {

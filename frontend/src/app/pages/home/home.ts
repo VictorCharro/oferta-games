@@ -55,6 +55,7 @@ export class Home implements OnInit, OnDestroy {
     this.seo.set({
       title: 'Início',
       description: 'Compare preços de jogos nas melhores lojas e encontre as maiores promoções.',
+      path: '/',
     });
     this.loadPreferredPlatformDeals();
     this.carregarDestaques();
