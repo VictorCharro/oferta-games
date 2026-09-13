@@ -2,9 +2,9 @@ package com.ofertagames.backend.jogos;
 
 import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
 import com.ofertagames.backend.comum.CacheHttp;
+import com.ofertagames.backend.comum.ParametrosPublicos;
 import com.ofertagames.backend.steam.RespostaAvaliacoesSteam;
 import com.ofertagames.backend.steam.ServicoSteam;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -59,15 +59,22 @@ public class ControladorJogos {
       @RequestParam(required = false) String q,
       @RequestParam(required = false) String stores
   ) {
-    int paginaSegura = Math.max(0, page);
-    int tamanhoSeguro = Math.min(100, Math.max(1, size));
-    Double descontoSeguro = minDiscount == null ? null : Math.min(100, Math.max(0, minDiscount));
-    List<String> lojas = stores == null || stores.isBlank()
-        ? List.of()
-        : Arrays.stream(stores.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+    // Tudo normalizado ANTES de virar chave do @Cacheable em RepositorioJogos.listar: valor
+    // desconhecido cai no padrao, precos em reais inteiros, lojas ordenadas e sem repeticao. Ver
+    // ParametrosPublicos (issue #16).
     return ResponseEntity.ok()
         .cacheControl(CacheHttp.publico())
-        .body(jogos.listar(paginaSegura, tamanhoSeguro, sort, type, platform, minPrice, maxPrice, descontoSeguro, q, lojas));
+        .body(jogos.listar(
+            ParametrosPublicos.pagina(page),
+            ParametrosPublicos.tamanhoCatalogo(size),
+            ParametrosPublicos.ordenacaoCatalogo(sort),
+            ParametrosPublicos.tipo(type),
+            ParametrosPublicos.plataforma(platform),
+            ParametrosPublicos.precoMinimo(minPrice),
+            ParametrosPublicos.precoMaximo(maxPrice),
+            ParametrosPublicos.descontoMinimo(minDiscount),
+            ParametrosPublicos.busca(q),
+            ParametrosPublicos.lojas(stores)));
   }
 
   @GetMapping("/search")

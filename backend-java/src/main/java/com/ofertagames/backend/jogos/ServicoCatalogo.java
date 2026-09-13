@@ -1,6 +1,7 @@
 package com.ofertagames.backend.jogos;
 
 import com.ofertagames.backend.comum.GeradorSlug;
+import com.ofertagames.backend.comum.ParametrosPublicos;
 import com.ofertagames.backend.itad.ClienteItad;
 import com.ofertagames.backend.itad.ItemOfertaItad;
 import com.ofertagames.backend.itad.OfertaPrecoItad;
@@ -80,7 +81,9 @@ public class ServicoCatalogo {
       throw new BuscaCurtaException();
     }
 
-    List<ResumoJogo> locais = jogos.listar(0, 20, "rank", "all", "all", null, null, null, termo, List.of());
+    // Mesma normalizacao do GET /api/games (caixa e espacos nao mudam o ILIKE), pra "Zelda" e
+    // "zelda  " caírem na mesma entrada de cache.
+    List<ResumoJogo> locais = jogos.listar(0, 20, "rank", "all", "all", null, null, null, ParametrosPublicos.busca(termo), List.of());
     if (!locais.isEmpty()) {
       return locais;
     }

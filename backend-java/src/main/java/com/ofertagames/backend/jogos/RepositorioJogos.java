@@ -7,6 +7,7 @@ import com.ofertagames.backend.comum.ConfiguracaoCache;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.IconeConquista;
 import com.ofertagames.backend.comum.JogosBloqueados;
+import com.ofertagames.backend.comum.LimiteConsultasPesadas;
 import com.ofertagames.backend.comum.LojasBloqueadas;
 import com.ofertagames.backend.comum.LojasCatalogo;
 import com.ofertagames.backend.comum.VariacaoPrecoRelevante;
@@ -54,14 +55,17 @@ public class RepositorioJogos {
   private final JdbcClient jdbc;
   private final JdbcTemplate jdbcTemplate;
   private final ObjectMapper objectMapper;
+  private final LimiteConsultasPesadas limite;
 
   RepositorioJogos(
       @Qualifier("catalogo") JdbcClient jdbc,
       @Qualifier("catalogo") JdbcTemplate jdbcTemplate,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      LimiteConsultasPesadas limite) {
     this.jdbc = jdbc;
     this.jdbcTemplate = jdbcTemplate;
     this.objectMapper = objectMapper;
+    this.limite = limite;
   }
 
   /**
@@ -97,9 +101,14 @@ public class RepositorioJogos {
    *     preferidas"). Lista vazia ou so com chaves invalidas <b>nao filtra</b> — nao devolve vazio.
    *     Quando filtra, restringe tanto quais jogos aparecem quanto quais ofertas contam pro preco
    *     exibido
+   * <p>Os parametros chegam normalizados por {@code ParametrosPublicos} (ver ControladorJogos) — e
+   * isso que mantem finito o numero de chaves do cache. {@code sync = true} faz requisicoes
+   * simultaneas pela mesma chave esperarem uma execucao so. O caminho que agrega o catalogo inteiro
+   * passa por {@link LimiteConsultasPesadas}; o pre-paginado (~30ms) nao (issue #16).
+   *
    * @return no maximo {@code tamanho} itens; lista vazia quando a pagina passa do fim
    */
-  @Cacheable(ConfiguracaoCache.CACHE_CATALOGO)
+  @Cacheable(value = ConfiguracaoCache.CACHE_CATALOGO, sync = true)
   public List<ResumoJogo> listar(int pagina, int tamanho, String ordenacao, String tipo, String plataforma, Double precoMinimo, Double precoMaximo, Double descontoMinimo, String busca, List<String> lojas) {
     int deslocamento = pagina * tamanho;
     String filtroTipo = switch (tipo) {
@@ -123,7 +132,8 @@ public class RepositorioJogos {
     String filtrosDeOferta = String.join(" ", filtroOfertaPlataforma, filtroLojaBloqueada,
         filtroOfertaLojasPreferidas);
 
-    String sql = podePrePaginar(ordenacao, precoMinimo, precoMaximo, descontoMinimo)
+    boolean prePaginado = podePrePaginar(ordenacao, precoMinimo, precoMaximo, descontoMinimo);
+    String sql = prePaginado
         ? sqlPrePaginado(ordenacao, filtrosDeJogo, filtrosDeOferta)
         : """
             SELECT
@@ -146,7 +156,7 @@ public class RepositorioJogos {
             """.formatted(filtrosDeOferta, filtrosDeJogo, filtroPreco, ordenarPor(ordenacao));
 
     var comando = jdbc.sql(sql).param("tamanho", tamanho).param("deslocamento", deslocamento);
-    if (podePrePaginar(ordenacao, precoMinimo, precoMaximo, descontoMinimo)) {
+    if (prePaginado) {
       // Teto do que a pagina pode consumir do "resto": as linhas de destaque so empurram itens
       // pra frente, nunca exigem mais linhas do resto do que isso.
       comando = comando.param("limiteResto", deslocamento + tamanho);
@@ -167,7 +177,10 @@ public class RepositorioJogos {
       comando = comando.param("lojasRegex", regexLojas);
     }
 
-    return comando.query(RepositorioJogos::mapearResumo).list();
+    var consulta = comando.query(RepositorioJogos::mapearResumo);
+    return prePaginado
+        ? consulta.list()
+        : limite.executar("catalogo ordenacao=" + ordenacao, consulta::list);
   }
 
   /** Fatia de destaque da ordenacao padrao: ate 200 no rank, o que a torna barata de agregar. */

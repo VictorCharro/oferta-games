@@ -4,7 +4,9 @@ import com.ofertagames.backend.comum.ClassificadorDlc;
 import com.ofertagames.backend.comum.ConfiguracaoCache;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.JogosBloqueados;
+import com.ofertagames.backend.comum.LimiteConsultasPesadas;
 import com.ofertagames.backend.comum.LojasBloqueadas;
+import com.ofertagames.backend.comum.ParametrosPublicos;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
@@ -17,9 +19,11 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class RepositorioDescontos {
   private final JdbcClient jdbc;
+  private final LimiteConsultasPesadas limite;
 
-  RepositorioDescontos(@Qualifier("catalogo") JdbcClient jdbc) {
+  RepositorioDescontos(@Qualifier("catalogo") JdbcClient jdbc, LimiteConsultasPesadas limite) {
     this.jdbc = jdbc;
+    this.limite = limite;
   }
 
   /**
@@ -50,16 +54,25 @@ public class RepositorioDescontos {
    *       dominam o topo do ranking geral.</li>
    * </ul>
    *
-   * <p>Query cara ({@code DISTINCT ON} + join na tabela de ofertas inteira) e chamada varias vezes
-   * por carregamento da Home, por isso o cache de 10 min e o reaquecimento apos cada rodada de
-   * precos. Ver {@link ConfiguracaoCache}.
+   * <p><b>Sempre devolve o topo inteiro</b> ({@link ParametrosPublicos#TAMANHO_TOPO_DESCONTOS}), e
+   * quem chama fatia. O custo da query quase nao depende do tamanho — o {@code DISTINCT ON} passa
+   * pelas ofertas de todo o catalogo de qualquer jogo —, entao ter o tamanho na chave do cache so
+   * multiplicava as chaves (200 tamanhos x ordenacoes x tipos), cada uma pagando a query inteira.
+   * Assim existem no maximo 6 entradas (issue #16).
    *
-   * @param ordenacao {@code rank} (relevancia primeiro) ou qualquer outro valor para ordenar por
-   *     maior desconto
-   * @param tipo {@code game}, {@code dlc}, ou outro valor para nao filtrar
+   * <p>{@code sync = true}: requisicoes simultaneas pela mesma chave esperam UMA execucao, em vez
+   * de cada SSR que chega com o cache frio (deploy, expiracao) disparar a sua.
+   *
+   * @param ordenacao {@code rank} ou {@code discount}, ja normalizada por
+   *     {@link ParametrosPublicos#ordenacaoDescontos}
+   * @param tipo {@code all}, {@code game} ou {@code dlc}, ja normalizado
    */
-  @Cacheable(ConfiguracaoCache.CACHE_DESCONTOS)
-  public List<DescontoJogo> listarMelhores(int tamanho, String ordenacao, String tipo) {
+  @Cacheable(value = ConfiguracaoCache.CACHE_DESCONTOS, sync = true)
+  public List<DescontoJogo> listarTopo(String ordenacao, String tipo) {
+    return limite.executar("descontos " + ordenacao + "/" + tipo, () -> consultarTopo(ordenacao, tipo));
+  }
+
+  private List<DescontoJogo> consultarTopo(String ordenacao, String tipo) {
     String ordenarPor = "rank".equals(ordenacao)
         ? "rank ASC NULLS LAST, discount_pct DESC"
         : "discount_pct DESC, rank ASC NULLS LAST";
@@ -73,8 +86,14 @@ public class RepositorioDescontos {
     // desconto real. Mas o preco/loja exibidos vem da oferta mais barata entre TODAS (LATERAL),
     // pra bater com o "melhor preco" mostrado na pagina do jogo — mesmo quando essa loja mais
     // barata nao tem desconto oficial (ex: preco padrao mais baixo em outra loja).
+    // LIMIT ANTES do LATERAL: a ordenacao final so usa discount_pct e rank (que ja vem de
+    // "elegiveis"), entao da pra cortar o topo primeiro e buscar a oferta mais barata so pra essas
+    // linhas. Antes o LATERAL rodava pros ~31 mil jogos elegiveis e o LIMIT descartava quase tudo
+    // (126 mil buffers pra devolver 200). O resultado e o mesmo: a oferta que tornou o jogo
+    // elegivel ja passou pelo filtro de loja bloqueada, entao o LATERAL sempre acha ao menos ela.
     String sql = """
         SELECT * FROM (
+          SELECT * FROM (
           SELECT DISTINCT ON (g.id)
             g.id AS game_id,
             g.slug,
@@ -94,6 +113,9 @@ public class RepositorioDescontos {
             %s
             %s
           ORDER BY g.id, (CASE WHEN o.price = 0 THEN 100 ELSE ROUND((1 - o.price / o.regular_price) * 100)::integer END) DESC
+          ) todos_elegiveis
+          ORDER BY %s
+          LIMIT :tamanho
         ) elegiveis
         JOIN LATERAL (
           SELECT o.store_name, o.price, o.regular_price, o.url
@@ -104,17 +126,17 @@ public class RepositorioDescontos {
           LIMIT 1
         ) barato ON true
         ORDER BY %s
-        LIMIT :tamanho
         """.formatted(
             LojasBloqueadas.filtroSql("o"),
             ConteudosNaoJogos.filtroSql("g"),
             JogosBloqueados.filtroSql("g"),
             filtroTipo,
+            ordenarPor,
             LojasBloqueadas.filtroSql("o"),
             ordenarPor);
 
     return jdbc.sql(sql)
-        .param("tamanho", tamanho)
+        .param("tamanho", ParametrosPublicos.TAMANHO_TOPO_DESCONTOS)
         .query((rs, linha) -> new DescontoJogo(
             rs.getString("slug"),
             rs.getString("title"),
