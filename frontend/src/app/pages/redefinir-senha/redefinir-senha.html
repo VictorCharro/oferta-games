@@ -1,0 +1,31 @@
+<div class="login-page">
+  <div class="login-card">
+    <img src="logo.png" class="login-logo" alt="Oferta Games" />
+    <h1><span class="logo-oferta">Oferta</span>Games</h1>
+    <p class="login-sub">Criar nova senha</p>
+
+    <p class="login-ajuda" *ngIf="linkValido === null">Conferindo o link...</p>
+
+    <ng-container *ngIf="linkValido === false">
+      <p class="msg-error">Este link expirou ou já foi usado.</p>
+      <a routerLink="/login" class="btn-primary btn-full" style="display:block;margin-top:16px;text-align:center">Pedir um novo link</a>
+    </ng-container>
+
+    <ng-container *ngIf="linkValido">
+      <p class="msg-success" *ngIf="sucesso">Senha alterada! Levando você para o início...</p>
+      <form *ngIf="!sucesso" (submit)="salvar(); $event.preventDefault()">
+        <input class="autofill-trap" type="text" autocomplete="username" hidden />
+        <div class="field">
+          <label>Nova senha</label>
+          <input type="password" [(ngModel)]="senha" name="senha" autocomplete="new-password" placeholder="Mínimo de 8 caracteres" />
+        </div>
+        <div class="field">
+          <label>Confirmar nova senha</label>
+          <input type="password" [(ngModel)]="confirmacao" name="confirmacao" autocomplete="new-password" />
+        </div>
+        <p class="msg-error" *ngIf="erro">{{ erro }}</p>
+        <button type="submit" class="btn-primary btn-full" [disabled]="salvando">{{ salvando ? 'Salvando...' : 'Salvar nova senha' }}</button>
+      </form>
+    </ng-container>
+  </div>
+</div>

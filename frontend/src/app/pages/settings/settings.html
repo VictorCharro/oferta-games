@@ -58,6 +58,29 @@
         <div class="card-heading"><h2>Sessão</h2><p>Encerre o acesso desta conta neste dispositivo.</p></div>
         <button class="btn-danger" (click)="logout()">Sair da conta</button>
       </div>
+
+      <div class="settings-card danger-card">
+        <div class="card-heading">
+          <h2>Excluir conta</h2>
+          <p>Apaga de forma definitiva sua conta, perfil público, blocos, favoritos, coleções, avaliações, jogos monitorados, conexões com Steam e Xbox e as imagens que você enviou. Não dá para desfazer.</p>
+        </div>
+        <ng-container *ngIf="!confirmandoExclusao; else confirmarExclusaoTpl">
+          <button class="btn-danger-outline" type="button" (click)="confirmandoExclusao = true">Quero excluir minha conta</button>
+        </ng-container>
+        <ng-template #confirmarExclusaoTpl>
+          <label class="field">
+            <span>Digite <strong>EXCLUIR</strong> para confirmar</span>
+            <input type="text" [(ngModel)]="textoConfirmacaoExclusao" autocomplete="off" placeholder="EXCLUIR" />
+          </label>
+          <div class="danger-actions">
+            <button class="btn-outline" type="button" (click)="cancelarExclusao()" [disabled]="excluindo">Cancelar</button>
+            <button class="btn-danger" type="button" (click)="excluirConta()"
+              [disabled]="excluindo || textoConfirmacaoExclusao.trim() !== 'EXCLUIR'">
+              {{ excluindo ? 'Excluindo...' : 'Excluir definitivamente' }}
+            </button>
+          </div>
+        </ng-template>
+      </div>
     </section>
 
     <section class="tab-content" *ngIf="activeTab === 'conexoes'">

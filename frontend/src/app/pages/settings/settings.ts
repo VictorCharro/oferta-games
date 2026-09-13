@@ -12,6 +12,7 @@ import {
 import { ConexoesSteamService, StatusSteam } from '../../services/conexoes-steam';
 import { ConexoesXboxService, StatusXbox } from '../../services/conexoes-xbox';
 import { PerfisService } from '../../services/perfis';
+import { ContaService } from '../../services/conta';
 import { STORE_FILTER_OPTIONS } from '../../services/store-brand';
 
 type SettingsTab = 'conta' | 'conexoes' | 'preferencias' | 'privacidade';
@@ -39,6 +40,9 @@ export class Settings implements OnInit {
   xboxStatus: StatusXbox | null = null;
   xboxLoading = false;
   profileHandle = '';
+  confirmandoExclusao = false;
+  textoConfirmacaoExclusao = '';
+  excluindo = false;
 
   readonly storeOptions = STORE_FILTER_OPTIONS;
 
@@ -55,6 +59,7 @@ export class Settings implements OnInit {
     private steamService: ConexoesSteamService,
     private xboxService: ConexoesXboxService,
     private perfisService: PerfisService,
+    private contaService: ContaService,
     private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef
@@ -93,6 +98,28 @@ export class Settings implements OnInit {
     }
     this.xboxLoading = false;
     await this.loadXbox();
+  }
+
+  cancelarExclusao() {
+    this.confirmandoExclusao = false;
+    this.textoConfirmacaoExclusao = '';
+  }
+
+  async excluirConta() {
+    if (this.textoConfirmacaoExclusao.trim() !== 'EXCLUIR' || this.excluindo) return;
+    this.excluindo = true;
+    this.clearMessages();
+    this.cdr.detectChanges();
+    try {
+      await this.contaService.excluirConta();
+      // Recarrega em vez de navegar: limpa todo estado em memoria (favoritos, perfil, preferencias)
+      // que ainda pertencia a conta que acabou de deixar de existir.
+      window.location.assign('/?conta=excluida');
+    } catch {
+      this.excluindo = false;
+      this.error = 'Não foi possível excluir a conta agora. Tente de novo em instantes ou saia e entre novamente.';
+      this.cdr.detectChanges();
+    }
   }
 
   selectTab(tab: SettingsTab) {

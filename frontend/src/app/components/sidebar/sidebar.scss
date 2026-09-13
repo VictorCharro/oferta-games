@@ -162,3 +162,17 @@
   background: rgba(0, 0, 0, 0.55);
   z-index: 150;
 }
+
+// Pe da sidebar com os links legais: margin-top auto empurra pro fundo da coluna flex.
+.sidebar-legal {
+  margin-top: auto;
+  padding: 16px 20px 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+
+  a { color: var(--text-muted); text-decoration: none; }
+  a:hover { color: var(--text-primary); text-decoration: underline; }
+  span { margin: 0 6px; }
+  p { margin: 8px 0 0; }
+}

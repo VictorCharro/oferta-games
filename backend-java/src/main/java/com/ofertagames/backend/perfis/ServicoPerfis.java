@@ -22,7 +22,10 @@ import org.springframework.web.server.ResponseStatusException;
 class ServicoPerfis {
   private static final Set<String> IDENTIFICADORES_RESERVADOS = Set.of(
       "admin", "api", "busca", "catalogo", "configuracoes", "favoritos", "gratuitos",
-      "jogo", "login", "mais-vendidos", "monitorados", "perfil", "promocoes", "u");
+      "jogo", "login", "mais-vendidos", "monitorados", "perfil", "promocoes", "u",
+      // Rotas de 13/09/2026: sem isso alguem registrava /termos como handle e a pagina sumia atras
+      // do perfil (o roteador do Angular casa rota fixa antes, mas o link compartilhado confundiria).
+      "redefinir-senha", "termos", "privacidade", "conta", "sobre", "contato", "ajuda");
   private final RepositorioPerfis perfis;
   private final ServicoConexoesSteam steam;
   private final ServicoConexoesXbox xbox;

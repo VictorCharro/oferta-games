@@ -1,0 +1,180 @@
+<article class="page-content legal-page">
+  <ng-container *ngIf="tipo === 'privacidade'; else termos">
+    <header>
+      <h1>Política de Privacidade</h1>
+      <p class="legal-revisao">Última atualização: {{ revisao }}</p>
+    </header>
+
+    <p>Esta política explica quais dados pessoais o <strong>Oferta Games</strong> trata, para quê, com quem são compartilhados e como você exerce seus direitos, conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).</p>
+
+    <section>
+      <h2>1. Quais dados coletamos</h2>
+      <h3>Quando você cria uma conta</h3>
+      <ul>
+        <li><strong>Cadastro por e-mail:</strong> nome, e-mail e senha. A senha é guardada pelo provedor de autenticação apenas em forma cifrada; nós nunca temos acesso a ela.</li>
+        <li><strong>Entrar com Google ou Discord:</strong> nome, e-mail e foto que esses serviços compartilham com a sua autorização.</li>
+      </ul>
+      <h3>Quando você usa o site com a conta</h3>
+      <ul>
+        <li>Perfil: nome de exibição, endereço do perfil (ex.: /seu-nome), bio, foto, banner, imagens e textos que você adiciona aos blocos.</li>
+        <li>Jogos favoritos, jogos monitorados, metas de preço e notificações de queda de preço.</li>
+        <li>Coleções, avaliações de jogos e votos em avaliações.</li>
+        <li>Suas preferências (tema, plataforma, lojas, filtros), guardadas no próprio navegador.</li>
+      </ul>
+      <h3>Quando você conecta Steam ou Xbox (opcional)</h3>
+      <ul>
+        <li><strong>Steam:</strong> seu SteamID e, do perfil público da Steam, a biblioteca de jogos, horas jogadas, conquistas e lista de desejos.</li>
+        <li><strong>Xbox:</strong> identificação da conta Xbox, biblioteca de jogos e conquistas, obtidas por meio do serviço OpenXBL.</li>
+      </ul>
+      <h3>Dados técnicos</h3>
+      <ul>
+        <li>Endereço IP e dados da requisição (página acessada, data e hora), usados para segurança, prevenção de abuso e diagnóstico de erros, e mantidos por período limitado nos registros dos servidores.</li>
+        <li>O site <strong>não usa cookies de publicidade nem ferramentas de rastreamento de terceiros</strong>. A sessão de login fica no armazenamento local do seu navegador.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. Para que usamos os dados</h2>
+      <table>
+        <thead><tr><th>Finalidade</th><th>Base legal (LGPD)</th></tr></thead>
+        <tbody>
+          <tr><td>Criar e manter sua conta, favoritos, monitoramento de preços e notificações</td><td>Execução de contrato (art. 7º, V)</td></tr>
+          <tr><td>Exibir seu perfil público e as informações que você escolheu mostrar</td><td>Consentimento (art. 7º, I) — configurável em Configurações &gt; Privacidade</td></tr>
+          <tr><td>Importar biblioteca, horas e conquistas da Steam e do Xbox</td><td>Consentimento (art. 7º, I) — você pode desconectar a qualquer momento</td></tr>
+          <tr><td>Segurança, prevenção de fraude e abuso, e correção de erros</td><td>Legítimo interesse (art. 7º, IX)</td></tr>
+        </tbody>
+      </table>
+      <p>Não vendemos seus dados e não os usamos para publicidade direcionada.</p>
+    </section>
+
+    <section>
+      <h2>3. O que fica público</h2>
+      <p>Se você ativar o perfil público, qualquer pessoa pode ver no endereço do seu perfil as informações que você deixar visíveis: nome, foto, banner, bio, blocos, favoritos, coleções, biblioteca, horas jogadas, conquistas e atividade. Cada item pode ser escondido em <strong>Configurações &gt; Privacidade</strong>, e o perfil inteiro pode ser tornado privado.</p>
+    </section>
+
+    <section>
+      <h2>4. Com quem compartilhamos</h2>
+      <p>Usamos prestadores de serviço (operadores) que tratam dados apenas para fazer o site funcionar:</p>
+      <ul>
+        <li><strong>Supabase</strong> — autenticação, banco de dados da conta e armazenamento de imagens (servidores em São Paulo, Brasil).</li>
+        <li><strong>Oracle Cloud</strong> — servidor da aplicação e banco do catálogo de jogos (São Paulo, Brasil).</li>
+        <li><strong>Vercel</strong> — hospedagem e entrega do site (rede global, com servidores fora do Brasil).</li>
+        <li><strong>Google</strong> e <strong>Discord</strong> — somente se você escolher entrar com essas contas.</li>
+        <li><strong>Valve (Steam)</strong> e <strong>OpenXBL</strong> — somente se você conectar essas contas, para buscar os dados descritos acima.</li>
+      </ul>
+      <p>Os preços vêm de fontes públicas como <strong>IsThereAnyDeal</strong> e das próprias lojas; essas consultas não enviam seus dados pessoais. Ao clicar em uma oferta, você é levado ao site da loja, às vezes passando por um link de redirecionamento de terceiros, que pode registrar o clique conforme a política dessa empresa.</p>
+      <p>Alguns desses prestadores podem processar dados fora do Brasil. Nesses casos, a transferência se apoia nas garantias previstas no art. 33 da LGPD, como cláusulas contratuais dos próprios prestadores.</p>
+      <p>Também podemos compartilhar dados quando exigido por lei ou por ordem de autoridade competente.</p>
+    </section>
+
+    <section>
+      <h2>5. Por quanto tempo guardamos</h2>
+      <ul>
+        <li>Enquanto sua conta existir.</li>
+        <li>Ao excluir a conta, os dados são apagados na hora do sistema em uso. Cópias de segurança são sobrescritas automaticamente em até <strong>35 dias</strong>.</li>
+        <li>Ao desconectar a Steam, a biblioteca, as horas e as conquistas importadas dela são removidas.</li>
+        <li>Ao desconectar o Xbox, a biblioteca já importada continua no seu perfil (dá para escondê-la em Configurações &gt; Privacidade) e é apagada quando você exclui a conta.</li>
+        <li>Registros técnicos de acesso são mantidos pelo tempo necessário para segurança e diagnóstico.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. Seus direitos</h2>
+      <p>Você pode, a qualquer momento:</p>
+      <ul>
+        <li><strong>Acessar e corrigir</strong> seus dados em <a routerLink="/configuracoes">Configurações</a> e no seu perfil;</li>
+        <li><strong>Excluir sua conta e seus dados</strong> em <a routerLink="/configuracoes">Configurações &gt; Conta &gt; Excluir conta</a>;</li>
+        <li><strong>Revogar consentimentos</strong>: tornar o perfil privado, esconder informações ou desconectar Steam e Xbox (veja no item 5 o que acontece com os dados de cada um);</li>
+        <li>Pedir <strong>confirmação do tratamento, portabilidade</strong> ou informações sobre compartilhamento<ng-container *ngIf="email">, pelo e-mail <a [href]="'mailto:' + email">{{ email }}</a></ng-container>;</li>
+        <li>Apresentar reclamação à <strong>Autoridade Nacional de Proteção de Dados (ANPD)</strong>.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>7. Segurança</h2>
+      <p>Usamos conexão cifrada (HTTPS), controle de acesso por usuário no banco de dados, limites contra abuso e cópias de segurança. Nenhum sistema é totalmente imune a incidentes; se ocorrer um incidente relevante envolvendo seus dados, você e a ANPD serão comunicados conforme a lei.</p>
+    </section>
+
+    <section>
+      <h2>8. Crianças e adolescentes</h2>
+      <p>O Oferta Games não é direcionado a menores de 13 anos. Se você é responsável por uma criança que criou uma conta, peça a exclusão em Configurações<ng-container *ngIf="email"> ou pelo e-mail de contato</ng-container>.</p>
+    </section>
+
+    <section>
+      <h2>9. Mudanças nesta política</h2>
+      <p>Quando esta política mudar de forma relevante, a data no topo será atualizada e, se a mudança afetar como usamos dados já coletados, avisaremos no site.</p>
+    </section>
+
+    <p class="legal-rodape">Veja também os <a routerLink="/termos">Termos de Uso</a>.</p>
+  </ng-container>
+
+  <ng-template #termos>
+    <header>
+      <h1>Termos de Uso</h1>
+      <p class="legal-revisao">Última atualização: {{ revisao }}</p>
+    </header>
+
+    <p>Estes termos regem o uso do <strong>Oferta Games</strong>. Ao usar o site ou criar uma conta, você concorda com eles e com a <a routerLink="/privacidade">Política de Privacidade</a>.</p>
+
+    <section>
+      <h2>1. O que é o Oferta Games</h2>
+      <p>Um comparador de preços de jogos digitais: reunimos ofertas de várias lojas, mostramos o histórico de preço e permitimos que você monitore jogos e monte um perfil com sua biblioteca. <strong>Não vendemos jogos.</strong> A compra acontece sempre no site da loja.</p>
+    </section>
+
+    <section>
+      <h2>2. Preços, cupons e disponibilidade</h2>
+      <ul>
+        <li>Os preços são coletados de fontes públicas e das lojas, e são atualizados periodicamente. <strong>Eles podem estar desatualizados</strong> ou ser diferentes do valor final na loja (impostos, variação cambial, região da conta, fim da promoção).</li>
+        <li>Cupons exibidos são informados pelas lojas ou por terceiros e podem expirar ou ter regras próprias.</li>
+        <li><strong>O preço e as condições que valem são os mostrados pela loja no momento da compra.</strong> Confira sempre antes de pagar.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. Links para lojas e marcas de terceiros</h2>
+      <p>As ofertas levam a sites de terceiros, com termos e políticas próprios; não controlamos esses sites nem respondemos pelas compras feitas neles. Alguns links passam por serviços de redirecionamento de parceiros de dados de preço.</p>
+      <p>Steam é marca da Valve Corporation; Xbox é marca da Microsoft. Os nomes, logos e imagens de jogos e lojas pertencem aos seus donos. O Oferta Games não é afiliado, patrocinado ou endossado por eles. Dados de preço fornecidos em parte por <a href="https://isthereanydeal.com" target="_blank" rel="noopener">IsThereAnyDeal</a>.</p>
+    </section>
+
+    <section>
+      <h2>4. Sua conta</h2>
+      <ul>
+        <li>Você é responsável pelas informações da conta e por manter sua senha em segurança.</li>
+        <li>Pode excluir a conta a qualquer momento em Configurações.</li>
+        <li>Podemos suspender ou encerrar contas que violem estes termos.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. Conteúdo que você publica</h2>
+      <p>Você é responsável pelo que coloca no seu perfil: nome, bio, imagens, textos e links. É proibido publicar conteúdo:</p>
+      <ul>
+        <li>ilegal, ofensivo, discriminatório, sexualmente explícito ou que incite violência;</li>
+        <li>que viole direitos autorais, marcas ou a privacidade de outras pessoas;</li>
+        <li>com golpes, spam, malware ou links enganosos;</li>
+        <li>que se passe por outra pessoa ou empresa.</li>
+      </ul>
+      <p>Você mantém os direitos sobre o seu conteúdo e nos autoriza a exibi-lo no site conforme suas configurações de privacidade. Podemos remover conteúdo que viole estes termos ou a lei, com ou sem aviso prévio.</p>
+    </section>
+
+    <section>
+      <h2>6. Uso proibido do serviço</h2>
+      <ul>
+        <li>Coletar dados do site de forma automatizada em volume que prejudique o serviço;</li>
+        <li>tentar acessar contas ou áreas sem permissão, ou burlar limites de uso e segurança;</li>
+        <li>usar o site para qualquer finalidade ilegal.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>7. Disponibilidade e responsabilidade</h2>
+      <p>O serviço é oferecido gratuitamente e "no estado em que se encontra". Trabalhamos para mantê-lo no ar e correto, mas não garantimos que funcione sem interrupções ou que todas as informações estejam sempre exatas. Na extensão permitida pela lei, não nos responsabilizamos por decisões de compra tomadas com base nos preços exibidos, nem por problemas em compras feitas em lojas de terceiros.</p>
+    </section>
+
+    <section>
+      <h2>8. Mudanças e lei aplicável</h2>
+      <p>Estes termos podem mudar; a data no topo indica a última versão. Continuar usando o site depois de uma mudança significa concordar com a nova versão. Aplica-se a lei brasileira, e fica eleito o foro do domicílio do consumidor.</p>
+      <p *ngIf="email">Dúvidas: <a [href]="'mailto:' + email">{{ email }}</a>.</p>
+    </section>
+  </ng-template>
+</article>

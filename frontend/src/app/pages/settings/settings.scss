@@ -16,6 +16,12 @@ select { cursor: pointer; }
 .action-button, .btn-danger { width: fit-content; }
 .session-card { flex-direction: row; align-items: center; justify-content: space-between; }
 .btn-danger { color: var(--color-red); border: 1px solid rgba(239, 68, 68, .55); background: transparent; border-radius: 6px; padding: 10px 18px; font-weight: 600; }
+.btn-danger:disabled { opacity: .5; cursor: not-allowed; }
+// Zona de exclusao: borda vermelha discreta pra separar do resto sem gritar.
+.danger-card { border-color: rgba(239, 68, 68, .35); }
+.danger-card .field { max-width: 320px; }
+.btn-danger-outline { width: fit-content; padding: 9px 16px; border: 1px solid rgba(239, 68, 68, .4); border-radius: 6px; background: transparent; color: var(--color-red); cursor: pointer; font-size: 13px; }
+.danger-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .message { margin-bottom: 18px; padding: 11px 14px; border-radius: 6px; font-size: 13px; &.success { color: var(--color-green); background: rgba(74, 222, 128, .08); border: 1px solid rgba(74, 222, 128, .2); } &.error { color: var(--color-red); background: rgba(239, 68, 68, .08); border: 1px solid rgba(239, 68, 68, .2); } }
 .autofill-trap { display: none; }
 .connections-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }

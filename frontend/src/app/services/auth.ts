@@ -37,9 +37,14 @@ export class AuthService {
     });
 
     // Escuta mudanças de sessão
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       this._user.next(session?.user ?? null);
       this.loadAvatar(session?.user ?? null);
+      // Link de "esqueci minha senha": o supabase-js le o token da URL e emite PASSWORD_RECOVERY.
+      // Tratado aqui, no servico global, e nao so na pagina /redefinir-senha, porque se a URL de
+      // retorno nao estiver na lista permitida do Supabase ele devolve pra raiz do site — e a
+      // pessoa precisa cair no formulario de nova senha de qualquer jeito.
+      if (event === 'PASSWORD_RECOVERY') this.router.navigate(['/redefinir-senha']);
     });
   }
 
@@ -71,17 +76,45 @@ export class AuthService {
     return error?.message ?? null;
   }
 
-  async loginWithGoogle() {
+  /**
+   * Envia o e-mail de redefinicao de senha. O Supabase responde igual pra e-mail cadastrado ou nao,
+   * e a tela tambem: mensagem neutra, pra ninguem descobrir quais e-mails tem conta.
+   */
+  async solicitarRedefinicaoSenha(email: string): Promise<string | null> {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/redefinir-senha`,
+    });
+    return error?.message ?? null;
+  }
+
+  /** Nova senha pra sessao de recuperacao aberta pelo link do e-mail. */
+  async definirNovaSenha(senha: string): Promise<string | null> {
+    const { error } = await supabase.auth.updateUser({ password: senha });
+    return error?.message ?? null;
+  }
+
+  async reenviarConfirmacao(email: string): Promise<string | null> {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    return error?.message ?? null;
+  }
+
+  // destino: caminho interno ja validado (ver destinoSeguro em login.ts). Se ele nao estiver na
+  // lista de URLs permitidas do Supabase, o Supabase volta pra raiz — nunca pra fora do site.
+  async loginWithGoogle(destino = '/') {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: window.location.origin + destino }
     });
   }
 
-  async loginWithDiscord() {
+  async loginWithDiscord(destino = '/') {
     await supabase.auth.signInWithOAuth({
       provider: 'discord',
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: window.location.origin + destino }
     });
   }
 

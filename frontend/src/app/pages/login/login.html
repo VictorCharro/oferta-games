@@ -2,13 +2,29 @@
   <div class="login-card">
     <img src="logo.png" class="login-logo" alt="Oferta Games" />
     <h1><span class="logo-oferta">Oferta</span>Games</h1>
-    <p class="login-sub">{{ mode === 'login' ? 'Entre na sua conta' : 'Crie sua conta grátis' }}</p>
+    <p class="login-sub">{{ mode === 'login' ? 'Entre na sua conta' : mode === 'register' ? 'Crie sua conta grátis' : 'Recuperar acesso' }}</p>
+    <p class="login-motivo" *ngIf="motivo && mode !== 'recuperar'">Entre para {{ motivo }}.</p>
 
-    <div class="mode-tabs">
-      <button [class.active]="mode === 'login'" (click)="mode = 'login'; error = ''; success = ''">Entrar</button>
-      <button [class.active]="mode === 'register'" (click)="mode = 'register'; error = ''; success = ''">Criar conta</button>
+    <div class="mode-tabs" *ngIf="mode !== 'recuperar'">
+      <button [class.active]="mode === 'login'" (click)="trocarModo('login')">Entrar</button>
+      <button [class.active]="mode === 'register'" (click)="trocarModo('register')">Criar conta</button>
     </div>
 
+    <ng-container *ngIf="mode === 'recuperar'">
+      <p class="login-ajuda">Informe o e-mail da sua conta. Vamos enviar um link para você criar uma nova senha.</p>
+      <form (submit)="submit(); $event.preventDefault()">
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" [(ngModel)]="email" name="email" autocomplete="username" placeholder="seu@email.com" />
+        </div>
+        <p class="msg-error" *ngIf="error">{{ error }}</p>
+        <p class="msg-success" *ngIf="success">{{ success }}</p>
+        <button type="submit" class="btn-primary btn-full" [disabled]="loading">{{ loading ? 'Aguarde...' : 'Enviar link' }}</button>
+      </form>
+      <button type="button" class="link-voltar" (click)="trocarModo('login')">← Voltar para entrar</button>
+    </ng-container>
+
+    <ng-container *ngIf="mode !== 'recuperar'">
     <div class="social-buttons">
       <button type="button" class="btn-social google" (click)="loginWithGoogle()">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -34,14 +50,21 @@
       <div class="field">
         <label>Senha</label>
         <input type="password" [(ngModel)]="password" name="password" [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'" placeholder="••••••••" />
+        <button *ngIf="mode === 'login'" type="button" class="link-esqueci" (click)="trocarModo('recuperar')">Esqueci minha senha</button>
       </div>
 
       <p class="msg-error" *ngIf="error">{{ error }}</p>
       <p class="msg-success" *ngIf="success">{{ success }}</p>
+      <button *ngIf="aguardandoConfirmacao" type="button" class="link-reenviar" (click)="reenviarConfirmacao()" [disabled]="loading">Não recebeu? Reenviar e-mail de confirmação</button>
 
       <button type="submit" class="btn-primary btn-full" [disabled]="loading">
         {{ loading ? 'Aguarde...' : (mode === 'login' ? 'Entrar' : 'Criar conta') }}
       </button>
+      <p class="login-termos" *ngIf="mode === 'register'">
+        Ao criar a conta você concorda com os <a routerLink="/termos" target="_blank">Termos de Uso</a> e a
+        <a routerLink="/privacidade" target="_blank">Política de Privacidade</a>.
+      </p>
     </form>
+    </ng-container>
   </div>
 </div>

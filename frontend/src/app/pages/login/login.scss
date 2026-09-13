@@ -150,3 +150,23 @@ form {
 
 .msg-error { color: var(--color-red); font-size: 13px; text-align: center; margin: 0; }
 .msg-success { color: var(--color-green); font-size: 13px; text-align: center; margin: 0; }
+
+.login-motivo { margin: -2px 0 12px; color: var(--text-secondary); font-size: 13px; text-align: center; }
+.login-ajuda { margin: 4px 0 16px; color: var(--text-muted); font-size: 13px; line-height: 1.5; text-align: center; }
+.login-termos { margin: 12px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; text-align: center; }
+.login-termos a { color: var(--color-purple); }
+
+// Links de texto (esqueci, reenviar, voltar): botao sem cara de botao, mas focavel por teclado.
+.link-esqueci, .link-reenviar, .link-voltar {
+  align-self: flex-end;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--color-purple);
+  cursor: pointer;
+  font-size: 12px;
+  &:hover { text-decoration: underline; }
+  &:disabled { opacity: .6; cursor: default; }
+}
+.link-reenviar { display: block; margin: 8px auto 0; font-size: 13px; }
+.link-voltar { display: block; margin: 16px auto 0; font-size: 13px; }

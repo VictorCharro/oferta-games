@@ -32,4 +32,13 @@
     </a>
   </nav>
 
+  <!-- Links legais no pe da sidebar (issue #18): precisam estar acessiveis de qualquer pagina, e o
+       app nao tem rodape. A atribuicao a ITAD tambem mora aqui. -->
+  <footer class="sidebar-legal" (click)="menuMobile.close()">
+    <a routerLink="/termos">Termos</a>
+    <span aria-hidden="true">·</span>
+    <a routerLink="/privacidade">Privacidade</a>
+    <p>Preços via <a href="https://isthereanydeal.com" target="_blank" rel="noopener">IsThereAnyDeal</a>. Não afiliado à Valve, Microsoft ou às lojas.</p>
+  </footer>
+
 </aside>

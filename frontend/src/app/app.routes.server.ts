@@ -21,6 +21,7 @@ const JOGO = { 'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-rev
 
 export const serverRoutes: ServerRoute[] = [
   { path: 'login', renderMode: RenderMode.Client },
+  { path: 'redefinir-senha', renderMode: RenderMode.Client },
   { path: 'perfil', renderMode: RenderMode.Client },
   { path: 'perfil/blocos', renderMode: RenderMode.Client },
   { path: 'configuracoes', renderMode: RenderMode.Client },
@@ -32,6 +33,8 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'mais-vendidos', renderMode: RenderMode.Server, headers: LISTAGEM },
   { path: 'gratuitos', renderMode: RenderMode.Server, headers: LISTAGEM },
   { path: 'jogo/:slug', renderMode: RenderMode.Server, headers: JOGO },
+  { path: 'privacidade', renderMode: RenderMode.Server, headers: LISTAGEM },
+  { path: 'termos', renderMode: RenderMode.Server, headers: LISTAGEM },
   // Perfil publico (:handle), busca e o resto: SEM cache na CDN. O perfil muda quando o dono edita
   // e o visitante veria a versao velha por minutos; a busca tem uma URL por termo e nao ganha nada.
   { path: '**', renderMode: RenderMode.Server },
