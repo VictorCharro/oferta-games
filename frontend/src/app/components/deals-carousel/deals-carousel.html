@@ -3,7 +3,7 @@
   <div class="deals-row" #row (scroll)="onScroll()">
     <a *ngFor="let deal of deals" class="deal-card" [routerLink]="['/jogo', deal.slug]">
       <div class="deal-cover">
-        <img [src]="deal.coverUrl || 'no-cover.svg'" [alt]="deal.title" loading="lazy" />
+        <img [src]="deal.coverUrl || 'no-cover.svg'" [alt]="deal.title" loading="lazy" decoding="async" (error)="capaIndisponivel($event)" />
         <span *ngIf="deal.discountPct > 0 && deal.discountPct < 100" class="badge-discount">-{{ deal.discountPct }}%</span>
         <span *ngIf="isDlc(deal)" class="badge-dlc">DLC</span>
       </div>

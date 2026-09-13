@@ -794,13 +794,13 @@ Ate 01/09/2026 o RLS estava **desligado nas 28 tabelas** do schema `public`. Ver
 
 Se algum dia o frontend precisar ler uma tabela direto, **a policy vem junto** — nao desligue o RLS.
 
-O `storage.objects` ja estava correto desde antes: leitura publica do bucket `avatars`, escrita restrita a pasta do proprio usuario (`foldername[1] = auth.uid()`).
+`storage.objects` (bucket `avatars`): escrita, atualizacao e remocao restritas a pasta do proprio usuario (`foldername[1] = auth.uid()`). **Leitura mudou em 13/09/2026** (`sql/20260913_storage_leitura_propria_pasta.sql`, issue #30): havia uma policy de SELECT pra `public` que deixava qualquer um, so com a chave anon, **listar o bucket inteiro** — e cada pasta e o UUID de um usuario (verificado: a listagem anonima devolvia as pastas). Bucket publico nao precisa de SELECT pra servir arquivo por URL, entao a policy virou "usuario logado lista a propria pasta" (usada pela exclusao de conta). Conferido depois: avatar, banner e imagem de bloco seguem com 200; listagem anonima devolve `[]`.
 
 **Ao testar escrita no PostgREST:** um `204` **nao** prova que a escrita passou — ele responde 204 mesmo afetando 0 linhas. So `Prefer: return=representation` e conclusivo: devolve as linhas afetadas, ou `[]` se o RLS bloqueou.
 
 ### O que ja estava certo
 
-- **Admin validado no servidor** (`ControladorAdministracao.exigirAdministrador`, por UID). O `adminGuard` do frontend e so cosmetico — quem protege e o backend.
+- **Admin validado no servidor** (`Administradores.exigir`, por UID; desde 13/09/2026 a lista vem de `ADMIN_USER_IDS`, com o UID antigo como padrao). O `adminGuard` do frontend e so cosmetico — quem protege e o backend.
 - **Sem IDOR**: nenhum endpoint aceita `userId` vindo do cliente; e sempre derivado do token.
 - **Sem SQL injection**: as interpolacoes em `comum/` usam constantes do codigo (alias literal, regex fixa), e `ordenarPor()` e um `switch` com `default`, entao `sort` arbitrario cai no padrao.
 - `auth.users` (e-mails e hashes de senha) nao e exposta pelo PostgREST.
@@ -815,7 +815,9 @@ O `storage.objects` ja estava correto desde antes: leitura publica do bucket `av
 | Escrita (POST/PUT/PATCH/DELETE) | 30 | So parte de navegador real, entao pode ficar perto do uso humano |
 | Leitura (GET/HEAD/OPTIONS) | 600 | **Precisa acomodar o SSR** |
 
-O teto de leitura alto nao e frouxidao: o SSR na Vercel chama esta API para renderizar cada pagina, e todas essas chamadas saem de um punhado de IPs da Vercel. Um limite de navegador em GET derrubaria o site sob trafego normal — nao o atacante. Se o trafego crescer a ponto de o SSR encostar nos 600, a saida **nao** e aumentar o numero: e isentar o SSR com um cabecalho secreto compartilhado, ai sim apertando a leitura.
+O teto de leitura alto nao e frouxidao: o SSR na Vercel chama esta API para renderizar cada pagina, e todas essas chamadas saem de um punhado de IPs da Vercel. Um limite de navegador em GET derrubaria o site sob trafego normal — nao o atacante.
+
+**Token do SSR (13/09/2026, issue #21).** O SSR manda `X-SSR-Token` (`SSR_API_TOKEN`, so no servidor: interceptor em `configuracao/token-ssr.ts`, provido so no `AppServerModule`, nunca no bundle do navegador). Token valido (comparacao em tempo constante) usa um balde proprio de 6.000/min. **O limite de navegador (120/min) so aperta depois que o backend VE o SSR mandando token valido nos ultimos 15 min** — antes disso segue o 600 de sempre. Isso elimina a armadilha de ordem de configuracao (VM com token e Vercel sem ele derrubaria o proprio SSR) e, se a Vercel perder a variavel, o limite volta a afrouxar sozinho. O valor fica em `deploy/oracle/.env` na VM e precisa ser o mesmo na Vercel.
 
 Detalhes que nao sao obvios:
 
@@ -830,11 +832,25 @@ Detalhes que nao sao obvios:
 - **So o sucesso e cacheado.** Falha nao entra de proposito: como toda falha e indistinguivel — inclusive "Supabase fora do ar" —, cachear negativo faria uma instabilidade de um segundo virar um minuto de usuarios deslogados. O custo e que token invalido sempre bate no Supabase; quem contem enxurrada disso e o limite de requisicoes, nao o cache.
 - Risco aceito: um token continua valido por ate 60s depois de invalidado. E pequeno porque o token de acesso ja e um JWT de ~1h — sair da conta nao o revoga de imediato de qualquer forma. Subir muito esse valor inverte a conta.
 
+### Preparacao pro lancamento (13/09/2026)
+
+Resultado da auditoria de ponta a ponta (issues #15 a #30). Cada item tem o detalhe na propria issue; aqui fica o que muda o jeito de trabalhar no codigo.
+
+- **Erros 4xx chegam na tela** (`TratadorErrosApi`): o Spring omitia o `reason` das `ResponseStatusException`, entao nenhuma mensagem de validacao aparecia pro usuario. Agora sai `{"status": 400, "error": "..."}` — **o texto do `reason` e lido pelo usuario**: escreva em pt-BR, com acento, dizendo o que corrigir. 5xx continua sem detalhe. No frontend, `mensagemDaApi(erro, padrao)`.
+- **Parametros publicos normalizados antes do cache** (`ParametrosPublicos`) e **teto de consultas pesadas simultaneas** (`LimiteConsultasPesadas`) — ver "Parametros normalizados e topo unico" na API.
+- **Filtros de catalogo sem regex de alternativas** (`TermosSql`): regex `(a|b|c)` custa ~30 µs/linha no Postgres. Lista nova de termos bloqueados vai nas listas das classes, nunca num regex.
+- **Blocos do perfil validados no servidor** (`ValidadorBlocos`): gradiente so no formato do editor, imagem so do bucket do proprio usuario (URL externa ja gravada no bloco continua valendo), limites de texto e links.
+- **Moderacao**: `profile_reports` + `profiles.blocked_at`, denuncia com login, painel no `/admin/coleta`.
+- **Exclusao de conta** (`RepositorioConta`): apaga `auth.users` e as tabelas SEM cascade. **Tabela nova com dado de usuario: ou FK com `ON DELETE CASCADE` pra `auth.users`, ou entra em `RepositorioConta.TABELAS_SEM_CASCADE`.**
+- **Steam OpenID**: alem da assinatura, confere `op_endpoint`, `return_to` (com o `state` deste login) e `claimed_id == identity`.
+- **CSP no SSR** (`server.ts`): aplicada so com `object-src/base-uri/form-action/frame-ancestors`; a politica completa vai em `Content-Security-Policy-Report-Only`. Integracao nova que carrega script/estilo/iframe de outro dominio: conferir o console e ajustar a Report-Only antes de promover.
+- **`GET /error` direto responde 404** (antes 500 com status 999).
+
 ### Pendencias conhecidas
 
-- **Protecao de senha vazada desligada** no Supabase Auth — toggle no painel, cruza a senha escolhida com a base do HaveIBeenPwned. E do lado do Supabase, nao do codigo.
+- **Protecao de senha vazada desligada** no Supabase Auth — toggle no painel, cruza a senha escolhida com a base do HaveIBeenPwned. E do lado do Supabase, nao do codigo (issue #20).
 - **Rate limiting nao cobre login**, porque o login nao passa pelo backend (ver acima).
-- **A pagina de perfil em branco no `ng serve`** (dev local): recarregar direto numa URL `/{handle}` (F5) renderiza so o esqueleto de loading, com o estado do componente correto e `cdr.detectChanges()` sem efeito — artefato de hidratacao do dev server. Reproduzido no HEAD sem nenhuma alteracao local, e **nao acontece em producao**. Pra testar local, entre por outra pagina e navegue clicando. Nao investigado a fundo por nao afetar producao.
+- **Pagina de perfil so com o esqueleto de loading no SSR** — era o mesmo problema que aparecia no `ng serve` ao dar F5 em `/{handle}`: o app e zoneless e o `await supabase.auth.getSession()` antes da chamada HTTP nao era rastreado, entao o servidor entregava a pagina antes dos dados. Corrigido em 13/09/2026 com `PendingTasks` (issue #22). Se aparecer de novo em outra pagina que faz `await` antes do HTTP, e a mesma causa.
 
 ## Estrutura de Codigo
 
@@ -921,7 +937,7 @@ No frontend a mesma regra vale com TSDoc (`/** ... */`), aplicada principalmente
 - Login Supabase, perfis compartilhaveis, avatar persistente, bio e privacidade geral.
 - Steam OpenID, biblioteca, horas, conquistas, favoritos pessoais e atividade recente.
 - Pagina admin de coleta protegida por UID.
-- Editor de perfil persistido com blocos (favoritos, biblioteca, atividade, platinados, wishlist Steam, conquistas recentes, mais jogados, texto, links, imagem), titulo editavel nos paineis de dados, upload de imagens JPG/PNG/WebP de ate 2 MB e imagens externas por URL `http(s)`, validado em desktop. O enquadramento de imagens de bloco aceita zoom por scroll/pinca e reposicionamento por arrasto direto na previa, em mouse ou toque. Desde 11/09/2026 a organizacao dos blocos (ordem, visibilidade, tamanho, visualizacao, cores) vive na pagina `/perfil/blocos`, com previa real do rascunho; o modo inline ficou so pro ajuste de imagem.
+- Editor de perfil persistido com blocos (favoritos, biblioteca, atividade, platinados, wishlist Steam, conquistas recentes, mais jogados, texto, links, imagem), titulo editavel nos paineis de dados, upload de imagens JPG/PNG/WebP de ate 2 MB (desde 13/09/2026 **sem** imagem externa por URL — ver "Preparacao pro lancamento"), validado em desktop. O enquadramento de imagens de bloco aceita zoom por scroll/pinca e reposicionamento por arrasto direto na previa, em mouse ou toque. Desde 11/09/2026 a organizacao dos blocos (ordem, visibilidade, tamanho, visualizacao, cores) vive na pagina `/perfil/blocos`, com previa real do rascunho; o modo inline ficou so pro ajuste de imagem.
 - Faixa fixa de estatisticas no perfil e galerias responsivas para favoritos pessoais e biblioteca Steam. Cards da Steam tentam a capa horizontal e depois uma capsula alternativa; se nenhuma existir, usam um fallback visual sem imagem quebrada. No hover de um card da biblioteca, "Ver na Steam" sempre aparece e "Ver no catalogo" aparece quando o jogo tem uma entrada correspondente no nosso catalogo (cruzamento em lote por `steam_app_id`).
 - Instant Gaming como fonte extra de preco via scraping (sem API publica), com afiliacao propria — ver secao dedicada em "Coletas e Atualizacao de Catalogo".
 - Favoritos pessoais com ordenacao manual (arrastar e soltar, persistida) dentro do modo Organizar da aba.
@@ -937,6 +953,7 @@ No frontend a mesma regra vale com TSDoc (`/** ... */`), aplicada principalmente
 - Perfil redesenhado (hero com banner, faixa de stats enxuta, abas com icone) + pagina `/perfil/blocos` com previa real do rascunho, toggle Ativo/Oculto funcionando de ponta a ponta e escolha de visualizacao (lista/cards) nos favoritos — ver "Redesign visual do perfil" e "Pagina Editar Blocos".
 - Favorito da Steam no perfil linkando pro nosso catalogo quando o jogo existe nele — ver "Perfil publico e privado".
 - Recoleta automatica de jogo live-service quando aparece conquista desbloqueada fora do catalogo, rodando o mesmo "Preencher tudo agora" do admin — ver "Recoleta de jogo live-service".
+- Pronto pra usuarios reais (13/09/2026): recuperacao de senha (`/redefinir-senha`), exclusao de conta, Politica de Privacidade e Termos (`/privacidade`, `/termos`), denuncia e bloqueio de perfil, login que volta pra onde a pessoa estava (`returnUrl`), cache na CDN, 404/503 reais no SSR, SEO do perfil e JSON-LD do jogo — ver "Preparacao pro lancamento" em Seguranca.
 
 ### Em validacao
 
@@ -957,7 +974,7 @@ No frontend a mesma regra vale com TSDoc (`/** ... */`), aplicada principalmente
 
 1. Conferir `git status --short` e nunca reverter mudancas do usuario.
 2. Para frontend: `cd frontend; npm.cmd run build`.
-3. Para backend: `cd backend-java; mvn -o test` (63 testes hoje). Nao ha `mvn` no PATH desta maquina nem `mvnw` no repo, mas existe um Maven baixado pelo wrapper em `%USERPROFILE%\.m2\wrapper\dists\apache-maven-3.9.11-bin\<hash>\apache-maven-3.9.11\bin\mvn.cmd` — da pra chamar por esse caminho e rodar o build/test localmente, sem depender so do CI.
+3. Para backend: `cd backend-java; mvn -o test` (100 testes em 13/09/2026; frontend 41). Nao ha `mvn` no PATH desta maquina nem `mvnw` no repo, mas existe um Maven baixado pelo wrapper em `%USERPROFILE%\.m2\wrapper\dists\apache-maven-3.9.11-bin\<hash>\apache-maven-3.9.11\bin\mvn.cmd` — da pra chamar por esse caminho e rodar o build/test localmente, sem depender so do CI.
 4. Conferir se uma migration nova precisa ser aplicada no Supabase antes do deploy.
 5. Conferir CORS quando uma rota `PUT`, `PATCH` ou `POST` nova for adicionada.
 6. Validar em producao: catalogo, detalhes, monitorados, perfil proprio, perfil anonimo e conexao Steam/Xbox quando afetados.

@@ -2,6 +2,7 @@ import { Component, Input, ElementRef, ViewChild, AfterViewInit, OnChanges, OnDe
 import { DealCardView } from '../../pages/home/home';
 import { resolveDlc } from '../../services/filters';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
+import { trocarPorCapaPadrao } from '../../services/capa';
 
 @Component({
   selector: 'app-deals-carousel',
@@ -10,6 +11,9 @@ import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-
   styleUrl: './deals-carousel.scss',
 })
 export class DealsCarousel implements AfterViewInit, OnChanges, OnDestroy {
+  /** Capa que nao carregou vira a imagem padrao (ver services/capa). */
+  readonly capaIndisponivel = trocarPorCapaPadrao;
+
   @Input() deals: DealCardView[] = [];
   @ViewChild('row') rowRef!: ElementRef<HTMLElement>;
   @ViewChild('prevBtn') prevBtnRef!: ElementRef<HTMLElement>;

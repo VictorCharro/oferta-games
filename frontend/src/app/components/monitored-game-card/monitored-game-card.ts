@@ -4,6 +4,7 @@ import { FavoriteGame, FavoritesService } from '../../services/favorites';
 import { AuthService } from '../../services/auth';
 import { storeBrand } from '../../services/store-brand';
 import { irParaLogin } from '../../services/ir-para-login';
+import { trocarPorCapaPadrao } from '../../services/capa';
 
 @Component({
   selector: 'app-monitored-game-card',
@@ -12,6 +13,9 @@ import { irParaLogin } from '../../services/ir-para-login';
   styleUrl: './monitored-game-card.scss',
 })
 export class MonitoredGameCard implements OnDestroy {
+  /** Capa que nao carregou vira a imagem padrao (ver services/capa). */
+  readonly capaIndisponivel = trocarPorCapaPadrao;
+
   @Input({ required: true }) game!: FavoriteGame;
 
   menuMetaAberto = false;

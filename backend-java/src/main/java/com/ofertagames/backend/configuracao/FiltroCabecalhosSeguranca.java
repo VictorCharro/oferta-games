@@ -21,6 +21,13 @@ class FiltroCabecalhosSeguranca extends OncePerRequestFilter {
     resposta.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     // HSTS: seguro aqui porque o Caddy na frente sempre serve por HTTPS (ver doc.md "Oracle").
     resposta.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    // GET /error chamado direto respondia 500 com {"status":999} e sujava log/monitoramento
+    // (issue #30). Aqui so chega requisicao de verdade: o encaminhamento interno pra /error, quando
+    // uma rota falha, e um dispatch ERROR e nao passa por este filtro (OncePerRequestFilter).
+    if ("/error".equals(requisicao.getRequestURI())) {
+      resposta.sendError(HttpServletResponse.SC_NOT_FOUND);
+      return;
+    }
     cadeia.doFilter(requisicao, resposta);
   }
 }

@@ -7,6 +7,7 @@ import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-
 import { PreferencesService, UserPreferences } from '../../services/preferences';
 import { SeoService } from '../../services/seo';
 import { temHistoricoParaGrafico } from '../../components/price-history-chart/price-history-chart';
+import { trocarPorCapaPadrao } from '../../services/capa';
 
 export interface DealCardView {
   slug: string;
@@ -27,6 +28,9 @@ export interface DealCardView {
   styleUrl: './home.scss',
 })
 export class Home implements OnInit, OnDestroy {
+  /** Capa que nao carregou vira a imagem padrao (ver services/capa). */
+  readonly capaIndisponivel = trocarPorCapaPadrao;
+
   featuredDeals: TopDeal[] = [];
   famousGames: DealCardView[] = [];
   favoritesDeals: FavoriteGame[] = [];

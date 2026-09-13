@@ -102,6 +102,12 @@ jobs:
             docker compose -f deploy/oracle/compose.yml build backend
             docker compose -f deploy/oracle/compose.yml up -d
             docker compose -f deploy/oracle/compose.yml ps
+            # Cada build deixa a imagem anterior sem tag e mais cache de build: em 13/09/2026 eram
+            # ~20 GB recuperaveis num disco de 48 GB (issue #29). Imagem sem uso sai sempre; cache
+            # de build so o de mais de 72h, pra camada de dependencias do Maven continuar sendo
+            # reaproveitada e o proximo build nao baixar tudo de novo.
+            docker image prune -f
+            docker builder prune -f --filter until=72h
           fi
 
           # So grava o marcador no fim: com set -e, qualquer falha acima deixa o marcador no

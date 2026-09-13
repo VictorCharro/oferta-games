@@ -5,12 +5,12 @@ Backend Spring Boot do Oferta Games.
 ## Arquitetura
 
 - Java 21 + Spring Boot 3.
-- PostgreSQL no Supabase via `DATABASE_URL`.
-- Supabase Auth para autenticar favoritos.
+- Dois bancos PostgreSQL: dados de usuario no Supabase (`DATABASE_URL`) e catalogo num Postgres proprio na VM (`CATALOG_DATABASE_URL`).
+- Supabase Auth para autenticar.
 - ITAD como fonte principal de ofertas.
 - Steam usado para complementar capa e classificar DLC quando existe oferta da loja Steam.
-- Frontend Angular continua hospedado separadamente no Vercel.
-- Deploy do backend no Render via Docker.
+- Frontend Angular hospedado separadamente na Vercel (SSR).
+- Deploy do backend na VM Oracle via Docker Compose + Caddy, disparado pelo GitHub Actions depois da CI (ver `deploy/oracle/` e `doc.md`).
 
 ## Padrao de codigo
 
@@ -77,7 +77,7 @@ O endpoint `POST /api/sync?page=0` continua disponivel para diagnostico/manual e
 X-Sync-Key: valor-de-SYNC_SECRET_KEY
 ```
 
-Os workflows de sync e keep alive do GitHub Actions foram removidos. O bot que ja mantem o Render ativo assume essa responsabilidade.
+A coleta roda agendada dentro do proprio backend (`APP_SYNC_SCHEDULER_ENABLED=true`); nao ha workflow de sync no GitHub Actions.
 
 ## Rodando localmente
 
@@ -88,25 +88,12 @@ cd backend-java
 mvn spring-boot:run
 ```
 
-## Deploy no Render
+## Deploy
 
-Criacao manual:
+O backend roda na VM Oracle (`deploy/oracle/compose.yml`: backend, Postgres do catalogo e Caddy com
+HTTPS). Todo push em `master` que passa na CI dispara `.github/workflows/deploy-oracle.yml`, que so
+reconstroi o container quando algo em `backend-java/` ou no `compose.yml` mudou.
 
-- Runtime: `Docker`
-- Root Directory: `backend-java`
-- Health Check Path: `/actuator/health`
-- Plan: `Free` por enquanto
-
-Tambem existe `render.yaml` na raiz do repositorio para criar via Blueprint.
-
-Variaveis obrigatorias no Render:
-
-```bash
-DATABASE_URL=postgresql://...
-SUPABASE_URL=https://...
-SUPABASE_ANON_KEY=...
-ITAD_API_KEY=...
-SYNC_SECRET_KEY=...
-APP_SYNC_SCHEDULER_ENABLED=true
-CORS_ALLOWED_ORIGINS=https://seu-front.vercel.app,http://localhost:4200
-```
+As variaveis ficam em `deploy/oracle/.env` na VM; a lista completa, com a explicacao de cada uma,
+esta em [`deploy/oracle/.env.example`](../deploy/oracle/.env.example). Backup e restauracao:
+[`deploy/oracle/README-catalogo-db.md`](../deploy/oracle/README-catalogo-db.md).

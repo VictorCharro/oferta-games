@@ -101,7 +101,7 @@ public class ServicoConexoesSteam {
 
   Optional<String> concluir(UUID estado, MultiValueMap<String, String> parametros) {
     Optional<String> usuarioId = conexoes.consumirEstado(estado);
-    if (usuarioId.isEmpty() || !validarRespostaOpenId(parametros)) return Optional.empty();
+    if (usuarioId.isEmpty() || !validarRespostaOpenId(estado, parametros)) return Optional.empty();
     String steamId = extrairSteamId(parametros.getFirst("openid.claimed_id"));
     if (steamId == null) return Optional.empty();
 
@@ -344,8 +344,27 @@ public class ServicoConexoesSteam {
     return urlFrontend + "/configuracoes?steam=error";
   }
 
-  private boolean validarRespostaOpenId(MultiValueMap<String, String> parametros) {
+  /**
+   * Alem da assinatura ({@code check_authentication} na propria Steam), confere os campos que a
+   * especificacao OpenID 2.0 manda o site conferir (issue #30):
+   * <ul>
+   *   <li>{@code op_endpoint} e a Steam — uma asserção de outro provedor nao vale aqui;</li>
+   *   <li>{@code return_to} e exatamente a URL de retorno DESTE login, com o mesmo {@code state}:
+   *       impede reaproveitar uma asserção valida emitida pra outro site ou outra tentativa;</li>
+   *   <li>{@code claimed_id} e {@code identity} sao o mesmo SteamID.</li>
+   * </ul>
+   */
+  static boolean camposOpenIdConferem(String urlBackend, UUID estado, MultiValueMap<String, String> parametros) {
+    String retornoEsperado = urlBackend + "/api/conexoes/steam/retorno?state=" + estado;
+    return URL_OPENID.equals(parametros.getFirst("openid.op_endpoint"))
+        && retornoEsperado.equals(parametros.getFirst("openid.return_to"))
+        && parametros.getFirst("openid.claimed_id") != null
+        && parametros.getFirst("openid.claimed_id").equals(parametros.getFirst("openid.identity"));
+  }
+
+  private boolean validarRespostaOpenId(UUID estado, MultiValueMap<String, String> parametros) {
     if (!"id_res".equals(parametros.getFirst("openid.mode"))) return false;
+    if (!camposOpenIdConferem(urlBackend, estado, parametros)) return false;
     MultiValueMap<String, String> formulario = new LinkedMultiValueMap<>();
     parametros.forEach((chave, valores) -> {
       if (chave.startsWith("openid.")) formulario.put(chave, valores);

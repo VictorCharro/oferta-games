@@ -25,16 +25,43 @@ const app = express();
  */
 const angularApp = new AngularNodeAppEngine({ trustProxyHeaders: true });
 
-// Headers de seguranca basicos em toda resposta. Sem CSP: os inline styles do Angular
-// (component styles injetados no HTML) e as fontes do Google Fonts tornariam um CSP
-// bem calibrado um projeto a parte; os headers abaixo ja cobrem o essencial sem risco de quebrar
-// a renderizacao.
+/**
+ * CSP em duas camadas (issue #30).
+ *
+ * APLICADA: so diretivas que nao dependem do que a pagina carrega, entao nao tem como quebrar a
+ * renderizacao — sem <object>/<embed>, sem <base> apontando pra fora, sem enviar formulario pra
+ * outro site e sem ser embutido em iframe.
+ *
+ * REPORT-ONLY: a politica completa que o site deveria seguir. O navegador so AVISA no console o que
+ * ela bloquearia, sem bloquear. Estilos e o script inline do tema (index.html) exigem
+ * 'unsafe-inline' hoje; imagens vem de varios CDNs (ITAD, Steam, Xbox, Supabase), por isso https:.
+ * Quando o console ficar limpo em producao, da pra promover diretivas daqui pra aplicada.
+ */
+const CSP_APLICADA = "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+const CSP_RELATORIO = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' blob: https:",
+  "connect-src 'self' https://api.163.176.220.243.sslip.io https://*.supabase.co wss://*.supabase.co https:",
+  "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
+// Headers de seguranca em toda resposta renderizada pela function (HTML do SSR).
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Content-Security-Policy', CSP_APLICADA);
+  res.setHeader('Content-Security-Policy-Report-Only', CSP_RELATORIO);
   next();
 });
 

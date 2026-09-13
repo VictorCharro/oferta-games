@@ -15,7 +15,7 @@
          (touchend)="onBannerTouchEnd()">
       <div class="banner-track" [class.arrastando]="arrastandoBanner" [style.transform]="bannerTrackTransform">
         <a class="banner-slide" *ngFor="let f of featuredDeals; let i = index" [class.active]="i === featuredIndex" [routerLink]="['/jogo', f.slug]" (click)="onBannerSlideClick($event)">
-          <img class="banner-cover" [src]="f.coverUrl || 'no-cover.svg'" [alt]="f.title" />
+          <img class="banner-cover" [src]="f.coverUrl || 'no-cover.svg'" [alt]="f.title" [attr.loading]="i === 0 ? 'eager' : 'lazy'" [attr.fetchpriority]="i === 0 ? 'high' : 'low'" decoding="async" (error)="capaIndisponivel($event)" />
           <div class="banner-info">
             <span class="banner-tag">Melhor oferta</span>
             <h1>{{ f.title }}</h1>

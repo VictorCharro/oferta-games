@@ -30,7 +30,12 @@ public class ControladorSincronizacao {
       @RequestHeader(value = "X-Sync-Key", required = false) String chaveInformada,
       @RequestParam(defaultValue = "0") int page
   ) {
-    if (chaveSecreta == null || chaveSecreta.isBlank() || !chaveSecreta.equals(chaveInformada)) {
+    // Comparacao em tempo constante (issue #30): equals() para no primeiro byte diferente, e o tempo
+    // de resposta vira um oraculo pra descobrir a chave aos poucos.
+    if (chaveSecreta == null || chaveSecreta.isBlank() || chaveInformada == null
+        || !java.security.MessageDigest.isEqual(
+            chaveSecreta.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+            chaveInformada.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
       return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
     }
     try {

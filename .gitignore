@@ -50,8 +50,15 @@ application-local.properties
 ### Node / Angular ###
 frontend/node_modules/
 frontend/dist/
-frontend/.angular/.idea/
+frontend/.angular/
 backend/node_modules/
+
+### IDE (config pessoal de cada maquina) ###
+.idea/
+backend-java/.idea/
+
+### Saida de build antiga do IntelliJ ###
+out/
 
 ### Claude Code (config pessoal, pode conter segredos em permissões) ###
 .claude/settings.local.json

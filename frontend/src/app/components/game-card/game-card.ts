@@ -8,6 +8,7 @@ import { FavoritesService } from '../../services/favorites';
 import { AuthService } from '../../services/auth';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 import { irParaLogin } from '../../services/ir-para-login';
+import { trocarPorCapaPadrao } from '../../services/capa';
 
 @Component({
   selector: 'app-game-card',
@@ -16,6 +17,9 @@ import { irParaLogin } from '../../services/ir-para-login';
   styleUrl: './game-card.scss',
 })
 export class GameCard implements OnInit, OnDestroy {
+  /** Capa que nao carregou vira a imagem padrao (ver services/capa). */
+  readonly capaIndisponivel = trocarPorCapaPadrao;
+
   @Input() game!: GameSummary;
   @Input() discountPct?: number;
   @Input() storeName?: string;
