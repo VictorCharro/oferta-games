@@ -130,12 +130,18 @@ export class Settings implements OnInit {
   async loadSteam() { try { this.steamStatus = await this.steamService.status(); } catch { this.steamStatus = null; } this.cdr.detectChanges(); }
   async connectSteam() { this.steamLoading = true; try { await this.steamService.conectar(); } catch { this.error = 'Não foi possível iniciar a conexão com a Steam.'; this.steamLoading = false; this.cdr.detectChanges(); } }
   async syncSteam() { this.steamLoading = true; try { await this.steamService.sincronizar(); this.success = 'Sincronização da biblioteca iniciada.'; } catch { this.error = 'Não foi possível iniciar a sincronização da Steam.'; } this.steamLoading = false; this.cdr.detectChanges(); }
-  async disconnectSteam() { this.steamLoading = true; try { await this.steamService.desconectar(); this.steamStatus = null; } catch { this.error = 'Não foi possível desconectar a Steam.'; } this.steamLoading = false; this.cdr.detectChanges(); }
+  // Desconectar apaga biblioteca, horas e conquistas importadas (Steam e Xbox): pergunta antes, pra
+  // um clique sem querer nao sumir com o perfil. Reconectar reimporta na proxima sincronizacao.
+  private confirmarDesconexao(plataforma: string): boolean {
+    return window.confirm(`Desconectar ${plataforma}? A biblioteca, as horas e as conquistas importadas dessa conta serão removidas do seu perfil. Se conectar de novo, elas voltam na próxima sincronização.`);
+  }
+
+  async disconnectSteam() { if (!this.confirmarDesconexao('a Steam')) return; this.steamLoading = true; this.clearMessages(); try { await this.steamService.desconectar(); this.steamStatus = null; this.success = 'Conta Steam desconectada.'; } catch { this.error = 'Não foi possível desconectar a Steam.'; } this.steamLoading = false; this.cdr.detectChanges(); }
 
   async loadXbox() { try { this.xboxStatus = await this.xboxService.status(); } catch { this.xboxStatus = null; } this.cdr.detectChanges(); }
   async connectXbox() { this.xboxLoading = true; try { await this.xboxService.conectar(); } catch { this.error = 'Não foi possível iniciar a conexão com a Xbox.'; this.xboxLoading = false; this.cdr.detectChanges(); } }
   async syncXbox() { this.xboxLoading = true; this.clearMessages(); try { await this.xboxService.sincronizar(); this.success = 'Sincronização da biblioteca Xbox iniciada.'; } catch { this.error = 'Não foi possível iniciar a sincronização da Xbox.'; } this.xboxLoading = false; this.cdr.detectChanges(); }
-  async disconnectXbox() { this.xboxLoading = true; this.clearMessages(); try { await this.xboxService.desconectar(); this.xboxStatus = null; this.success = 'Conta Xbox desconectada.'; } catch { this.error = 'Não foi possível desconectar a Xbox.'; } this.xboxLoading = false; this.cdr.detectChanges(); }
+  async disconnectXbox() { if (!this.confirmarDesconexao('o Xbox')) return; this.xboxLoading = true; this.clearMessages(); try { await this.xboxService.desconectar(); this.xboxStatus = null; this.success = 'Conta Xbox desconectada.'; } catch { this.error = 'Não foi possível desconectar o Xbox.'; } this.xboxLoading = false; this.cdr.detectChanges(); }
 
   async loadPublicProfile() { try { const perfil = await this.perfisService.proprio(); if (perfil) { this.profileHandle = perfil.handle || ''; this.privacy = { publicProfile: perfil.publico, showGameHours: perfil.mostrarHoras, showAchievements: perfil.mostrarConquistas, showLibrary: perfil.mostrarBiblioteca, showFavoriteGames: perfil.mostrarFavoritos, showRecentActivity: perfil.mostrarAtividades, showCollections: perfil.mostrarColecoes }; } } catch {} this.cdr.detectChanges(); }
   async salvarPrivacidade() { try { await this.salvarPerfilPublico(); this.success = 'Preferências de privacidade salvas.'; this.error = ''; } catch { this.error = 'Defina uma URL válida e disponível para publicar o perfil.'; } this.cdr.detectChanges(); }

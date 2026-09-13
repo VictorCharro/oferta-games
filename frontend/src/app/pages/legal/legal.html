@@ -72,8 +72,7 @@
       <ul>
         <li>Enquanto sua conta existir.</li>
         <li>Ao excluir a conta, os dados são apagados na hora do sistema em uso. Cópias de segurança são sobrescritas automaticamente em até <strong>35 dias</strong>.</li>
-        <li>Ao desconectar a Steam, a biblioteca, as horas e as conquistas importadas dela são removidas.</li>
-        <li>Ao desconectar o Xbox, a biblioteca já importada continua no seu perfil (dá para escondê-la em Configurações &gt; Privacidade) e é apagada quando você exclui a conta.</li>
+        <li>Ao desconectar a Steam ou o Xbox, a biblioteca, as horas e as conquistas importadas daquela conta são removidas.</li>
         <li>Registros técnicos de acesso são mantidos pelo tempo necessário para segurança e diagnóstico.</li>
       </ul>
     </section>
@@ -84,7 +83,7 @@
       <ul>
         <li><strong>Acessar e corrigir</strong> seus dados em <a routerLink="/configuracoes">Configurações</a> e no seu perfil;</li>
         <li><strong>Excluir sua conta e seus dados</strong> em <a routerLink="/configuracoes">Configurações &gt; Conta &gt; Excluir conta</a>;</li>
-        <li><strong>Revogar consentimentos</strong>: tornar o perfil privado, esconder informações ou desconectar Steam e Xbox (veja no item 5 o que acontece com os dados de cada um);</li>
+        <li><strong>Revogar consentimentos</strong>: tornar o perfil privado, esconder informações ou desconectar Steam e Xbox, o que remove os dados importados;</li>
         <li>Pedir <strong>confirmação do tratamento, portabilidade</strong> ou informações sobre compartilhamento<ng-container *ngIf="email">, pelo e-mail <a [href]="'mailto:' + email">{{ email }}</a></ng-container>;</li>
         <li>Apresentar reclamação à <strong>Autoridade Nacional de Proteção de Dados (ANPD)</strong>.</li>
       </ul>

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 class RepositorioConexoesXbox {
@@ -60,9 +61,21 @@ class RepositorioConexoesXbox {
         .optional();
   }
 
+  /**
+   * Desconectar tira a biblioteca Xbox do perfil junto com o vinculo, igual a Steam (onde o cascade
+   * de steam_connections leva a biblioteca). Decisao de 13/09/2026: antes a biblioteca ficava,
+   * "pra nao apagar historico", mas desconectar e a forma de o usuario revogar o consentimento de
+   * importar esses dados (Politica de Privacidade, item 5) — manter os jogos contrariava isso.
+   *
+   * <p>Isso NAO muda a regra da sincronizacao, que continua so fazendo upsert (ver
+   * upsertJogoBiblioteca): a protecao contra perder dados vale pra coleta, nao pra um pedido
+   * explicito do dono. Reconectar reimporta tudo na proxima sincronizacao.
+   */
+  @Transactional
   void removerConexao(String usuarioId) {
-    // So remove o vinculo de login - a biblioteca ja sincronizada (xbox_library_games) fica,
-    // pra nao apagar historico do usuario so por desconectar a conta.
+    jdbc.sql("DELETE FROM xbox_library_games WHERE user_id = CAST(:usuarioId AS uuid)")
+        .param("usuarioId", usuarioId)
+        .update();
     jdbc.sql("DELETE FROM xbox_connections WHERE user_id = CAST(:usuarioId AS uuid)")
         .param("usuarioId", usuarioId)
         .update();
