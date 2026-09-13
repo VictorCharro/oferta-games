@@ -44,9 +44,9 @@ public class ControladorColecoesPerfil {
     Optional<String> usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
     if (usuarioId.isEmpty()) return naoAutenticado();
     String nome = normalizarNome(requisicao == null ? null : requisicao.nome());
-    if (nome == null) return ResponseEntity.badRequest().body(Map.of("error", "Informe um nome de ate " + MAXIMO_CARACTERES_NOME + " caracteres"));
+    if (nome == null) return ResponseEntity.badRequest().body(Map.of("error", "Informe um nome de até " + MAXIMO_CARACTERES_NOME + " caracteres"));
     if (colecoes.contarColecoes(usuarioId.get()) >= MAXIMO_COLECOES) {
-      return ResponseEntity.badRequest().body(Map.of("error", "Limite de " + MAXIMO_COLECOES + " colecoes atingido"));
+      return ResponseEntity.badRequest().body(Map.of("error", "Limite de " + MAXIMO_COLECOES + " coleções atingido"));
     }
     return ResponseEntity.status(201).body(Map.of("id", colecoes.criar(usuarioId.get(), nome)));
   }
@@ -58,7 +58,7 @@ public class ControladorColecoesPerfil {
     ResponseEntity<?> bloqueio = verificarEditavel(usuarioId.get(), colecaoId);
     if (bloqueio != null) return bloqueio;
     String nome = normalizarNome(requisicao == null ? null : requisicao.nome());
-    if (nome == null) return ResponseEntity.badRequest().body(Map.of("error", "Informe um nome de ate " + MAXIMO_CARACTERES_NOME + " caracteres"));
+    if (nome == null) return ResponseEntity.badRequest().body(Map.of("error", "Informe um nome de até " + MAXIMO_CARACTERES_NOME + " caracteres"));
     if (!colecoes.renomear(usuarioId.get(), colecaoId, nome)) return colecaoNaoEncontrada();
     return ResponseEntity.ok(Map.of("ok", true));
   }
@@ -81,7 +81,7 @@ public class ControladorColecoesPerfil {
     if (bloqueio != null) return bloqueio;
     if (requisicao == null) return ResponseEntity.badRequest().body(Map.of("error", "Informe slug ou steamAppId"));
     if (colecoes.contarItens(colecaoId) >= MAXIMO_ITENS) {
-      return ResponseEntity.badRequest().body(Map.of("error", "Limite de " + MAXIMO_ITENS + " jogos por colecao atingido"));
+      return ResponseEntity.badRequest().body(Map.of("error", "Limite de " + MAXIMO_ITENS + " jogos por coleção atingido"));
     }
 
     boolean temSlug = requisicao.slug() != null && !requisicao.slug().isBlank();
@@ -90,11 +90,11 @@ public class ControladorColecoesPerfil {
 
     if (temSlug) {
       Optional<Long> jogoId = jogos.buscarIdPorSlug(requisicao.slug());
-      if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
+      if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado"));
       colecoes.adicionarJogo(usuarioId.get(), colecaoId, jogoId.get());
     } else {
       if (colecoes.tituloSteam(usuarioId.get(), requisicao.steamAppId()).isEmpty()) {
-        return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado na biblioteca Steam"));
+        return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado na biblioteca Steam"));
       }
       colecoes.adicionarSteam(usuarioId.get(), colecaoId, requisicao.steamAppId());
     }
@@ -108,7 +108,7 @@ public class ControladorColecoesPerfil {
     ResponseEntity<?> bloqueio = verificarEditavel(usuarioId.get(), colecaoId);
     if (bloqueio != null) return bloqueio;
     Optional<Long> jogoId = jogos.buscarIdPorSlug(slug);
-    if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
+    if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado"));
     colecoes.removerJogo(usuarioId.get(), colecaoId, jogoId.get());
     return ResponseEntity.ok(Map.of("ok", true));
   }
@@ -125,7 +125,7 @@ public class ControladorColecoesPerfil {
 
   // 404 tambem quando a colecao existe mas e de outro usuario: nao revela a existencia dela.
   private static ResponseEntity<?> colecaoNaoEncontrada() {
-    return ResponseEntity.status(404).body(Map.of("error", "Colecao nao encontrada"));
+    return ResponseEntity.status(404).body(Map.of("error", "Coleção não encontrada"));
   }
 
   // null quando a colecao e do usuario e pode ser editada; senao devolve a resposta que o
@@ -135,13 +135,13 @@ public class ControladorColecoesPerfil {
     Optional<String> origem = colecoes.origemDaColecao(usuarioId, colecaoId);
     if (origem.isEmpty()) return colecaoNaoEncontrada();
     if (!"usuario".equals(origem.get())) {
-      return ResponseEntity.badRequest().body(Map.of("error", "Esta lista e sincronizada automaticamente e nao pode ser editada manualmente"));
+      return ResponseEntity.badRequest().body(Map.of("error", "Esta lista é sincronizada automaticamente e não pode ser editada manualmente"));
     }
     return null;
   }
 
   private static ResponseEntity<?> naoAutenticado() {
-    return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+    return ResponseEntity.status(401).body(Map.of("error", "Não autenticado"));
   }
 
   private static String normalizarNome(String valor) {

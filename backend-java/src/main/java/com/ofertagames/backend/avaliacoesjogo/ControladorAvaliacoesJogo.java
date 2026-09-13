@@ -29,7 +29,7 @@ public class ControladorAvaliacoesJogo {
     String visitanteId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao).orElse(null);
     return servico.buscar(slug, visitanteId)
         .<ResponseEntity<?>>map(ResponseEntity::ok)
-        .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado")));
+        .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado")));
   }
 
   @PostMapping
@@ -44,7 +44,7 @@ public class ControladorAvaliacoesJogo {
       servico.salvar(slug, usuarioId.get(), requisicao);
       return ResponseEntity.status(201).body(Map.of("ok", true));
     } catch (ServicoAvaliacoesJogo.JogoNaoEncontradoException erro) {
-      return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
+      return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado"));
     } catch (ServicoAvaliacoesJogo.AvaliacaoInvalidaException erro) {
       return ResponseEntity.badRequest().body(Map.of("error", erro.getMessage()));
     }
@@ -58,7 +58,7 @@ public class ControladorAvaliacoesJogo {
       servico.excluir(slug, usuarioId.get());
       return ResponseEntity.ok(Map.of("ok", true));
     } catch (ServicoAvaliacoesJogo.JogoNaoEncontradoException erro) {
-      return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
+      return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado"));
     }
   }
 
@@ -78,11 +78,11 @@ public class ControladorAvaliacoesJogo {
       servico.votar(reviewId, usuarioId.get(), requisicao.util());
       return ResponseEntity.ok(Map.of("ok", true));
     } catch (ServicoAvaliacoesJogo.AvaliacaoNaoEncontradaException erro) {
-      return ResponseEntity.status(404).body(Map.of("error", "Avaliacao nao encontrada"));
+      return ResponseEntity.status(404).body(Map.of("error", "Avaliação não encontrada"));
     }
   }
 
   private static ResponseEntity<?> naoAutenticado() {
-    return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+    return ResponseEntity.status(401).body(Map.of("error", "Não autenticado"));
   }
 }

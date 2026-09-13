@@ -42,10 +42,13 @@ class ServicoPerfis {
 
   void salvar(String usuarioId, EntradaPerfil entrada) {
     String handle = normalizarHandle(entrada.handle());
-    if (entrada.publico() && handle == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Defina a URL do perfil antes de torna-lo publico");
+    if (entrada.publico() && handle == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Defina a URL do perfil antes de torná-lo público");
     String avatarUrl = perfis.buscarPorUsuario(usuarioId).map(RepositorioPerfis.Perfil::avatarUrl).orElse(null);
     try { perfis.salvar(usuarioId, new RepositorioPerfis.DadosPerfil(handle, limitar(entrada.nomeExibicao(), 60), limitar(entrada.bio(), 180), avatarUrl, entrada.publico(), entrada.mostrarHoras(), entrada.mostrarConquistas(), entrada.mostrarBiblioteca(), entrada.mostrarFavoritos(), entrada.mostrarAtividades(), entrada.mostrarColecoes())); }
-    catch (RuntimeException erro) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta URL de perfil ja esta em uso"); }
+    // So violacao de unicidade (handle repetido) vira 409. Antes era catch de RuntimeException: queda
+    // de conexao ou erro de SQL tambem aparecia como "URL ja em uso", confundindo quem salvava e
+    // escondendo a falha real do log (issue #28).
+    catch (org.springframework.dao.DuplicateKeyException erro) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta URL de perfil já está em uso"); }
   }
 
   void atualizarAvatar(String usuarioId, EntradaAvatar entrada) {
@@ -77,7 +80,7 @@ class ServicoPerfis {
   }
 
   void salvarBlocos(String usuarioId, List<RepositorioBlocosPerfil.BlocoPerfil> entrada) {
-    if (entrada == null || entrada.size() > 20) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantidade de blocos invalida");
+    if (entrada == null || entrada.size() > 20) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantidade de blocos inválida");
     // "conquistas" (sem sufixo) e um tipo aposentado, filtrado em blocosPublicos - o bloco novo de
     // conquistas recentes usa "conquistas-recentes" de proposito, pra nao cair naquele filtro.
     //
@@ -86,7 +89,7 @@ class ServicoPerfis {
     // lido pelo tipo correspondente, entao um valor de outro vocabulario e inerte - por isso a
     // validacao aqui aceita o conjunto todo em vez de cruzar com o tipo.
     for (RepositorioBlocosPerfil.BlocoPerfil bloco : entrada) {
-      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("favoritos", "biblioteca", "atividade", "platinados", "wishlist", "conquistas-recentes", "mais-jogados", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$")) || (bloco.visualizacao() != null && !Set.of("cards", "lista", "proporcao", "redimensionar").contains(bloco.visualizacao()))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
+      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("favoritos", "biblioteca", "atividade", "platinados", "wishlist", "conquistas-recentes", "mais-jogados", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$")) || (bloco.visualizacao() != null && !Set.of("cards", "lista", "proporcao", "redimensionar").contains(bloco.visualizacao()))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil inválido");
     }
     // Conteudo (texto, links, imagens, gradiente) numa segunda passada, com mensagem especifica:
     // aqui o dono precisa saber O QUE corrigir. Ver ValidadorBlocos (issue #25).
@@ -159,7 +162,7 @@ class ServicoPerfis {
   }
 
   private static String normalizarHandle(String valor) { if (valor == null || valor.isBlank()) return null; return normalizarHandleObrigatorio(valor); }
-  private static String normalizarHandleObrigatorio(String valor) { String handle = valor.trim().toLowerCase(Locale.ROOT); if (!handle.matches("^[a-z0-9][a-z0-9-]{2,29}$")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use de 3 a 30 caracteres: letras minusculas, numeros e hifen"); if (IDENTIFICADORES_RESERVADOS.contains(handle)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta URL e reservada pelo sistema"); return handle; }
+  private static String normalizarHandleObrigatorio(String valor) { String handle = valor.trim().toLowerCase(Locale.ROOT); if (!handle.matches("^[a-z0-9][a-z0-9-]{2,29}$")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use de 3 a 30 caracteres: letras minúsculas, números e hífen"); if (IDENTIFICADORES_RESERVADOS.contains(handle)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta URL e reservada pelo sistema"); return handle; }
   private static String limitar(String valor, int maximo) { String resultado = valor == null ? "" : valor.trim(); return resultado.length() > maximo ? resultado.substring(0, maximo) : resultado; }
 
   // Cruza os jogos da biblioteca Steam com o catalogo (por steam_app_id) pra oferecer

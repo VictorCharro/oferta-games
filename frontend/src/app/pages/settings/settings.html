@@ -135,8 +135,8 @@
           <label class="switch-row"><span><strong>Mostrar conquistas</strong><small>Exibe o total sincronizado das plataformas.</small></span><input type="checkbox" [(ngModel)]="privacy.showAchievements" [disabled]="!privacy.publicProfile" /></label>
           <label class="switch-row"><span><strong>Mostrar biblioteca</strong><small>Exibe os jogos sincronizados no perfil.</small></span><input type="checkbox" [(ngModel)]="privacy.showLibrary" [disabled]="!privacy.publicProfile" /></label>
           <label class="switch-row"><span><strong>Mostrar jogos favoritos</strong><small>Exibe os favoritos pessoais escolhidos para o perfil.</small></span><input type="checkbox" [(ngModel)]="privacy.showFavoriteGames" [disabled]="!privacy.publicProfile" /></label>
-          <label class="switch-row"><span><strong>Mostrar coleções</strong><small>Exibe as listas de jogos que voce montou.</small></span><input type="checkbox" [(ngModel)]="privacy.showCollections" [disabled]="!privacy.publicProfile" /></label>
-          <label class="switch-row"><span><strong>Mostrar atividade recente</strong><small>Exibe conexoes, sincronizacoes e alteracoes nos seus jogos.</small></span><input type="checkbox" [(ngModel)]="privacy.showRecentActivity" [disabled]="!privacy.publicProfile" /></label>
+          <label class="switch-row"><span><strong>Mostrar coleções</strong><small>Exibe as listas de jogos que você montou.</small></span><input type="checkbox" [(ngModel)]="privacy.showCollections" [disabled]="!privacy.publicProfile" /></label>
+          <label class="switch-row"><span><strong>Mostrar atividade recente</strong><small>Exibe conexões, sincronizações e alterações nos seus jogos.</small></span><input type="checkbox" [(ngModel)]="privacy.showRecentActivity" [disabled]="!privacy.publicProfile" /></label>
         </div>
         <p class="privacy-hint" *ngIf="!privacy.publicProfile">Com o perfil privado, somente você verá essas informações.</p>
         <a class="public-profile-link" *ngIf="privacy.publicProfile && profileHandle" [href]="perfilPublicoUrl()" target="_blank" rel="noopener">Ver perfil público</a>

@@ -75,7 +75,7 @@ export class AdminColeta implements OnInit, OnDestroy {
       this.aviso = bloquearPerfil ? `Perfil /${denuncia.handle} bloqueado e denúncia resolvida.` : 'Denúncia resolvida.';
       this.denuncias = await this.administracao.listarDenuncias();
     } catch {
-      this.error = 'Nao foi possivel moderar essa denuncia.';
+      this.error = 'Não foi possível moderar essa denúncia.';
     }
     this.moderandoId = null;
     this.cdr.detectChanges();
@@ -87,7 +87,7 @@ export class AdminColeta implements OnInit, OnDestroy {
       this.aviso = `Perfil /${handle} desbloqueado.`;
       this.denuncias = await this.administracao.listarDenuncias();
     } catch {
-      this.error = 'Nao foi possivel desbloquear o perfil.';
+      this.error = 'Não foi possível desbloquear o perfil.';
     }
     this.cdr.detectChanges();
   }
@@ -99,7 +99,7 @@ export class AdminColeta implements OnInit, OnDestroy {
       if (exibirCarregamento) this.denuncias = await this.administracao.listarDenuncias().catch(() => this.denuncias);
       this.error = '';
     } catch {
-      this.error = 'Nao foi possivel consultar o status da coleta.';
+      this.error = 'Não foi possível consultar o status da coleta.';
     } finally {
       this.loading = false;
       this.cdr.detectChanges();
@@ -115,17 +115,17 @@ export class AdminColeta implements OnInit, OnDestroy {
       case 'detalhes-conquistas':
         return [
           { titulo: 'Detalhes do jogo', tipo: 'detalhes', coleta: dados.detalhes },
-          { titulo: 'Conquistas do catalogo', tipo: 'conquistas-catalogo', coleta: dados.conquistasCatalogo },
+          { titulo: 'Conquistas do catálogo', tipo: 'conquistas-catalogo', coleta: dados.conquistasCatalogo },
         ];
       case 'instant-gaming':
         return [
           { titulo: 'Escaneamento', tipo: 'instant-gaming-escaneamento', coleta: dados.instantGamingEscaneamento },
           { titulo: 'Casamento', tipo: 'instant-gaming-casamento', coleta: dados.instantGamingCasamento },
-          { titulo: 'Precos', tipo: 'instant-gaming-precos', coleta: dados.instantGamingPrecos },
+          { titulo: 'Preços', tipo: 'instant-gaming-precos', coleta: dados.instantGamingPrecos },
         ];
       default:
         return [
-          { titulo: 'Precos ITAD', tipo: 'precos', coleta: dados.precos },
+          { titulo: 'Preços ITAD', tipo: 'precos', coleta: dados.precos },
           { titulo: 'Metadados Steam', tipo: 'steam', coleta: dados.steam },
         ];
     }
@@ -137,10 +137,10 @@ export class AdminColeta implements OnInit, OnDestroy {
     this.error = '';
     try {
       await this.administracao.dispararColeta(tipo);
-      this.aviso = `Coleta de ${tipo} solicitada. O status sera atualizado em instantes.`;
+      this.aviso = `Coleta de ${tipo} solicitada. O status será atualizado em instantes.`;
       setTimeout(() => this.carregar(false), 800);
     } catch {
-      this.error = 'Nao foi possivel solicitar a coleta.';
+      this.error = 'Não foi possível solicitar a coleta.';
     } finally {
       this.disparando = null;
       this.cdr.detectChanges();
@@ -159,8 +159,8 @@ export class AdminColeta implements OnInit, OnDestroy {
       this.resultadoPreenchimento = await this.administracao.preencherJogo(slug);
     } catch (erro: any) {
       this.erroPreenchimento = erro?.status === 404
-        ? 'Jogo nao encontrado. Confira o slug (o final da URL da pagina do jogo).'
-        : 'Nao foi possivel preencher esse jogo agora.';
+        ? 'Jogo não encontrado. Confira o slug (o final da URL da página do jogo).'
+        : 'Não foi possível preencher esse jogo agora.';
     } finally {
       this.preenchendo = false;
       this.cdr.detectChanges();
@@ -168,8 +168,8 @@ export class AdminColeta implements OnInit, OnDestroy {
   }
 
   textoStatus(status: StatusColeta): string {
-    if (status.emExecucao) return 'Em execucao';
-    return status.ultimaConclusao ? 'Concluida' : 'Aguardando primeira rodada';
+    if (status.emExecucao) return 'Em execução';
+    return status.ultimaConclusao ? 'Concluída' : 'Aguardando primeira rodada';
   }
 
   formatarData(valor: string | null): string {

@@ -29,8 +29,8 @@ export const CATALOGO_BLOCOS: DescricaoBloco[] = [
   { tipo: 'mais-jogados', titulo: 'Mais Jogados', descricao: 'Ranking por horas na biblioteca', icone: '⏱️', arquivo: 'horas-jogadas.png' },
   { tipo: 'biblioteca', titulo: 'Biblioteca', descricao: 'Jogos das plataformas conectadas', icone: '🎮', arquivo: 'biblioteca.png' },
   { tipo: 'wishlist', titulo: 'Lista de Desejos (Steam)', descricao: 'Sincronizada com a wishlist da Steam', icone: '⭐', arquivo: 'steam-modo-escuro.png' },
-  { tipo: 'atividade', titulo: 'Atividade Recente', descricao: 'O que voce andou jogando', icone: '📡', arquivo: 'jogos-monitorados-modo-escuro.png' },
-  { tipo: 'texto', titulo: 'Texto', descricao: 'Um texto livre sobre voce', icone: '📝' },
+  { tipo: 'atividade', titulo: 'Atividade Recente', descricao: 'O que você andou jogando', icone: '📡', arquivo: 'jogos-monitorados-modo-escuro.png' },
+  { tipo: 'texto', titulo: 'Texto', descricao: 'Um texto livre sobre você', icone: '📝' },
   { tipo: 'imagem', titulo: 'Imagem', descricao: 'Uma imagem sua ou de um jogo', icone: '🖼️' },
   { tipo: 'links', titulo: 'Links', descricao: 'Links para suas redes', icone: '🔗' },
 ];

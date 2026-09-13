@@ -494,7 +494,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       await this.perfis.atualizarMostrarWishlistSteam(mostrar);
     } catch {
       this.profile.mostrarWishlistSteam = anterior;
-      this.message = 'Nao foi possivel salvar essa preferencia.';
+      this.message = 'Não foi possível salvar essa preferência.';
     }
     this.cdr.detectChanges();
   }
@@ -508,7 +508,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       await this.recarregarColecoes();
       this.novaColecaoNome = '';
     } catch {
-      this.message = 'Nao foi possivel criar a colecao.';
+      this.message = 'Não foi possível criar a coleção.';
     }
     this.criandoColecao = false;
     this.cdr.detectChanges();
@@ -532,7 +532,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       await this.recarregarColecoes();
       this.cancelarRenomearColecao();
     } catch {
-      this.message = 'Nao foi possivel renomear a colecao.';
+      this.message = 'Não foi possível renomear a coleção.';
     }
     this.cdr.detectChanges();
   }
@@ -558,7 +558,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       await this.colecoes.excluir(colecao.id);
       await this.recarregarColecoes();
     } catch {
-      this.message = 'Nao foi possivel excluir a colecao.';
+      this.message = 'Não foi possível excluir a coleção.';
     }
     this.cdr.detectChanges();
   }
@@ -602,7 +602,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.bibliotecaCompleta = await this.conexoesSteam.biblioteca();
     } catch {
       this.bibliotecaCompleta = [];
-      this.message = 'Nao foi possivel carregar sua biblioteca Steam.';
+      this.message = 'Não foi possível carregar sua biblioteca Steam.';
     }
     this.carregandoBiblioteca = false;
     this.cdr.detectChanges();
@@ -653,7 +653,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       else await this.colecoes.adicionarItem(colecao.id, { steamAppId: jogo.appId });
       await this.recarregarColecoes();
     } catch {
-      this.message = 'Nao foi possivel atualizar a colecao.';
+      this.message = 'Não foi possível atualizar a coleção.';
     }
     this.cdr.detectChanges();
   }
@@ -666,7 +666,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       else await this.colecoes.adicionarItem(colecao.id, { slug: jogo.slug });
       await this.recarregarColecoes();
     } catch {
-      this.message = 'Nao foi possivel atualizar a colecao.';
+      this.message = 'Não foi possível atualizar a coleção.';
     }
     this.cdr.detectChanges();
   }
@@ -682,7 +682,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     try {
       await this.profileFavorites.reorder(this.profile.favoritos.map(game => ({ slug: game.slug, steamAppId: game.steamAppId })));
     } catch {
-      this.message = 'Nao foi possivel salvar a nova ordem dos favoritos.';
+      this.message = 'Não foi possível salvar a nova ordem dos favoritos.';
       this.profile.favoritos = await this.profileFavorites.load();
       this.cdr.detectChanges();
     }
@@ -1219,7 +1219,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       const idsSteam = ordenados.filter(game => game.plataforma === 'steam').map(game => game.appId);
       await this.conexoesSteam.reordenarPlatinados(idsSteam);
     } catch {
-      this.message = 'Nao foi possivel salvar a nova ordem dos platinados.';
+      this.message = 'Não foi possível salvar a nova ordem dos platinados.';
       try {
         const atualizado = await this.perfis.publico(this.profile.handle);
         this.profile.biblioteca = atualizado.biblioteca;
@@ -1291,7 +1291,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   formatPrice(price: number | null): string {
-    return price == null ? 'Preco indisponivel' : price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return price == null ? 'Preço indisponível' : price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
   async removePersonalFavorite(game: PerfilPublico['favoritos'][number]) {
@@ -1302,7 +1302,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.profile.favoritos = await this.profileFavorites.load();
       this.message = 'Jogo removido dos favoritos.';
     } catch {
-      this.message = 'Nao foi possivel remover o jogo dos favoritos.';
+      this.message = 'Não foi possível remover o jogo dos favoritos.';
     }
     this.cdr.detectChanges();
   }
@@ -1398,11 +1398,11 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.message = '';
     try {
       const result = await this.perfis.atualizarPublico(this.profile.handle);
-      if (result.status === 'agendada') this.message = 'Atualizacao iniciada. Os dados serao atualizados em alguns instantes.';
+      if (result.status === 'agendada') this.message = 'Atualização iniciada. Os dados serão atualizados em alguns instantes.';
       if (result.status === 'aguarde') this.message = 'Este perfil foi atualizado recentemente. Tente novamente em alguns minutos.';
-      if (result.status === 'sem_conexao') this.message = 'Este perfil nao possui uma conta Steam conectada.';
+      if (result.status === 'sem_conexao') this.message = 'Este perfil não possui uma conta Steam conectada.';
     } catch {
-      this.message = 'Nao foi possivel iniciar a atualizacao do perfil.';
+      this.message = 'Não foi possível iniciar a atualização do perfil.';
     }
     this.refreshing = false;
     this.cdr.detectChanges();
@@ -1430,7 +1430,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (!error) {
       try {
         const own = await this.perfis.proprio();
-        if (!own?.handle) throw new Error('Perfil nao encontrado');
+        if (!own?.handle) throw new Error('Perfil não encontrado');
 
         await this.perfis.salvar({
           handle: own.handle,
@@ -1449,10 +1449,10 @@ export class PublicProfile implements OnInit, OnDestroy {
         this.editingBio = false;
         this.message = 'Bio atualizada.';
       } catch {
-        this.message = 'Nao foi possivel salvar a bio.';
+        this.message = 'Não foi possível salvar a bio.';
       }
     } else {
-      this.message = 'Nao foi possivel salvar a bio.';
+      this.message = 'Não foi possível salvar a bio.';
     }
 
     this.savingBio = false;
@@ -1463,7 +1463,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
-    if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de ate 2 MB.'; return; }
+    if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de até 2 MB.'; return; }
     if (!this.auth.user || !this.profile) return;
 
     if (this.avatarPreview) URL.revokeObjectURL(this.avatarPreview);
@@ -1552,13 +1552,13 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.message = '';
     const caminho = `${this.auth.user.id}/avatar`;
     const { error: erroUpload } = await supabase.storage.from('avatars').upload(caminho, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
-    if (erroUpload) { this.message = 'Nao foi possivel enviar a foto.'; this.cdr.detectChanges(); return; }
+    if (erroUpload) { this.message = 'Não foi possível enviar a foto.'; this.cdr.detectChanges(); return; }
 
     const { data } = supabase.storage.from('avatars').getPublicUrl(caminho);
     const avatarUrl = `${data.publicUrl}?v=${Date.now()}`;
     const metadata = this.auth.user.user_metadata ?? {};
     const { error: erroAuth } = await supabase.auth.updateUser({ data: { ...metadata, avatar_url: avatarUrl } });
-    if (erroAuth) { this.message = 'Nao foi possivel salvar a foto.'; this.cdr.detectChanges(); return; }
+    if (erroAuth) { this.message = 'Não foi possível salvar a foto.'; this.cdr.detectChanges(); return; }
 
     try {
       await this.perfis.atualizarAvatar(avatarUrl, this.avatarZoom, this.avatarPositionX, this.avatarPositionY);
@@ -1570,7 +1570,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.auth.updateAvatar(avatarUrl);
       this.cancelAvatarEdit();
     } catch {
-      this.message = 'A foto foi enviada, mas nao foi possivel vincula-la ao perfil.';
+      this.message = 'A foto foi enviada, mas não foi possível vinculá-la ao perfil.';
     }
     this.cdr.detectChanges();
   }
@@ -1579,7 +1579,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
-    if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de ate 2 MB.'; return; }
+    if (file.size > 2 * 1024 * 1024) { this.message = 'Escolha uma imagem de até 2 MB.'; return; }
     if (!this.auth.user || !this.profile) return;
 
     if (this.bannerPreview) URL.revokeObjectURL(this.bannerPreview);
@@ -1665,7 +1665,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.message = '';
     const caminho = `${this.auth.user.id}/banner`;
     const { error: erroUpload } = await supabase.storage.from('avatars').upload(caminho, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
-    if (erroUpload) { this.message = 'Nao foi possivel enviar o banner.'; this.cdr.detectChanges(); return; }
+    if (erroUpload) { this.message = 'Não foi possível enviar o banner.'; this.cdr.detectChanges(); return; }
 
     const { data } = supabase.storage.from('avatars').getPublicUrl(caminho);
     const bannerUrl = `${data.publicUrl}?v=${Date.now()}`;
@@ -1678,7 +1678,7 @@ export class PublicProfile implements OnInit, OnDestroy {
       this.profile.bannerPosicaoY = this.bannerPositionY;
       this.cancelBannerEdit();
     } catch {
-      this.message = 'O banner foi enviado, mas nao foi possivel vincula-lo ao perfil.';
+      this.message = 'O banner foi enviado, mas não foi possível vinculá-lo ao perfil.';
     }
     this.cdr.detectChanges();
   }

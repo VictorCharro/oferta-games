@@ -106,7 +106,7 @@ export class AdministracaoService {
   private async cabecalhosAutorizacao(): Promise<{ Authorization: string }> {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    if (!token) throw new Error('Sessao administrativa nao encontrada');
+    if (!token) throw new Error('Sessão administrativa não encontrada');
     return { Authorization: `Bearer ${token}` };
   }
 }

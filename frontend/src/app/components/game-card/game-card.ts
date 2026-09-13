@@ -7,6 +7,7 @@ import { resolveDlc } from '../../services/filters';
 import { FavoritesService } from '../../services/favorites';
 import { AuthService } from '../../services/auth';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
+import { irParaLogin } from '../../services/ir-para-login';
 
 @Component({
   selector: 'app-game-card',
@@ -79,7 +80,7 @@ export class GameCard implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     if (!this.auth.isLoggedIn) {
-      this.router.navigate(['/login']);
+      irParaLogin(this.router, 'monitorar este jogo');
       return;
     }
     this.favoritesService.toggle(this.game);

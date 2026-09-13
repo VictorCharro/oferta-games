@@ -25,7 +25,7 @@ export class ContaService {
   async excluirConta(): Promise<void> {
     const { data } = await supabase.auth.getSession();
     const sessao = data.session;
-    if (!sessao) throw new Error('Sessao nao encontrada');
+    if (!sessao) throw new Error('Sessão não encontrada');
 
     await this.apagarArquivos(sessao.user.id).catch(() => undefined);
 

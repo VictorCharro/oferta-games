@@ -80,7 +80,7 @@ public class ControladorAdministracao {
       case "instant-gaming-escaneamento" -> () -> execucao.executar("instant-gaming-escaneamento", sincronizacao::sincronizarRodadaInstantGamingEscaneamento);
       case "instant-gaming-casamento" -> () -> execucao.executar("instant-gaming-casamento", sincronizacao::sincronizarRodadaInstantGamingCasamento);
       case "instant-gaming-precos" -> () -> execucao.executar("instant-gaming-precos", sincronizacao::sincronizarRodadaInstantGamingPrecos);
-      default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de coleta invalido");
+      default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de coleta inválido");
     };
     executorManual.execute(tarefa);
     return ResponseEntity.accepted().body(new RespostaDisparoColeta(true, tipo));
@@ -97,7 +97,7 @@ public class ControladorAdministracao {
     try {
       return catalogo.preencherTudoDoJogo(slug);
     } catch (ServicoCatalogo.JogoNaoEncontradoException erro) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Jogo nao encontrado");
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Jogo não encontrado");
     }
   }
 

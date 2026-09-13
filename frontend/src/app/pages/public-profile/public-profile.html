@@ -150,7 +150,7 @@
             [(ngModel)]="bioDraft"
             maxlength="180"
             rows="3"
-            placeholder="Conte um pouco sobre voce como jogador"
+            placeholder="Conte um pouco sobre você como jogador"
           ></textarea>
           <div class="bio-actions">
             <span>{{ bioDraft.length }}/180</span>
@@ -167,7 +167,7 @@
         </button>
         <ng-container *ngIf="!isOwner">
           <p *ngIf="profile.bio; else noBio">{{ profile.bio }}</p>
-          <ng-template #noBio><p>Perfil publico do Oferta Games</p></ng-template>
+          <ng-template #noBio><p>Perfil público do Oferta Games</p></ng-template>
         </ng-container>
         <p *ngIf="message" class="profile-message">{{ message }}</p>
       </div>
@@ -456,7 +456,7 @@
                     ><span>{{ hours(game.minutosJogadas) }} jogadas</span
                     ><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small
                   ></ng-container>
-                  <ng-template #favoriteCardCatalogInfo><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template>
+                  <ng-template #favoriteCardCatalogInfo><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preço indisponível' }}</strong></ng-template>
                 </div>
               </a>
             </article>
@@ -480,7 +480,7 @@
                     ><span *ngIf="favoriteAchievementProgress(game) != null" class="favorite-meta-divider">·</span
                     ><span *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</span
                   ></ng-container>
-                  <ng-template #favoriteCatalogInfo><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template>
+                  <ng-template #favoriteCatalogInfo><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preço indisponível' }}</strong></ng-template>
                 </div>
               </a>
               <img *ngIf="game.steamAppId != null" class="favorite-platform" src="store-logos/steam.svg" alt="Steam" title="Steam" />
@@ -507,7 +507,7 @@
           </div>
           <div *ngIf="wishlistPreview(block).length; else noWishlistPreview" [ngClass]="['profile-game-grid', 'grid-' + block.tamanho]">
             <article *ngFor="let game of wishlistPreview(block)" class="profile-game-card">
-              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><div class="game-card-info"><h3>{{ game.titulo }}</h3><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></div></a>
+              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><div class="game-card-info"><h3>{{ game.titulo }}</h3><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preço indisponível' }}</strong></div></a>
             </article>
           </div>
           <ng-template #noWishlistPreview><div class="empty-panel"><h3>Nenhum jogo na wishlist</h3></div></ng-template></ng-container
@@ -642,7 +642,7 @@
         >
           {{ editingFavorites ? 'Concluir' : 'Organizar' }}
         </button>
-        <a *ngIf="isOwner" routerLink="/catalogo" class="panel-link">Explorar catalogo</a>
+        <a *ngIf="isOwner" routerLink="/catalogo" class="panel-link">Explorar catálogo</a>
       </div>
     </div>
     <p *ngIf="isOwner && editingFavorites" class="favorites-reorder-hint">Arraste os cards para reordenar e use Remover para tirar um jogo. A ordem e salva automaticamente.</p>
@@ -657,7 +657,7 @@
     >
       <article *ngFor="let game of profile.favoritos" class="profile-game-card" cdkDrag [cdkDragDisabled]="!isOwner || !editingFavorites">
         <span *ngIf="isOwner && editingFavorites" class="favorite-drag-handle" cdkDragHandle aria-label="Arrastar para reordenar" title="Arrastar para reordenar">↕</span>
-        <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else favoriteCatalogDetail"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #favoriteCatalogDetail><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template></div></a>
+        <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else favoriteCatalogDetail"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #favoriteCatalogDetail><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preço indisponível' }}</strong></ng-template></div></a>
         <button
           *ngIf="isOwner && editingFavorites"
           type="button"
@@ -673,7 +673,7 @@
         <img src="jogos-favoritos.png" alt="" />
         <h3>Nenhum jogo favorito ainda</h3>
         <p *ngIf="isOwner">Abra um jogo para adiciona-lo aos favoritos pessoais.</p>
-        <p *ngIf="!isOwner">Este perfil ainda nao possui jogos favoritos.</p>
+        <p *ngIf="!isOwner">Este perfil ainda não possui jogos favoritos.</p>
       </div></ng-template
     >
   </section>
@@ -737,7 +737,7 @@
         <ng-container *ngIf="colecaoExpandida(colecao)">
           <div *ngIf="colecao.jogos.length; else colecaoVazia" class="profile-game-grid grid-completo">
             <article *ngFor="let game of colecao.jogos" class="profile-game-card">
-              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else colecaoCatalogDetail"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #colecaoCatalogDetail><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preco indisponivel' }}</strong></ng-template></div></a>
+              <a [href]="favoriteUrl(game)" [attr.target]="game.slug ? null : '_blank'" rel="noopener"><img [src]="favoriteImage(game)" [alt]="game.titulo" /><div class="game-card-shade"></div><span *ngIf="game.steamAppId != null" class="game-platform"><img src="store-logos/steam.svg" alt="Steam" /></span><div class="game-card-info"><h3>{{ game.titulo }}</h3><ng-container *ngIf="game.steamAppId != null; else colecaoCatalogDetail"><span>{{ hours(game.minutosJogadas) }} jogadas</span><small *ngIf="favoriteAchievementProgress(game) != null">{{ favoriteAchievementProgress(game) }}% conquistas</small></ng-container><ng-template #colecaoCatalogDetail><span *ngIf="game.ehDlc" class="favorite-tag">DLC</span><strong>{{ game.precoMinimo != null ? formatPrice(game.precoMinimo) : 'Preço indisponível' }}</strong></ng-template></div></a>
             </article>
           </div>
           <ng-template #colecaoVazia>
@@ -752,7 +752,7 @@
         <img src="jogos-favoritos.png" alt="" />
         <h3>Nenhuma coleção ainda</h3>
         <p *ngIf="isOwner">Use o botão Organizar para criar sua primeira lista de jogos.</p>
-        <p *ngIf="!isOwner">Este perfil ainda nao possui coleções.</p>
+        <p *ngIf="!isOwner">Este perfil ainda não possui coleções.</p>
       </div></ng-template
     >
 

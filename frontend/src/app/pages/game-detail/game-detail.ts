@@ -29,6 +29,7 @@ import { AuthService } from '../../services/auth';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 import { SITE_URL, SeoService } from '../../services/seo';
 import { StatusResposta } from '../../services/status-resposta';
+import { irParaLogin } from '../../services/ir-para-login';
 
 @Component({
   selector: 'app-game-detail',
@@ -608,12 +609,12 @@ export class GameDetail implements OnInit, OnDestroy {
   }
 
   definirEstrela(nota: number) {
-    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
+    if (!this.auth.isLoggedIn) { irParaLogin(this.router, 'avaliar este jogo'); return; }
     this.minhaNota = nota;
   }
 
   async enviarAvaliacao() {
-    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
+    if (!this.auth.isLoggedIn) { irParaLogin(this.router, 'avaliar este jogo'); return; }
     if (!this.game || !this.minhaNota || this.enviandoAvaliacao) return;
     this.enviandoAvaliacao = true;
     this.cdr.detectChanges();
@@ -650,7 +651,7 @@ export class GameDetail implements OnInit, OnDestroy {
 
   async votarUtil(reviewId: number, util: boolean) {
     if (!this.game) return;
-    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
+    if (!this.auth.isLoggedIn) { irParaLogin(this.router, 'votar nas avaliações'); return; }
     try {
       await this.reviewsService.votar(this.game.slug, reviewId, util);
       this.avaliacoes = await this.reviewsService.listar(this.game.slug);
@@ -669,7 +670,7 @@ export class GameDetail implements OnInit, OnDestroy {
     event.stopPropagation();
     if (!this.game) return;
     if (!this.auth.isLoggedIn) {
-      this.router.navigate(['/login']);
+      irParaLogin(this.router, 'monitorar o preço deste jogo');
       return;
     }
     const atual = this.favoritesService.getFavorite(this.game.slug)?.targetPrice;
@@ -718,7 +719,7 @@ export class GameDetail implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     if (!this.game) return;
-    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
+    if (!this.auth.isLoggedIn) { irParaLogin(this.router, 'favoritar este jogo'); return; }
     await this.profileFavoritesService.toggle(this.gameSummary(this.game));
     this.cdr.detectChanges();
   }
@@ -726,7 +727,7 @@ export class GameDetail implements OnInit, OnDestroy {
   async toggleMenuColecoes(event: Event) {
     event.preventDefault();
     event.stopPropagation();
-    if (!this.auth.isLoggedIn) { this.router.navigate(['/login']); return; }
+    if (!this.auth.isLoggedIn) { irParaLogin(this.router, 'adicionar este jogo a uma lista'); return; }
     this.menuColecoesAberto = !this.menuColecoesAberto;
     if (this.menuColecoesAberto) await this.carregarColecoes();
     this.cdr.detectChanges();

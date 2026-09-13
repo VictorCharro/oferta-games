@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { FavoriteGame, FavoritesService } from '../../services/favorites';
 import { AuthService } from '../../services/auth';
 import { storeBrand } from '../../services/store-brand';
+import { irParaLogin } from '../../services/ir-para-login';
 
 @Component({
   selector: 'app-monitored-game-card',
@@ -70,7 +71,7 @@ export class MonitoredGameCard implements OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     if (!this.auth.isLoggedIn) {
-      this.router.navigate(['/login']);
+      irParaLogin(this.router, 'definir uma meta de preço');
       return;
     }
     // Ancora sempre no elemento clicado (o icone ou o link "definir meta"), colado na borda

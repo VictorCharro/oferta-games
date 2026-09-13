@@ -33,7 +33,7 @@ public class ControladorFavoritos {
   ResponseEntity<?> listar(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
     return autenticacao.buscarUsuarioPeloCabecalho(autorizacao)
         .<ResponseEntity<?>>map(usuarioId -> ResponseEntity.ok(favoritos.listarPorUsuario(usuarioId)))
-        .orElseGet(() -> ResponseEntity.status(401).body(Map.of("error", "Nao autenticado")));
+        .orElseGet(() -> ResponseEntity.status(401).body(Map.of("error", "Não autenticado")));
   }
 
   @PostMapping
@@ -43,15 +43,15 @@ public class ControladorFavoritos {
   ) {
     var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
     if (usuarioId.isEmpty()) {
-      return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+      return ResponseEntity.status(401).body(Map.of("error", "Não autenticado"));
     }
     if (requisicao == null || requisicao.slug() == null || requisicao.slug().isBlank()) {
-      return ResponseEntity.badRequest().body(Map.of("error", "slug e obrigatorio"));
+      return ResponseEntity.badRequest().body(Map.of("error", "slug é obrigatório"));
     }
 
     var jogoId = jogos.buscarIdPorSlug(requisicao.slug());
     if (jogoId.isEmpty()) {
-      return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
+      return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado"));
     }
 
     if (favoritos.adicionar(usuarioId.get(), jogoId.get(), requisicao.targetPrice())) {
@@ -67,12 +67,12 @@ public class ControladorFavoritos {
   ) {
     var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
     if (usuarioId.isEmpty()) {
-      return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+      return ResponseEntity.status(401).body(Map.of("error", "Não autenticado"));
     }
 
     var jogoId = jogos.buscarIdPorSlug(slug);
     if (jogoId.isEmpty()) {
-      return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
+      return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado"));
     }
 
     if (favoritos.remover(usuarioId.get(), jogoId.get())) {

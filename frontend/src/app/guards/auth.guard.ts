@@ -1,10 +1,11 @@
 import { inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
 import { AuthService } from '../services/auth';
 
-export const authGuard = () => {
+export const authGuard = (_rota: ActivatedRouteSnapshot, estado: RouterStateSnapshot) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   if (auth.isLoggedIn) return true;
-  return router.createUrlTree(['/login']);
+  // Volta pra pagina pedida depois de entrar (ex.: link de /monitorados aberto deslogado).
+  return router.createUrlTree(['/login'], { queryParams: { returnUrl: estado.url } });
 };

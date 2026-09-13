@@ -30,5 +30,5 @@ export class ConexoesSteamService {
   async sincronizar() { await firstValueFrom(this.http.post(`${this.api}/sincronizar`, {}, { headers: await this.headers() })); }
   async reordenarPlatinados(appIds: number[]): Promise<void> { await firstValueFrom(this.http.put(`${this.api}/platinados/ordem`, { appIds }, { headers: await this.headers() })); }
   async desconectar() { await firstValueFrom(this.http.delete(this.api, { headers: await this.headers() })); }
-  private async headers(): Promise<{ Authorization: string }> { const { data } = await supabase.auth.getSession(); if (!data.session?.access_token) throw new Error('Sessao nao encontrada'); return { Authorization: `Bearer ${data.session.access_token}` }; }
+  private async headers(): Promise<{ Authorization: string }> { const { data } = await supabase.auth.getSession(); if (!data.session?.access_token) throw new Error('Sessão não encontrada'); return { Authorization: `Bearer ${data.session.access_token}` }; }
 }

@@ -2,9 +2,9 @@
   <main class="admin-page">
     <header class="page-header">
       <div>
-        <p class="eyebrow">Administracao</p>
-        <h1>Coleta do catalogo</h1>
-        <p>Acompanhamento interno das atualizacoes de precos e metadados.</p>
+        <p class="eyebrow">Administração</p>
+        <h1>Coleta do catálogo</h1>
+        <p>Acompanhamento interno das atualizações de preços e metadados.</p>
       </div>
       <button class="btn-outline refresh" type="button" (click)="carregar()" [disabled]="loading">Atualizar</button>
     </header>
@@ -38,9 +38,9 @@
 
     <section class="preencher-jogo">
       <div>
-        <p class="label">Jogo especifico</p>
+        <p class="label">Jogo específico</p>
         <h2>Preencher tudo agora</h2>
-        <p class="hint">Pula a fila: atualiza metadados Steam, detalhes e conquistas de um jogo na hora. Use quando um jogo novo ou pouco tocado estiver bombando e nao valer esperar a rodada normal.</p>
+        <p class="hint">Pula a fila: atualiza metadados Steam, detalhes e conquistas de um jogo na hora. Use quando um jogo novo ou pouco tocado estiver bombando e não valer esperar a rodada normal.</p>
       </div>
       <form class="preencher-jogo-form" (ngSubmit)="preencherJogo()">
         <input
@@ -58,7 +58,7 @@
       <ul class="preencher-jogo-resultado" *ngIf="resultadoPreenchimento as r">
         <li [class.ok]="r.metadadosSteamAtualizados">
           <span class="preencher-jogo-icone" aria-hidden="true">{{ r.metadadosSteamAtualizados ? '✓' : '—' }}</span>
-          Metadados Steam {{ r.metadadosSteamAtualizados ? 'atualizados' : 'sem mudanca' }}
+          Metadados Steam {{ r.metadadosSteamAtualizados ? 'atualizados' : 'sem mudança' }}
         </li>
         <li *ngIf="!r.temSteamAppId" class="aviso-linha">
           <span class="preencher-jogo-icone" aria-hidden="true">!</span>
@@ -67,18 +67,18 @@
         <ng-container *ngIf="r.temSteamAppId">
           <li [class.ok]="r.detalhesAtualizados">
             <span class="preencher-jogo-icone" aria-hidden="true">{{ r.detalhesAtualizados ? '✓' : '—' }}</span>
-            Detalhes {{ r.detalhesAtualizados ? 'atualizados' : 'sem mudanca' }}
+            Detalhes {{ r.detalhesAtualizados ? 'atualizados' : 'sem mudança' }}
           </li>
           <li [class.ok]="r.conquistasAtualizadas">
             <span class="preencher-jogo-icone" aria-hidden="true">{{ r.conquistasAtualizadas ? '✓' : '—' }}</span>
-            Conquistas {{ r.conquistasAtualizadas ? 'atualizadas' : 'sem conquistas ou sem mudanca' }}
+            Conquistas {{ r.conquistasAtualizadas ? 'atualizadas' : 'sem conquistas ou sem mudança' }}
           </li>
         </ng-container>
       </ul>
     </section>
 
     <nav class="admin-tabs">
-      <button type="button" [class.active]="abaAtiva === 'precos-steam'" (click)="selecionarAba('precos-steam')">Precos e Steam</button>
+      <button type="button" [class.active]="abaAtiva === 'precos-steam'" (click)="selecionarAba('precos-steam')">Preços e Steam</button>
       <button type="button" [class.active]="abaAtiva === 'detalhes-conquistas'" (click)="selecionarAba('detalhes-conquistas')">Detalhes e Conquistas</button>
       <button type="button" [class.active]="abaAtiva === 'instant-gaming'" (click)="selecionarAba('instant-gaming')">Instant Gaming</button>
     </nav>
@@ -96,12 +96,12 @@
             </div>
             <button class="btn-primary" type="button" (click)="disparar(cartao.tipo)"
               [disabled]="cartao.coleta.emExecucao || disparando !== null">
-              {{ cartao.coleta.emExecucao ? 'Em execucao...' : (disparando === cartao.tipo ? 'Solicitando...' : 'Rodar agora') }}
+              {{ cartao.coleta.emExecucao ? 'Em execução...' : (disparando === cartao.tipo ? 'Solicitando...' : 'Rodar agora') }}
             </button>
           </div>
           <dl>
-            <div><dt>Ultima conclusao</dt><dd>{{ formatarData(cartao.coleta.ultimaConclusao) }}</dd></div>
-            <div><dt>Duracao</dt><dd>{{ formatarDuracao(cartao.coleta.emExecucao ? cartao.coleta.duracaoAtualMs : cartao.coleta.ultimaDuracaoMs) }}</dd></div>
+            <div><dt>Última conclusão</dt><dd>{{ formatarData(cartao.coleta.ultimaConclusao) }}</dd></div>
+            <div><dt>Duração</dt><dd>{{ formatarDuracao(cartao.coleta.emExecucao ? cartao.coleta.duracaoAtualMs : cartao.coleta.ultimaDuracaoMs) }}</dd></div>
             <div><dt>Jogos atualizados</dt><dd>{{ cartao.coleta.jogosAtualizados | number }}</dd></div>
             <div><dt>Ofertas atualizadas</dt><dd>{{ cartao.coleta.ofertasAtualizadas | number }}</dd></div>
           </dl>
@@ -111,12 +111,12 @@
 
       <section class="queue-card" *ngIf="abaAtiva === 'precos-steam'">
         <div>
-          <p class="label">Fila do catalogo</p>
-          <h2>Atualizacao pendente</h2>
+          <p class="label">Fila do catálogo</p>
+          <h2>Atualização pendente</h2>
         </div>
         <div class="queue-metrics">
           <div><span>Nunca sincronizados</span><strong>{{ dados.fila.nuncaSincronizados | number }}</strong></div>
-          <div><span>Preco mais antigo</span><strong>{{ formatarData(dados.fila.sincronizacaoMaisAntiga) }}</strong></div>
+          <div><span>Preço mais antigo</span><strong>{{ formatarData(dados.fila.sincronizacaoMaisAntiga) }}</strong></div>
           <div><span>Pendentes Steam</span><strong>{{ dados.fila.pendentesSteam | number }}</strong></div>
         </div>
       </section>
@@ -124,7 +124,7 @@
       <section class="queue-card" *ngIf="abaAtiva === 'detalhes-conquistas'">
         <div>
           <p class="label">Fila de detalhes</p>
-          <h2>Atualizacao pendente</h2>
+          <h2>Atualização pendente</h2>
         </div>
         <div class="queue-metrics">
           <div><span>Pendentes de detalhes</span><strong>{{ dados.pendentesDetalhes | number }}</strong></div>
@@ -138,8 +138,8 @@
           <h2>Descoberta e casamento</h2>
         </div>
         <div class="queue-metrics">
-          <div><span>Ultimo id escaneado</span><strong>{{ dados.filaInstantGaming.ultimoIdEscaneado | number }}</strong></div>
-          <div><span>Catalogo descoberto</span><strong>{{ dados.filaInstantGaming.catalogoDescoberto | number }}</strong></div>
+          <div><span>Último id escaneado</span><strong>{{ dados.filaInstantGaming.ultimoIdEscaneado | number }}</strong></div>
+          <div><span>Catálogo descoberto</span><strong>{{ dados.filaInstantGaming.catalogoDescoberto | number }}</strong></div>
           <div><span>Jogos casados</span><strong>{{ dados.filaInstantGaming.jogosCasados | number }}</strong></div>
           <div><span>Pendentes de casamento</span><strong>{{ dados.filaInstantGaming.pendentesCasamento | number }}</strong></div>
         </div>

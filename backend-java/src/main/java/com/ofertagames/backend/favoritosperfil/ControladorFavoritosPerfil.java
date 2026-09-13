@@ -34,16 +34,16 @@ public class ControladorFavoritosPerfil {
   ResponseEntity<?> listar(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
     return autenticacao.buscarUsuarioPeloCabecalho(autorizacao)
         .<ResponseEntity<?>>map(usuarioId -> ResponseEntity.ok(favoritos.listarPorUsuario(usuarioId)))
-        .orElseGet(() -> ResponseEntity.status(401).body(Map.of("error", "Nao autenticado")));
+        .orElseGet(() -> ResponseEntity.status(401).body(Map.of("error", "Não autenticado")));
   }
 
   @PostMapping
   ResponseEntity<?> adicionar(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody(required = false) RequisicaoFavoritoPerfil requisicao) {
     var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
-    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
-    if (requisicao == null || requisicao.slug() == null || requisicao.slug().isBlank()) return ResponseEntity.badRequest().body(Map.of("error", "slug e obrigatorio"));
+    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Não autenticado"));
+    if (requisicao == null || requisicao.slug() == null || requisicao.slug().isBlank()) return ResponseEntity.badRequest().body(Map.of("error", "slug é obrigatório"));
     var jogoId = jogos.buscarIdPorSlug(requisicao.slug());
-    if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
+    if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado"));
 
     if (favoritos.adicionar(usuarioId.get(), jogoId.get())) {
       atividades.registrar(usuarioId.get(), "FAVORITO_PESSOAL_ADICIONADO", jogoId.get());
@@ -54,9 +54,9 @@ public class ControladorFavoritosPerfil {
   @DeleteMapping("/{slug}")
   ResponseEntity<?> remover(@RequestHeader(value = "Authorization", required = false) String autorizacao, @PathVariable String slug) {
     var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
-    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Não autenticado"));
     var jogoId = jogos.buscarIdPorSlug(slug);
-    if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
+    if (jogoId.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado"));
 
     if (favoritos.remover(usuarioId.get(), jogoId.get())) {
       atividades.registrar(usuarioId.get(), "FAVORITO_PESSOAL_REMOVIDO", jogoId.get());
@@ -67,10 +67,10 @@ public class ControladorFavoritosPerfil {
   @PostMapping("/steam")
   ResponseEntity<?> adicionarSteam(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody(required = false) RequisicaoFavoritoSteam requisicao) {
     var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
-    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
-    if (requisicao == null || requisicao.appId() == null || requisicao.appId() <= 0) return ResponseEntity.badRequest().body(Map.of("error", "appId e obrigatorio"));
+    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Não autenticado"));
+    if (requisicao == null || requisicao.appId() == null || requisicao.appId() <= 0) return ResponseEntity.badRequest().body(Map.of("error", "appId é obrigatório"));
     String titulo = favoritos.tituloSteam(usuarioId.get(), requisicao.appId()).orElse(null);
-    if (titulo == null) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado na biblioteca Steam"));
+    if (titulo == null) return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado na biblioteca Steam"));
 
     if (favoritos.adicionarSteam(usuarioId.get(), requisicao.appId())) {
       atividades.registrar(usuarioId.get(), "FAVORITO_PESSOAL_STEAM_ADICIONADO", titulo);
@@ -81,9 +81,9 @@ public class ControladorFavoritosPerfil {
   @DeleteMapping("/steam/{appId}")
   ResponseEntity<?> removerSteam(@RequestHeader(value = "Authorization", required = false) String autorizacao, @PathVariable int appId) {
     var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
-    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Não autenticado"));
     String titulo = favoritos.tituloSteam(usuarioId.get(), appId).orElse(null);
-    if (titulo == null) return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado na biblioteca Steam"));
+    if (titulo == null) return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado na biblioteca Steam"));
 
     if (favoritos.removerSteam(usuarioId.get(), appId)) {
       atividades.registrar(usuarioId.get(), "FAVORITO_PESSOAL_STEAM_REMOVIDO", titulo);
@@ -94,7 +94,7 @@ public class ControladorFavoritosPerfil {
   @PutMapping("/ordem")
   ResponseEntity<?> ordenar(@RequestHeader(value = "Authorization", required = false) String autorizacao, @RequestBody(required = false) RequisicaoOrdemFavoritos requisicao) {
     var usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao);
-    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado"));
+    if (usuarioId.isEmpty()) return ResponseEntity.status(401).body(Map.of("error", "Não autenticado"));
     favoritos.reordenar(usuarioId.get(), requisicao == null ? java.util.List.of() : requisicao.itens());
     return ResponseEntity.ok(Map.of("ok", true));
   }

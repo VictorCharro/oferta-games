@@ -167,13 +167,13 @@ public class ControladorJogos {
     try {
       return ResponseEntity.ok(catalogo.atualizarPrecos(slug));
     } catch (ServicoCatalogo.JogoNaoEncontradoException erro) {
-      return ResponseEntity.status(404).body(Map.of("error", "Jogo nao encontrado"));
+      return ResponseEntity.status(404).body(Map.of("error", "Jogo não encontrado"));
     } catch (ServicoCatalogo.JogoSemItadException erro) {
-      return ResponseEntity.badRequest().body(Map.of("error", "Jogo sem fonte de precos para atualizar"));
+      return ResponseEntity.badRequest().body(Map.of("error", "Jogo sem fonte de preços para atualizar"));
     } catch (ServicoCatalogo.RefreshRecenteException erro) {
       return ResponseEntity.status(429)
           .header("Retry-After", String.valueOf(erro.segundosRestantes()))
-          .body(Map.of("error", "Precos atualizados recentemente", "segundosRestantes", erro.segundosRestantes()));
+          .body(Map.of("error", "Preços atualizados recentemente", "segundosRestantes", erro.segundosRestantes()));
     }
   }
 }

@@ -61,5 +61,5 @@ public class ControladorNotificacoes {
   }
 
   private java.util.Optional<String> usuario(String autorizacao) { return autenticacao.buscarUsuarioPeloCabecalho(autorizacao); }
-  private static ResponseEntity<Map<String, String>> naoAutenticado() { return ResponseEntity.status(401).body(Map.of("error", "Nao autenticado")); }
+  private static ResponseEntity<Map<String, String>> naoAutenticado() { return ResponseEntity.status(401).body(Map.of("error", "Não autenticado")); }
 }
