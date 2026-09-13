@@ -51,6 +51,9 @@ app:
   # (variavel SSR_API_TOKEN). Vazio desliga a isencao, sem quebrar nada.
   ssr:
     token: ${SSR_API_TOKEN:}
+  # UIDs (auth.users) com acesso a /api/admin/**, separados por virgula. Ver Administradores.
+  admin:
+    user-ids: ${ADMIN_USER_IDS:0a6eb06b-756e-4434-899b-33420bed8609}
   supabase:
     url: ${SUPABASE_URL:}
     anon-key: ${SUPABASE_ANON_KEY:}

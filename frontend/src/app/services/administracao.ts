@@ -57,11 +57,33 @@ export type TipoColeta =
   | 'instant-gaming-casamento'
   | 'instant-gaming-precos';
 
+export interface DenunciaAberta {
+  id: number;
+  handle: string | null;
+  nomeExibicao: string | null;
+  perfilBloqueado: boolean;
+  motivo: string;
+  criadaEm: string;
+  totalDoPerfil: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdministracaoService {
   private api = `${URL_API}/admin`;
 
   constructor(private http: HttpClient) {}
+
+  async listarDenuncias(): Promise<DenunciaAberta[]> {
+    return firstValueFrom(this.http.get<DenunciaAberta[]>(`${this.api}/denuncias`, { headers: await this.cabecalhosAutorizacao() }));
+  }
+
+  async resolverDenuncia(id: number): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.api}/denuncias/${id}/resolver`, {}, { headers: await this.cabecalhosAutorizacao() }));
+  }
+
+  async definirBloqueio(handle: string, bloqueado: boolean): Promise<void> {
+    await firstValueFrom(this.http.put(`${this.api}/perfis/${encodeURIComponent(handle)}/bloqueio`, { bloqueado }, { headers: await this.cabecalhosAutorizacao() }));
+  }
 
   async consultarColeta(): Promise<StatusAdministrativoColeta> {
     return firstValueFrom(this.http.get<StatusAdministrativoColeta>(`${this.api}/coleta`, {

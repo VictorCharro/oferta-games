@@ -7,6 +7,8 @@ import { PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis
 import { CATALOGO_BLOCOS, DescricaoBloco, TIPOS_COM_VISUALIZACAO, TIPOS_UNICOS, blocosPadrao, descricaoBloco, novoBloco, visualizacaoDoBloco } from '../../services/perfil-blocos';
 import { PublicProfile } from '../public-profile/public-profile';
 import { SeoService } from '../../services/seo';
+import { mensagemDaApi } from '../../services/mensagem-api';
+import { removerImagensOrfas } from '../../services/imagens-blocos';
 
 /**
  * Pagina dedicada de organizacao dos blocos do perfil (/perfil/blocos).
@@ -196,11 +198,13 @@ export class EditarBlocos implements OnInit {
     this.message = '';
     this.renumerar();
     try {
+      const anteriores = this.snapshotSalvo ? JSON.parse(this.snapshotSalvo) : [];
       await this.perfis.salvarBlocos(this.blocos);
+      void removerImagensOrfas(anteriores, this.blocos);
       this.snapshotSalvo = JSON.stringify(this.blocos);
       this.message = 'Blocos salvos.';
-    } catch {
-      this.message = 'Não foi possível salvar os blocos.';
+    } catch (erro) {
+      this.message = mensagemDaApi(erro, 'Não foi possível salvar os blocos.');
     }
     this.saving = false;
     this.cdr.detectChanges();

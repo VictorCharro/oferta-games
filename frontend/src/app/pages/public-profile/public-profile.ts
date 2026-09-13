@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { DragDropModule } from '@angular/cdk/drag-drop';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth';
@@ -16,6 +16,8 @@ import { ProfileFavoritesService } from '../../services/profile-favorites';
 import { supabase } from '../../services/supabase';
 import { SeoService } from '../../services/seo';
 import { StatusResposta } from '../../services/status-resposta';
+import { mensagemDaApi } from '../../services/mensagem-api';
+import { removerImagensOrfas } from '../../services/imagens-blocos';
 
 @Component({
   selector: 'app-public-profile',
@@ -36,6 +38,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   falhaCarregamento = false;
   private readonly statusResposta = inject(StatusResposta);
   private readonly pendingTasks = inject(PendingTasks);
+  private readonly router = inject(Router);
   loading = true;
   activeTab: 'resumo' | 'jogosFavoritos' | 'biblioteca' | 'colecoes' = 'resumo';
   readonly capasSteamIndisponiveis = new Set<number>();
@@ -93,6 +96,11 @@ export class PublicProfile implements OnInit, OnDestroy {
   private bannerPointerId: number | null = null;
   blockMenuAberto: string | null = null;
   menuEdicaoAberto = false;
+  denunciaAberta = false;
+  denunciaEnviada = false;
+  enviandoDenuncia = false;
+  motivoDenuncia = '';
+  erroDenuncia = '';
   globalColorMenuOpen = false;
   addBlockMenuOpen = false;
   globalBackgroundColor = '#121a2a';
@@ -101,8 +109,6 @@ export class PublicProfile implements OnInit, OnDestroy {
   blockImagePreview = '';
   blockImageFile: File | null = null;
   blockImageExternalUrl = '';
-  blockImageUrlInput: { blockId: string; destino: 'conteudo' | 'fundo' } | null = null;
-  blockImageUrlDraft = '';
   blockImageZoom = 1;
   blockImagePositionX = 50;
   blockImagePositionY = 50;
@@ -290,7 +296,10 @@ export class PublicProfile implements OnInit, OnDestroy {
     }
     // O menu do bloco fecha ao clicar fora dele (o proprio menu para o clique no template).
     if (!alvo.closest('.block-menu-wrap')) this.blockMenuAberto = null;
-    if (!alvo.closest('.hero-menu-wrap')) this.menuEdicaoAberto = false;
+    if (!alvo.closest('.hero-menu-wrap')) {
+      this.menuEdicaoAberto = false;
+      this.denunciaAberta = false;
+    }
   }
 
   @HostListener('document:keydown.escape')
@@ -299,6 +308,33 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.addBlockMenuOpen = false;
     this.blockMenuAberto = null;
     this.menuEdicaoAberto = false;
+  }
+
+  /** Denunciar exige conta (ver ControladorModeracao): deslogado vai pro login e volta pra ca. */
+  abrirDenuncia(event: MouseEvent) {
+    event.stopPropagation();
+    if (!this.auth.isLoggedIn) {
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url, motivo: 'denunciar este perfil' } });
+      return;
+    }
+    this.denunciaAberta = !this.denunciaAberta;
+    this.erroDenuncia = '';
+  }
+
+  async enviarDenuncia() {
+    if (!this.profile?.handle || this.motivoDenuncia.trim().length < 3) return;
+    this.enviandoDenuncia = true;
+    this.erroDenuncia = '';
+    this.cdr.detectChanges();
+    try {
+      await this.perfis.denunciar(this.profile.handle, this.motivoDenuncia.trim());
+      this.denunciaEnviada = true;
+      this.motivoDenuncia = '';
+    } catch (erro) {
+      this.erroDenuncia = mensagemDaApi(erro, 'Não foi possível enviar agora. Tente de novo.');
+    }
+    this.enviandoDenuncia = false;
+    this.cdr.detectChanges();
   }
 
   toggleMenuEdicao(event: MouseEvent) {
@@ -664,11 +700,21 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.savingLayout = true;
     this.layoutDraft.forEach((block, position) => block.posicao = position);
     try {
-      await this.perfis.salvarBlocos(this.layoutDraft);
+      // O rascunho deste editor sai de profile.blocos, que vem do payload PUBLICO — e o publico ja
+      // filtra os blocos Ocultos. Como o PUT substitui a lista inteira, salvar daqui apagava de vez
+      // todo bloco que o dono tinha escondido pela pagina /perfil/blocos. Busca a lista completa e
+      // devolve os ocultos (que este editor nem mostra) no fim, com as mesmas configuracoes.
+      const todos = await this.perfis.meusBlocos();
+      const ocultos = todos
+        .filter(bloco => !bloco.visivel && !this.layoutDraft.some(rascunho => rascunho.id === bloco.id))
+        .map((bloco, indice) => ({ ...bloco, posicao: this.layoutDraft.length + indice }));
+      const completo = [...this.layoutDraft, ...ocultos];
+      await this.perfis.salvarBlocos(completo);
+      void removerImagensOrfas(todos, completo);
       this.profile.blocos = structuredClone(this.layoutDraft);
       this.editingLayout = false;
       this.message = 'Layout do perfil salvo.';
-    } catch { this.message = 'Não foi possível salvar o layout.'; }
+    } catch (erro) { this.message = mensagemDaApi(erro, 'Não foi possível salvar o layout.'); }
     this.savingLayout = false;
     this.cdr.detectChanges();
   }
@@ -720,33 +766,9 @@ export class PublicProfile implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  isBlockImageUrlInputOpen(block: PerfilBloco, destino: 'conteudo' | 'fundo') {
-    return this.blockImageUrlInput?.blockId === block.id && this.blockImageUrlInput.destino === destino;
-  }
-
-  toggleBlockImageUrlInput(block: PerfilBloco, destino: 'conteudo' | 'fundo') {
-    if (this.isBlockImageUrlInputOpen(block, destino)) {
-      this.blockImageUrlInput = null;
-      return;
-    }
-    this.blockImageUrlInput = { blockId: block.id, destino };
-    this.blockImageUrlDraft = '';
-  }
-
-  useBlockImageUrl(block: PerfilBloco, destino: 'conteudo' | 'fundo') {
-    const url = this.normalizarUrlImagem(this.blockImageUrlDraft);
-    if (!url) {
-      this.message = 'Informe uma URL de imagem valida, com http:// ou https://.';
-      return;
-    }
-    this.blockImageUrlInput = null;
-    if (destino === 'fundo') {
-      block.valorFundo = url;
-      return;
-    }
-    this.startBlockImageEdit(block, null, url);
-  }
-
+  // Nao existe mais "Usar URL" pra imagem de bloco (issue #25): imagem de outro site fazia todo
+  // visitante do perfil carregar a URL (vazando IP) e permitia hotlink de conteudo improprio. So
+  // upload pro bucket do proprio usuario; o backend recusa URL externa nova (ValidadorBlocos).
   blockImageUrl(block: PerfilBloco): string {
     return this.blockImageData(block).url;
   }
@@ -1025,10 +1047,6 @@ export class PublicProfile implements OnInit, OnDestroy {
     } catch {
       return null;
     }
-  }
-
-  private normalizarUrlImagem(endereco: string): string | null {
-    return this.normalizarUrlLink(endereco);
   }
 
   // Layout de quem nunca editou o perfil. A ordem segue a hierarquia do redesign: destaque visual

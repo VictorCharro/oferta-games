@@ -34,8 +34,9 @@ class ServicoPerfis {
   private final RepositorioAtividadesPerfil atividades;
   private final RepositorioBlocosPerfil blocos;
   private final RepositorioJogos jogos;
+  private final ValidadorBlocos validador;
 
-  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam, ServicoConexoesXbox xbox, RepositorioFavoritosPerfil favoritosPerfil, RepositorioColecoesPerfil colecoesPerfil, RepositorioAtividadesPerfil atividades, RepositorioBlocosPerfil blocos, RepositorioJogos jogos) { this.perfis = perfis; this.steam = steam; this.xbox = xbox; this.favoritosPerfil = favoritosPerfil; this.colecoesPerfil = colecoesPerfil; this.atividades = atividades; this.blocos = blocos; this.jogos = jogos; }
+  ServicoPerfis(RepositorioPerfis perfis, ServicoConexoesSteam steam, ServicoConexoesXbox xbox, RepositorioFavoritosPerfil favoritosPerfil, RepositorioColecoesPerfil colecoesPerfil, RepositorioAtividadesPerfil atividades, RepositorioBlocosPerfil blocos, RepositorioJogos jogos, com.fasterxml.jackson.databind.ObjectMapper json) { this.perfis = perfis; this.steam = steam; this.xbox = xbox; this.favoritosPerfil = favoritosPerfil; this.colecoesPerfil = colecoesPerfil; this.atividades = atividades; this.blocos = blocos; this.jogos = jogos; this.validador = new ValidadorBlocos(json); }
 
   RepositorioPerfis.Perfil proprio(String usuarioId) { return perfis.buscarPorUsuario(usuarioId).orElse(null); }
 
@@ -65,8 +66,7 @@ class ServicoPerfis {
 
   private static String validarUrlPropriaPasta(String usuarioId, String url, String mensagemErro) {
     String valor = url == null ? "" : url.trim();
-    String padrao = "^https://[a-z0-9-]+\\.supabase\\.co/storage/v1/object/public/avatars/" + java.util.regex.Pattern.quote(usuarioId) + "/[^\\s]{1,900}$";
-    if (!valor.matches(padrao)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, mensagemErro);
+    if (!ValidadorBlocos.urlDoProprioBucket(usuarioId, valor)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, mensagemErro);
     return valor;
   }
 
@@ -86,14 +86,24 @@ class ServicoPerfis {
     // lido pelo tipo correspondente, entao um valor de outro vocabulario e inerte - por isso a
     // validacao aqui aceita o conjunto todo em vez de cruzar com o tipo.
     for (RepositorioBlocosPerfil.BlocoPerfil bloco : entrada) {
-      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("favoritos", "biblioteca", "atividade", "platinados", "wishlist", "conquistas-recentes", "mais-jogados", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$")) || (bloco.visualizacao() != null && !Set.of("cards", "lista", "proporcao", "redimensionar").contains(bloco.visualizacao()))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
+      if (bloco == null || bloco.id() == null || bloco.tipo() == null || bloco.tipo() == null || bloco.tamanho() == null || bloco.tipoFundo() == null || !bloco.id().matches("^[a-z0-9-]{3,60}$") || !Set.of("favoritos", "biblioteca", "atividade", "platinados", "wishlist", "conquistas-recentes", "mais-jogados", "texto", "imagem", "links").contains(bloco.tipo()) || !Set.of("pequeno", "medio", "largo", "completo").contains(bloco.tamanho()) || !Set.of("padrao", "cor", "imagem", "gradiente").contains(bloco.tipoFundo()) || bloco.opacidade() < 0 || bloco.opacidade() > 85 || (bloco.tipoFundo().equals("cor") && (bloco.valorFundo() == null || !bloco.valorFundo().matches("^#[0-9a-fA-F]{6}$"))) || (bloco.corTexto() != null && !bloco.corTexto().matches("^#[0-9a-fA-F]{6}$")) || (bloco.visualizacao() != null && !Set.of("cards", "lista", "proporcao", "redimensionar").contains(bloco.visualizacao()))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bloco de perfil invalido");
+    }
+    // Conteudo (texto, links, imagens, gradiente) numa segunda passada, com mensagem especifica:
+    // aqui o dono precisa saber O QUE corrigir. Ver ValidadorBlocos (issue #25).
+    Map<String, RepositorioBlocosPerfil.BlocoPerfil> anteriores = blocos.listar(usuarioId).stream()
+        .collect(java.util.stream.Collectors.toMap(RepositorioBlocosPerfil.BlocoPerfil::id, b -> b, (a, b) -> a));
+    for (RepositorioBlocosPerfil.BlocoPerfil bloco : entrada) {
+      validador.validar(usuarioId, bloco, anteriores).ifPresent(problema -> {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, problema);
+      });
     }
     blocos.substituir(usuarioId, entrada);
   }
 
   PerfilPublico publico(String handle, String visitanteId) {
     RepositorioPerfis.Perfil perfil = perfis.buscarPorHandle(normalizarHandleObrigatorio(handle)).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    if (!perfil.publico() && !perfil.usuarioId().equals(visitanteId)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    // Privado ou bloqueado pela moderacao: 404 pra quem nao e o dono (sem revelar qual dos dois).
+    if ((!perfil.publico() || perfil.bloqueado()) && !perfil.usuarioId().equals(visitanteId)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     ServicoConexoesSteam.StatusConexaoSteam status = steam.status(perfil.usuarioId());
     ServicoConexoesXbox.StatusConexaoXbox statusXbox = xbox.status(perfil.usuarioId());
     boolean dono = perfil.usuarioId().equals(visitanteId);
@@ -142,7 +152,7 @@ class ServicoPerfis {
     RepositorioPerfis.Perfil perfil = perfis.buscarPorHandle(normalizarHandleObrigatorio(handle))
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     boolean dono = perfil.usuarioId().equals(visitanteId);
-    if (!perfil.publico() && !dono) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    if ((!perfil.publico() || perfil.bloqueado()) && !dono) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     if (!steam.status(perfil.usuarioId()).conectada()) return new ResultadoAtualizacao("sem_conexao", null);
     if (!steam.reservarAtualizacaoPublica(perfil.usuarioId())) return new ResultadoAtualizacao("aguarde", null);
     return new ResultadoAtualizacao("agendada", perfil.usuarioId());

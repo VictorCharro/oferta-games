@@ -1,6 +1,6 @@
 package com.ofertagames.backend.administracao;
 
-import com.ofertagames.backend.autenticacao.ServicoAutenticacao;
+import com.ofertagames.backend.autenticacao.Administradores;
 import com.ofertagames.backend.instantgaming.ServicoInstantGaming;
 import com.ofertagames.backend.jogos.RepositorioJogos;
 import com.ofertagames.backend.jogos.ServicoCatalogo;
@@ -23,9 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/admin")
 public class ControladorAdministracao {
-  private static final String UID_ADMINISTRADOR = "0a6eb06b-756e-4434-899b-33420bed8609";
-
-  private final ServicoAutenticacao autenticacao;
+  private final Administradores administradores;
   private final ServicoExecucaoColeta execucao;
   private final ServicoSincronizacao sincronizacao;
   private final RepositorioJogos jogos;
@@ -34,7 +32,7 @@ public class ControladorAdministracao {
   private final TaskExecutor executorManual;
 
   ControladorAdministracao(
-      ServicoAutenticacao autenticacao,
+      Administradores administradores,
       ServicoExecucaoColeta execucao,
       ServicoSincronizacao sincronizacao,
       RepositorioJogos jogos,
@@ -42,7 +40,7 @@ public class ControladorAdministracao {
       ServicoInstantGaming instantGaming,
       @Qualifier("executorColetaManual") TaskExecutor executorManual
   ) {
-    this.autenticacao = autenticacao;
+    this.administradores = administradores;
     this.execucao = execucao;
     this.sincronizacao = sincronizacao;
     this.jogos = jogos;
@@ -104,11 +102,7 @@ public class ControladorAdministracao {
   }
 
   private void exigirAdministrador(String autorizacao) {
-    String usuarioId = autenticacao.buscarUsuarioPeloCabecalho(autorizacao)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-    if (!UID_ADMINISTRADOR.equals(usuarioId)) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-    }
+    administradores.exigir(autorizacao);
   }
 
   private static StatusColetaAdministrativa mapearStatus(RegistroColeta status) {

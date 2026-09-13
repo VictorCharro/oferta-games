@@ -12,6 +12,30 @@
     <p class="message success" *ngIf="aviso">{{ aviso }}</p>
     <p class="message error" *ngIf="error">{{ error }}</p>
 
+    <section class="preencher-jogo denuncias">
+      <div>
+        <p class="label">Moderação</p>
+        <h2>Denúncias abertas ({{ denuncias.length }})</h2>
+        <p class="hint" *ngIf="!denuncias.length">Nenhuma denúncia pendente.</p>
+      </div>
+      <ul *ngIf="denuncias.length" class="lista-denuncias">
+        <li *ngFor="let d of denuncias">
+          <div>
+            <a *ngIf="d.handle" [href]="'/' + d.handle" target="_blank" rel="noopener"><strong>/{{ d.handle }}</strong></a>
+            <span *ngIf="!d.handle">(perfil sem URL)</span>
+            <small> · {{ d.totalDoPerfil }} denúncia(s) · {{ d.criadaEm | date:'dd/MM HH:mm' }}</small>
+            <small *ngIf="d.perfilBloqueado" class="bloqueado"> · BLOQUEADO</small>
+            <p>{{ d.motivo }}</p>
+          </div>
+          <div class="acoes">
+            <button class="btn-outline" type="button" (click)="resolverDenuncia(d, false)" [disabled]="moderandoId === d.id">Resolver sem ação</button>
+            <button *ngIf="d.handle && !d.perfilBloqueado" class="btn-outline perigo" type="button" (click)="resolverDenuncia(d, true)" [disabled]="moderandoId === d.id">Bloquear perfil</button>
+            <button *ngIf="d.handle && d.perfilBloqueado" class="btn-outline" type="button" (click)="desbloquear(d.handle)">Desbloquear</button>
+          </div>
+        </li>
+      </ul>
+    </section>
+
     <section class="preencher-jogo">
       <div>
         <p class="label">Jogo especifico</p>

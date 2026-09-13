@@ -141,6 +141,12 @@
 .hero-menu { position: absolute; top: calc(100% + 7px); right: 0; z-index: 30; width: 268px; display: flex; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card); box-shadow: 0 16px 34px rgba(0, 0, 0, .45); }
 .hero-menu-opcao { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); cursor: pointer; font: inherit; text-align: left; }
 .hero-menu-opcao:hover { background: var(--bg-card-hover); }
+.denuncia-menu { gap: 8px; padding: 12px; }
+.denuncia-menu strong { color: var(--text-primary); font-size: 14px; }
+.denuncia-menu small { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+.denuncia-menu textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); color: var(--text-primary); font: inherit; font-size: 13px; resize: vertical; }
+.denuncia-erro { margin: 0; color: var(--color-red); font-size: 12px; }
+.denuncia-acoes { display: flex; justify-content: flex-end; gap: 6px; }
 .hero-menu-opcao strong { color: var(--text-primary); font-size: 13px; font-weight: 700; }
 .hero-menu-opcao:hover strong { color: var(--color-purple); }
 .hero-menu-opcao small { color: var(--text-muted); font-size: 11px; line-height: 1.35; }
@@ -166,8 +172,6 @@
 .block-menu-campo small { color: var(--text-muted); font-size: 10px; }
 .block-menu-campo input, .block-menu-campo textarea { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font: inherit; font-size: 12px; resize: vertical; }
 .block-menu-campo input:focus, .block-menu-campo textarea:focus { outline: none; border-color: var(--color-purple); }
-.block-menu-campo-url { display: flex; gap: 6px; padding: 4px 8px 6px; }
-.block-menu-campo-url input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font: inherit; font-size: 12px; }
 .block-menu-dica { margin: 0 8px 4px; font-size: 10px; color: var(--text-muted); }
 
 .dica-imagem { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 14px; padding: 8px 10px; border: 1px solid rgba(41, 168, 224, .22); border-radius: 8px; background: rgba(41, 168, 224, .08); color: var(--text-secondary); font-size: 11px; line-height: 1.5; }

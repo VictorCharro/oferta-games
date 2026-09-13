@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdministracaoService, ResultadoPreenchimentoJogo, StatusAdministrativoColeta, StatusColeta, TipoColeta } from '../../services/administracao';
+import { AdministracaoService, DenunciaAberta, ResultadoPreenchimentoJogo, StatusAdministrativoColeta, StatusColeta, TipoColeta } from '../../services/administracao';
 
 type Aba = 'precos-steam' | 'detalhes-conquistas' | 'instant-gaming';
 
@@ -62,10 +62,41 @@ export class AdminColeta implements OnInit, OnDestroy {
     ].some(coleta => coleta.emExecucao);
   }
 
+  // Denuncias de perfil (issue #25). Carregadas junto com o status, sem polling proprio.
+  denuncias: DenunciaAberta[] = [];
+  moderandoId: number | null = null;
+
+  async resolverDenuncia(denuncia: DenunciaAberta, bloquearPerfil: boolean) {
+    this.moderandoId = denuncia.id;
+    this.cdr.detectChanges();
+    try {
+      if (bloquearPerfil && denuncia.handle) await this.administracao.definirBloqueio(denuncia.handle, true);
+      await this.administracao.resolverDenuncia(denuncia.id);
+      this.aviso = bloquearPerfil ? `Perfil /${denuncia.handle} bloqueado e denúncia resolvida.` : 'Denúncia resolvida.';
+      this.denuncias = await this.administracao.listarDenuncias();
+    } catch {
+      this.error = 'Nao foi possivel moderar essa denuncia.';
+    }
+    this.moderandoId = null;
+    this.cdr.detectChanges();
+  }
+
+  async desbloquear(handle: string) {
+    try {
+      await this.administracao.definirBloqueio(handle, false);
+      this.aviso = `Perfil /${handle} desbloqueado.`;
+      this.denuncias = await this.administracao.listarDenuncias();
+    } catch {
+      this.error = 'Nao foi possivel desbloquear o perfil.';
+    }
+    this.cdr.detectChanges();
+  }
+
   async carregar(exibirCarregamento = true) {
     if (exibirCarregamento) this.loading = true;
     try {
       this.status = await this.administracao.consultarColeta();
+      if (exibirCarregamento) this.denuncias = await this.administracao.listarDenuncias().catch(() => this.denuncias);
       this.error = '';
     } catch {
       this.error = 'Nao foi possivel consultar o status da coleta.';

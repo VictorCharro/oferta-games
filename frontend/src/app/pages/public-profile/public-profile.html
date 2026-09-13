@@ -64,6 +64,27 @@
       <button *ngIf="isOwner && editingLayout" type="button" class="hero-btn" (click)="cancelLayoutEdit()" title="Sair do modo de edição">
         <span aria-hidden="true">✕</span> Sair da edição
       </button>
+      <!-- Denuncia (issue #25): so pra quem nao e o dono, e fora do preview do editor. -->
+      <div *ngIf="!isOwner && !previewHandle" class="hero-menu-wrap">
+        <button type="button" class="hero-btn icon-only" (click)="abrirDenuncia($event)" aria-label="Denunciar perfil" title="Denunciar perfil">
+          <span aria-hidden="true">⚑</span>
+        </button>
+        <div *ngIf="denunciaAberta" class="hero-menu denuncia-menu" (click)="$event.stopPropagation()">
+          <ng-container *ngIf="!denunciaEnviada; else denunciaOk">
+            <strong>Denunciar perfil</strong>
+            <small>Conte o que há de errado (conteúdo impróprio, golpe, se passando por alguém...). A denúncia é anônima para o dono do perfil.</small>
+            <textarea [(ngModel)]="motivoDenuncia" rows="3" maxlength="500" placeholder="Motivo"></textarea>
+            <p *ngIf="erroDenuncia" class="denuncia-erro">{{ erroDenuncia }}</p>
+            <div class="denuncia-acoes">
+              <button type="button" class="hero-btn" (click)="denunciaAberta = false">Cancelar</button>
+              <button type="button" class="hero-btn" (click)="enviarDenuncia()" [disabled]="enviandoDenuncia || motivoDenuncia.trim().length < 3">
+                {{ enviandoDenuncia ? 'Enviando...' : 'Enviar' }}
+              </button>
+            </div>
+          </ng-container>
+          <ng-template #denunciaOk><strong>Denúncia enviada.</strong><small>Obrigado. Vamos analisar.</small></ng-template>
+        </div>
+      </div>
       <!-- Sem atalho de Configuracoes aqui: o acesso e so pelo dropdown do usuario na topbar, pra
            nao ter dois caminhos pra mesma tela no mesmo canto. -->
       <button
@@ -325,11 +346,6 @@
               <p class="block-menu-titulo">Imagem</p>
               <input #contentImageInput class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" (change)="onBlockImageSelected($event, block)" />
               <button type="button" class="block-menu-opcao" (click)="contentImageInput.click()">{{ blockImageUrl(block) ? 'Trocar imagem' : 'Escolher imagem' }}</button>
-              <button type="button" class="block-menu-opcao" (click)="toggleBlockImageUrlInput(block, 'conteudo')">Usar URL</button>
-              <div *ngIf="isBlockImageUrlInputOpen(block, 'conteudo')" class="block-menu-campo-url">
-                <input [(ngModel)]="blockImageUrlDraft" placeholder="https://exemplo.com/imagem.jpg" aria-label="URL da imagem" />
-                <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'conteudo')">Continuar</button>
-              </div>
               <button *ngIf="blockImageUrl(block)" type="button" class="block-menu-opcao" (click)="startBlockImageEdit(block); fecharMenuDoBloco()">Ajustar enquadramento</button>
             </ng-container>
 
@@ -373,11 +389,6 @@
             <ng-container *ngIf="block.tipoFundo === 'imagem'">
               <input #backgroundImageInput class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" (change)="onBlockImageSelected($event, block, 'fundo')" />
               <button type="button" class="block-menu-opcao" (click)="backgroundImageInput.click()">{{ block.valorFundo ? 'Trocar imagem de fundo' : 'Escolher imagem de fundo' }}</button>
-              <button type="button" class="block-menu-opcao" (click)="toggleBlockImageUrlInput(block, 'fundo')">Usar URL</button>
-              <div *ngIf="isBlockImageUrlInputOpen(block, 'fundo')" class="block-menu-campo-url">
-                <input [(ngModel)]="blockImageUrlDraft" placeholder="https://exemplo.com/imagem.jpg" aria-label="URL da imagem de fundo" />
-                <button type="button" class="save-btn" (click)="useBlockImageUrl(block, 'fundo')">Usar URL</button>
-              </div>
             </ng-container>
 
             <div class="block-menu-cor">

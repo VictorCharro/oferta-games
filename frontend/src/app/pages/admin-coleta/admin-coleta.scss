@@ -117,3 +117,14 @@ dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top
 .preencher-jogo-resultado li.aviso-linha .preencher-jogo-icone { background: rgba(240, 180, 41, .16); }
 
 @media (max-width: 760px) { .page-header, .queue-card { align-items: flex-start; flex-direction: column; } .status-grid { grid-template-columns: 1fr; } .queue-metrics { width: 100%; grid-template-columns: 1fr; gap: 14px; } .preencher-jogo-form { flex-direction: column; } .preencher-jogo-form input { max-width: none; } }
+
+// Moderacao de perfis (issue #25)
+.denuncias { flex-direction: column; align-items: stretch; }
+.lista-denuncias { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.lista-denuncias li { display: flex; justify-content: space-between; gap: 16px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; }
+.lista-denuncias p { margin: 6px 0 0; color: var(--text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
+.lista-denuncias small { color: var(--text-muted); }
+.lista-denuncias .bloqueado { color: var(--color-red); font-weight: 700; }
+.lista-denuncias .acoes { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+.lista-denuncias .perigo { color: var(--color-red); border-color: rgba(239, 68, 68, .5); }
+@media (max-width: 650px) { .lista-denuncias li { flex-direction: column; } .lista-denuncias .acoes { flex-direction: row; flex-wrap: wrap; } }

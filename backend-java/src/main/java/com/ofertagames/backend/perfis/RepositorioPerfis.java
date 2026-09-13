@@ -10,7 +10,7 @@ class RepositorioPerfis {
 
   RepositorioPerfis(JdbcClient jdbc) { this.jdbc = jdbc; }
 
-  private static final String COLUNAS = "user_id::text, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games, show_recent_activity, avatar_zoom, avatar_position_x, avatar_position_y, banner_url, banner_zoom, banner_position_x, banner_position_y, show_collections, show_steam_wishlist";
+  private static final String COLUNAS = "user_id::text, handle, display_name, bio, avatar_url, is_public, show_game_hours, show_achievements, show_library, show_favorite_games, show_recent_activity, avatar_zoom, avatar_position_x, avatar_position_y, banner_url, banner_zoom, banner_position_x, banner_position_y, show_collections, show_steam_wishlist, blocked_at IS NOT NULL";
 
   Optional<Perfil> buscarPorUsuario(String usuarioId) {
     return jdbc.sql("SELECT " + COLUNAS + " FROM profiles WHERE user_id = CAST(:usuarioId AS uuid)")
@@ -18,7 +18,7 @@ class RepositorioPerfis {
   }
 
   Optional<Perfil> buscarPublicoPorHandle(String handle) {
-    return jdbc.sql("SELECT " + COLUNAS + " FROM profiles WHERE handle = :handle AND is_public = true")
+    return jdbc.sql("SELECT " + COLUNAS + " FROM profiles WHERE handle = :handle AND is_public = true AND blocked_at IS NULL")
         .param("handle", handle).query((rs, linha) -> mapear(rs)).optional();
   }
 
@@ -61,9 +61,20 @@ class RepositorioPerfis {
   }
 
   private static Perfil mapear(java.sql.ResultSet rs) throws java.sql.SQLException {
-    return new Perfil(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getBoolean(6), rs.getBoolean(7), rs.getBoolean(8), rs.getBoolean(9), rs.getBoolean(10), rs.getBoolean(11), rs.getDouble(12), rs.getInt(13), rs.getInt(14), rs.getString(15), rs.getDouble(16), rs.getInt(17), rs.getInt(18), rs.getBoolean(19), rs.getBoolean(20));
+    return new Perfil(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getBoolean(6), rs.getBoolean(7), rs.getBoolean(8), rs.getBoolean(9), rs.getBoolean(10), rs.getBoolean(11), rs.getDouble(12), rs.getInt(13), rs.getInt(14), rs.getString(15), rs.getDouble(16), rs.getInt(17), rs.getInt(18), rs.getBoolean(19), rs.getBoolean(20), rs.getBoolean(21));
   }
 
-  record Perfil(String usuarioId, String handle, String nomeExibicao, String bio, String avatarUrl, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY, String bannerUrl, double bannerZoom, int bannerPosicaoX, int bannerPosicaoY, boolean mostrarColecoes, boolean mostrarWishlistSteam) {}
+  /**
+   * Bloqueio de moderacao (issue #25): o perfil some pra todo mundo menos o dono, e o dono nao
+   * consegue reverter — {@code salvar} nao toca em {@code blocked_at}.
+   */
+  int definirBloqueio(String handle, boolean bloqueado) {
+    return jdbc.sql("UPDATE profiles SET blocked_at = " + (bloqueado ? "coalesce(blocked_at, now())" : "NULL") + " WHERE handle = :handle")
+        .param("handle", handle).update();
+  }
+
+  // bloqueado: moderacao tirou o perfil do ar (ver definirBloqueio). Serializa no GET /me pro dono
+  // entender por que o link parou de funcionar.
+  record Perfil(String usuarioId, String handle, String nomeExibicao, String bio, String avatarUrl, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades, double avatarZoom, int avatarPosicaoX, int avatarPosicaoY, String bannerUrl, double bannerZoom, int bannerPosicaoX, int bannerPosicaoY, boolean mostrarColecoes, boolean mostrarWishlistSteam, boolean bloqueado) {}
   record DadosPerfil(String handle, String nomeExibicao, String bio, String avatarUrl, boolean publico, boolean mostrarHoras, boolean mostrarConquistas, boolean mostrarBiblioteca, boolean mostrarFavoritos, boolean mostrarAtividades, boolean mostrarColecoes) {}
 }
