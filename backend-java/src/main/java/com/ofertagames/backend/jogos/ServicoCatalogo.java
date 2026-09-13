@@ -1,6 +1,9 @@
 package com.ofertagames.backend.jogos;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ofertagames.backend.comum.GeradorSlug;
+import com.ofertagames.backend.comum.LimitePorJanela;
 import com.ofertagames.backend.comum.ParametrosPublicos;
 import com.ofertagames.backend.itad.ClienteItad;
 import com.ofertagames.backend.itad.ItemOfertaItad;
@@ -20,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -43,9 +48,28 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ServicoCatalogo {
+  private static final Logger logger = LoggerFactory.getLogger(ServicoCatalogo.class);
+
   // POST /api/games/{slug}/refresh nao exige login (qualquer visitante ve o botao "Atualizar
-  // precos"); este cooldown por jogo e o unico freio contra alguem martelando o botao.
+  // precos"); este cooldown por jogo segura alguem martelando o botao de UM jogo.
   private static final Duration COOLDOWN_REFRESH_MANUAL = Duration.ofMinutes(5);
+
+  /**
+   * ... e este teto global segura quem percorre MUITOS jogos (issue #24): com 110 mil jogos o
+   * cooldown por jogo nao limitava nada, e cada refresh e uma chamada a ITAD (mais uma por DLC).
+   * 120 por hora e folgado pro uso real do botao; acima disso a resposta e 429 com Retry-After,
+   * igual ao cooldown, entao o frontend ja sabe mostrar a contagem.
+   */
+  private final LimitePorJanela limiteRefreshManual = new LimitePorJanela(120, Duration.ofHours(1));
+
+  /** Chamadas de busca na ITAD por hora, somando todos os visitantes. */
+  private final LimitePorJanela limiteBuscasItad = new LimitePorJanela(200, Duration.ofHours(1));
+
+  /** Termos (normalizados) que ja voltaram vazios da ITAD: nao pergunta de novo por 1h. */
+  private final Cache<String, Boolean> buscasSemResultadoItad = Caffeine.newBuilder()
+      .expireAfterWrite(Duration.ofHours(1))
+      .maximumSize(20_000)
+      .build();
 
   private final RepositorioJogos jogos;
   private final ClienteItad itad;
@@ -83,13 +107,28 @@ public class ServicoCatalogo {
 
     // Mesma normalizacao do GET /api/games (caixa e espacos nao mudam o ILIKE), pra "Zelda" e
     // "zelda  " caírem na mesma entrada de cache.
-    List<ResumoJogo> locais = jogos.listar(0, 20, "rank", "all", "all", null, null, null, ParametrosPublicos.busca(termo), List.of());
+    String normalizado = ParametrosPublicos.busca(termo);
+    List<ResumoJogo> locais = jogos.listar(0, 20, "rank", "all", "all", null, null, null, normalizado, List.of());
     if (!locais.isEmpty()) {
       return locais;
     }
 
+    // Fallback na ITAD so com freio (issue #24): a rota e anonima, e cada termo sem resultado local
+    // gastava uma chamada da chave e ainda gravava no catalogo tudo que a ITAD devolvesse. Um script
+    // com palavras aleatorias esgotava a cota e enchia o banco de lixo.
+    // - termo que ja nao achou nada na ITAD nao pergunta de novo por 1h;
+    // - acima do teto global por hora, responde so com o que existe localmente (vazio).
+    if (normalizado == null || buscasSemResultadoItad.getIfPresent(normalizado) != null) {
+      return List.of();
+    }
+    if (!limiteBuscasItad.tentarConsumir()) {
+      logger.warn("Teto de buscas na ITAD por hora atingido; respondendo so com o catalogo local");
+      return List.of();
+    }
+
     List<ResultadoBuscaItad> encontrados = Objects.requireNonNullElse(itad.buscarJogos(termo), List.of());
     if (encontrados.isEmpty()) {
+      buscasSemResultadoItad.put(normalizado, Boolean.TRUE);
       return List.of();
     }
 
@@ -131,6 +170,9 @@ public class ServicoCatalogo {
         long restanteSegundos = COOLDOWN_REFRESH_MANUAL.minus(decorrido).toSeconds() + 1;
         throw new RefreshRecenteException(restanteSegundos);
       }
+    }
+    if (!limiteRefreshManual.tentarConsumir()) {
+      throw new RefreshRecenteException(limiteRefreshManual.segundosAteLiberar());
     }
     jogos.marcarRefreshManual(jogo.id());
 
@@ -203,13 +245,20 @@ public class ServicoCatalogo {
    * que nao filtra lojas bloqueadas — ver o Javadoc de la. Ao final marca todos como
    * sincronizados, o que os manda pro fim da fila.
    *
-   * <p>Jogo do lote que a ITAD nao reconhecer e simplesmente ignorado; jogo reconhecido mas sem
+   * <p>Jogo do lote que a ITAD nao devolver tem as ofertas <b>preservadas</b>; jogo devolvido mas sem
    * nenhuma oferta valida tem as ofertas ITAD apagadas (ver
    * {@link RepositorioJogos#substituirOfertasItadEmLote}).
    *
-   * @throws IllegalStateException quando a ITAD nao devolve nada ou nada reconhecivel — falha o
-   *     lote inteiro de proposito, pra o job registrar erro em vez de marcar como sincronizado um
-   *     lote que nao foi atualizado
+   * <p><b>Todo jogo consultado e marcado como sincronizado</b>, inclusive os que a ITAD nao devolveu
+   * (issue #23). Ela simplesmente omite jogo sem preco no Brasil (fora de venda no pais, removido,
+   * id mesclado). Antes esses jogos ficavam sem marca e, como a fila ordena por
+   * {@code last_price_sync_at NULLS FIRST}, voltavam pro comeco toda rodada; com o tempo se juntaram
+   * em lotes INTEIROS sem preco — a ITAD respondia vazio, o lote "falhava" 3 vezes (30s de espera) e
+   * 588 jogos ficaram parados ha semanas, gerando 806 linhas de erro por dia. Marcados, eles vao pro
+   * fim da fila e sao tentados de novo na proxima volta completa, sem travar ninguem.
+   *
+   * <p>Resposta vazia <b>nao</b> e erro: falha de verdade (HTTP, timeout, chave) ja estoura como
+   * excecao no {@code RestClient} e continua sendo re-tentada pelo job.
    */
   public ResultadoAtualizacaoLote atualizarPrecosEmLote(List<RepositorioJogos.JogoParaSincronizar> jogosParaAtualizar) {
     if (jogosParaAtualizar == null || jogosParaAtualizar.isEmpty()) {
@@ -228,9 +277,6 @@ public class ServicoCatalogo {
 
     List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(
         itad.buscarPrecos(new ArrayList<>(jogosPorIdItad.keySet())), List.of());
-    if (resultados.isEmpty()) {
-      throw new IllegalStateException("A ITAD nao retornou precos para o lote da coleta agendada");
-    }
 
     Map<Long, List<OfertaParaSalvar>> ofertasPorJogo = new LinkedHashMap<>();
     for (ResultadoPrecoItad resultado : resultados) {
@@ -267,18 +313,23 @@ public class ServicoCatalogo {
       ofertasPorJogo.put(jogoId, ofertasAtuais);
     }
 
-    if (ofertasPorJogo.isEmpty()) {
-      throw new IllegalStateException("A ITAD nao retornou jogos reconhecidos para o lote da coleta agendada");
+    int ofertasAtualizadas = 0;
+    if (!ofertasPorJogo.isEmpty()) {
+      List<Long> jogosIds = new ArrayList<>(ofertasPorJogo.keySet());
+      Map<Long, java.math.BigDecimal> precosAnteriores = jogos.precosMinimos(jogosIds);
+      ofertasAtualizadas = jogos.substituirOfertasItadEmLote(ofertasPorJogo);
+      Map<Long, java.math.BigDecimal> precosAtuais = jogos.precosMinimos(jogosIds);
+      for (Long jogoId : jogosIds) {
+        notificacoes.registrarQueda(jogoId, precosAnteriores.get(jogoId), precosAtuais.get(jogoId));
+      }
     }
 
-    List<Long> jogosIds = new ArrayList<>(ofertasPorJogo.keySet());
-    Map<Long, java.math.BigDecimal> precosAnteriores = jogos.precosMinimos(jogosIds);
-    int ofertasAtualizadas = jogos.substituirOfertasItadEmLote(ofertasPorJogo);
-    Map<Long, java.math.BigDecimal> precosAtuais = jogos.precosMinimos(jogosIds);
-    for (Long jogoId : jogosIds) {
-      notificacoes.registrarQueda(jogoId, precosAnteriores.get(jogoId), precosAtuais.get(jogoId));
+    int semPreco = jogosPorIdItad.size() - ofertasPorJogo.size();
+    if (semPreco > 0) {
+      logger.info("Lote de precos: {} de {} jogos sem preco no Brasil na ITAD (ofertas mantidas, voltam no proximo ciclo)",
+          semPreco, jogosPorIdItad.size());
     }
-    jogos.marcarPrecosSincronizados(new ArrayList<>(ofertasPorJogo.keySet()));
+    jogos.marcarPrecosSincronizados(new ArrayList<>(jogosPorIdItad.values()));
     return new ResultadoAtualizacaoLote(ofertasPorJogo.size(), ofertasAtualizadas);
   }
 

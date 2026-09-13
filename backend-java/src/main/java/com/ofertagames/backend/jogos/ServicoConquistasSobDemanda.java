@@ -1,5 +1,6 @@
 package com.ofertagames.backend.jogos;
 
+import com.ofertagames.backend.comum.LimitePorJanela;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
@@ -11,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -49,6 +51,13 @@ public class ServicoConquistasSobDemanda {
    * disparariam a mesma coleta em paralelo, multiplicando chamadas a Steam sem necessidade.
    */
   private final Set<Long> emAndamento = ConcurrentHashMap.newKeySet();
+
+  /**
+   * Coletas disparadas por visita, por hora, somando pagina de jogo e perfil. Cada uma faz de 2 a 4
+   * chamadas a Steam; 300/h fica bem abaixo do limite diario da Web API (100 mil) mesmo rodando o
+   * dia inteiro no teto, e acima do que o trafego organico pede.
+   */
+  private final LimitePorJanela limiteColetas = new LimitePorJanela(300, Duration.ofHours(1));
 
   /** Intervalo minimo entre dois preenchimentos completos do mesmo jogo. */
   private static final Duration INTERVALO_MINIMO = Duration.ofHours(12);
@@ -119,17 +128,41 @@ public class ServicoConquistasSobDemanda {
   private void agendarPreenchimentoDe(int steamAppId, String slug) {
     var jogo = jogos.buscarIdESteamAppIdPorSlug(slug).orElse(null);
     if (jogo == null || !emAndamento.add(jogo.id())) return;
+    if (!limiteColetas.tentarConsumir()) {
+      emAndamento.remove(jogo.id());
+      return;
+    }
     preenchidoEm.put(steamAppId, Instant.now());
-    executor.execute(() -> {
-      try {
-        log.info("Conquista fora do catalogo: refazendo o jogo {} (app {}) por inteiro", slug, steamAppId);
-        catalogo.preencherTudoDoJogo(slug);
-      } catch (RuntimeException erro) {
-        log.warn("Falha preenchendo tudo do jogo {}: {}", slug, erro.toString());
-      } finally {
-        emAndamento.remove(jogo.id());
-      }
+    enfileirar(jogo.id(), () -> {
+      log.info("Conquista fora do catalogo: refazendo o jogo {} (app {}) por inteiro", slug, steamAppId);
+      catalogo.preencherTudoDoJogo(slug);
     });
+  }
+
+  /**
+   * Manda pro executor e garante que a trava sai de {@code emAndamento} em QUALQUER desfecho —
+   * inclusive quando o executor recusa. Ele tem 1 thread e fila de 1: com a fila cheia o
+   * {@code execute} lanca, e antes a trava ficava presa ate o proximo restart. O jogo passava a
+   * responder "coletando" pra sempre e nunca era coletado.
+   *
+   * @return {@code false} se o executor recusou (fila cheia)
+   */
+  private boolean enfileirar(long jogoId, Runnable coleta) {
+    try {
+      executor.execute(() -> {
+        try {
+          coleta.run();
+        } catch (RuntimeException erro) {
+          log.warn("Falha na coleta sob demanda do jogo {}: {}", jogoId, erro.toString());
+        } finally {
+          emAndamento.remove(jogoId);
+        }
+      });
+      return true;
+    } catch (TaskRejectedException recusada) {
+      emAndamento.remove(jogoId);
+      return false;
+    }
   }
 
   public boolean agendarSeNecessario(String slug) {
@@ -145,16 +178,14 @@ public class ServicoConquistasSobDemanda {
         // Outra visita ja disparou: nao duplica a coleta, mas o frontend deve esperar por ela.
         return true;
       }
-      executor.execute(() -> {
-        try {
-          catalogo.coletarConquistasDoJogo(jogo.id(), jogo.steamAppId());
-        } catch (RuntimeException erro) {
-          log.warn("Falha coletando conquistas sob demanda do jogo {}: {}", jogo.id(), erro.toString());
-        } finally {
-          emAndamento.remove(jogo.id());
-        }
-      });
-      return true;
+      // Teto global por hora (issue #24): a rota e anonima e cada coleta gasta chamadas da chave
+      // da Steam. Percorrer slugs em massa nao pode esgotar a cota diaria. Acima do teto, o jogo so
+      // e coletado numa proxima visita — a pagina funciona igual, sem a aba de conquistas.
+      if (!limiteColetas.tentarConsumir()) {
+        emAndamento.remove(jogo.id());
+        return false;
+      }
+      return enfileirar(jogo.id(), () -> catalogo.coletarConquistasDoJogo(jogo.id(), jogo.steamAppId()));
     } catch (RuntimeException erro) {
       log.warn("Falha agendando conquistas sob demanda de {}: {}", slug, erro.toString());
       return false;

@@ -3,6 +3,7 @@ package com.ofertagames.backend.jogos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -225,5 +226,52 @@ class ServicoCatalogoTest {
     assertEquals(false, resultado.detalhesAtualizados());
     assertEquals(false, resultado.conquistasAtualizadas());
     verify(jogos, times(1)).marcarConquistasVerificadas(1L);
+  }
+
+  // Issue #24: termo que ja voltou vazio da ITAD nao gasta outra chamada da chave (nem com outra
+  // caixa/espacos, que a normalizacao junta na mesma chave).
+  @Test
+  void buscaSemResultadoNaITADNaoConsultaDeNovoOMesmoTermo() {
+    when(jogos.listar(anyInt(), anyInt(), anyString(), anyString(), anyString(), any(), any(), any(), any(), anyList()))
+        .thenReturn(List.of());
+    when(itad.buscarJogos(anyString())).thenReturn(List.of());
+
+    assertEquals(List.of(), servico.buscarComFallbackItad("jogo que nao existe"));
+    assertEquals(List.of(), servico.buscarComFallbackItad("  Jogo   que NAO existe "));
+
+    verify(itad, times(1)).buscarJogos(anyString());
+    verify(jogos, never()).salvarJogosItad(anyList());
+  }
+
+  // Issue #23: a ITAD omite jogo sem preco no Brasil. Antes o lote sem nenhum preco estourava
+  // excecao e ninguem era marcado, entao os mesmos jogos voltavam ao topo da fila pra sempre.
+  @Test
+  void loteSemNenhumPrecoNaITADMarcaTodosComoSincronizadosSemMexerNasOfertas() {
+    var lote = List.of(
+        new RepositorioJogos.JogoParaSincronizar(1L, "itad-1"),
+        new RepositorioJogos.JogoParaSincronizar(2L, "itad-2"));
+    when(itad.buscarPrecos(anyList())).thenReturn(List.of());
+
+    var resultado = servico.atualizarPrecosEmLote(lote);
+
+    assertEquals(0, resultado.jogosAtualizados());
+    verify(jogos, never()).substituirOfertasItadEmLote(any());
+    verify(jogos).marcarPrecosSincronizados(List.of(1L, 2L));
+  }
+
+  @Test
+  void loteParcialAtualizaQuemVeioEMarcaTambemQuemAITADOmitiu() {
+    var lote = List.of(
+        new RepositorioJogos.JogoParaSincronizar(1L, "itad-1"),
+        new RepositorioJogos.JogoParaSincronizar(2L, "itad-sem-preco-no-br"));
+    when(itad.buscarPrecos(anyList())).thenReturn(List.of(ofertaItad("itad-1", BigDecimal.TEN)));
+    when(jogos.substituirOfertasItadEmLote(any())).thenReturn(1);
+
+    var resultado = servico.atualizarPrecosEmLote(lote);
+
+    assertEquals(1, resultado.jogosAtualizados());
+    // So o jogo devolvido tem as ofertas substituidas; o omitido e so marcado.
+    verify(jogos).substituirOfertasItadEmLote(org.mockito.ArgumentMatchers.argThat(mapa -> mapa.keySet().equals(java.util.Set.of(1L))));
+    verify(jogos).marcarPrecosSincronizados(List.of(1L, 2L));
   }
 }
