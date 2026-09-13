@@ -121,7 +121,10 @@ app-public-profile .profile-block { display: flex; flex-direction: column; heigh
    subiu pra 600px o bloco de conquistas ficou com 5 itens e um terco vazio. Assim qualquer
    --altura-bloco funciona sem recalibrar. Ordem de leitura: desce a 1a coluna, depois a 2a. */
 app-public-profile .profile-block .profile-favorite-list,
-app-public-profile .profile-block .achievement-list { display: flex; flex: 1; flex-flow: column wrap; align-content: flex-start; gap: 8px 10px; min-height: 0; overflow: hidden; }
+app-public-profile .profile-block .achievement-list { display: flex; flex: 1; flex-flow: column wrap; align-content: flex-start; gap: 7px 10px; min-height: 0; overflow: hidden; }
+/* gap vertical 7px, nao 8: no medio a lista tem 519px e 8 conquistas (58px) com vao de 8px somam
+   520 - o 8o item sumia por 1px, deixando uma sobra visivel. Com 7px somam 513 e cabem 8 por
+   coluna (16 no largo/completo). */
 app-public-profile .profile-block .profile-favorite-list > *,
 app-public-profile .profile-block .achievement-list > * { flex: none; width: 100%; }
 app-public-profile .profile-block > p { min-height: 0; overflow: auto; }

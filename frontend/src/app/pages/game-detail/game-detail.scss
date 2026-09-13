@@ -1978,6 +1978,12 @@
   vertical-align: middle;
 }
 
+// Na tabela de ofertas o cupom fica SEMPRE embaixo do preco. Inline-block ele so quebrava de
+// linha quando a coluna era estreita: com zoom reduzido (ou tela larga) cabia do lado e a linha
+// ficava desalinhada das outras. block + fit-content + margin auto = linha propria, centralizado
+// sob o preco. O @media mobile mais abaixo ainda esconde este selo (la ele vai pra baixo da loja).
+.offer-row .price-current .voucher-badge { display: block; width: fit-content; margin: 4px auto 0; }
+
 .hero-best .voucher-badge {
   margin-left: 0;
   width: fit-content;
