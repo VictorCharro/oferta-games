@@ -34,15 +34,18 @@ class RepositorioContato {
         .single();
   }
 
-  List<MensagemAberta> listarAbertas() {
+  /** Abertas (todas, ate 200) ou lidas (as 100 mais recentes, pra consulta). */
+  List<MensagemAberta> listar(boolean lidas) {
     return jdbc.sql("""
         SELECT m.id, m.kind, m.message, m.reply_email, m.page_path, m.created_at, p.handle
         FROM contact_messages m
         LEFT JOIN profiles p ON p.user_id = m.user_id
-        WHERE m.resolved_at IS NULL
+        WHERE (m.resolved_at IS NOT NULL) = :lidas
         ORDER BY m.created_at DESC
-        LIMIT 200
+        LIMIT :limite
         """)
+        .param("lidas", lidas)
+        .param("limite", lidas ? 100 : 200)
         .query((rs, linha) -> new MensagemAberta(
             rs.getLong("id"),
             rs.getString("kind"),

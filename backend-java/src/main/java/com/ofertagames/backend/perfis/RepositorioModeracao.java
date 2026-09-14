@@ -66,6 +66,21 @@ class RepositorioModeracao {
         .list();
   }
 
+  List<PerfilBloqueado> listarBloqueados() {
+    return jdbc.sql("""
+        SELECT handle, display_name, blocked_at
+        FROM profiles
+        WHERE blocked_at IS NOT NULL
+        ORDER BY blocked_at DESC
+        LIMIT 200
+        """)
+        .query((rs, linha) -> new PerfilBloqueado(
+            rs.getString("handle"),
+            rs.getString("display_name"),
+            rs.getObject("blocked_at", OffsetDateTime.class)))
+        .list();
+  }
+
   int resolver(long id) {
     return jdbc.sql("UPDATE profile_reports SET resolved_at = now() WHERE id = :id AND resolved_at IS NULL")
         .param("id", id)
@@ -74,4 +89,6 @@ class RepositorioModeracao {
 
   record DenunciaAberta(long id, String handle, String nomeExibicao, boolean perfilBloqueado, String motivo,
       OffsetDateTime criadaEm, long totalDoPerfil) {}
+
+  record PerfilBloqueado(String handle, String nomeExibicao, OffsetDateTime bloqueadoEm) {}
 }

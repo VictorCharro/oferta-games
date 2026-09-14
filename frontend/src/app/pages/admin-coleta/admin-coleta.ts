@@ -1,9 +1,23 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdministracaoService, DenunciaAberta, MensagemContato,ResultadoPreenchimentoJogo, StatusAdministrativoColeta, StatusColeta, TipoColeta } from '../../services/administracao';
+import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import {
+  AdministracaoService,
+  DenunciaAberta,
+  MensagemContato,
+  PerfilBloqueado,
+  ResultadoPreenchimentoJogo,
+  StatusAdministrativoColeta,
+  StatusColeta,
+  TipoColeta,
+} from '../../services/administracao';
+import { GameService, GameSummary } from '../../services/game';
 
-type Aba = 'precos-steam' | 'detalhes-conquistas' | 'instant-gaming';
+type Aba = 'geral' | 'moderacao' | 'mensagens' | 'coleta' | 'ferramentas';
+type GrupoColeta = 'precos-steam' | 'detalhes-conquistas' | 'instant-gaming';
+type FiltroMensagem = 'todas' | MensagemContato['tipo'] | 'lidas';
 
 interface CartaoColeta {
   titulo: string;
@@ -11,6 +25,30 @@ interface CartaoColeta {
   coleta: StatusColeta;
 }
 
+/** Denuncias do mesmo perfil juntas: moderar e decidir uma vez por perfil, nao por denuncia. */
+interface GrupoDenuncias {
+  handle: string | null;
+  nomeExibicao: string | null;
+  perfilBloqueado: boolean;
+  denuncias: DenunciaAberta[];
+  ultimaEm: string;
+}
+
+interface ItemAtencao {
+  tipo: 'erro' | 'denuncia' | 'mensagem';
+  titulo: string;
+  detalhe: string;
+  aba: Aba;
+  acao: string;
+}
+
+const ABAS: Aba[] = ['geral', 'moderacao', 'mensagens', 'coleta', 'ferramentas'];
+
+/**
+ * Painel de administracao (/admin/coleta): resumo no topo e abas por area — visao geral,
+ * moderacao de perfis, mensagens do Fale conosco, coletas do catalogo e ferramentas.
+ * A aba ativa fica na URL (?aba=) pra recarregar sem perder o lugar.
+ */
 @Component({
   selector: 'app-admin-coleta',
   imports: [CommonModule, FormsModule],
@@ -18,113 +56,129 @@ interface CartaoColeta {
   styleUrl: './admin-coleta.scss',
 })
 export class AdminColeta implements OnInit, OnDestroy {
+  readonly abas: Array<{ id: Aba; rotulo: string }> = [
+    { id: 'geral', rotulo: 'Visão geral' },
+    { id: 'moderacao', rotulo: 'Moderação' },
+    { id: 'mensagens', rotulo: 'Mensagens' },
+    { id: 'coleta', rotulo: 'Coleta' },
+    { id: 'ferramentas', rotulo: 'Ferramentas' },
+  ];
+  abaAtiva: Aba = 'geral';
+
   status: StatusAdministrativoColeta | null = null;
   loading = true;
   error = '';
   aviso = '';
+  atualizadoEm: Date | null = null;
+  flashAtualizado = false;
+
+  // Moderacao
+  denuncias: DenunciaAberta[] = [];
+  bloqueados: PerfilBloqueado[] = [];
+  mostrarBloqueados = false;
+  moderandoHandle: string | null = null;
+
+  // Mensagens
+  mensagens: MensagemContato[] = [];
+  mensagensLidas: MensagemContato[] | null = null;
+  filtroMensagem: FiltroMensagem = 'todas';
+  resolvendoMensagemId: number | null = null;
+  readonly rotuloTipo: Record<MensagemContato['tipo'], string> = {
+    elogio: 'Elogio', sugestao: 'Sugestão', problema: 'Problema', denuncia: 'Denúncia', outro: 'Outro',
+  };
+
+  // Coleta
+  grupoColeta: GrupoColeta = 'precos-steam';
   disparando: TipoColeta | null = null;
-  abaAtiva: Aba = 'precos-steam';
-  slugPreenchimento = '';
+
+  // Ferramentas
+  buscaJogo = '';
+  sugestoesJogo: GameSummary[] = [];
+  jogoEscolhido: GameSummary | null = null;
   preenchendo = false;
   erroPreenchimento = '';
   resultadoPreenchimento: ResultadoPreenchimentoJogo | null = null;
+
   private destruido = false;
   private atualizador?: ReturnType<typeof setTimeout>;
+  private flashTimer?: ReturnType<typeof setTimeout>;
+  private buscaTimer?: ReturnType<typeof setTimeout>;
+  private buscaSeq = 0;
 
-  constructor(private administracao: AdministracaoService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private administracao: AdministracaoService,
+    private games: GameService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
+    const aba = this.route.snapshot.queryParamMap.get('aba') as Aba | null;
+    if (aba && ABAS.includes(aba)) this.abaAtiva = aba;
     this.carregar().then(() => this.agendarProximaAtualizacao());
   }
 
   ngOnDestroy() {
     this.destruido = true;
-    if (this.atualizador) clearTimeout(this.atualizador);
-    if (this.flashTimer) clearTimeout(this.flashTimer);
+    for (const t of [this.atualizador, this.flashTimer, this.buscaTimer]) if (t) clearTimeout(t);
   }
 
-  // Enquanto algum job estiver rodando, atualiza mais rapido (5s) pra quem esta acompanhando ver o
-  // andamento quase em tempo real; parado, volta pro ritmo tranquilo de 15s.
+  selecionarAba(aba: Aba) {
+    this.abaAtiva = aba;
+    this.aviso = '';
+    this.router.navigate([], { queryParams: { aba: aba === 'geral' ? null : aba }, replaceUrl: true });
+    if (aba === 'moderacao' && this.mostrarBloqueados) this.carregarBloqueados();
+  }
+
+  // ---------- Carregamento ----------
+
+  // Enquanto algum job roda, atualiza o status a cada 5s; parado, a cada 15s. Listas de moderacao e
+  // mensagens so recarregam no Atualizar manual ou depois de uma acao, pra nao mexer no que se le.
   private agendarProximaAtualizacao() {
     if (this.destruido) return;
     const atraso = this.status && this.algumEmExecucao(this.status) ? 5000 : 15000;
-    this.atualizador = setTimeout(() => this.carregar(false).then(() => this.agendarProximaAtualizacao()), atraso);
+    this.atualizador = setTimeout(() => this.carregarStatus().then(() => this.agendarProximaAtualizacao()), atraso);
   }
 
   private algumEmExecucao(dados: StatusAdministrativoColeta): boolean {
-    return [
-      dados.precos,
-      dados.steam,
-      dados.detalhes,
-      dados.conquistasCatalogo,
-      dados.instantGamingEscaneamento,
-      dados.instantGamingCasamento,
-      dados.instantGamingPrecos,
-    ].some(coleta => coleta.emExecucao);
+    return this.todasColetas(dados).some(c => c.coleta.emExecucao);
   }
 
-  // Denuncias de perfil (issue #25). Carregadas junto com o status, sem polling proprio.
-  denuncias: DenunciaAberta[] = [];
-  moderandoId: number | null = null;
-
-  async resolverDenuncia(denuncia: DenunciaAberta, bloquearPerfil: boolean) {
-    this.moderandoId = denuncia.id;
+  async carregar() {
+    this.loading = true;
     this.cdr.detectChanges();
+    const [status, denuncias, mensagens] = await Promise.allSettled([
+      this.administracao.consultarColeta(),
+      this.administracao.listarDenuncias(),
+      this.administracao.listarMensagensContato(),
+    ]);
+    if (status.status === 'fulfilled') this.status = status.value;
+    if (denuncias.status === 'fulfilled') this.denuncias = denuncias.value;
+    if (mensagens.status === 'fulfilled') this.mensagens = mensagens.value;
+    const falhou = [status, denuncias, mensagens].some(r => r.status === 'rejected');
+    this.error = falhou ? 'Parte do painel não carregou. Tente atualizar de novo.' : '';
+    if (!falhou) this.atualizadoEm = new Date();
+    if (this.mensagensLidas) this.mensagensLidas = await this.administracao.listarMensagensContato(true).catch(() => this.mensagensLidas);
+    if (this.mostrarBloqueados) await this.carregarBloqueados();
+    this.loading = false;
+    this.cdr.detectChanges();
+  }
+
+  private async carregarStatus() {
     try {
-      if (bloquearPerfil && denuncia.handle) await this.administracao.definirBloqueio(denuncia.handle, true);
-      await this.administracao.resolverDenuncia(denuncia.id);
-      this.aviso = bloquearPerfil ? `Perfil /${denuncia.handle} bloqueado e denúncia resolvida.` : 'Denúncia resolvida.';
-      this.denuncias = await this.administracao.listarDenuncias();
-    } catch {
-      this.error = 'Não foi possível moderar essa denúncia.';
-    }
-    this.moderandoId = null;
+      this.status = await this.administracao.consultarColeta();
+      this.atualizadoEm = new Date();
+    } catch { /* o proximo ciclo tenta de novo; erro persistente aparece no Atualizar manual */ }
     this.cdr.detectChanges();
   }
 
-  // Fale conosco (/contato): mesma logica das denuncias, carregado junto com o status.
-  mensagensContato: MensagemContato[] = [];
-  resolvendoContatoId: number | null = null;
-  readonly rotuloTipoContato: Record<MensagemContato['tipo'], string> = {
-    elogio: 'Elogio', sugestao: 'Sugestão', problema: 'Problema', denuncia: 'Denúncia', outro: 'Outro',
-  };
-
-  async resolverMensagemContato(id: number) {
-    this.resolvendoContatoId = id;
-    this.cdr.detectChanges();
-    try {
-      await this.administracao.resolverMensagemContato(id);
-      this.mensagensContato = await this.administracao.listarMensagensContato();
-    } catch {
-      this.error = 'Não foi possível marcar a mensagem como lida.';
-    }
-    this.resolvendoContatoId = null;
-    this.cdr.detectChanges();
-  }
-
-  async desbloquear(handle: string) {
-    try {
-      await this.administracao.definirBloqueio(handle, false);
-      this.aviso = `Perfil /${handle} desbloqueado.`;
-      this.denuncias = await this.administracao.listarDenuncias();
-    } catch {
-      this.error = 'Não foi possível desbloquear o perfil.';
-    }
-    this.cdr.detectChanges();
-  }
-
-  // Feedback do botao Atualizar: a resposta costuma voltar em ~100ms, rapido demais pra perceber, entao
-  // o "Atualizando..." fica no minimo 600ms e depois pisca "Atualizado agora" por 2s.
-  atualizadoEm: Date | null = null;
-  flashAtualizado = false;
-  private flashTimer?: ReturnType<typeof setTimeout>;
-
+  // A resposta costuma voltar em ~100ms, rapido demais pra perceber: o "Atualizando..." fica no
+  // minimo 600ms e depois pisca "Atualizado agora" por 2s.
   async atualizarManual() {
     if (this.loading) return;
     this.aviso = '';
     const inicio = Date.now();
-    this.loading = true;
-    this.cdr.detectChanges();
     await this.carregar();
     const restante = 600 - (Date.now() - inicio);
     if (restante > 0) {
@@ -141,48 +195,197 @@ export class AdminColeta implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  async carregar(exibirCarregamento = true) {
-    if (exibirCarregamento) this.loading = true;
+  // ---------- Resumo e visao geral ----------
+
+  get coletasRodando(): number {
+    return this.status ? this.todasColetas(this.status).filter(c => c.coleta.emExecucao).length : 0;
+  }
+
+  get coletasComErro(): CartaoColeta[] {
+    return this.status ? this.todasColetas(this.status).filter(c => !!c.coleta.ultimoErro && !c.coleta.emExecucao) : [];
+  }
+
+  get totalColetas(): number {
+    return this.status ? this.todasColetas(this.status).length : 0;
+  }
+
+  get itensAtencao(): ItemAtencao[] {
+    const itens: ItemAtencao[] = this.coletasComErro.map(c => ({
+      tipo: 'erro', titulo: c.titulo, detalhe: c.coleta.ultimoErro ?? '', aba: 'coleta', acao: 'Ver',
+    }));
+    for (const g of this.gruposDenuncias.slice(0, 3)) {
+      itens.push({
+        tipo: 'denuncia',
+        titulo: `${g.handle ? '/' + g.handle : 'Perfil sem URL'} recebeu ${g.denuncias.length} denúncia${g.denuncias.length > 1 ? 's' : ''}`,
+        detalhe: `Última ${this.tempoRelativo(g.ultimaEm)}`,
+        aba: 'moderacao',
+        acao: 'Moderar',
+      });
+    }
+    for (const m of this.mensagens.filter(m => m.tipo === 'problema' || m.tipo === 'denuncia').slice(0, 3)) {
+      itens.push({
+        tipo: 'mensagem',
+        titulo: `${this.rotuloTipo[m.tipo]}: "${this.resumir(m.mensagem, 70)}"`,
+        detalhe: `${m.pagina ? 'veio de ' + m.pagina + ' · ' : ''}${this.tempoRelativo(m.criadaEm)}`,
+        aba: 'mensagens',
+        acao: 'Abrir',
+      });
+    }
+    return itens;
+  }
+
+  // ---------- Moderacao ----------
+
+  get gruposDenuncias(): GrupoDenuncias[] {
+    const grupos = new Map<string, GrupoDenuncias>();
+    for (const d of this.denuncias) {
+      const chave = d.handle ?? `sem-url-${d.id}`;
+      const grupo = grupos.get(chave) ?? { handle: d.handle, nomeExibicao: d.nomeExibicao, perfilBloqueado: d.perfilBloqueado, denuncias: [], ultimaEm: d.criadaEm };
+      grupo.denuncias.push(d);
+      if (d.criadaEm > grupo.ultimaEm) grupo.ultimaEm = d.criadaEm;
+      grupos.set(chave, grupo);
+    }
+    return [...grupos.values()].sort((a, b) => b.denuncias.length - a.denuncias.length || b.ultimaEm.localeCompare(a.ultimaEm));
+  }
+
+  chaveGrupo(grupo: GrupoDenuncias): string {
+    return grupo.handle ?? String(grupo.denuncias[0].id);
+  }
+
+  async moderarGrupo(grupo: GrupoDenuncias, bloquear: boolean) {
+    if (bloquear && !window.confirm(`Bloquear /${grupo.handle}? O perfil some pra todo mundo até ser desbloqueado.`)) return;
+    this.moderandoHandle = this.chaveGrupo(grupo);
+    this.aviso = '';
+    this.cdr.detectChanges();
     try {
-      this.status = await this.administracao.consultarColeta();
-      if (exibirCarregamento) {
-        [this.denuncias, this.mensagensContato] = await Promise.all([
-          this.administracao.listarDenuncias().catch(() => this.denuncias),
-          this.administracao.listarMensagensContato().catch(() => this.mensagensContato),
-        ]);
-      }
-      this.error = '';
-      this.atualizadoEm = new Date();
+      if (bloquear && grupo.handle) await this.administracao.definirBloqueio(grupo.handle, true);
+      await Promise.all(grupo.denuncias.map(d => this.administracao.resolverDenuncia(d.id)));
+      this.aviso = bloquear ? `Perfil /${grupo.handle} bloqueado.` : 'Denúncias descartadas.';
+      this.denuncias = await this.administracao.listarDenuncias();
+      if (this.mostrarBloqueados) await this.carregarBloqueados();
     } catch {
-      this.error = 'Não foi possível consultar o status da coleta.';
-    } finally {
-      this.loading = false;
-      this.cdr.detectChanges();
+      this.error = 'Não foi possível moderar esse perfil.';
+    }
+    this.moderandoHandle = null;
+    this.cdr.detectChanges();
+  }
+
+  async alternarBloqueados() {
+    this.mostrarBloqueados = !this.mostrarBloqueados;
+    if (this.mostrarBloqueados) await this.carregarBloqueados();
+    this.cdr.detectChanges();
+  }
+
+  private async carregarBloqueados() {
+    this.bloqueados = await this.administracao.listarPerfisBloqueados().catch(() => this.bloqueados);
+    this.cdr.detectChanges();
+  }
+
+  async desbloquear(handle: string) {
+    if (!window.confirm(`Desbloquear /${handle}? O perfil volta a ficar visível.`)) return;
+    try {
+      await this.administracao.definirBloqueio(handle, false);
+      this.aviso = `Perfil /${handle} desbloqueado.`;
+      await this.carregarBloqueados();
+    } catch {
+      this.error = 'Não foi possível desbloquear o perfil.';
+    }
+    this.cdr.detectChanges();
+  }
+
+  // ---------- Mensagens ----------
+
+  async selecionarFiltroMensagem(filtro: FiltroMensagem) {
+    this.filtroMensagem = filtro;
+    if (filtro === 'lidas' && !this.mensagensLidas) {
+      this.mensagensLidas = await this.administracao.listarMensagensContato(true).catch(() => []);
+    }
+    this.cdr.detectChanges();
+  }
+
+  contarTipo(tipo: MensagemContato['tipo']): number {
+    return this.mensagens.filter(m => m.tipo === tipo).length;
+  }
+
+  get tiposComMensagem(): Array<MensagemContato['tipo']> {
+    return (Object.keys(this.rotuloTipo) as Array<MensagemContato['tipo']>).filter(t => this.contarTipo(t) > 0);
+  }
+
+  get mensagensFiltradas(): MensagemContato[] {
+    if (this.filtroMensagem === 'lidas') return this.mensagensLidas ?? [];
+    if (this.filtroMensagem === 'todas') return this.mensagens;
+    return this.mensagens.filter(m => m.tipo === this.filtroMensagem);
+  }
+
+  linkResposta(m: MensagemContato): string {
+    const assunto = encodeURIComponent(`Re: sua mensagem no Oferta Games (${this.rotuloTipo[m.tipo]})`);
+    const corpo = encodeURIComponent(`\n\n---\nSua mensagem:\n${m.mensagem}`);
+    return `mailto:${m.email}?subject=${assunto}&body=${corpo}`;
+  }
+
+  async marcarLida(m: MensagemContato) {
+    this.resolvendoMensagemId = m.id;
+    this.cdr.detectChanges();
+    try {
+      await this.administracao.resolverMensagemContato(m.id);
+      this.mensagens = this.mensagens.filter(x => x.id !== m.id);
+      if (this.mensagensLidas) this.mensagensLidas = [m, ...this.mensagensLidas];
+      if (this.filtroMensagem !== 'todas' && this.filtroMensagem !== 'lidas' && !this.contarTipo(this.filtroMensagem)) this.filtroMensagem = 'todas';
+    } catch {
+      this.error = 'Não foi possível marcar a mensagem como lida.';
+    }
+    this.resolvendoMensagemId = null;
+    this.cdr.detectChanges();
+  }
+
+  // ---------- Coleta ----------
+
+  private todasColetas(dados: StatusAdministrativoColeta): CartaoColeta[] {
+    return [
+      { titulo: 'Preços ITAD', tipo: 'precos', coleta: dados.precos },
+      { titulo: 'Metadados Steam', tipo: 'steam', coleta: dados.steam },
+      { titulo: 'Detalhes do jogo', tipo: 'detalhes', coleta: dados.detalhes },
+      { titulo: 'Conquistas do catálogo', tipo: 'conquistas-catalogo', coleta: dados.conquistasCatalogo },
+      { titulo: 'Instant Gaming: escaneamento', tipo: 'instant-gaming-escaneamento', coleta: dados.instantGamingEscaneamento },
+      { titulo: 'Instant Gaming: casamento', tipo: 'instant-gaming-casamento', coleta: dados.instantGamingCasamento },
+      { titulo: 'Instant Gaming: preços', tipo: 'instant-gaming-precos', coleta: dados.instantGamingPrecos },
+    ];
+  }
+
+  coletasResumo(dados: StatusAdministrativoColeta): CartaoColeta[] {
+    return this.todasColetas(dados);
+  }
+
+  cartoesDoGrupo(dados: StatusAdministrativoColeta): CartaoColeta[] {
+    const todas = this.todasColetas(dados);
+    switch (this.grupoColeta) {
+      case 'detalhes-conquistas': return todas.slice(2, 4);
+      case 'instant-gaming': return todas.slice(4);
+      default: return todas.slice(0, 2);
     }
   }
 
-  selecionarAba(aba: Aba) {
-    this.abaAtiva = aba;
+  /**
+   * Progresso estimado pela duracao da ultima rodada (o backend nao sabe quanto falta). Trava em 95%
+   * pra nao parecer concluido quando a rodada atual demora mais que a anterior.
+   */
+  progresso(c: StatusColeta): number | null {
+    if (!c.emExecucao || c.duracaoAtualMs == null || !c.ultimaDuracaoMs) return null;
+    return Math.min(95, Math.round((c.duracaoAtualMs / c.ultimaDuracaoMs) * 100));
   }
 
-  cartoesDaAba(dados: StatusAdministrativoColeta): CartaoColeta[] {
-    switch (this.abaAtiva) {
-      case 'detalhes-conquistas':
-        return [
-          { titulo: 'Detalhes do jogo', tipo: 'detalhes', coleta: dados.detalhes },
-          { titulo: 'Conquistas do catálogo', tipo: 'conquistas-catalogo', coleta: dados.conquistasCatalogo },
-        ];
-      case 'instant-gaming':
-        return [
-          { titulo: 'Escaneamento', tipo: 'instant-gaming-escaneamento', coleta: dados.instantGamingEscaneamento },
-          { titulo: 'Casamento', tipo: 'instant-gaming-casamento', coleta: dados.instantGamingCasamento },
-          { titulo: 'Preços', tipo: 'instant-gaming-precos', coleta: dados.instantGamingPrecos },
-        ];
-      default:
-        return [
-          { titulo: 'Preços ITAD', tipo: 'precos', coleta: dados.precos },
-          { titulo: 'Metadados Steam', tipo: 'steam', coleta: dados.steam },
-        ];
+  estadoColeta(c: StatusColeta): 'rodando' | 'erro' | 'ok' | 'nunca' {
+    if (c.emExecucao) return 'rodando';
+    if (c.ultimoErro) return 'erro';
+    return c.ultimaConclusao ? 'ok' : 'nunca';
+  }
+
+  textoEstado(c: StatusColeta): string {
+    switch (this.estadoColeta(c)) {
+      case 'rodando': return `Rodando · ${this.formatarDuracao(c.duracaoAtualMs)}`;
+      case 'erro': return 'Falhou na última rodada';
+      case 'ok': return `Concluída ${this.tempoRelativo(c.ultimaConclusao)}`;
+      default: return 'Aguardando primeira rodada';
     }
   }
 
@@ -190,10 +393,11 @@ export class AdminColeta implements OnInit, OnDestroy {
     this.disparando = tipo;
     this.aviso = '';
     this.error = '';
+    this.cdr.detectChanges();
     try {
       await this.administracao.dispararColeta(tipo);
-      this.aviso = `Coleta de ${tipo} solicitada. O status será atualizado em instantes.`;
-      setTimeout(() => this.carregar(false), 800);
+      this.aviso = 'Coleta solicitada. O status atualiza em instantes.';
+      setTimeout(() => this.carregarStatus(), 800);
     } catch {
       this.error = 'Não foi possível solicitar a coleta.';
     } finally {
@@ -202,19 +406,49 @@ export class AdminColeta implements OnInit, OnDestroy {
     }
   }
 
-  // Botao "Preencher tudo agora": pra quando um jogo novo/pouco tocado esta bombando e nao vale
-  // esperar ele chegar na vez na fila normal (steam/detalhes/conquistas rodam sincronos, na hora).
+  // ---------- Ferramentas ----------
+
+  aoDigitarBusca() {
+    this.jogoEscolhido = null;
+    this.resultadoPreenchimento = null;
+    this.erroPreenchimento = '';
+    if (this.buscaTimer) clearTimeout(this.buscaTimer);
+    const termo = this.buscaJogo.trim();
+    if (termo.length < 3) { this.sugestoesJogo = []; return; }
+    const seq = ++this.buscaSeq;
+    this.buscaTimer = setTimeout(async () => {
+      try {
+        const resultado = await firstValueFrom(this.games.searchGames(termo));
+        if (seq === this.buscaSeq) this.sugestoesJogo = resultado.slice(0, 8);
+      } catch {
+        if (seq === this.buscaSeq) this.sugestoesJogo = [];
+      }
+      this.cdr.detectChanges();
+    }, 300);
+  }
+
+  escolherJogo(jogo: GameSummary) {
+    this.jogoEscolhido = jogo;
+    this.buscaJogo = jogo.title;
+    this.sugestoesJogo = [];
+  }
+
+  // "Preencher tudo agora": pra quando um jogo novo/pouco tocado esta bombando e nao vale esperar
+  // ele chegar na vez na fila normal (steam/detalhes/conquistas rodam sincronos, na hora).
+  // Aceita o jogo escolhido na busca ou um slug digitado direto.
   async preencherJogo() {
-    const slug = this.slugPreenchimento.trim();
+    const slug = this.jogoEscolhido?.slug ?? this.buscaJogo.trim();
     if (!slug || this.preenchendo) return;
     this.preenchendo = true;
     this.erroPreenchimento = '';
     this.resultadoPreenchimento = null;
+    this.sugestoesJogo = [];
+    this.cdr.detectChanges();
     try {
       this.resultadoPreenchimento = await this.administracao.preencherJogo(slug);
     } catch (erro: any) {
       this.erroPreenchimento = erro?.status === 404
-        ? 'Jogo não encontrado. Confira o slug (o final da URL da página do jogo).'
+        ? 'Jogo não encontrado. Escolha um jogo da lista ou confira o slug (o final da URL da página do jogo).'
         : 'Não foi possível preencher esse jogo agora.';
     } finally {
       this.preenchendo = false;
@@ -222,9 +456,17 @@ export class AdminColeta implements OnInit, OnDestroy {
     }
   }
 
-  textoStatus(status: StatusColeta): string {
-    if (status.emExecucao) return 'Em execução';
-    return status.ultimaConclusao ? 'Concluída' : 'Aguardando primeira rodada';
+  // ---------- Formatacao ----------
+
+  tempoRelativo(valor: string | null): string {
+    if (!valor) return '--';
+    const segundos = Math.max(0, Math.round((Date.now() - new Date(valor).getTime()) / 1000));
+    if (segundos < 60) return 'agora';
+    const minutos = Math.round(segundos / 60);
+    if (minutos < 60) return `há ${minutos} min`;
+    const horas = Math.round(minutos / 60);
+    if (horas < 48) return `há ${horas} h`;
+    return `há ${Math.round(horas / 24)} dias`;
   }
 
   formatarData(valor: string | null): string {
@@ -234,6 +476,11 @@ export class AdminColeta implements OnInit, OnDestroy {
   formatarDuracao(valor: number | null): string {
     if (valor == null) return '--';
     if (valor < 1000) return `${valor} ms`;
-    return `${(valor / 1000).toFixed(1)} s`;
+    const s = Math.round(valor / 1000);
+    return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
+  }
+
+  resumir(texto: string, max: number): string {
+    return texto.length > max ? texto.slice(0, max - 1).trimEnd() + '…' : texto;
   }
 }

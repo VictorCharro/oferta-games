@@ -3,8 +3,7 @@
     <header class="page-header">
       <div>
         <p class="eyebrow">Administração</p>
-        <h1>Coleta do catálogo</h1>
-        <p>Acompanhamento interno das atualizações de preços e metadados.</p>
+        <h1>Painel</h1>
       </div>
       <div class="refresh-area">
         <button class="btn-outline refresh" type="button" (click)="atualizarManual()" [disabled]="loading">
@@ -20,71 +19,239 @@
     <p class="message success" *ngIf="aviso">{{ aviso }}</p>
     <p class="message error" *ngIf="error">{{ error }}</p>
 
-    <section class="preencher-jogo denuncias">
-      <div>
-        <p class="label">Moderação</p>
-        <h2>Denúncias abertas ({{ denuncias.length }})</h2>
-        <p class="hint" *ngIf="!denuncias.length">Nenhuma denúncia pendente.</p>
-      </div>
-      <ul *ngIf="denuncias.length" class="lista-denuncias">
-        <li *ngFor="let d of denuncias">
-          <div>
-            <a *ngIf="d.handle" [href]="'/' + d.handle" target="_blank" rel="noopener"><strong>/{{ d.handle }}</strong></a>
-            <span *ngIf="!d.handle">(perfil sem URL)</span>
-            <small> · {{ d.totalDoPerfil }} denúncia(s) · {{ d.criadaEm | date:'dd/MM HH:mm' }}</small>
-            <small *ngIf="d.perfilBloqueado" class="bloqueado"> · BLOQUEADO</small>
-            <p>{{ d.motivo }}</p>
+    <!-- Resumo: cada numero leva pra aba onde se resolve. -->
+    <section class="resumo">
+      <button type="button" class="metrica" (click)="selecionarAba('moderacao')">
+        <span>Denúncias abertas</span>
+        <strong [class.alerta]="denuncias.length">{{ denuncias.length }}</strong>
+      </button>
+      <button type="button" class="metrica" (click)="selecionarAba('mensagens')">
+        <span>Mensagens novas</span>
+        <strong [class.alerta]="mensagens.length">{{ mensagens.length }}</strong>
+      </button>
+      <button type="button" class="metrica" (click)="selecionarAba('coleta')">
+        <span>Coletas rodando</span>
+        <strong [class.rodando]="coletasRodando">{{ coletasRodando }} <small>de {{ totalColetas }}</small></strong>
+      </button>
+      <button type="button" class="metrica" (click)="selecionarAba('coleta')">
+        <span>Coletas com erro</span>
+        <strong [class.erro]="coletasComErro.length">{{ coletasComErro.length }}</strong>
+      </button>
+    </section>
+
+    <nav class="admin-tabs" role="tablist">
+      <button *ngFor="let aba of abas" type="button" role="tab" [attr.aria-selected]="abaAtiva === aba.id"
+        [class.active]="abaAtiva === aba.id" (click)="selecionarAba(aba.id)">
+        {{ aba.rotulo }}
+        <span class="contador" *ngIf="aba.id === 'moderacao' && gruposDenuncias.length">{{ gruposDenuncias.length }}</span>
+        <span class="contador" *ngIf="aba.id === 'mensagens' && mensagens.length">{{ mensagens.length }}</span>
+        <span class="contador erro" *ngIf="aba.id === 'coleta' && coletasComErro.length">{{ coletasComErro.length }}</span>
+      </button>
+    </nav>
+
+    <!-- ===== Visao geral ===== -->
+    <section *ngIf="abaAtiva === 'geral'" class="grade-geral">
+      <article class="painel">
+        <header class="painel-topo"><h2>Precisa de atenção</h2></header>
+        <p class="vazio" *ngIf="!itensAtencao.length">Tudo em dia: nenhuma denúncia, problema relatado ou coleta com erro.</p>
+        <ul class="linhas">
+          <li *ngFor="let item of itensAtencao">
+            <div class="linha-texto">
+              <span class="tag" [ngClass]="item.tipo">{{ item.tipo === 'erro' ? 'Erro' : item.tipo === 'denuncia' ? 'Denúncia' : 'Mensagem' }}</span>
+              <strong>{{ item.titulo }}</strong>
+              <small>{{ item.detalhe }}</small>
+            </div>
+            <button class="btn-outline pequeno" type="button" (click)="selecionarAba(item.aba)">{{ item.acao }}</button>
+          </li>
+        </ul>
+      </article>
+
+      <article class="painel" *ngIf="status as dados">
+        <header class="painel-topo"><h2>Coletas</h2></header>
+        <ul class="coletas-mini">
+          <li *ngFor="let c of coletasResumo(dados)">
+            <span><i class="ponto" [ngClass]="estadoColeta(c.coleta)"></i>{{ c.titulo }}</span>
+            <small [ngClass]="estadoColeta(c.coleta)">{{ textoEstado(c.coleta) }}</small>
+          </li>
+        </ul>
+        <dl class="fila-mini">
+          <div><dt>Nunca sincronizados</dt><dd>{{ dados.fila.nuncaSincronizados | number }}</dd></div>
+          <div><dt>Pendentes Steam</dt><dd>{{ dados.fila.pendentesSteam | number }}</dd></div>
+          <div><dt>Pendentes de detalhes</dt><dd>{{ dados.pendentesDetalhes | number }}</dd></div>
+          <div><dt>Pendentes de conquistas</dt><dd>{{ dados.pendentesConquistas | number }}</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <!-- ===== Moderacao ===== -->
+    <section *ngIf="abaAtiva === 'moderacao'" class="painel">
+      <header class="painel-topo">
+        <h2>Denúncias abertas</h2>
+        <small>agrupadas por perfil</small>
+      </header>
+      <p class="vazio" *ngIf="!gruposDenuncias.length">Nenhuma denúncia pendente.</p>
+      <ul class="linhas">
+        <li *ngFor="let g of gruposDenuncias">
+          <div class="linha-texto">
+            <div class="linha-titulo">
+              <a *ngIf="g.handle" [href]="'/' + g.handle" target="_blank" rel="noopener"><strong>/{{ g.handle }}</strong></a>
+              <strong *ngIf="!g.handle">Perfil sem URL</strong>
+              <span class="contador" [class.alerta]="g.denuncias.length > 1">{{ g.denuncias.length }} denúncia{{ g.denuncias.length > 1 ? 's' : '' }}</span>
+              <span class="tag erro" *ngIf="g.perfilBloqueado">Bloqueado</span>
+              <small>última {{ tempoRelativo(g.ultimaEm) }}</small>
+            </div>
+            <p class="citacao" *ngFor="let d of g.denuncias">"{{ d.motivo }}"</p>
           </div>
           <div class="acoes">
-            <button class="btn-outline" type="button" (click)="resolverDenuncia(d, false)" [disabled]="moderandoId === d.id">Resolver sem ação</button>
-            <button *ngIf="d.handle && !d.perfilBloqueado" class="btn-outline perigo" type="button" (click)="resolverDenuncia(d, true)" [disabled]="moderandoId === d.id">Bloquear perfil</button>
-            <button *ngIf="d.handle && d.perfilBloqueado" class="btn-outline" type="button" (click)="desbloquear(d.handle)">Desbloquear</button>
+            <a *ngIf="g.handle" class="btn-outline pequeno" [href]="'/' + g.handle" target="_blank" rel="noopener">Ver perfil</a>
+            <button class="btn-outline pequeno" type="button" (click)="moderarGrupo(g, false)" [disabled]="moderandoHandle === chaveGrupo(g)">Descartar</button>
+            <button *ngIf="g.handle && !g.perfilBloqueado" class="btn-outline pequeno perigo" type="button" (click)="moderarGrupo(g, true)" [disabled]="moderandoHandle === chaveGrupo(g)">Bloquear</button>
+          </div>
+        </li>
+      </ul>
+
+      <button type="button" class="expansor" (click)="alternarBloqueados()" [attr.aria-expanded]="mostrarBloqueados">
+        Perfis bloqueados{{ mostrarBloqueados ? ' (' + bloqueados.length + ')' : '' }} <span aria-hidden="true">{{ mostrarBloqueados ? '▴' : '▾' }}</span>
+      </button>
+      <ng-container *ngIf="mostrarBloqueados">
+        <p class="vazio" *ngIf="!bloqueados.length">Nenhum perfil bloqueado.</p>
+        <ul class="linhas">
+          <li *ngFor="let b of bloqueados">
+            <div class="linha-texto">
+              <div class="linha-titulo">
+                <strong>/{{ b.handle }}</strong>
+                <small *ngIf="b.nomeExibicao">{{ b.nomeExibicao }}</small>
+                <small>bloqueado {{ tempoRelativo(b.bloqueadoEm) }}</small>
+              </div>
+            </div>
+            <div class="acoes">
+              <button class="btn-outline pequeno" type="button" (click)="desbloquear(b.handle)">Desbloquear</button>
+            </div>
+          </li>
+        </ul>
+      </ng-container>
+    </section>
+
+    <!-- ===== Mensagens ===== -->
+    <section *ngIf="abaAtiva === 'mensagens'" class="painel">
+      <header class="painel-topo filtros">
+        <button type="button" class="filtro" [class.ativo]="filtroMensagem === 'todas'" (click)="selecionarFiltroMensagem('todas')">Todas <span>{{ mensagens.length }}</span></button>
+        <button *ngFor="let t of tiposComMensagem" type="button" class="filtro" [class.ativo]="filtroMensagem === t" (click)="selecionarFiltroMensagem(t)">{{ rotuloTipo[t] }} <span>{{ contarTipo(t) }}</span></button>
+        <button type="button" class="filtro" [class.ativo]="filtroMensagem === 'lidas'" (click)="selecionarFiltroMensagem('lidas')">Lidas</button>
+      </header>
+      <p class="vazio" *ngIf="!mensagensFiltradas.length">{{ filtroMensagem === 'lidas' ? 'Nenhuma mensagem lida ainda.' : 'Nenhuma mensagem nova.' }}</p>
+      <ul class="linhas">
+        <li *ngFor="let m of mensagensFiltradas">
+          <div class="linha-texto">
+            <div class="linha-titulo">
+              <span class="tag" [ngClass]="'tipo-' + m.tipo">{{ rotuloTipo[m.tipo] }}</span>
+              <small>{{ tempoRelativo(m.criadaEm) }} · {{ m.criadaEm | date:'dd/MM HH:mm' }}</small>
+              <small *ngIf="m.pagina">· veio de <a [href]="m.pagina" target="_blank" rel="noopener">{{ m.pagina }}</a></small>
+              <small *ngIf="m.handle">· <a [href]="'/' + m.handle" target="_blank" rel="noopener">&#64;{{ m.handle }}</a></small>
+              <small *ngIf="!m.handle">· anônimo</small>
+            </div>
+            <p class="mensagem-texto">{{ m.mensagem }}</p>
+            <small *ngIf="m.email" class="email">{{ m.email }}</small>
+          </div>
+          <div class="acoes">
+            <a *ngIf="m.email" class="btn-outline pequeno" [href]="linkResposta(m)">Responder</a>
+            <button *ngIf="filtroMensagem !== 'lidas'" class="btn-outline pequeno" type="button" (click)="marcarLida(m)" [disabled]="resolvendoMensagemId === m.id">Marcar como lida</button>
           </div>
         </li>
       </ul>
     </section>
 
-    <section class="preencher-jogo denuncias">
-      <div>
-        <p class="label">Fale conosco</p>
-        <h2>Mensagens abertas ({{ mensagensContato.length }})</h2>
-        <p class="hint" *ngIf="!mensagensContato.length">Nenhuma mensagem pendente.</p>
+    <!-- ===== Coleta ===== -->
+    <section *ngIf="abaAtiva === 'coleta'">
+      <div class="filtros grupo-coleta">
+        <button type="button" class="filtro" [class.ativo]="grupoColeta === 'precos-steam'" (click)="grupoColeta = 'precos-steam'">Preços e Steam</button>
+        <button type="button" class="filtro" [class.ativo]="grupoColeta === 'detalhes-conquistas'" (click)="grupoColeta = 'detalhes-conquistas'">Detalhes e conquistas</button>
+        <button type="button" class="filtro" [class.ativo]="grupoColeta === 'instant-gaming'" (click)="grupoColeta = 'instant-gaming'">Instant Gaming</button>
       </div>
-      <ul *ngIf="mensagensContato.length" class="lista-denuncias">
-        <li *ngFor="let m of mensagensContato">
-          <div>
-            <strong>{{ rotuloTipoContato[m.tipo] }}</strong>
-            <small> · {{ m.criadaEm | date:'dd/MM HH:mm' }}</small>
-            <small *ngIf="m.handle"> · <a [href]="'/' + m.handle" target="_blank" rel="noopener">/{{ m.handle }}</a></small>
-            <small *ngIf="m.pagina"> · veio de {{ m.pagina }}</small>
-            <small *ngIf="m.email"> · <a [href]="'mailto:' + m.email">{{ m.email }}</a></small>
-            <p>{{ m.mensagem }}</p>
+
+      <ng-container *ngIf="status as dados">
+        <div class="status-grid">
+          <article class="status-card" *ngFor="let cartao of cartoesDoGrupo(dados)">
+            <div class="card-top">
+              <div>
+                <p class="label">{{ cartao.titulo }}</p>
+                <strong [ngClass]="estadoColeta(cartao.coleta)">
+                  <span class="status-dot" *ngIf="cartao.coleta.emExecucao" aria-hidden="true"></span>
+                  {{ textoEstado(cartao.coleta) }}
+                </strong>
+              </div>
+              <button class="btn-primary pequeno" type="button" (click)="disparar(cartao.tipo)"
+                [disabled]="cartao.coleta.emExecucao || disparando !== null">
+                {{ cartao.coleta.emExecucao ? 'Rodando...' : (disparando === cartao.tipo ? 'Solicitando...' : 'Rodar agora') }}
+              </button>
+            </div>
+            <div class="progresso" *ngIf="progresso(cartao.coleta) as p" [title]="'Estimativa pela duração da última rodada'">
+              <div class="progresso-barra"><div [style.width.%]="p"></div></div>
+              <small>~{{ p }}% (estimado pela última rodada, {{ formatarDuracao(cartao.coleta.ultimaDuracaoMs) }})</small>
+            </div>
+            <dl>
+              <div><dt>Última conclusão</dt><dd>{{ formatarData(cartao.coleta.ultimaConclusao) }}</dd></div>
+              <div><dt>Duração</dt><dd>{{ formatarDuracao(cartao.coleta.emExecucao ? cartao.coleta.duracaoAtualMs : cartao.coleta.ultimaDuracaoMs) }}</dd></div>
+              <div><dt>Jogos atualizados</dt><dd>{{ cartao.coleta.jogosAtualizados | number }}</dd></div>
+              <div><dt>Ofertas atualizadas</dt><dd>{{ cartao.coleta.ofertasAtualizadas | number }}</dd></div>
+            </dl>
+            <p class="error-detail" *ngIf="cartao.coleta.ultimoErro">{{ cartao.coleta.ultimoErro }}</p>
+          </article>
+        </div>
+
+        <section class="queue-card" *ngIf="grupoColeta === 'precos-steam'">
+          <div><p class="label">Fila do catálogo</p><h2>Atualização pendente</h2></div>
+          <div class="queue-metrics">
+            <div><span>Nunca sincronizados</span><strong>{{ dados.fila.nuncaSincronizados | number }}</strong></div>
+            <div><span>Preço mais antigo</span><strong>{{ formatarData(dados.fila.sincronizacaoMaisAntiga) }}</strong></div>
+            <div><span>Pendentes Steam</span><strong>{{ dados.fila.pendentesSteam | number }}</strong></div>
           </div>
-          <div class="acoes">
-            <button class="btn-outline" type="button" (click)="resolverMensagemContato(m.id)" [disabled]="resolvendoContatoId === m.id">Marcar como lida</button>
+        </section>
+        <section class="queue-card" *ngIf="grupoColeta === 'detalhes-conquistas'">
+          <div><p class="label">Fila de detalhes</p><h2>Atualização pendente</h2></div>
+          <div class="queue-metrics">
+            <div><span>Pendentes de detalhes</span><strong>{{ dados.pendentesDetalhes | number }}</strong></div>
+            <div><span>Pendentes de conquistas</span><strong>{{ dados.pendentesConquistas | number }}</strong></div>
           </div>
-        </li>
-      </ul>
+        </section>
+        <section class="queue-card" *ngIf="grupoColeta === 'instant-gaming'">
+          <div><p class="label">Fila do Instant Gaming</p><h2>Descoberta e casamento</h2></div>
+          <div class="queue-metrics">
+            <div><span>Último id escaneado</span><strong>{{ dados.filaInstantGaming.ultimoIdEscaneado | number }}</strong></div>
+            <div><span>Catálogo descoberto</span><strong>{{ dados.filaInstantGaming.catalogoDescoberto | number }}</strong></div>
+            <div><span>Jogos casados</span><strong>{{ dados.filaInstantGaming.jogosCasados | number }}</strong></div>
+            <div><span>Pendentes de casamento</span><strong>{{ dados.filaInstantGaming.pendentesCasamento | number }}</strong></div>
+          </div>
+        </section>
+      </ng-container>
     </section>
 
-    <section class="preencher-jogo">
-      <div>
-        <p class="label">Jogo específico</p>
-        <h2>Preencher tudo agora</h2>
-        <p class="hint">Pula a fila: atualiza metadados Steam, detalhes e conquistas de um jogo na hora. Use quando um jogo novo ou pouco tocado estiver bombando e não valer esperar a rodada normal.</p>
-      </div>
+    <!-- ===== Ferramentas ===== -->
+    <section *ngIf="abaAtiva === 'ferramentas'" class="painel ferramenta">
+      <header class="painel-topo">
+        <div>
+          <h2>Preencher jogo agora</h2>
+          <p class="hint">Pula a fila: atualiza metadados Steam, detalhes e conquistas de um jogo na hora. Use quando um jogo novo ou pouco tocado estiver bombando.</p>
+        </div>
+      </header>
       <form class="preencher-jogo-form" (ngSubmit)="preencherJogo()">
-        <input
-          type="text"
-          name="slugPreenchimento"
-          [(ngModel)]="slugPreenchimento"
-          placeholder="slug do jogo, ex: baldurs-gate-3"
-          [disabled]="preenchendo"
-        />
-        <button class="btn-primary" type="submit" [disabled]="preenchendo || !slugPreenchimento.trim()">
+        <div class="busca-jogo">
+          <input type="text" name="buscaJogo" [(ngModel)]="buscaJogo" (ngModelChange)="aoDigitarBusca()"
+            placeholder="Nome do jogo ou slug, ex: baldurs-gate-3" autocomplete="off" [disabled]="preenchendo" />
+          <ul class="sugestoes" *ngIf="sugestoesJogo.length">
+            <li *ngFor="let j of sugestoesJogo">
+              <button type="button" (click)="escolherJogo(j)">
+                <img *ngIf="j.coverUrl" [src]="j.coverUrl" alt="" loading="lazy" />
+                <span>{{ j.title }}<small>{{ j.slug }}</small></span>
+              </button>
+            </li>
+          </ul>
+        </div>
+        <button class="btn-primary" type="submit" [disabled]="preenchendo || !buscaJogo.trim()">
           {{ preenchendo ? 'Preenchendo...' : 'Preencher tudo agora' }}
         </button>
       </form>
+      <small class="escolhido" *ngIf="jogoEscolhido">Jogo escolhido: <strong>{{ jogoEscolhido.title }}</strong> ({{ jogoEscolhido.slug }})</small>
       <p class="error-detail" *ngIf="erroPreenchimento">{{ erroPreenchimento }}</p>
       <ul class="preencher-jogo-resultado" *ngIf="resultadoPreenchimento as r">
         <li [class.ok]="r.metadadosSteamAtualizados">
@@ -93,7 +260,7 @@
         </li>
         <li *ngIf="!r.temSteamAppId" class="aviso-linha">
           <span class="preencher-jogo-icone" aria-hidden="true">!</span>
-          Jogo sem oferta Steam identificada ainda — detalhes e conquistas dependem disso, tente de novo depois.
+          Jogo sem oferta Steam identificada ainda. Detalhes e conquistas dependem disso, tente de novo depois.
         </li>
         <ng-container *ngIf="r.temSteamAppId">
           <li [class.ok]="r.detalhesAtualizados">
@@ -107,74 +274,5 @@
         </ng-container>
       </ul>
     </section>
-
-    <nav class="admin-tabs">
-      <button type="button" [class.active]="abaAtiva === 'precos-steam'" (click)="selecionarAba('precos-steam')">Preços e Steam</button>
-      <button type="button" [class.active]="abaAtiva === 'detalhes-conquistas'" (click)="selecionarAba('detalhes-conquistas')">Detalhes e Conquistas</button>
-      <button type="button" [class.active]="abaAtiva === 'instant-gaming'" (click)="selecionarAba('instant-gaming')">Instant Gaming</button>
-    </nav>
-
-    <ng-container *ngIf="status as dados">
-      <section class="status-grid">
-        <article class="status-card" *ngFor="let cartao of cartoesDaAba(dados)">
-          <div class="card-top">
-            <div>
-              <p class="label">{{ cartao.titulo }}</p>
-              <strong [class.running]="cartao.coleta.emExecucao">
-                <span class="status-dot" *ngIf="cartao.coleta.emExecucao" aria-hidden="true"></span>
-                {{ textoStatus(cartao.coleta) }}
-              </strong>
-            </div>
-            <button class="btn-primary" type="button" (click)="disparar(cartao.tipo)"
-              [disabled]="cartao.coleta.emExecucao || disparando !== null">
-              {{ cartao.coleta.emExecucao ? 'Em execução...' : (disparando === cartao.tipo ? 'Solicitando...' : 'Rodar agora') }}
-            </button>
-          </div>
-          <dl>
-            <div><dt>Última conclusão</dt><dd>{{ formatarData(cartao.coleta.ultimaConclusao) }}</dd></div>
-            <div><dt>Duração</dt><dd>{{ formatarDuracao(cartao.coleta.emExecucao ? cartao.coleta.duracaoAtualMs : cartao.coleta.ultimaDuracaoMs) }}</dd></div>
-            <div><dt>Jogos atualizados</dt><dd>{{ cartao.coleta.jogosAtualizados | number }}</dd></div>
-            <div><dt>Ofertas atualizadas</dt><dd>{{ cartao.coleta.ofertasAtualizadas | number }}</dd></div>
-          </dl>
-          <p class="error-detail" *ngIf="cartao.coleta.ultimoErro">{{ cartao.coleta.ultimoErro }}</p>
-        </article>
-      </section>
-
-      <section class="queue-card" *ngIf="abaAtiva === 'precos-steam'">
-        <div>
-          <p class="label">Fila do catálogo</p>
-          <h2>Atualização pendente</h2>
-        </div>
-        <div class="queue-metrics">
-          <div><span>Nunca sincronizados</span><strong>{{ dados.fila.nuncaSincronizados | number }}</strong></div>
-          <div><span>Preço mais antigo</span><strong>{{ formatarData(dados.fila.sincronizacaoMaisAntiga) }}</strong></div>
-          <div><span>Pendentes Steam</span><strong>{{ dados.fila.pendentesSteam | number }}</strong></div>
-        </div>
-      </section>
-
-      <section class="queue-card" *ngIf="abaAtiva === 'detalhes-conquistas'">
-        <div>
-          <p class="label">Fila de detalhes</p>
-          <h2>Atualização pendente</h2>
-        </div>
-        <div class="queue-metrics">
-          <div><span>Pendentes de detalhes</span><strong>{{ dados.pendentesDetalhes | number }}</strong></div>
-          <div><span>Pendentes de conquistas</span><strong>{{ dados.pendentesConquistas | number }}</strong></div>
-        </div>
-      </section>
-
-      <section class="queue-card" *ngIf="abaAtiva === 'instant-gaming'">
-        <div>
-          <p class="label">Fila do Instant Gaming</p>
-          <h2>Descoberta e casamento</h2>
-        </div>
-        <div class="queue-metrics">
-          <div><span>Último id escaneado</span><strong>{{ dados.filaInstantGaming.ultimoIdEscaneado | number }}</strong></div>
-          <div><span>Catálogo descoberto</span><strong>{{ dados.filaInstantGaming.catalogoDescoberto | number }}</strong></div>
-          <div><span>Jogos casados</span><strong>{{ dados.filaInstantGaming.jogosCasados | number }}</strong></div>
-          <div><span>Pendentes de casamento</span><strong>{{ dados.filaInstantGaming.pendentesCasamento | number }}</strong></div>
-        </div>
-      </section>
-    </ng-container>
   </main>
 </div>

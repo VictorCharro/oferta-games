@@ -77,6 +77,12 @@ public class ControladorModeracao {
     return moderacao.listarAbertas();
   }
 
+  @GetMapping("/api/admin/perfis/bloqueados")
+  List<RepositorioModeracao.PerfilBloqueado> bloqueados(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
+    administradores.exigir(autorizacao);
+    return moderacao.listarBloqueados();
+  }
+
   @PostMapping("/api/admin/denuncias/{id}/resolver")
   ResponseEntity<Void> resolver(@PathVariable long id, @RequestHeader(value = "Authorization", required = false) String autorizacao) {
     administradores.exigir(autorizacao);

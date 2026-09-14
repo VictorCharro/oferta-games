@@ -77,14 +77,24 @@ export interface MensagemContato {
   criadaEm: string;
 }
 
+export interface PerfilBloqueado {
+  handle: string;
+  nomeExibicao: string | null;
+  bloqueadoEm: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdministracaoService {
   private api = `${URL_API}/admin`;
 
   constructor(private http: HttpClient) {}
 
-  async listarMensagensContato(): Promise<MensagemContato[]> {
-    return firstValueFrom(this.http.get<MensagemContato[]>(`${this.api}/contato`, { headers: await this.cabecalhosAutorizacao() }));
+  async listarMensagensContato(lidas = false): Promise<MensagemContato[]> {
+    return firstValueFrom(this.http.get<MensagemContato[]>(`${this.api}/contato?lidas=${lidas}`, { headers: await this.cabecalhosAutorizacao() }));
+  }
+
+  async listarPerfisBloqueados(): Promise<PerfilBloqueado[]> {
+    return firstValueFrom(this.http.get<PerfilBloqueado[]>(`${this.api}/perfis/bloqueados`, { headers: await this.cabecalhosAutorizacao() }));
   }
 
   async resolverMensagemContato(id: number): Promise<void> {

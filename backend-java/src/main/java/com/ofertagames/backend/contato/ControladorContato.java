@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -95,9 +96,10 @@ public class ControladorContato {
   }
 
   @GetMapping("/api/admin/contato")
-  List<RepositorioContato.MensagemAberta> listar(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
+  List<RepositorioContato.MensagemAberta> listar(@RequestHeader(value = "Authorization", required = false) String autorizacao,
+      @RequestParam(defaultValue = "false") boolean lidas) {
     administradores.exigir(autorizacao);
-    return contato.listarAbertas();
+    return contato.listar(lidas);
   }
 
   @PostMapping("/api/admin/contato/{id}/resolver")
