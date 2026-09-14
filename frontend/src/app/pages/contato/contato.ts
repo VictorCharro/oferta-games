@@ -29,8 +29,8 @@ export class Contato implements OnInit {
   readonly tipos: Array<{ id: TipoMensagem; rotulo: string; dica: string }> = [
     { id: 'sugestao', rotulo: 'Sugestão', dica: 'O que faria o site ser mais útil pra você?' },
     { id: 'problema', rotulo: 'Problema', dica: 'O que aconteceu e o que você esperava? Se puder, diga o jogo ou a página.' },
-    { id: 'elogio', rotulo: 'Elogio', dica: 'Conta o que você curtiu — ajuda a saber o que manter.' },
-    { id: 'denuncia', rotulo: 'Denúncia', dica: 'Preço errado, link suspeito, conteúdo impróprio... Diga onde está. Pra perfil, use também o ⚑ no próprio perfil.' },
+    { id: 'elogio', rotulo: 'Elogio', dica: 'Conta o que você curtiu, ajuda a saber o que manter.' },
+    { id: 'denuncia', rotulo: 'Denúncia', dica: 'Preço errado, link suspeito, conteúdo impróprio.\nPra perfil, use também o ⚑ no próprio perfil.' },
     { id: 'outro', rotulo: 'Outro', dica: 'Pode escrever o que quiser.' },
   ];
 
