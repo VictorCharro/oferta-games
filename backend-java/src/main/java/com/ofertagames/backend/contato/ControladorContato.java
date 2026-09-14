@@ -95,8 +95,39 @@ public class ControladorContato {
     return new MensagemValidada(tipo, texto, email, pagina);
   }
 
+  /** Mensagens que a pessoa mandou logada, com as respostas do admin (entregues no site). */
+  @GetMapping("/api/contato/minhas")
+  List<RepositorioContato.MinhaMensagem> minhas(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
+    return contato.listarDoUsuario(exigirUsuario(autorizacao));
+  }
+
+  @PostMapping("/api/contato/minhas/respostas-lidas")
+  ResponseEntity<Void> marcarRespostasLidas(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
+    contato.marcarRespostasLidas(exigirUsuario(autorizacao));
+    return ResponseEntity.noContent().build();
+  }
+
+  private String exigirUsuario(String autorizacao) {
+    return autenticacao.buscarUsuarioPeloCabecalho(autorizacao)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Entre na sua conta"));
+  }
+
+  @PostMapping("/api/admin/contato/{id}/responder")
+  ResponseEntity<Void> responder(@PathVariable long id, @RequestHeader(value = "Authorization", required = false) String autorizacao,
+      @RequestBody EntradaResposta entrada) {
+    administradores.exigir(autorizacao);
+    String resposta = entrada == null || entrada.resposta() == null ? "" : entrada.resposta().trim();
+    if (resposta.isEmpty() || resposta.length() > 2000) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escreva a resposta em até 2000 caracteres");
+    }
+    if (contato.responder(id, resposta) == 0) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Mensagem não encontrada ou enviada sem conta (não tem pra quem responder)");
+    }
+    return ResponseEntity.noContent().build();
+  }
+
   @GetMapping("/api/admin/contato")
-  List<RepositorioContato.MensagemAberta> listar(@RequestHeader(value = "Authorization", required = false) String autorizacao,
+  List<RepositorioContato.MensagemAdmin> listar(@RequestHeader(value = "Authorization", required = false) String autorizacao,
       @RequestParam(defaultValue = "false") boolean lidas) {
     administradores.exigir(autorizacao);
     return contato.listar(lidas);
@@ -110,5 +141,6 @@ public class ControladorContato {
   }
 
   record EntradaContato(String tipo, String mensagem, String email, String pagina, String site) {}
+  record EntradaResposta(String resposta) {}
   record MensagemValidada(String tipo, String texto, String email, String pagina) {}
 }

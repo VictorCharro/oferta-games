@@ -51,7 +51,7 @@ header {
   small { align-self: flex-end; color: var(--text-muted); font-size: 11px; }
 }
 
-input[type='email'], textarea {
+textarea {
   width: 100%;
   padding: 11px 12px;
   background: var(--bg-primary);
@@ -63,6 +63,32 @@ input[type='email'], textarea {
   &:focus { outline: none; border-color: var(--color-purple); }
 }
 textarea { resize: vertical; min-height: 140px; }
+
+.aviso-resposta { margin: -4px 0 0; font-size: 13px !important; }
+.link { padding: 0; border: 0; background: none; color: var(--color-purple); font: inherit; font-weight: 600; cursor: pointer; &:hover { text-decoration: underline; } }
+
+.minhas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 32px;
+  scroll-margin-top: 80px;
+  > h2 { font-size: 20px; }
+}
+.mensagem { gap: 10px; padding: 18px 20px;
+  &.nova { border-color: var(--color-purple); }
+}
+.mensagem-topo, .resposta-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  small { color: var(--text-muted); font-size: 12px; }
+}
+.tag { padding: 2px 8px; border-radius: 6px; background: var(--bg-card-hover); color: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.texto { margin: 0; color: var(--text-primary) !important; white-space: pre-wrap; overflow-wrap: anywhere; }
+.resposta { padding: 12px 14px; border-left: 3px solid var(--color-purple); border-radius: 0 6px 6px 0; background: rgba(41, 168, 224, .07);
+  strong { font-size: 13px; color: var(--color-purple); }
+  .texto { margin-top: 6px; }
+}
+.selo-nova { padding: 1px 7px; border-radius: 999px; background: var(--color-purple); color: #fff; font-size: 10px; font-weight: 700; }
+.aguardando { color: var(--text-muted); font-size: 12px; }
 
 .isca { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 

@@ -106,7 +106,7 @@
 .linhas { margin: 0; padding: 0; list-style: none;
   li { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 14px 16px; border-top: 1px solid var(--border-color); }
 }
-.linha-texto { display: flex; flex-direction: column; gap: 4px; min-width: 0;
+.linha-texto { display: flex; flex: 1 1 auto; flex-direction: column; gap: 4px; min-width: 0;
   > strong { font-size: 14px; }
   small { color: var(--text-muted); font-size: 12px; }
   a { color: var(--color-purple); text-decoration: none; &:hover { text-decoration: underline; } }
@@ -115,7 +115,16 @@
 .linhas .linha-texto > .tag { align-self: flex-start; }
 .citacao, .mensagem-texto { margin: 2px 0 0; color: var(--text-secondary); font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .mensagem-texto { color: var(--text-primary); }
-.email { color: var(--text-secondary) !important; }
+.resposta-enviada { margin-top: 6px; padding: 8px 12px; border-left: 3px solid var(--color-purple); background: rgba(41, 168, 224, .07);
+  small { color: var(--color-purple) !important; font-weight: 600; }
+  p { margin: 4px 0 0; color: var(--text-primary); font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+}
+.caixa-resposta { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; width: min(640px, 100%);
+  textarea { width: 100%; min-height: 90px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); font: inherit; font-size: 13.5px; resize: vertical;
+    &:focus { outline: none; border-color: var(--color-purple); } }
+}
+.caixa-resposta-acoes { display: flex; align-items: center; justify-content: flex-end; gap: 8px; small { margin-right: auto; } }
+.sem-resposta { align-self: center; color: var(--text-muted); font-size: 12px; }
 .acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; flex: 0 0 auto; max-width: 50%; }
 .pequeno { padding: 6px 12px !important; font-size: 12.5px !important; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; }
 .perigo { color: var(--color-red) !important; border-color: rgba(239, 68, 68, .5) !important; }

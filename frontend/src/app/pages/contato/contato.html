@@ -7,8 +7,8 @@
 
     <section class="contato-card" *ngIf="enviada">
       <h2>Mensagem enviada, obrigado!</h2>
-      <p *ngIf="email.trim()">Se precisarmos de mais detalhes, respondemos em {{ email.trim() }}.</p>
-      <p *ngIf="!email.trim()">Como você não deixou e-mail, não temos como responder, mas a mensagem chegou.</p>
+      <p *ngIf="auth.isLoggedIn">Se respondermos, a resposta aparece nas suas notificações e em "Minhas mensagens", aqui embaixo.</p>
+      <p *ngIf="!auth.isLoggedIn">Como você enviou sem entrar na conta, não temos como responder, mas a mensagem chegou.</p>
       <div class="acoes">
         <button class="btn-outline" type="button" (click)="novaMensagem()">Enviar outra</button>
         <a class="btn-primary" routerLink="/">Voltar ao início</a>
@@ -30,16 +30,16 @@
         <small>{{ mensagem.trim().length < 10 ? 'mínimo 10 caracteres · ' : '' }}{{ mensagem.length }}/2000</small>
       </label>
 
-      <label class="campo">
-        <span>E-mail para resposta <em>(opcional)</em></span>
-        <input type="email" name="email" [(ngModel)]="email" maxlength="254" autocomplete="email" placeholder="voce@exemplo.com" />
-      </label>
-
       <!-- Isca pra bot: fora da tela e fora da ordem de tab. -->
       <label class="isca" aria-hidden="true">
         Site
         <input type="text" name="site" [(ngModel)]="site" tabindex="-1" autocomplete="off" />
       </label>
+
+      <p class="aviso-resposta" *ngIf="sessaoPronta && auth.isLoggedIn">A resposta, se houver, chega nas suas notificações aqui no site.</p>
+      <p class="aviso-resposta" *ngIf="sessaoPronta && !auth.isLoggedIn">
+        Pode enviar sem conta, mas assim não temos como responder. <button type="button" class="link" (click)="entrar()">Entre na sua conta</button> pra receber a resposta no site.
+      </p>
 
       <p class="message error" *ngIf="erro">{{ erro }}</p>
 
@@ -48,7 +48,27 @@
           {{ enviando ? 'Enviando...' : 'Enviar mensagem' }}
         </button>
       </div>
-      <p class="rodape">Usamos a mensagem e o e-mail só para responder e melhorar o site. Veja a <a routerLink="/privacidade">Política de Privacidade</a>.</p>
+      <p class="rodape">Usamos a mensagem só para responder e melhorar o site. Veja a <a routerLink="/privacidade">Política de Privacidade</a>.</p>
     </form>
+
+    <section id="minhas" class="minhas" *ngIf="auth.isLoggedIn && minhas.length">
+      <h2>Minhas mensagens</h2>
+      <article class="contato-card mensagem" *ngFor="let m of minhas" [class.nova]="novas.has(m.id)">
+        <div class="mensagem-topo">
+          <span class="tag">{{ rotuloTipo[m.tipo] }}</span>
+          <small>enviada em {{ m.criadaEm | date:'dd/MM/yyyy HH:mm' }}</small>
+        </div>
+        <p class="texto">{{ m.mensagem }}</p>
+        <div class="resposta" *ngIf="m.resposta; else semResposta">
+          <div class="resposta-topo">
+            <strong>Resposta do Oferta Games</strong>
+            <span class="selo-nova" *ngIf="novas.has(m.id)">Nova</span>
+            <small *ngIf="m.respondidaEm">{{ m.respondidaEm | date:'dd/MM/yyyy HH:mm' }}</small>
+          </div>
+          <p class="texto">{{ m.resposta }}</p>
+        </div>
+        <ng-template #semResposta><small class="aguardando">Ainda sem resposta.</small></ng-template>
+      </article>
+    </section>
   </main>
 </div>

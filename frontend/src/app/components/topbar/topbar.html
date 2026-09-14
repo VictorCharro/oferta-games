@@ -54,7 +54,18 @@
       </button>
       <div class="notifications-panel" *ngIf="notificationsOpen">
         <div class="notifications-heading"><strong>Notificações</strong><button type="button" *ngIf="unreadNotifications" (click)="markAllNotificationsRead()">Marcar todas como lidas</button></div>
-        <div class="notification-list" *ngIf="notifications.length; else noNotifications">
+        <div class="notification-list" *ngIf="notifications.length || respostasNaoLidas.length; else noNotifications">
+          <!-- Respostas do Fale conosco: somem daqui depois de lidas (continuam em /contato). -->
+          <a *ngFor="let r of respostasNaoLidas" routerLink="/contato" fragment="minhas" (click)="notificationsOpen = false" class="notification-item unread resposta">
+            <span class="notification-icone" aria-hidden="true">✉</span>
+            <span>
+              <span class="notification-tag resposta-tag">Resposta</span>
+              <b>Respondemos sua mensagem</b>
+              <span class="resposta-previa">{{ r.resposta }}</span>
+              <small>{{ r.respondidaEm ? relativeNotificationTime(r.respondidaEm) : '' }}</small>
+            </span>
+            <span></span>
+          </a>
           <a *ngFor="let notification of notifications" [routerLink]="['/jogo', notification.slug]" (click)="markNotificationRead(notification)" [class.unread]="!notification.lida" [class.meta-atingida]="notification.tipo === 'meta_atingida'" class="notification-item">
             <img src="jogos-monitorados-modo-escuro.png" alt="" />
             <span *ngIf="notification.tipo === 'meta_atingida'; else quedaComum">
@@ -67,7 +78,7 @@
             <button type="button" (click)="removeNotification($event, notification.id)" title="Remover notificação" aria-label="Remover notificação">×</button>
           </a>
         </div>
-        <ng-template #noNotifications><p class="notifications-empty">Nenhum alerta de preço por enquanto.</p></ng-template>
+        <ng-template #noNotifications><p class="notifications-empty">Nenhuma notificação por enquanto.</p></ng-template>
       </div>
     </div>
 

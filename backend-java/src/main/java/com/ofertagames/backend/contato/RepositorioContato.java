@@ -5,7 +5,10 @@ import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** Mensagens do Fale conosco (tabela contact_messages, ver sql/20260914_mensagens_contato.sql). */
+/**
+ * Mensagens do Fale conosco (tabela contact_messages, ver sql/20260914_mensagens_contato.sql e
+ * sql/20260914_resposta_mensagens_contato.sql).
+ */
 @Repository
 class RepositorioContato {
   private final JdbcClient jdbc;
@@ -35,9 +38,10 @@ class RepositorioContato {
   }
 
   /** Abertas (todas, ate 200) ou lidas (as 100 mais recentes, pra consulta). */
-  List<MensagemAberta> listar(boolean lidas) {
+  List<MensagemAdmin> listar(boolean lidas) {
     return jdbc.sql("""
-        SELECT m.id, m.kind, m.message, m.reply_email, m.page_path, m.created_at, p.handle
+        SELECT m.id, m.kind, m.message, m.reply_email, m.page_path, m.created_at, p.handle,
+               m.user_id IS NOT NULL AS respondivel, m.reply, m.replied_at
         FROM contact_messages m
         LEFT JOIN profiles p ON p.user_id = m.user_id
         WHERE (m.resolved_at IS NOT NULL) = :lidas
@@ -46,14 +50,17 @@ class RepositorioContato {
         """)
         .param("lidas", lidas)
         .param("limite", lidas ? 100 : 200)
-        .query((rs, linha) -> new MensagemAberta(
+        .query((rs, linha) -> new MensagemAdmin(
             rs.getLong("id"),
             rs.getString("kind"),
             rs.getString("message"),
             rs.getString("reply_email"),
             rs.getString("page_path"),
             rs.getString("handle"),
-            rs.getObject("created_at", OffsetDateTime.class)))
+            rs.getObject("created_at", OffsetDateTime.class),
+            rs.getBoolean("respondivel"),
+            rs.getString("reply"),
+            rs.getObject("replied_at", OffsetDateTime.class)))
         .list();
   }
 
@@ -63,6 +70,54 @@ class RepositorioContato {
         .update();
   }
 
-  record MensagemAberta(long id, String tipo, String mensagem, String email, String pagina, String handle,
-      OffsetDateTime criadaEm) {}
+  /**
+   * Grava a resposta e ja tira a mensagem da fila. Responder de novo substitui a resposta e volta a
+   * notificar. So vale pra mensagem com autor logado (user_id): retorna 0 pra anonima ou id inexistente.
+   */
+  int responder(long id, String resposta) {
+    return jdbc.sql("""
+        UPDATE contact_messages
+        SET reply = :resposta, replied_at = now(), reply_read_at = NULL, resolved_at = coalesce(resolved_at, now())
+        WHERE id = :id AND user_id IS NOT NULL
+        """)
+        .param("id", id)
+        .param("resposta", resposta)
+        .update();
+  }
+
+  /** Mensagens do proprio usuario, mais recentes primeiro, pra "Minhas mensagens" e o sino. */
+  List<MinhaMensagem> listarDoUsuario(String usuarioId) {
+    return jdbc.sql("""
+        SELECT id, kind, message, created_at, reply, replied_at, reply_read_at IS NOT NULL AS resposta_lida
+        FROM contact_messages
+        WHERE user_id = CAST(:usuarioId AS uuid)
+        ORDER BY coalesce(replied_at, created_at) DESC
+        LIMIT 50
+        """)
+        .param("usuarioId", usuarioId)
+        .query((rs, linha) -> new MinhaMensagem(
+            rs.getLong("id"),
+            rs.getString("kind"),
+            rs.getString("message"),
+            rs.getObject("created_at", OffsetDateTime.class),
+            rs.getString("reply"),
+            rs.getObject("replied_at", OffsetDateTime.class),
+            rs.getBoolean("resposta_lida")))
+        .list();
+  }
+
+  void marcarRespostasLidas(String usuarioId) {
+    jdbc.sql("""
+        UPDATE contact_messages SET reply_read_at = now()
+        WHERE user_id = CAST(:usuarioId AS uuid) AND replied_at IS NOT NULL AND reply_read_at IS NULL
+        """)
+        .param("usuarioId", usuarioId)
+        .update();
+  }
+
+  record MensagemAdmin(long id, String tipo, String mensagem, String email, String pagina, String handle,
+      OffsetDateTime criadaEm, boolean respondivel, String resposta, OffsetDateTime respondidaEm) {}
+
+  record MinhaMensagem(long id, String tipo, String mensagem, OffsetDateTime criadaEm, String resposta,
+      OffsetDateTime respondidaEm, boolean respostaLida) {}
 }

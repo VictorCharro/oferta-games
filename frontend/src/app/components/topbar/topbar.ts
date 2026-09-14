@@ -8,7 +8,7 @@ import { AuthService } from '../../services/auth';
 import { GameService, GameSummary } from '../../services/game';
 import { SearchService } from '../../services/search';
 import { PerfisService } from '../../services/perfis';
-import { NotificationsService, PriceNotification } from '../../services/notifications';
+import { MinhaMensagem, NotificationsService, PriceNotification } from '../../services/notifications';
 
 @Component({
   selector: 'app-topbar',
@@ -33,6 +33,7 @@ export class Topbar implements OnInit, OnDestroy {
   private routeSub!: Subscription;
   private searchSub!: Subscription;
   private notificationsSub!: Subscription;
+  private mensagensSub?: Subscription;
   private sessaoSub!: Subscription;
   private searchInput$ = new Subject<string>();
 
@@ -55,6 +56,7 @@ export class Topbar implements OnInit, OnDestroy {
     this.sessaoSub = this.auth.sessaoResolvida$.subscribe(() => this.cdr.detectChanges());
     this.avatarSub = this.auth.avatar$.subscribe(() => this.cdr.detectChanges());
     this.notificationsSub = this.notificationsService.list$.subscribe(notifications => { this.notifications = notifications; this.cdr.detectChanges(); });
+    this.mensagensSub = this.notificationsService.mensagens$.subscribe(() => this.cdr.detectChanges());
 
     this.isCatalogPage = this.router.url.startsWith('/catalogo');
     this.routeSub = this.router.events
@@ -95,6 +97,7 @@ export class Topbar implements OnInit, OnDestroy {
     this.routeSub?.unsubscribe();
     this.searchSub?.unsubscribe();
     this.notificationsSub?.unsubscribe();
+    this.mensagensSub?.unsubscribe();
     this.sessaoSub?.unsubscribe();
   }
 
@@ -156,9 +159,19 @@ export class Topbar implements OnInit, OnDestroy {
   }
 
   toggleDropdown() { this.dropdownOpen = !this.dropdownOpen; }
-  toggleNotifications() { this.notificationsOpen = !this.notificationsOpen; }
+  toggleNotifications() {
+    this.notificationsOpen = !this.notificationsOpen;
+    // Busca respostas novas ao abrir o sino: sem isso so chegariam no proximo login/recarga.
+    if (this.notificationsOpen) this.notificationsService.loadMensagens();
+  }
 
-  get unreadNotifications(): number { return this.notifications.filter(notification => !notification.lida).length; }
+  get unreadNotifications(): number { return this.notificationsService.unreadCount; }
+  get respostasNaoLidas(): MinhaMensagem[] { return this.notificationsService.respostasNaoLidas; }
+
+  abrirResposta() {
+    this.notificationsOpen = false;
+    this.router.navigate(['/contato'], { fragment: 'minhas' });
+  }
 
   formatNotificationPrice(price: number): string { return Number(price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 

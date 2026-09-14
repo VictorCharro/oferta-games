@@ -317,10 +317,43 @@ export class AdminColeta implements OnInit, OnDestroy {
     return this.mensagens.filter(m => m.tipo === this.filtroMensagem);
   }
 
-  linkResposta(m: MensagemContato): string {
-    const assunto = encodeURIComponent(`Re: sua mensagem no Oferta Games (${this.rotuloTipo[m.tipo]})`);
-    const corpo = encodeURIComponent(`\n\n---\nSua mensagem:\n${m.mensagem}`);
-    return `mailto:${m.email}?subject=${assunto}&body=${corpo}`;
+  // Resposta entregue no site (sino e "Minhas mensagens" de quem enviou), sem e-mail por enquanto.
+  // Enviar a resposta ja tira a mensagem da fila.
+  respondendoId: number | null = null;
+  textoResposta = '';
+  enviandoResposta = false;
+
+  abrirResposta(m: MensagemContato) {
+    this.respondendoId = m.id;
+    this.textoResposta = m.resposta ?? '';
+  }
+
+  cancelarResposta() {
+    this.respondendoId = null;
+    this.textoResposta = '';
+  }
+
+  async enviarResposta(m: MensagemContato) {
+    const resposta = this.textoResposta.trim();
+    if (!resposta || this.enviandoResposta) return;
+    this.enviandoResposta = true;
+    this.aviso = '';
+    this.cdr.detectChanges();
+    try {
+      await this.administracao.responderMensagemContato(m.id, resposta);
+      const respondida: MensagemContato = { ...m, resposta, respondidaEm: new Date().toISOString() };
+      this.mensagens = this.mensagens.filter(x => x.id !== m.id);
+      if (this.mensagensLidas) this.mensagensLidas = [respondida, ...this.mensagensLidas.filter(x => x.id !== m.id)];
+      if (this.filtroMensagem !== 'todas' && this.filtroMensagem !== 'lidas' && !this.contarTipo(this.filtroMensagem)) this.filtroMensagem = 'todas';
+      this.aviso = 'Resposta enviada. Ela aparece nas notificações de quem mandou a mensagem.';
+      this.cancelarResposta();
+    } catch (erro: any) {
+      this.error = erro?.status === 404
+        ? 'Essa mensagem foi enviada sem conta, não tem pra quem entregar a resposta.'
+        : 'Não foi possível enviar a resposta.';
+    }
+    this.enviandoResposta = false;
+    this.cdr.detectChanges();
   }
 
   async marcarLida(m: MensagemContato) {

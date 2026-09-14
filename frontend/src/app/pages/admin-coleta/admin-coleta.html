@@ -151,10 +151,22 @@
               <small *ngIf="!m.handle">· anônimo</small>
             </div>
             <p class="mensagem-texto">{{ m.mensagem }}</p>
-            <small *ngIf="m.email" class="email">{{ m.email }}</small>
+            <div class="resposta-enviada" *ngIf="m.resposta">
+              <small>Sua resposta{{ m.respondidaEm ? ' · ' + tempoRelativo(m.respondidaEm) : '' }}</small>
+              <p>{{ m.resposta }}</p>
+            </div>
+            <form class="caixa-resposta" *ngIf="respondendoId === m.id" (ngSubmit)="enviarResposta(m)">
+              <textarea name="resposta" [(ngModel)]="textoResposta" rows="4" maxlength="2000" placeholder="Escreva a resposta. Ela aparece nas notificações de quem enviou."></textarea>
+              <div class="caixa-resposta-acoes">
+                <small>{{ textoResposta.length }}/2000</small>
+                <button class="btn-outline pequeno" type="button" (click)="cancelarResposta()">Cancelar</button>
+                <button class="btn-primary pequeno" type="submit" [disabled]="enviandoResposta || !textoResposta.trim()">{{ enviandoResposta ? 'Enviando...' : 'Enviar resposta' }}</button>
+              </div>
+            </form>
           </div>
-          <div class="acoes">
-            <a *ngIf="m.email" class="btn-outline pequeno" [href]="linkResposta(m)">Responder</a>
+          <div class="acoes" *ngIf="respondendoId !== m.id">
+            <button *ngIf="m.respondivel" class="btn-outline pequeno" type="button" (click)="abrirResposta(m)">{{ m.resposta ? 'Editar resposta' : 'Responder' }}</button>
+            <small *ngIf="!m.respondivel" class="sem-resposta" title="Enviada sem conta: não tem pra quem entregar a resposta">Sem como responder</small>
             <button *ngIf="filtroMensagem !== 'lidas'" class="btn-outline pequeno" type="button" (click)="marcarLida(m)" [disabled]="resolvendoMensagemId === m.id">Marcar como lida</button>
           </div>
         </li>

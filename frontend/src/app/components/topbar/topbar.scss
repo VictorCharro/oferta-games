@@ -262,6 +262,10 @@
 .notification-item small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 11px; }
 .notification-item button { width: 20px; height: 20px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 17px; line-height: 1; }
 .notification-item button:hover { background: var(--bg-input); color: var(--text-primary); }
+.notification-item.resposta { border-left: 3px solid var(--color-purple); padding-left: 8px; }
+.notification-icone { width: 20px; margin-top: 1px; color: var(--color-purple); font-size: 16px; line-height: 1; text-align: center; }
+.notification-tag.resposta-tag { background: rgba(41, 168, 224, .16); color: var(--color-purple); }
+.resposta-previa { display: -webkit-box; margin-top: 2px; overflow: hidden; color: var(--text-secondary); -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .notifications-empty { margin: 8px 6px 6px; padding: 22px 8px; color: var(--text-secondary); font-size: 13px; text-align: center; }
 
 .dropdown {

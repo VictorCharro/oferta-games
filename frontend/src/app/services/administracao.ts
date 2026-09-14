@@ -75,6 +75,10 @@ export interface MensagemContato {
   pagina: string | null;
   handle: string | null;
   criadaEm: string;
+  /** Enviada com conta: da pra responder no site. Anonima nao tem pra quem entregar. */
+  respondivel: boolean;
+  resposta: string | null;
+  respondidaEm: string | null;
 }
 
 export interface PerfilBloqueado {
@@ -91,6 +95,10 @@ export class AdministracaoService {
 
   async listarMensagensContato(lidas = false): Promise<MensagemContato[]> {
     return firstValueFrom(this.http.get<MensagemContato[]>(`${this.api}/contato?lidas=${lidas}`, { headers: await this.cabecalhosAutorizacao() }));
+  }
+
+  async responderMensagemContato(id: number, resposta: string): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.api}/contato/${id}/responder`, { resposta }, { headers: await this.cabecalhosAutorizacao() }));
   }
 
   async listarPerfisBloqueados(): Promise<PerfilBloqueado[]> {
