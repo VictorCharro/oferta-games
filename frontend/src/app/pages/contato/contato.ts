@@ -1,9 +1,9 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpEventType } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth';
 import { SeoService } from '../../services/seo';
 import { supabase } from '../../services/supabase';
@@ -86,6 +86,7 @@ export class Contato implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.sub?.unsubscribe();
     this.fragmentoSub?.unsubscribe();
+    this.limparAnexos();
   }
 
   private async verRespostas(rolar = false) {
@@ -112,21 +113,83 @@ export class Contato implements OnInit, OnDestroy {
       return;
     }
     this.enviando = true;
+    this.progresso = null;
     this.cdr.detectChanges();
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
-      await firstValueFrom(this.http.post(`${URL_API}/contato`,
-        { tipo: this.tipo, mensagem: texto, pagina: this.paginaOrigem, site: this.site },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }));
+      const corpo = new FormData();
+      corpo.append('tipo', this.tipo);
+      corpo.append('mensagem', texto);
+      if (this.paginaOrigem) corpo.append('pagina', this.paginaOrigem);
+      corpo.append('site', this.site);
+      for (const anexo of this.anexos) corpo.append('anexos', anexo.arquivo, anexo.arquivo.name);
+      await new Promise<void>((resolve, reject) => {
+        this.http.post(`${URL_API}/contato`, corpo, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          reportProgress: true,
+          observe: 'events',
+        }).subscribe({
+          next: evento => {
+            // Barra so faz sentido com anexo: sem ele a requisicao e instantanea.
+            if (evento.type === HttpEventType.UploadProgress && this.anexos.length && evento.total) {
+              this.progresso = Math.round((evento.loaded / evento.total) * 100);
+              this.cdr.detectChanges();
+            }
+          },
+          error: reject,
+          complete: resolve,
+        });
+      });
       this.enviada = true;
       this.mensagem = '';
+      this.limparAnexos();
       if (token) this.notificacoes.loadMensagens();
     } catch (erro) {
       this.erro = mensagemDaApi(erro, 'Não foi possível enviar agora. Tente de novo em instantes.');
     }
     this.enviando = false;
+    this.progresso = null;
     this.cdr.detectChanges();
+  }
+
+  // ---------- Anexos ----------
+  // Mesmos limites do backend (ArmazenamentoAnexos), conferidos aqui pra avisar antes de subir 50 MB
+  // a toa. O backend confere de novo pelo conteudo do arquivo.
+  readonly maxAnexos = 3;
+  anexos: Array<{ arquivo: File; url: string; video: boolean }> = [];
+  progresso: number | null = null;
+
+  aoEscolherArquivos(evento: Event) {
+    const input = evento.target as HTMLInputElement;
+    const arquivos = Array.from(input.files ?? []);
+    input.value = '';
+    this.erro = '';
+    for (const arquivo of arquivos) {
+      if (this.anexos.length >= this.maxAnexos) { this.erro = `Envie no máximo ${this.maxAnexos} anexos.`; break; }
+      const video = arquivo.type.startsWith('video/');
+      const imagem = arquivo.type.startsWith('image/');
+      if (!video && !imagem) { this.erro = `"${arquivo.name}" não é imagem nem vídeo.`; continue; }
+      const limiteMb = video ? 50 : 8;
+      if (arquivo.size > limiteMb * 1024 * 1024) { this.erro = `"${arquivo.name}" passa de ${limiteMb} MB.`; continue; }
+      this.anexos.push({ arquivo, url: URL.createObjectURL(arquivo), video });
+    }
+    this.cdr.detectChanges();
+  }
+
+  removerAnexo(indice: number) {
+    const [removido] = this.anexos.splice(indice, 1);
+    if (removido) URL.revokeObjectURL(removido.url);
+    this.cdr.detectChanges();
+  }
+
+  private limparAnexos() {
+    this.anexos.forEach(a => URL.revokeObjectURL(a.url));
+    this.anexos = [];
+  }
+
+  tamanho(bytes: number): string {
+    return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   novaMensagem() {

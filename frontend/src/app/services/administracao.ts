@@ -79,6 +79,14 @@ export interface MensagemContato {
   respondivel: boolean;
   resposta: string | null;
   respondidaEm: string | null;
+  anexos: AnexoContato[];
+}
+
+export interface AnexoContato {
+  id: number;
+  contentType: string;
+  tamanho: number;
+  nomeOriginal: string | null;
 }
 
 export interface PerfilBloqueado {
@@ -95,6 +103,11 @@ export class AdministracaoService {
 
   async listarMensagensContato(lidas = false): Promise<MensagemContato[]> {
     return firstValueFrom(this.http.get<MensagemContato[]>(`${this.api}/contato?lidas=${lidas}`, { headers: await this.cabecalhosAutorizacao() }));
+  }
+
+  /** Arquivo do anexo como Blob: a rota exige o token, entao nao da pra usar a URL direto num <img>. */
+  async baixarAnexoContato(id: number): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${this.api}/contato/anexos/${id}`, { headers: await this.cabecalhosAutorizacao(), responseType: 'blob' }));
   }
 
   async responderMensagemContato(id: number, resposta: string): Promise<void> {

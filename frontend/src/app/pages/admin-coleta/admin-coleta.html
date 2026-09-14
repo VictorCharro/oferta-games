@@ -151,6 +151,18 @@
               <small *ngIf="!m.handle">· anônimo</small>
             </div>
             <p class="mensagem-texto">{{ m.mensagem }}</p>
+            <div class="anexos-admin" *ngIf="m.anexos?.length">
+              <ng-container *ngFor="let a of m.anexos">
+                <button *ngIf="!urlsAnexos.has(a.id)" type="button" class="anexo-chip" (click)="verAnexo(a)" [disabled]="carregandoAnexo !== null">
+                  {{ carregandoAnexo === a.id ? 'Carregando...' : (ehVideo(a) ? '▶ Vídeo' : '▣ Imagem') }} · {{ tamanhoArquivo(a.tamanho) }}
+                </button>
+                <figure *ngIf="urlsAnexos.get(a.id) as url" class="anexo-aberto">
+                  <a *ngIf="!ehVideo(a)" [href]="url" target="_blank" rel="noopener"><img [src]="url" [alt]="a.nomeOriginal || 'Anexo'" /></a>
+                  <video *ngIf="ehVideo(a)" [src]="url" controls preload="metadata"></video>
+                  <figcaption>{{ a.nomeOriginal || 'anexo' }} · <a [href]="url" [attr.download]="a.nomeOriginal || 'anexo'">baixar</a></figcaption>
+                </figure>
+              </ng-container>
+            </div>
             <div class="resposta-enviada" *ngIf="m.resposta">
               <small>Sua resposta{{ m.respondidaEm ? ' · ' + tempoRelativo(m.respondidaEm) : '' }}</small>
               <p>{{ m.resposta }}</p>

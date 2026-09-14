@@ -30,6 +30,24 @@
         <small>{{ mensagem.trim().length < 10 ? 'mínimo 10 caracteres · ' : '' }}{{ mensagem.length }}/2000</small>
       </label>
 
+      <div class="campo anexos">
+        <span>Anexos <em>(opcional)</em></span>
+        <p class="anexos-dica">Print ou vídeo ajudam muito a entender um problema. Até {{ maxAnexos }} arquivos: imagem até 8 MB, vídeo até 50 MB.</p>
+        <div class="anexos-lista">
+          <div class="anexo" *ngFor="let a of anexos; let i = index">
+            <img *ngIf="!a.video" [src]="a.url" alt="" />
+            <video *ngIf="a.video" [src]="a.url" muted preload="metadata"></video>
+            <span class="anexo-info">{{ a.video ? 'Vídeo' : 'Imagem' }} · {{ tamanho(a.arquivo.size) }}</span>
+            <button type="button" class="anexo-remover" (click)="removerAnexo(i)" [disabled]="enviando" [attr.aria-label]="'Remover ' + a.arquivo.name">×</button>
+          </div>
+          <label class="anexo-adicionar" *ngIf="anexos.length < maxAnexos" [class.desativado]="enviando">
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime" multiple (change)="aoEscolherArquivos($event)" [disabled]="enviando" />
+            <strong>+</strong>
+            <small>Adicionar</small>
+          </label>
+        </div>
+      </div>
+
       <!-- Isca pra bot: fora da tela e fora da ordem de tab. -->
       <label class="isca" aria-hidden="true">
         Site
@@ -45,8 +63,9 @@
 
       <div class="acoes">
         <button class="btn-primary" type="submit" [disabled]="enviando">
-          {{ enviando ? 'Enviando...' : 'Enviar mensagem' }}
+          {{ enviando ? (progresso !== null && progresso < 100 ? 'Enviando ' + progresso + '%' : 'Enviando...') : 'Enviar mensagem' }}
         </button>
+        <div class="progresso" *ngIf="enviando && progresso !== null"><div [style.width.%]="progresso"></div></div>
       </div>
       <p class="rodape">Usamos a mensagem só para responder e melhorar o site. Veja a <a routerLink="/privacidade">Política de Privacidade</a>.</p>
     </form>

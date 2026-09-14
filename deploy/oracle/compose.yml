@@ -47,6 +47,11 @@ services:
     environment:
       PORT: 8080
       JAVA_OPTS: -Xms256m -Xmx1024m
+      CONTATO_ANEXOS_DIR: /data/anexos-contato
+    # Anexos (imagem/video) do Fale conosco. Volume nomeado pra sobreviver a rebuild do container;
+    # teto de 5 GB aplicado no codigo (ArmazenamentoAnexos.MAX_TOTAL).
+    volumes:
+      - anexos_contato:/data/anexos-contato
     expose:
       - "8080"
 
@@ -70,3 +75,4 @@ volumes:
   caddy_data:
   caddy_config:
   catalogo_db_data:
+  anexos_contato:

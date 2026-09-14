@@ -64,6 +64,25 @@ textarea {
 }
 textarea { resize: vertical; min-height: 140px; }
 
+.anexos-dica { margin: -2px 0 2px; font-size: 12px !important; color: var(--text-muted) !important; }
+.anexos-lista { display: flex; flex-wrap: wrap; gap: 10px; }
+.anexo, .anexo-adicionar { position: relative; width: 120px; height: 90px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: var(--bg-primary); }
+.anexo {
+  img, video { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+.anexo-info { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 6px; background: rgba(0, 0, 0, .65); color: #fff; font-size: 10.5px; }
+.anexo-remover { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .7); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; &:hover { background: var(--color-red); } }
+.anexo-adicionar { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-style: dashed; color: var(--text-secondary); cursor: pointer;
+  input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  strong { font-size: 22px; line-height: 1; }
+  small { font-size: 12px; align-self: center !important; }
+  &:hover { border-color: var(--color-purple); color: var(--color-purple); }
+  &.desativado { opacity: .5; pointer-events: none; }
+}
+.progresso { flex: 1 1 160px; align-self: center; height: 6px; border-radius: 6px; background: var(--bg-card-hover); overflow: hidden;
+  div { height: 100%; background: var(--color-purple); transition: width .2s; }
+}
+
 .aviso-resposta { margin: -4px 0 0; font-size: 13px !important; }
 .link { padding: 0; border: 0; background: none; color: var(--color-purple); font: inherit; font-weight: 600; cursor: pointer; &:hover { text-decoration: underline; } }
 

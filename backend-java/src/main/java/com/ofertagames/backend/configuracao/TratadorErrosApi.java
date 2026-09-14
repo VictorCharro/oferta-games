@@ -5,6 +5,7 @@ import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -31,5 +32,11 @@ class TratadorErrosApi {
       corpo.put("error", erro.getReason());
     }
     return ResponseEntity.status(erro.getStatusCode()).headers(erro.getHeaders()).body(corpo);
+  }
+
+  /** Upload acima do teto de spring.servlet.multipart (anexos do Fale conosco). */
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  ResponseEntity<Map<String, Object>> tratarUploadGrande(MaxUploadSizeExceededException erro) {
+    return ResponseEntity.status(413).body(Map.of("status", 413, "error", "Anexo muito grande: vídeo até 50 MB e imagem até 8 MB"));
   }
 }

@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
   AdministracaoService,
+  AnexoContato,
   DenunciaAberta,
   MensagemContato,
   PerfilBloqueado,
@@ -122,6 +123,7 @@ export class AdminColeta implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destruido = true;
     for (const t of [this.atualizador, this.flashTimer, this.buscaTimer]) if (t) clearTimeout(t);
+    this.urlsAnexos.forEach(url => URL.revokeObjectURL(url));
   }
 
   selecionarAba(aba: Aba) {
@@ -315,6 +317,32 @@ export class AdminColeta implements OnInit, OnDestroy {
     if (this.filtroMensagem === 'lidas') return this.mensagensLidas ?? [];
     if (this.filtroMensagem === 'todas') return this.mensagens;
     return this.mensagens.filter(m => m.tipo === this.filtroMensagem);
+  }
+
+  // Anexos: baixados com o token sob demanda (video pode ter 50 MB) e mostrados via blob URL.
+  urlsAnexos = new Map<number, string>();
+  carregandoAnexo: number | null = null;
+
+  async verAnexo(anexo: AnexoContato) {
+    if (this.urlsAnexos.has(anexo.id) || this.carregandoAnexo !== null) return;
+    this.carregandoAnexo = anexo.id;
+    this.cdr.detectChanges();
+    try {
+      const blob = await this.administracao.baixarAnexoContato(anexo.id);
+      this.urlsAnexos.set(anexo.id, URL.createObjectURL(blob));
+    } catch {
+      this.error = 'Não foi possível abrir o anexo.';
+    }
+    this.carregandoAnexo = null;
+    this.cdr.detectChanges();
+  }
+
+  ehVideo(anexo: AnexoContato): boolean {
+    return anexo.contentType.startsWith('video/');
+  }
+
+  tamanhoArquivo(bytes: number): string {
+    return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   // Resposta entregue no site (sino e "Minhas mensagens" de quem enviou), sem e-mail por enquanto.

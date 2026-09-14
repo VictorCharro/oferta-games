@@ -115,6 +115,14 @@
 .linhas .linha-texto > .tag { align-self: flex-start; }
 .citacao, .mensagem-texto { margin: 2px 0 0; color: var(--text-secondary); font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .mensagem-texto { color: var(--text-primary); }
+.anexos-admin { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-top: 6px; }
+.anexo-chip { padding: 6px 10px; border: 1px dashed var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-secondary); font: inherit; font-size: 12px; cursor: pointer;
+  &:hover:not(:disabled) { border-color: var(--color-purple); color: var(--color-purple); }
+}
+.anexo-aberto { margin: 0; max-width: min(420px, 100%);
+  img, video { display: block; max-width: 100%; max-height: 320px; border: 1px solid var(--border-color); border-radius: 6px; background: #000; }
+  figcaption { margin-top: 4px; color: var(--text-muted); font-size: 11px; overflow-wrap: anywhere; }
+}
 .resposta-enviada { margin-top: 6px; padding: 8px 12px; border-left: 3px solid var(--color-purple); background: rgba(41, 168, 224, .07);
   small { color: var(--color-purple) !important; font-weight: 600; }
   p { margin: 4px 0 0; color: var(--text-primary); font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
