@@ -40,6 +40,7 @@ export class AdminColeta implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destruido = true;
     if (this.atualizador) clearTimeout(this.atualizador);
+    if (this.flashTimer) clearTimeout(this.flashTimer);
   }
 
   // Enquanto algum job estiver rodando, atualiza mais rapido (5s) pra quem esta acompanhando ver o
@@ -112,6 +113,34 @@ export class AdminColeta implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  // Feedback do botao Atualizar: a resposta costuma voltar em ~100ms, rapido demais pra perceber, entao
+  // o "Atualizando..." fica no minimo 600ms e depois pisca "Atualizado agora" por 2s.
+  atualizadoEm: Date | null = null;
+  flashAtualizado = false;
+  private flashTimer?: ReturnType<typeof setTimeout>;
+
+  async atualizarManual() {
+    if (this.loading) return;
+    this.aviso = '';
+    const inicio = Date.now();
+    this.loading = true;
+    this.cdr.detectChanges();
+    await this.carregar();
+    const restante = 600 - (Date.now() - inicio);
+    if (restante > 0) {
+      this.loading = true;
+      this.cdr.detectChanges();
+      await new Promise(r => setTimeout(r, restante));
+      this.loading = false;
+    }
+    if (!this.error) {
+      this.flashAtualizado = true;
+      if (this.flashTimer) clearTimeout(this.flashTimer);
+      this.flashTimer = setTimeout(() => { this.flashAtualizado = false; this.cdr.detectChanges(); }, 2000);
+    }
+    this.cdr.detectChanges();
+  }
+
   async carregar(exibirCarregamento = true) {
     if (exibirCarregamento) this.loading = true;
     try {
@@ -123,6 +152,7 @@ export class AdminColeta implements OnInit, OnDestroy {
         ]);
       }
       this.error = '';
+      this.atualizadoEm = new Date();
     } catch {
       this.error = 'Não foi possível consultar o status da coleta.';
     } finally {

@@ -6,7 +6,15 @@
         <h1>Coleta do catálogo</h1>
         <p>Acompanhamento interno das atualizações de preços e metadados.</p>
       </div>
-      <button class="btn-outline refresh" type="button" (click)="carregar()" [disabled]="loading">Atualizar</button>
+      <div class="refresh-area">
+        <button class="btn-outline refresh" type="button" (click)="atualizarManual()" [disabled]="loading">
+          <span class="spinner" *ngIf="loading" aria-hidden="true"></span>
+          {{ loading ? 'Atualizando...' : 'Atualizar' }}
+        </button>
+        <small class="atualizado-em" *ngIf="atualizadoEm" [class.flash]="flashAtualizado">
+          {{ flashAtualizado ? 'Atualizado agora' : 'Atualizado às ' + (atualizadoEm | date:'HH:mm:ss') }}
+        </small>
+      </div>
     </header>
 
     <p class="message success" *ngIf="aviso">{{ aviso }}</p>

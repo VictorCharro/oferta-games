@@ -36,7 +36,11 @@
   }
 }
 .eyebrow, .label { color: var(--color-purple) !important; font-size: 11px !important; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
-.refresh { min-width: 40px; }
+.refresh-area { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: 0 0 auto; }
+.refresh { display: inline-flex; align-items: center; gap: 8px; min-width: 130px; justify-content: center; }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--border-color); border-top-color: var(--color-purple); border-radius: 50%; animation: girar .7s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.atualizado-em { color: var(--text-muted); font-size: 11px; transition: color .2s; &.flash { color: var(--color-green); font-weight: 600; } }
 .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .status-card, .queue-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; }
 .status-card { padding: 22px; }
