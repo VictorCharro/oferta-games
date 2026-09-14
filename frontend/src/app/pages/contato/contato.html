@@ -1,0 +1,54 @@
+<div class="page-content">
+  <main class="contato-page">
+    <header>
+      <h1>Fale conosco</h1>
+      <p>O Oferta Games está em desenvolvimento e cada mensagem ajuda a decidir o que melhorar primeiro. Lemos todas.</p>
+    </header>
+
+    <section class="contato-card" *ngIf="enviada">
+      <h2>Mensagem enviada, obrigado!</h2>
+      <p *ngIf="email.trim()">Se precisarmos de mais detalhes, respondemos em {{ email.trim() }}.</p>
+      <p *ngIf="!email.trim()">Como você não deixou e-mail, não temos como responder — mas a mensagem chegou.</p>
+      <div class="acoes">
+        <button class="btn-outline" type="button" (click)="novaMensagem()">Enviar outra</button>
+        <a class="btn-primary" routerLink="/">Voltar ao início</a>
+      </div>
+    </section>
+
+    <form class="contato-card" *ngIf="!enviada" (ngSubmit)="enviar()">
+      <fieldset class="tipos">
+        <legend>Sobre o que é?</legend>
+        <label *ngFor="let t of tipos" class="tipo" [class.ativo]="tipo === t.id">
+          <input type="radio" name="tipo" [value]="t.id" [(ngModel)]="tipo" />
+          {{ t.rotulo }}
+        </label>
+      </fieldset>
+
+      <label class="campo">
+        <span>Mensagem</span>
+        <textarea name="mensagem" [(ngModel)]="mensagem" rows="7" maxlength="2000" [placeholder]="dicaAtual" required></textarea>
+        <small>{{ mensagem.length }}/2000</small>
+      </label>
+
+      <label class="campo">
+        <span>E-mail para resposta <em>(opcional)</em></span>
+        <input type="email" name="email" [(ngModel)]="email" maxlength="254" autocomplete="email" placeholder="voce@exemplo.com" />
+      </label>
+
+      <!-- Isca pra bot: fora da tela e fora da ordem de tab. -->
+      <label class="isca" aria-hidden="true">
+        Site
+        <input type="text" name="site" [(ngModel)]="site" tabindex="-1" autocomplete="off" />
+      </label>
+
+      <p class="message error" *ngIf="erro">{{ erro }}</p>
+
+      <div class="acoes">
+        <button class="btn-primary" type="submit" [disabled]="enviando || mensagem.trim().length < 10">
+          {{ enviando ? 'Enviando...' : 'Enviar mensagem' }}
+        </button>
+      </div>
+      <p class="rodape">Usamos a mensagem e o e-mail só para responder e melhorar o site. Veja a <a routerLink="/privacidade">Política de Privacidade</a>.</p>
+    </form>
+  </main>
+</div>

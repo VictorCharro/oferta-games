@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdministracaoService, DenunciaAberta, ResultadoPreenchimentoJogo, StatusAdministrativoColeta, StatusColeta, TipoColeta } from '../../services/administracao';
+import { AdministracaoService, DenunciaAberta, MensagemContato,ResultadoPreenchimentoJogo, StatusAdministrativoColeta, StatusColeta, TipoColeta } from '../../services/administracao';
 
 type Aba = 'precos-steam' | 'detalhes-conquistas' | 'instant-gaming';
 
@@ -81,6 +81,26 @@ export class AdminColeta implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  // Fale conosco (/contato): mesma logica das denuncias, carregado junto com o status.
+  mensagensContato: MensagemContato[] = [];
+  resolvendoContatoId: number | null = null;
+  readonly rotuloTipoContato: Record<MensagemContato['tipo'], string> = {
+    elogio: 'Elogio', sugestao: 'Sugestão', problema: 'Problema', denuncia: 'Denúncia', outro: 'Outro',
+  };
+
+  async resolverMensagemContato(id: number) {
+    this.resolvendoContatoId = id;
+    this.cdr.detectChanges();
+    try {
+      await this.administracao.resolverMensagemContato(id);
+      this.mensagensContato = await this.administracao.listarMensagensContato();
+    } catch {
+      this.error = 'Não foi possível marcar a mensagem como lida.';
+    }
+    this.resolvendoContatoId = null;
+    this.cdr.detectChanges();
+  }
+
   async desbloquear(handle: string) {
     try {
       await this.administracao.definirBloqueio(handle, false);
@@ -96,7 +116,12 @@ export class AdminColeta implements OnInit, OnDestroy {
     if (exibirCarregamento) this.loading = true;
     try {
       this.status = await this.administracao.consultarColeta();
-      if (exibirCarregamento) this.denuncias = await this.administracao.listarDenuncias().catch(() => this.denuncias);
+      if (exibirCarregamento) {
+        [this.denuncias, this.mensagensContato] = await Promise.all([
+          this.administracao.listarDenuncias().catch(() => this.denuncias),
+          this.administracao.listarMensagensContato().catch(() => this.mensagensContato),
+        ]);
+      }
       this.error = '';
     } catch {
       this.error = 'Não foi possível consultar o status da coleta.';

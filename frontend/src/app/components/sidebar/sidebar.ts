@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { MenuMobileService } from '../../services/menu-mobile';
 
 @Component({
@@ -8,5 +9,5 @@ import { MenuMobileService } from '../../services/menu-mobile';
   styleUrl: './sidebar.scss',
 })
 export class Sidebar {
-  constructor(public menuMobile: MenuMobileService) {}
+  constructor(public menuMobile: MenuMobileService, public router: Router) {}
 }

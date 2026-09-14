@@ -1,0 +1,85 @@
+.contato-page { max-width: 720px; margin: 0 auto; padding-bottom: 48px; }
+
+header {
+  margin-bottom: 20px;
+  h1 { margin: 0 0 6px; font-size: 28px; }
+  p { color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+}
+
+.contato-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  h2 { font-size: 18px; }
+  p { color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+}
+
+.tipos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  legend { margin-bottom: 10px; color: var(--text-secondary); font-size: 13px; font-weight: 600; }
+}
+
+.tipo {
+  padding: 8px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  input { position: absolute; opacity: 0; pointer-events: none; }
+  &:hover { color: var(--text-primary); }
+  &:focus-within { outline: 2px solid var(--color-purple); outline-offset: 2px; }
+  &.ativo { color: #fff; background: var(--color-purple); border-color: var(--color-purple); }
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  span { color: var(--text-secondary); font-size: 13px; font-weight: 600; }
+  em { color: var(--text-muted); font-style: normal; font-weight: 400; }
+  small { align-self: flex-end; color: var(--text-muted); font-size: 11px; }
+}
+
+input[type='email'], textarea {
+  width: 100%;
+  padding: 11px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  &:focus { outline: none; border-color: var(--color-purple); }
+}
+textarea { resize: vertical; min-height: 140px; }
+
+.isca { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+.acoes { display: flex; flex-wrap: wrap; gap: 10px; a { text-decoration: none; } }
+
+.message.error {
+  padding: 11px 14px;
+  border-radius: 6px;
+  color: var(--color-red);
+  background: rgba(239, 68, 68, .08);
+  border: 1px solid rgba(239, 68, 68, .2);
+  font-size: 13px;
+}
+
+.rodape { font-size: 12px !important; color: var(--text-muted) !important; a { color: var(--color-purple); } }
+
+@media (max-width: 620px) {
+  header h1 { font-size: 24px; }
+  .contato-card { padding: 18px; }
+}

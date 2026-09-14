@@ -36,6 +36,29 @@
       </ul>
     </section>
 
+    <section class="preencher-jogo denuncias">
+      <div>
+        <p class="label">Fale conosco</p>
+        <h2>Mensagens abertas ({{ mensagensContato.length }})</h2>
+        <p class="hint" *ngIf="!mensagensContato.length">Nenhuma mensagem pendente.</p>
+      </div>
+      <ul *ngIf="mensagensContato.length" class="lista-denuncias">
+        <li *ngFor="let m of mensagensContato">
+          <div>
+            <strong>{{ rotuloTipoContato[m.tipo] }}</strong>
+            <small> · {{ m.criadaEm | date:'dd/MM HH:mm' }}</small>
+            <small *ngIf="m.handle"> · <a [href]="'/' + m.handle" target="_blank" rel="noopener">/{{ m.handle }}</a></small>
+            <small *ngIf="m.pagina"> · veio de {{ m.pagina }}</small>
+            <small *ngIf="m.email"> · <a [href]="'mailto:' + m.email">{{ m.email }}</a></small>
+            <p>{{ m.mensagem }}</p>
+          </div>
+          <div class="acoes">
+            <button class="btn-outline" type="button" (click)="resolverMensagemContato(m.id)" [disabled]="resolvendoContatoId === m.id">Marcar como lida</button>
+          </div>
+        </li>
+      </ul>
+    </section>
+
     <section class="preencher-jogo">
       <div>
         <p class="label">Jogo específico</p>

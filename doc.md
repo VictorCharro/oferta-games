@@ -954,6 +954,7 @@ No frontend a mesma regra vale com TSDoc (`/** ... */`), aplicada principalmente
 - Favorito da Steam no perfil linkando pro nosso catalogo quando o jogo existe nele — ver "Perfil publico e privado".
 - Recoleta automatica de jogo live-service quando aparece conquista desbloqueada fora do catalogo, rodando o mesmo "Preencher tudo agora" do admin — ver "Recoleta de jogo live-service".
 - Pronto pra usuarios reais (13/09/2026): recuperacao de senha (`/redefinir-senha`), exclusao de conta, Politica de Privacidade e Termos (`/privacidade`, `/termos`), denuncia e bloqueio de perfil, login que volta pra onde a pessoa estava (`returnUrl`), cache na CDN, 404/503 reais no SSR, SEO do perfil e JSON-LD do jogo — ver "Preparacao pro lancamento" em Seguranca.
+- Fale conosco (`/contato`, 14/09/2026): elogio, sugestao, problema, denuncia ou outro, com e-mail opcional e a pagina de origem; aceita anonimo (freios: campo isca, 10/dia por conta, 30/h anonimas no total, limite por IP). Tabela `contact_messages` (`sql/20260914_mensagens_contato.sql`), lida em `/admin/coleta` > "Mensagens abertas". Sem aviso por e-mail: precisa abrir o admin.
 
 ### Em validacao
 

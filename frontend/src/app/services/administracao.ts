@@ -67,11 +67,29 @@ export interface DenunciaAberta {
   totalDoPerfil: number;
 }
 
+export interface MensagemContato {
+  id: number;
+  tipo: 'elogio' | 'sugestao' | 'problema' | 'denuncia' | 'outro';
+  mensagem: string;
+  email: string | null;
+  pagina: string | null;
+  handle: string | null;
+  criadaEm: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdministracaoService {
   private api = `${URL_API}/admin`;
 
   constructor(private http: HttpClient) {}
+
+  async listarMensagensContato(): Promise<MensagemContato[]> {
+    return firstValueFrom(this.http.get<MensagemContato[]>(`${this.api}/contato`, { headers: await this.cabecalhosAutorizacao() }));
+  }
+
+  async resolverMensagemContato(id: number): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.api}/contato/${id}/resolver`, {}, { headers: await this.cabecalhosAutorizacao() }));
+  }
 
   async listarDenuncias(): Promise<DenunciaAberta[]> {
     return firstValueFrom(this.http.get<DenunciaAberta[]>(`${this.api}/denuncias`, { headers: await this.cabecalhosAutorizacao() }));

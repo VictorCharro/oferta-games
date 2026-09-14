@@ -26,6 +26,7 @@ const routes: Routes = [
   { path: 'redefinir-senha', loadComponent: () => import('./pages/redefinir-senha/redefinir-senha').then(m => m.RedefinirSenha) },
   { path: 'privacidade', data: { tipo: 'privacidade' }, loadComponent: () => import('./pages/legal/legal').then(m => m.Legal) },
   { path: 'termos', data: { tipo: 'termos' }, loadComponent: () => import('./pages/legal/legal').then(m => m.Legal) },
+  { path: 'contato', loadComponent: () => import('./pages/contato/contato').then(m => m.Contato) },
   { path: 'perfil', canActivate: [authGuard], loadComponent: () => import('./pages/profile/profile').then(m => m.Profile) },
   { path: 'perfil/blocos', canActivate: [authGuard], loadComponent: () => import('./pages/editar-blocos/editar-blocos').then(m => m.EditarBlocos) },
   { path: 'configuracoes', canActivate: [authGuard], loadComponent: () => import('./pages/settings/settings').then(m => m.Settings) },

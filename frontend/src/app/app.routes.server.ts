@@ -28,6 +28,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'monitorados', renderMode: RenderMode.Client },
   { path: 'favoritos', renderMode: RenderMode.Client },
   { path: 'admin/coleta', renderMode: RenderMode.Client },
+  { path: 'contato', renderMode: RenderMode.Client },
   { path: '', renderMode: RenderMode.Server, headers: LISTAGEM },
   { path: 'catalogo', renderMode: RenderMode.Server, headers: LISTAGEM },
   { path: 'mais-vendidos', renderMode: RenderMode.Server, headers: LISTAGEM },
