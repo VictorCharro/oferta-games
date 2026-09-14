@@ -8,7 +8,7 @@
     <section class="contato-card" *ngIf="enviada">
       <h2>Mensagem enviada, obrigado!</h2>
       <p *ngIf="email.trim()">Se precisarmos de mais detalhes, respondemos em {{ email.trim() }}.</p>
-      <p *ngIf="!email.trim()">Como você não deixou e-mail, não temos como responder — mas a mensagem chegou.</p>
+      <p *ngIf="!email.trim()">Como você não deixou e-mail, não temos como responder, mas a mensagem chegou.</p>
       <div class="acoes">
         <button class="btn-outline" type="button" (click)="novaMensagem()">Enviar outra</button>
         <a class="btn-primary" routerLink="/">Voltar ao início</a>
