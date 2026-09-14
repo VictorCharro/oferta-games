@@ -35,8 +35,7 @@
   <!-- Links legais e Fale conosco no pe da sidebar (issue #18): precisam estar acessiveis de
        qualquer pagina, e o app nao tem rodape. O state leva a pagina atual pra mensagem de contato. -->
   <footer class="sidebar-legal" (click)="menuMobile.close()">
-    <a routerLink="/contato" [state]="{ de: router.url }">Fale conosco</a>
-    <span aria-hidden="true">·</span>
+    <a class="contato" routerLink="/contato" [state]="{ de: router.url }">Fale conosco</a>
     <a routerLink="/termos">Termos</a>
     <span aria-hidden="true">·</span>
     <a routerLink="/privacidade">Privacidade</a>
