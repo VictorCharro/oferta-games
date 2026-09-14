@@ -27,7 +27,7 @@
       <label class="campo">
         <span>Mensagem</span>
         <textarea name="mensagem" [(ngModel)]="mensagem" rows="7" maxlength="2000" [placeholder]="dicaAtual" required></textarea>
-        <small>{{ mensagem.length }}/2000</small>
+        <small>{{ mensagem.trim().length < 10 ? 'mínimo 10 caracteres · ' : '' }}{{ mensagem.length }}/2000</small>
       </label>
 
       <label class="campo">
@@ -44,7 +44,7 @@
       <p class="message error" *ngIf="erro">{{ erro }}</p>
 
       <div class="acoes">
-        <button class="btn-primary" type="submit" [disabled]="enviando || mensagem.trim().length < 10">
+        <button class="btn-primary" type="submit" [disabled]="enviando">
           {{ enviando ? 'Enviando...' : 'Enviar mensagem' }}
         </button>
       </div>

@@ -70,7 +70,11 @@ export class Contato implements OnInit {
   async enviar() {
     this.erro = '';
     const texto = this.mensagem.trim();
-    if (texto.length < 10) { this.erro = 'Escreva pelo menos 10 caracteres.'; return; }
+    if (texto.length < 10) {
+      this.erro = 'Escreva pelo menos 10 caracteres pra gente entender a mensagem.';
+      this.cdr.detectChanges();
+      return;
+    }
     this.enviando = true;
     this.cdr.detectChanges();
     try {
