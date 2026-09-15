@@ -14,7 +14,9 @@ const SITE_NAME = 'Oferta Games';
 // Unico lugar com o dominio publico do site: og:url, canonical e JSON-LD saem daqui. Na troca pro
 // dominio proprio (issue #19) e so mudar esta constante.
 export const SITE_URL = 'https://ofertagames.vercel.app';
-const DEFAULT_IMAGE = `${SITE_URL}/logo.png`;
+// Arte 1200x630 (proporcao que WhatsApp, Discord e X esperam no card grande). Jogo e perfil passam a
+// propria imagem; o resto usa esta.
+const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`;
 const ID_JSON_LD = 'seo-json-ld';
 
 // Title/Meta funcionam identicos no browser e no server (Angular so troca o backend por baixo),
@@ -36,6 +38,15 @@ export class SeoService {
     this.setTag('og:title', fullTitle);
     this.setTag('og:description', config.description);
     this.setTag('og:image', image);
+    // Dimensoes so valem pra arte padrao: capa de jogo e banner de perfil tem outro tamanho, e
+    // declarar 1200x630 neles faria o WhatsApp distorcer o card.
+    if (image === DEFAULT_IMAGE) {
+      this.setTag('og:image:width', '1200');
+      this.setTag('og:image:height', '630');
+    } else {
+      this.meta.removeTag('property="og:image:width"');
+      this.meta.removeTag('property="og:image:height"');
+    }
     this.setTag('og:url', url);
     this.setTag('og:type', 'website');
     this.setTag('og:site_name', SITE_NAME);
