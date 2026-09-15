@@ -25,7 +25,8 @@ describe('SeoService', () => {
     expect(meta.getTag('property="og:image"')?.content).toBe('https://cdn.exemplo/capa.jpg');
 
     seo.set({ title: 'Jogo Y', description: 'Desc' });
-    expect(meta.getTag('property="og:image"')?.content).toContain('logo.png');
+    expect(meta.getTag('property="og:image"')?.content).toContain('og-image.png');
+    expect(meta.getTag('property="og:image:width"')?.content).toBe('1200');
   });
 
   it('monta a og:url absoluta a partir do path', () => {
