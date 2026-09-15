@@ -84,6 +84,7 @@ public class FiltroLimiteRequisicoes extends OncePerRequestFilter {
   private final Clock relogio;
   /** Instante (millis) do ultimo token SSR valido; 0 = nunca visto desde o boot. */
   private final AtomicLong ultimoTokenSsrValido = new AtomicLong(0);
+  private final AtomicLong ultimoAvisoTokenInvalido = new AtomicLong(0);
 
   @Autowired
   FiltroLimiteRequisicoes(
@@ -155,7 +156,17 @@ public class FiltroLimiteRequisicoes extends OncePerRequestFilter {
     String recebido = requisicao.getHeader(CABECALHO_TOKEN_SSR);
     if (recebido == null) return false;
     boolean valido = MessageDigest.isEqual(tokenSsr, recebido.getBytes(StandardCharsets.UTF_8));
-    if (valido) ultimoTokenSsrValido.set(relogio.millis());
+    long agora = relogio.millis();
+    if (valido) {
+      // Diagnostico de configuracao: sem esses logs nao ha como saber, olhando so o backend, se a
+      // Vercel nao manda o token ou manda um valor diferente. Nunca loga o valor, so o tamanho.
+      if (ultimoTokenSsrValido.getAndSet(agora) == 0) logger.info("Token do SSR reconhecido (primeiro desde o boot)");
+    } else {
+      long ultimoAviso = ultimoAvisoTokenInvalido.get();
+      if (agora - ultimoAviso > Duration.ofMinutes(10).toMillis() && ultimoAvisoTokenInvalido.compareAndSet(ultimoAviso, agora)) {
+        logger.warn("X-SSR-Token recebido nao confere com SSR_API_TOKEN (tamanho recebido={}, esperado={})", recebido.length(), tokenSsr.length);
+      }
+    }
     return valido;
   }
 
