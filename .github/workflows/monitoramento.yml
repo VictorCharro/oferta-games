@@ -11,6 +11,11 @@ on:
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
+    inputs:
+      simular_falha:
+        description: "Simular um problema pra testar o alerta (abre a issue; rode de novo sem marcar pra fechar)"
+        type: boolean
+        default: false
 
 permissions:
   issues: write
@@ -44,6 +49,9 @@ jobs:
           checar "Site (SSR na Vercel)" "https://ofertagames.vercel.app/" "Oferta Games"
           checar "API (backend na Oracle)" "https://api.163.176.220.243.sslip.io/actuator/health" '"UP"'
           checar "Ofertas da Home (API + banco do catalogo)" "https://api.163.176.220.243.sslip.io/api/deals/top?size=1" "slug"
+          if [ "${{ inputs.simular_falha }}" = "true" ]; then
+            problemas="${problemas}- **Teste de alerta** (execucao manual com simular_falha). Nada esta fora do ar.\n"
+          fi
           printf '%b' "$problemas" > problemas-http.md
 
       - name: Configurar chave SSH
