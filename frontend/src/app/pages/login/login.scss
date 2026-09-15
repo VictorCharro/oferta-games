@@ -170,3 +170,7 @@ form {
 }
 .link-reenviar { display: block; margin: 8px auto 0; font-size: 13px; }
 .link-voltar { display: block; margin: 16px auto 0; font-size: 13px; }
+
+// Saida da tela de nova senha (recuperacao aberta): botao com cara de link.
+.link-sair { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--color-purple); font: inherit; font-size: 13px; cursor: pointer; }
+.link-sair:hover { text-decoration: underline; }

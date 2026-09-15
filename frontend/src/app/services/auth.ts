@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
+import { NavigationEnd, Router } from '@angular/router';
+import { BehaviorSubject, filter } from 'rxjs';
 import { supabase } from './supabase';
 import type { User, Session } from '@supabase/supabase-js';
+
+const CHAVE_RECUPERACAO = 'oferta-games-recuperacao-pendente';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -44,8 +46,37 @@ export class AuthService {
       // Tratado aqui, no servico global, e nao so na pagina /redefinir-senha, porque se a URL de
       // retorno nao estiver na lista permitida do Supabase ele devolve pra raiz do site — e a
       // pessoa precisa cair no formulario de nova senha de qualquer jeito.
-      if (event === 'PASSWORD_RECOVERY') this.router.navigate(['/redefinir-senha']);
+      if (event === 'PASSWORD_RECOVERY') {
+        this.marcarRecuperacaoPendente(true);
+        this.router.navigate(['/redefinir-senha']);
+      }
+      if (event === 'SIGNED_OUT') this.marcarRecuperacaoPendente(false);
     });
+
+    // Enquanto a recuperacao nao terminar, o site prende a pessoa na tela de nova senha. O link do
+    // e-mail ja cria sessao (e assim que o Supabase permite trocar a senha), entao sem isso quem
+    // abrisse o link entrava na conta e podia navegar sem nunca definir senha nova — e o link do
+    // e-mail viraria um atalho de login permanente. Saidas: salvar a senha ou sair da conta.
+    this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(evento => {
+        if (this.recuperacaoPendente && !evento.urlAfterRedirects.startsWith('/redefinir-senha')) {
+          this.router.navigateByUrl('/redefinir-senha');
+        }
+      });
+  }
+
+  /** Recuperacao de senha aberta: sessao criada pelo link do e-mail, senha ainda nao trocada. */
+  get recuperacaoPendente(): boolean {
+    return typeof window !== 'undefined' && localStorage.getItem(CHAVE_RECUPERACAO) === 'true';
+  }
+
+  private marcarRecuperacaoPendente(pendente: boolean) {
+    if (typeof window === 'undefined') return;
+    try {
+      if (pendente) localStorage.setItem(CHAVE_RECUPERACAO, 'true');
+      else localStorage.removeItem(CHAVE_RECUPERACAO);
+    } catch { /* navegador com storage bloqueado: sem a trava, o fluxo continua funcionando */ }
   }
 
   get user(): User | null { return this._user.value; }
@@ -90,6 +121,7 @@ export class AuthService {
   /** Nova senha pra sessao de recuperacao aberta pelo link do e-mail. */
   async definirNovaSenha(senha: string): Promise<string | null> {
     const { error } = await supabase.auth.updateUser({ password: senha });
+    if (!error) this.marcarRecuperacaoPendente(false);
     return error?.message ?? null;
   }
 
@@ -119,6 +151,7 @@ export class AuthService {
   }
 
   async logout() {
+    this.marcarRecuperacaoPendente(false);
     await supabase.auth.signOut();
     this.router.navigate(['/']);
   }

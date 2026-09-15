@@ -44,6 +44,13 @@ export class RedefinirSenha implements OnInit {
     this.cdr.detectChanges();
   }
 
+  // Enquanto a recuperacao esta aberta o site prende nesta tela (ver AuthService): esta e a saida
+  // pra quem clicou no link sem querer e lembrou da senha atual.
+  async sair() {
+    await this.auth.logout();
+    this.router.navigate(['/login']);
+  }
+
   async salvar() {
     this.erro = '';
     if (this.senha.length < 8) { this.erro = 'A nova senha precisa ter pelo menos 8 caracteres.'; return; }

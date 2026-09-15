@@ -26,6 +26,10 @@
         <p class="msg-error" *ngIf="erro">{{ erro }}</p>
         <button type="submit" class="btn-primary btn-full" [disabled]="salvando">{{ salvando ? 'Salvando...' : 'Salvar nova senha' }}</button>
       </form>
+      <p class="login-ajuda" *ngIf="!sucesso">
+        Você precisa definir a nova senha pra continuar usando o site.<br>
+        <button type="button" class="link-sair" (click)="sair()">Prefiro sair e entrar com a senha atual</button>
+      </p>
     </ng-container>
   </div>
 </div>
