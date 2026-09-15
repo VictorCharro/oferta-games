@@ -45,6 +45,7 @@
         {{ aba.rotulo }}
         <span class="contador" *ngIf="aba.id === 'moderacao' && gruposDenuncias.length">{{ gruposDenuncias.length }}</span>
         <span class="contador" *ngIf="aba.id === 'mensagens' && mensagens.length">{{ mensagens.length }}</span>
+        <span class="contador erro" *ngIf="aba.id === 'erros' && erros.length">{{ erros.length }}</span>
         <span class="contador erro" *ngIf="aba.id === 'coleta' && coletasComErro.length">{{ coletasComErro.length }}</span>
       </button>
     </nav>
@@ -180,6 +181,39 @@
             <button *ngIf="m.respondivel" class="btn-outline pequeno" type="button" (click)="abrirResposta(m)">{{ m.resposta ? 'Editar resposta' : 'Responder' }}</button>
             <small *ngIf="!m.respondivel" class="sem-resposta" title="Enviada sem conta: não tem pra quem entregar a resposta">Sem como responder</small>
             <button *ngIf="filtroMensagem !== 'lidas'" class="btn-outline pequeno" type="button" (click)="marcarLida(m)" [disabled]="resolvendoMensagemId === m.id">Marcar como lida</button>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ===== Erros ===== -->
+    <section *ngIf="abaAtiva === 'erros'" class="painel">
+      <header class="painel-topo filtros">
+        <button type="button" class="filtro" [class.ativo]="!verErrosResolvidos" (click)="alternarErrosResolvidos(false)">Abertos <span>{{ erros.length }}</span></button>
+        <button type="button" class="filtro" [class.ativo]="verErrosResolvidos" (click)="alternarErrosResolvidos(true)">Resolvidos</button>
+        <small class="dica-erros">Erros no navegador dos usuários e 500 do backend, agrupados. Se um resolvido acontecer de novo, ele reabre.</small>
+      </header>
+      <p class="vazio" *ngIf="!errosVisiveis.length">{{ verErrosResolvidos ? 'Nenhum erro resolvido ainda.' : 'Nenhum erro aberto.' }}</p>
+      <ul class="linhas">
+        <li *ngFor="let e of errosVisiveis">
+          <div class="linha-texto">
+            <div class="linha-titulo">
+              <span class="tag" [ngClass]="e.origem === 'servidor' ? 'erro' : 'mensagem'">{{ e.origem === 'servidor' ? 'Backend' : 'Navegador' }}</span>
+              <span class="contador" [class.alerta]="e.ocorrencias > 1">{{ e.ocorrencias }}x</span>
+              <small>última {{ tempoRelativo(e.ultimaEm) }} · primeira {{ e.primeiraEm | date:'dd/MM HH:mm' }}</small>
+            </div>
+            <p class="mensagem-texto erro-mensagem">{{ e.mensagem }}</p>
+            <small>
+              <ng-container *ngIf="e.pagina">{{ e.pagina }}</ng-container>
+              <ng-container *ngIf="e.userAgent"> · {{ navegadorResumido(e.userAgent) }}</ng-container>
+            </small>
+            <button *ngIf="e.detalhe" type="button" class="link-detalhe" (click)="erroExpandido = erroExpandido === e.id ? null : e.id">
+              {{ erroExpandido === e.id ? 'Esconder detalhes' : 'Ver detalhes' }}
+            </button>
+            <pre class="pilha" *ngIf="erroExpandido === e.id">{{ e.detalhe }}</pre>
+          </div>
+          <div class="acoes" *ngIf="!verErrosResolvidos">
+            <button class="btn-outline pequeno" type="button" (click)="resolverErro(e)" [disabled]="resolvendoErroId === e.id">Marcar resolvido</button>
           </div>
         </li>
       </ul>

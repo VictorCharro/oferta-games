@@ -7,6 +7,7 @@ import {
   AdministracaoService,
   AnexoContato,
   DenunciaAberta,
+  ErroRegistrado,
   MensagemContato,
   PerfilBloqueado,
   ResultadoPreenchimentoJogo,
@@ -16,7 +17,7 @@ import {
 } from '../../services/administracao';
 import { GameService, GameSummary } from '../../services/game';
 
-type Aba = 'geral' | 'moderacao' | 'mensagens' | 'coleta' | 'ferramentas';
+type Aba = 'geral' | 'moderacao' | 'mensagens' | 'erros' | 'coleta' | 'ferramentas';
 type GrupoColeta = 'precos-steam' | 'detalhes-conquistas' | 'instant-gaming';
 type FiltroMensagem = 'todas' | MensagemContato['tipo'] | 'lidas';
 
@@ -43,7 +44,7 @@ interface ItemAtencao {
   acao: string;
 }
 
-const ABAS: Aba[] = ['geral', 'moderacao', 'mensagens', 'coleta', 'ferramentas'];
+const ABAS: Aba[] = ['geral', 'moderacao', 'mensagens', 'erros', 'coleta', 'ferramentas'];
 
 /**
  * Painel de administracao (/admin/coleta): resumo no topo e abas por area — visao geral,
@@ -61,6 +62,7 @@ export class AdminColeta implements OnInit, OnDestroy {
     { id: 'geral', rotulo: 'Visão geral' },
     { id: 'moderacao', rotulo: 'Moderação' },
     { id: 'mensagens', rotulo: 'Mensagens' },
+    { id: 'erros', rotulo: 'Erros' },
     { id: 'coleta', rotulo: 'Coleta' },
     { id: 'ferramentas', rotulo: 'Ferramentas' },
   ];
@@ -150,15 +152,18 @@ export class AdminColeta implements OnInit, OnDestroy {
   async carregar() {
     this.loading = true;
     this.cdr.detectChanges();
-    const [status, denuncias, mensagens] = await Promise.allSettled([
+    const [status, denuncias, mensagens, erros] = await Promise.allSettled([
       this.administracao.consultarColeta(),
       this.administracao.listarDenuncias(),
       this.administracao.listarMensagensContato(),
+      this.administracao.listarErros(),
     ]);
     if (status.status === 'fulfilled') this.status = status.value;
     if (denuncias.status === 'fulfilled') this.denuncias = denuncias.value;
     if (mensagens.status === 'fulfilled') this.mensagens = mensagens.value;
-    const falhou = [status, denuncias, mensagens].some(r => r.status === 'rejected');
+    if (erros.status === 'fulfilled') this.erros = erros.value;
+    const falhou = [status, denuncias, mensagens, erros].some(r => r.status === 'rejected');
+    if (this.errosResolvidos) this.errosResolvidos = await this.administracao.listarErros(true).catch(() => this.errosResolvidos);
     this.error = falhou ? 'Parte do painel não carregou. Tente atualizar de novo.' : '';
     if (!falhou) this.atualizadoEm = new Date();
     if (this.mensagensLidas) this.mensagensLidas = await this.administracao.listarMensagensContato(true).catch(() => this.mensagensLidas);
@@ -215,6 +220,15 @@ export class AdminColeta implements OnInit, OnDestroy {
     const itens: ItemAtencao[] = this.coletasComErro.map(c => ({
       tipo: 'erro', titulo: c.titulo, detalhe: c.coleta.ultimoErro ?? '', aba: 'coleta', acao: 'Ver',
     }));
+    for (const e of this.errosRecentes.slice(0, 3)) {
+      itens.push({
+        tipo: 'erro',
+        titulo: `Erro no ${e.origem}: ${this.resumir(e.mensagem, 70)}`,
+        detalhe: `${e.ocorrencias}x · última ${this.tempoRelativo(e.ultimaEm)}${e.pagina ? ' · ' + e.pagina : ''}`,
+        aba: 'erros',
+        acao: 'Ver',
+      });
+    }
     for (const g of this.gruposDenuncias.slice(0, 3)) {
       itens.push({
         tipo: 'denuncia',
@@ -397,6 +411,54 @@ export class AdminColeta implements OnInit, OnDestroy {
     }
     this.resolvendoMensagemId = null;
     this.cdr.detectChanges();
+  }
+
+  // ---------- Erros ----------
+  // Rastreamento proprio (issue #29): erros do navegador dos usuarios e 500 do backend, agrupados.
+
+  erros: ErroRegistrado[] = [];
+  errosResolvidos: ErroRegistrado[] | null = null;
+  verErrosResolvidos = false;
+  erroExpandido: number | null = null;
+  resolvendoErroId: number | null = null;
+
+  get errosVisiveis(): ErroRegistrado[] {
+    return this.verErrosResolvidos ? (this.errosResolvidos ?? []) : this.erros;
+  }
+
+  /** Erros abertos que aconteceram nas ultimas 24h: os que entram no "Precisa de atencao". */
+  get errosRecentes(): ErroRegistrado[] {
+    const limite = Date.now() - 24 * 60 * 60 * 1000;
+    return this.erros.filter(e => new Date(e.ultimaEm).getTime() >= limite);
+  }
+
+  async alternarErrosResolvidos(ver: boolean) {
+    this.verErrosResolvidos = ver;
+    if (ver && !this.errosResolvidos) this.errosResolvidos = await this.administracao.listarErros(true).catch(() => []);
+    this.cdr.detectChanges();
+  }
+
+  async resolverErro(e: ErroRegistrado) {
+    this.resolvendoErroId = e.id;
+    this.cdr.detectChanges();
+    try {
+      await this.administracao.resolverErro(e.id);
+      this.erros = this.erros.filter(x => x.id !== e.id);
+      if (this.errosResolvidos) this.errosResolvidos = [e, ...this.errosResolvidos];
+    } catch {
+      this.error = 'Não foi possível marcar o erro como resolvido.';
+    }
+    this.resolvendoErroId = null;
+    this.cdr.detectChanges();
+  }
+
+  navegadorResumido(userAgent: string | null): string {
+    if (!userAgent) return '';
+    const navegador = /Edg\//.test(userAgent) ? 'Edge' : /OPR\//.test(userAgent) ? 'Opera' : /Firefox\//.test(userAgent) ? 'Firefox'
+      : /Chrome\//.test(userAgent) ? 'Chrome' : /Safari\//.test(userAgent) ? 'Safari' : 'outro navegador';
+    const sistema = /Android/.test(userAgent) ? 'Android' : /iPhone|iPad/.test(userAgent) ? 'iOS' : /Windows/.test(userAgent) ? 'Windows'
+      : /Mac OS/.test(userAgent) ? 'macOS' : /Linux/.test(userAgent) ? 'Linux' : '';
+    return sistema ? `${navegador} · ${sistema}` : navegador;
   }
 
   // ---------- Coleta ----------

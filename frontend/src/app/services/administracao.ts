@@ -89,6 +89,18 @@ export interface AnexoContato {
   nomeOriginal: string | null;
 }
 
+export interface ErroRegistrado {
+  id: number;
+  origem: 'navegador' | 'servidor';
+  mensagem: string;
+  detalhe: string | null;
+  pagina: string | null;
+  userAgent: string | null;
+  ocorrencias: number;
+  primeiraEm: string;
+  ultimaEm: string;
+}
+
 export interface PerfilBloqueado {
   handle: string;
   nomeExibicao: string | null;
@@ -112,6 +124,14 @@ export class AdministracaoService {
 
   async responderMensagemContato(id: number, resposta: string): Promise<void> {
     await firstValueFrom(this.http.post(`${this.api}/contato/${id}/responder`, { resposta }, { headers: await this.cabecalhosAutorizacao() }));
+  }
+
+  async listarErros(resolvidos = false): Promise<ErroRegistrado[]> {
+    return firstValueFrom(this.http.get<ErroRegistrado[]>(`${this.api}/erros?resolvidos=${resolvidos}`, { headers: await this.cabecalhosAutorizacao() }));
+  }
+
+  async resolverErro(id: number): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.api}/erros/${id}/resolver`, {}, { headers: await this.cabecalhosAutorizacao() }));
   }
 
   async listarPerfisBloqueados(): Promise<PerfilBloqueado[]> {

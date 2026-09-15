@@ -1,0 +1,106 @@
+name: Monitoramento
+
+# Verificacao externa de hora em hora (issue #29): site, API, disco, memoria e backup da VM.
+# Problema abre (ou atualiza) UMA issue com a label "alerta" - o GitHub avisa o dono por e-mail -
+# e a volta ao normal fecha a issue sozinha.
+#
+# Por que de hora em hora e nao a cada 5 min: o repositorio e privado e cada execucao conta como
+# 1 minuto da cota gratis do Actions (2000/mes), que ja e usada pela CI e pelo deploy. De hora em
+# hora sao ~720 min/mes. Monitor de minuto a minuto fica pra um servico externo (UptimeRobot).
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: monitoramento
+  cancel-in-progress: false
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verificar site e API
+        id: http
+        run: |
+          problemas=""
+          # 3 tentativas com 20s de intervalo: um deploy do backend deixa a API fora por ~15s e isso
+          # nao e incidente.
+          checar() {
+            local nome="$1" url="$2" esperado="$3"
+            for tentativa in 1 2 3; do
+              corpo=$(curl -s -m 20 -w '\n%{http_code}' "$url" || true)
+              status=$(printf '%s' "$corpo" | tail -n1)
+              if [ "$status" = "200" ] && printf '%s' "$corpo" | grep -q "$esperado"; then return 0; fi
+              [ "$tentativa" -lt 3 ] && sleep 20
+            done
+            problemas="${problemas}- **${nome}** fora do ar ou com erro: \`${url}\` respondeu HTTP ${status:-sem resposta}\n"
+          }
+          checar "Site (SSR na Vercel)" "https://ofertagames.vercel.app/" "Oferta Games"
+          checar "API (backend na Oracle)" "https://api.163.176.220.243.sslip.io/actuator/health" '"UP"'
+          checar "Ofertas da Home (API + banco do catalogo)" "https://api.163.176.220.243.sslip.io/api/deals/top?size=1" "slug"
+          printf '%b' "$problemas" > problemas-http.md
+
+      - name: Configurar chave SSH
+        env:
+          ORACLE_SSH_PRIVATE_KEY_B64: ${{ secrets.ORACLE_SSH_PRIVATE_KEY_B64 }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "$ORACLE_SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/id_oracle
+          chmod 600 ~/.ssh/id_oracle
+
+      - name: Verificar VM (disco, memoria, containers, backup)
+        env:
+          ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+        run: |
+          # Sem SSH a VM ja apareceu como "API fora do ar" no passo anterior; aqui nao duplica.
+          ssh -i ~/.ssh/id_oracle -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 ubuntu@"$ORACLE_HOST" 'bash -s' > problemas-vm.md <<'REMOTO' || true
+          disco=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+          [ "$disco" -ge 80 ] && echo "- **Disco da VM em ${disco}%** (alerta a partir de 80%). Ver \`docker system df\`."
+          # MemAvailable, nao "free": cache de disco conta como usado mas e liberado quando precisa.
+          disponivel=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
+          [ "$disponivel" -lt 300 ] && echo "- **Memoria disponivel baixa na VM: ${disponivel} MB** (a VM nao tem swap)."
+          for c in oferta-games-backend oferta-games-catalogo-db oferta-games-caddy; do
+            estado=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo ausente)
+            [ "$estado" != "running" ] && echo "- **Container \`$c\` esta \`$estado\`**."
+          done
+          # Backup roda as 04:00 UTC; mais de 26h sem arquivo novo = pulou pelo menos um dia.
+          for tipo in catalogo supabase; do
+            recente=$(find /opt/backups/$tipo -name '*.dump' -mmin -1560 2>/dev/null | head -1)
+            [ -z "$recente" ] && echo "- **Backup \`$tipo\` sem arquivo novo ha mais de 26h**. Ver \`/opt/backups/backup.log\`."
+          done
+          exit 0
+          REMOTO
+
+      - name: Abrir, atualizar ou fechar issue de alerta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cat problemas-http.md problemas-vm.md > problemas.md
+          gh label create alerta --color B60205 --description "Aberta pelo workflow de monitoramento" 2>/dev/null || true
+          aberta=$(gh issue list --label alerta --state open --json number -q '.[0].number')
+          execucao="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ -s problemas.md ]; then
+            corpo="$(printf 'Detectado em %s (UTC) pelo [monitoramento](%s):\n\n' "$(date -u '+%d/%m %H:%M')" "$execucao"; cat problemas.md)"
+            if [ -z "$aberta" ]; then
+              gh issue create --title "Alerta de producao: algo precisa de atencao" --label alerta --body "$corpo
+
+          A issue fecha sozinha quando a verificacao seguinte passar. Onde olhar: secao \"Quando algo cair\" do doc.md."
+            else
+              # Comenta so se o conteudo mudou, pra nao gerar um e-mail por hora do mesmo problema.
+              ultimo=$(gh issue view "$aberta" --json comments,body -q '(.comments | last | .body) // .body')
+              if ! printf '%s' "$ultimo" | grep -qF "$(head -1 problemas.md)" || [ "$(printf '%s' "$ultimo" | grep -c '^- ')" != "$(grep -c '^- ' problemas.md)" ]; then
+                gh issue comment "$aberta" --body "$corpo"
+              fi
+            fi
+            exit 1
+          elif [ -n "$aberta" ]; then
+            gh issue close "$aberta" --comment "Tudo normal de novo em $(date -u '+%d/%m %H:%M') (UTC) ([verificacao]($execucao))."
+          fi

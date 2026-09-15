@@ -115,6 +115,10 @@
 .linhas .linha-texto > .tag { align-self: flex-start; }
 .citacao, .mensagem-texto { margin: 2px 0 0; color: var(--text-secondary); font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .mensagem-texto { color: var(--text-primary); }
+.dica-erros { flex: 1 1 260px; text-align: right; }
+.erro-mensagem { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px !important; }
+.link-detalhe { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--color-purple); font: inherit; font-size: 12px; cursor: pointer; &:hover { text-decoration: underline; } }
+.pilha { margin: 4px 0 0; padding: 10px 12px; max-height: 260px; overflow: auto; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-secondary); font-size: 11.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .anexos-admin { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-top: 6px; }
 .anexo-chip { padding: 6px 10px; border: 1px dashed var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-secondary); font: inherit; font-size: 12px; cursor: pointer;
   &:hover:not(:disabled) { border-color: var(--color-purple); color: var(--color-purple); }

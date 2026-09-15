@@ -1,4 +1,5 @@
-import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ErrorHandler, NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { RelatorErros } from './configuracao/relator-erros';
 import { BrowserModule, provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
@@ -50,6 +51,7 @@ import { NotFound } from './pages/not-found/not-found';
     GameCard, PriceHistoryChart],
   providers: [
     provideBrowserGlobalErrorListeners(),
+    { provide: ErrorHandler, useClass: RelatorErros },
     provideClientHydration(withEventReplay()),
     provideHttpClient(withFetch(), withInterceptors([tokenSsrInterceptor])),
   ],
