@@ -4,4 +4,4 @@
 export const EMAIL_CONTATO = '';
 
 // Data da ultima revisao dos textos legais. Mudou o texto, muda aqui.
-export const REVISAO_TEXTOS_LEGAIS = '13 de setembro de 2026';
+export const REVISAO_TEXTOS_LEGAIS = '14 de setembro de 2026';

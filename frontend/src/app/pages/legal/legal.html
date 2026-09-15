@@ -91,7 +91,7 @@
         <li><strong>Acessar e corrigir</strong> seus dados em <a routerLink="/configuracoes">Configurações</a> e no seu perfil;</li>
         <li><strong>Excluir sua conta e seus dados</strong> em <a routerLink="/configuracoes">Configurações &gt; Conta &gt; Excluir conta</a>;</li>
         <li><strong>Revogar consentimentos</strong>: tornar o perfil privado, esconder informações ou desconectar Steam e Xbox, o que remove os dados importados;</li>
-        <li>Pedir <strong>confirmação do tratamento, portabilidade</strong> ou informações sobre compartilhamento<ng-container *ngIf="email">, pelo e-mail <a [href]="'mailto:' + email">{{ email }}</a></ng-container>;</li>
+        <li>Pedir <strong>confirmação do tratamento, portabilidade</strong> ou informações sobre compartilhamento pelo <a routerLink="/contato">Fale conosco</a><ng-container *ngIf="email"> ou pelo e-mail <a [href]="'mailto:' + email">{{ email }}</a></ng-container>;</li>
         <li>Apresentar reclamação à <strong>Autoridade Nacional de Proteção de Dados (ANPD)</strong>.</li>
       </ul>
     </section>
@@ -103,7 +103,7 @@
 
     <section>
       <h2>8. Crianças e adolescentes</h2>
-      <p>O Oferta Games não é direcionado a menores de 13 anos. Se você é responsável por uma criança que criou uma conta, peça a exclusão em Configurações<ng-container *ngIf="email"> ou pelo e-mail de contato</ng-container>.</p>
+      <p>O Oferta Games não é direcionado a menores de 13 anos. Se você é responsável por uma criança que criou uma conta, peça a exclusão em Configurações ou pelo <a routerLink="/contato">Fale conosco</a><ng-container *ngIf="email"> ou pelo e-mail de contato</ng-container>.</p>
     </section>
 
     <section>
@@ -180,7 +180,7 @@
     <section>
       <h2>8. Mudanças e lei aplicável</h2>
       <p>Estes termos podem mudar; a data no topo indica a última versão. Continuar usando o site depois de uma mudança significa concordar com a nova versão. Aplica-se a lei brasileira, e fica eleito o foro do domicílio do consumidor.</p>
-      <p *ngIf="email">Dúvidas: <a [href]="'mailto:' + email">{{ email }}</a>.</p>
+      <p>Dúvidas: <a routerLink="/contato">Fale conosco</a><ng-container *ngIf="email"> ou <a [href]="'mailto:' + email">{{ email }}</a></ng-container>.</p>
     </section>
   </ng-template>
 </article>
