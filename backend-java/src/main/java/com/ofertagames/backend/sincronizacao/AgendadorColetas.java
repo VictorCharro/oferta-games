@@ -51,16 +51,33 @@ class AgendadorColetas {
     execucao.executar("detalhes", sincronizacao::sincronizarRodadaDetalhes);
   }
 
-  // A varredura agendada de conquistas foi DESLIGADA em 01/09/2026. Nao readicionar sem reavaliar
-  // o espaco em disco: ela percorria os 39 mil jogos com steam_app_id e, com 35% da fila
-  // processada, game_achievements ja ocupava 121 MB; completar levaria o banco a ~590 MB, acima da
-  // cota de 0,5 GB do plano free do Supabase.
+  // Varredura de conquistas do catalogo RELIGADA em 15/09/2026. Tinha sido desligada em 01/09
+  // porque game_achievements morava no Supabase free (cota de 0,5 GB); desde a migracao do
+  // catalogo pro Postgres da VM (disco de 48 GB) isso nao se aplica: 13,6 mil jogos com conquistas
+  // ocupam 118 MB e ~65% dos jogos verificados nao tem conquista nenhuma (so ganham o carimbo
+  // achievements_checked_at).
   //
-  // A coleta agora e sob demanda, disparada ao abrir a pagina do jogo
-  // (ServicoConquistasSobDemanda), entao so entra no banco conquista de jogo que alguem olhou.
-  //
-  // sincronizarRodadaConquistasCatalogo continua existindo e o botao "conquistas-catalogo" do
-  // painel de admin segue disparando a varredura manualmente, para quando fizer sentido.
+  // Ritmo: 250 jogos (LIMITE_CONQUISTAS_CATALOGO) a cada 10 min drena os ~19 mil pendentes em
+  // ~13h. Cada jogo custa 1 chamada a Steam (esquema) ou 2 (com percentuais), bem abaixo das 100 mil
+  // por dia da chave. Com a fila vazia, cada rodada so pega jogo novo que entrou no catalogo.
+  // A coleta sob demanda ao abrir a pagina (ServicoConquistasSobDemanda) continua valendo pro jogo
+  // que alguem abre antes de a varredura chegar nele.
+  @Scheduled(
+      fixedDelayString = "${app.sync.scheduler.conquistas-catalogo-varredura-delay-ms:600000}",
+      initialDelayString = "${app.sync.scheduler.conquistas-catalogo-varredura-initial-delay-ms:480000}")
+  void coletarConquistasCatalogo() {
+    execucao.executar("conquistas-catalogo", sincronizacao::sincronizarRodadaConquistasCatalogo);
+  }
+
+  // Descoberta de jogos novos e populares pelas listas da Steam (ServicoDescobertaJogos). A cada 3h:
+  // as listas mudam devagar (mais vendidos e lancamentos da semana), e cada rodada custa 3 chamadas a
+  // loja + 1 a ITAD quando nao ha nada novo.
+  @Scheduled(
+      fixedDelayString = "${app.sync.scheduler.descoberta-delay-ms:10800000}",
+      initialDelayString = "${app.sync.scheduler.descoberta-initial-delay-ms:240000}")
+  void descobrirJogosNovos() {
+    execucao.executar("descoberta", sincronizacao::sincronizarRodadaDescoberta);
+  }
 
   // Instant Gaming nao tem API: varredura por id numerico de produto (permitida pelo robots.txt
   // deles, diferente da busca do site). Ritmo de manutencao (15min): a descoberta ja cobriu o

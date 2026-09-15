@@ -6,6 +6,7 @@ import com.ofertagames.backend.itad.ItemOfertaItad;
 import com.ofertagames.backend.itad.RespostaOfertasItad;
 import com.ofertagames.backend.jogos.RepositorioJogos;
 import com.ofertagames.backend.jogos.ServicoCatalogo;
+import com.ofertagames.backend.jogos.ServicoDescobertaJogos;
 import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -58,8 +59,10 @@ public class ServicoSincronizacao {
   private final RepositorioJogos jogos;
   private final ServicoAquecimentoCache aquecimentoCache;
   private final ServicoInstantGaming instantGaming;
+  private final ServicoDescobertaJogos descoberta;
 
-  ServicoSincronizacao(ClienteItad itad, ServicoCatalogo catalogo, RepositorioJogos jogos, ServicoAquecimentoCache aquecimentoCache, ServicoInstantGaming instantGaming) {
+  ServicoSincronizacao(ClienteItad itad, ServicoCatalogo catalogo, RepositorioJogos jogos, ServicoAquecimentoCache aquecimentoCache, ServicoInstantGaming instantGaming, ServicoDescobertaJogos descoberta) {
+    this.descoberta = descoberta;
     this.itad = itad;
     this.catalogo = catalogo;
     this.jogos = jogos;
@@ -139,6 +142,11 @@ public class ServicoSincronizacao {
     int atualizados = catalogo.preencherDetalhesJogos(LIMITE_DETALHES_JOGOS);
     logger.info("Coleta agendada de detalhes (sobre/reviews) concluida: {} jogos atualizados", atualizados);
     return new ResultadoRodadaColeta(atualizados, 0);
+  }
+
+  public ResultadoRodadaColeta sincronizarRodadaDescoberta() {
+    int novos = descoberta.descobrir();
+    return new ResultadoRodadaColeta(novos, 0);
   }
 
   public ResultadoRodadaColeta sincronizarRodadaConquistasCatalogo() {

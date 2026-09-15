@@ -31,6 +31,7 @@ export interface StatusAdministrativoColeta {
   instantGamingEscaneamento: StatusColeta;
   instantGamingCasamento: StatusColeta;
   instantGamingPrecos: StatusColeta;
+  descoberta: StatusColeta;
   fila: {
     nuncaSincronizados: number;
     sincronizacaoMaisAntiga: string | null;
@@ -55,7 +56,8 @@ export type TipoColeta =
   | 'conquistas-catalogo'
   | 'instant-gaming-escaneamento'
   | 'instant-gaming-casamento'
-  | 'instant-gaming-precos';
+  | 'instant-gaming-precos'
+  | 'descoberta';
 
 export interface DenunciaAberta {
   id: number;

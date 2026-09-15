@@ -467,6 +467,7 @@ export class AdminColeta implements OnInit, OnDestroy {
     return [
       { titulo: 'Preços ITAD', tipo: 'precos', coleta: dados.precos },
       { titulo: 'Metadados Steam', tipo: 'steam', coleta: dados.steam },
+      { titulo: 'Descoberta de jogos novos', tipo: 'descoberta', coleta: dados.descoberta },
       { titulo: 'Detalhes do jogo', tipo: 'detalhes', coleta: dados.detalhes },
       { titulo: 'Conquistas do catálogo', tipo: 'conquistas-catalogo', coleta: dados.conquistasCatalogo },
       { titulo: 'Instant Gaming: escaneamento', tipo: 'instant-gaming-escaneamento', coleta: dados.instantGamingEscaneamento },
@@ -482,9 +483,9 @@ export class AdminColeta implements OnInit, OnDestroy {
   cartoesDoGrupo(dados: StatusAdministrativoColeta): CartaoColeta[] {
     const todas = this.todasColetas(dados);
     switch (this.grupoColeta) {
-      case 'detalhes-conquistas': return todas.slice(2, 4);
-      case 'instant-gaming': return todas.slice(4);
-      default: return todas.slice(0, 2);
+      case 'detalhes-conquistas': return todas.slice(3, 5);
+      case 'instant-gaming': return todas.slice(5);
+      default: return todas.slice(0, 3);
     }
   }
 

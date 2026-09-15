@@ -18,10 +18,13 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
@@ -478,6 +481,24 @@ public class RepositorioJogos {
     } catch (DuplicateKeyException conflito) {
       return buscarIdPorSlug(slug).orElseThrow(() -> conflito);
     }
+  }
+
+  /** Quais desses app ids da Steam ja estao em algum jogo do catalogo (descoberta de jogos novos). */
+  public Set<Integer> steamAppIdsExistentes(List<Integer> appIds) {
+    if (appIds.isEmpty()) return Set.of();
+    return new HashSet<>(jdbc.sql("SELECT steam_app_id FROM games WHERE steam_app_id IN (:ids)")
+        .param("ids", appIds).query(Integer.class).list());
+  }
+
+  /** Id do jogo por id da ITAD, so dos que ja existem no catalogo. */
+  public Map<String, Long> idsPorItadIds(List<String> itadIds) {
+    if (itadIds.isEmpty()) return Map.of();
+    Map<String, Long> resultado = new HashMap<>();
+    jdbc.sql("SELECT itad_id::text AS itad_id, id FROM games WHERE itad_id IN (:ids)")
+        .param("ids", itadIds.stream().map(UUID::fromString).toList())
+        .query((rs, linha) -> resultado.put(rs.getString("itad_id"), rs.getLong("id")))
+        .list();
+    return resultado;
   }
 
   public List<IdJogoItad> salvarJogosItad(List<JogoParaSalvar> jogos) {

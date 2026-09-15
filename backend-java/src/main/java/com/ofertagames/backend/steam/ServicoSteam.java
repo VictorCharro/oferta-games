@@ -107,6 +107,38 @@ public class ServicoSteam {
    * @return vazio quando a Steam responde {@code success: false}, o que acontece com app id
    *     inexistente, removido ou restrito por regiao
    */
+  private static final Pattern APP_ID_NO_LOGO = Pattern.compile("/apps/(\\d+)/");
+
+  /**
+   * App ids de uma lista da busca da loja, na ordem da Steam: {@code topsellers} (mais vendidos),
+   * {@code popularnew} (lancamentos populares) ou {@code popularcomingsoon} (pre-venda popular).
+   * So jogos ({@code category1=998}), sem DLC, trilha sonora ou software.
+   *
+   * <p>E a fonte da descoberta de jogos novos: a ITAD nao tem lista de lancamentos, e o catalogo so
+   * crescia pela busca do site. O JSON dessa pagina nao traz o app id em campo proprio; ele vem na
+   * URL da imagem ({@code .../apps/<id>/...}). Pacotes e bundles nao tem esse formato e ficam de fora.
+   */
+  public List<Integer> listarAppsDaBusca(String filtro, int quantidade) {
+    try {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> resposta = restClient.get()
+          .uri("https://store.steampowered.com/search/results/?filter={filtro}&json=1&start=0&count={quantidade}&cc=br&l=brazilian&category1=998",
+              filtro, quantidade)
+          .retrieve()
+          .body(Map.class);
+      if (resposta == null || !(resposta.get("items") instanceof List<?> itens)) return List.of();
+      List<Integer> ids = new ArrayList<>();
+      for (Object item : itens) {
+        if (!(item instanceof Map<?, ?> mapa)) continue;
+        var achado = APP_ID_NO_LOGO.matcher(String.valueOf(mapa.get("logo")));
+        if (achado.find()) ids.add(Integer.parseInt(achado.group(1)));
+      }
+      return ids;
+    } catch (Exception falha) {
+      return List.of();
+    }
+  }
+
   public Optional<DetalhesAplicativoSteam> buscarDetalhesAplicativo(String appId) {
     try {
       @SuppressWarnings("unchecked")
