@@ -56,6 +56,15 @@
       }
     })();
   </script>
+  <!--
+    Vercel Web Analytics: visitantes e paginas vistas, sem cookie e sem dado pessoal. E o script
+    que o pacote @vercel/analytics injetaria; direto aqui porque o pacote conflita com as peer deps
+    do projeto (arrasta SvelteKit/Vite 8). O script e servido pela propria Vercel no mesmo dominio
+    (/_vercel/insights) e acompanha a troca de rota do Angular pelo History API. Fora da Vercel
+    (ng serve) o arquivo nao existe e simplesmente nao carrega.
+  -->
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
   <app-root></app-root>
