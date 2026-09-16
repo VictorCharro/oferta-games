@@ -2,6 +2,7 @@ package com.ofertagames.backend.jogos;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ofertagames.backend.comum.ApelidosBusca;
 import com.ofertagames.backend.comum.ClassificadorDlc;
 import com.ofertagames.backend.comum.ConfiguracaoCache;
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
@@ -119,7 +120,11 @@ public class RepositorioJogos {
       case "game" -> ClassificadorDlc.filtroApenasJogosSql("g");
       default -> "";
     };
-    String filtroBusca = busca == null || busca.isBlank() ? "" : "AND g.title ILIKE :busca";
+    // Casa em INICIO DE PALAVRA (~* com \m) e aceita os apelidos conhecidos ("gta" tambem procura
+    // "grand theft auto"). ILIKE '%termo%' dava "RagTag" pra quem buscava "gta" e nao achava nenhum
+    // Grand Theft Auto.
+    List<String> termosBusca = ApelidosBusca.expandir(busca);
+    String filtroBusca = termosBusca.isEmpty() ? "" : "AND g.title ~* ANY(CAST(:termosRegex AS text[]))";
     String filtroPlataforma = filtroPlataforma(plataforma);
     String filtroOfertaPlataforma = filtroOfertaPlataforma(plataforma);
     String filtroLojaBloqueada = filtroLojaBloqueada("o");
@@ -144,8 +149,8 @@ public class RepositorioJogos {
         && podePrePaginar(ordenacao, precoMinimo, precoMaximo, descontoMinimo);
     String ordemRelevancia = filtroBusca.isEmpty() ? "" : """
         CASE
-          WHEN lower(g.title) = lower(:termo) THEN 0
-          WHEN lower(g.title) LIKE lower(:termo) || '%' THEN 1
+          WHEN lower(g.title) = ANY(CAST(:termos AS text[])) THEN 0
+          WHEN lower(g.title) LIKE ANY(CAST(:termosPrefixo AS text[])) THEN 1
           ELSE 2
         END ASC, length(g.title) ASC, """;
     String sql = prePaginado
@@ -176,8 +181,11 @@ public class RepositorioJogos {
       // pra frente, nunca exigem mais linhas do resto do que isso.
       comando = comando.param("limiteResto", deslocamento + tamanho);
     }
-    if (busca != null && !busca.isBlank()) {
-      comando = comando.param("busca", "%" + busca.trim() + "%").param("termo", busca.trim());
+    if (!termosBusca.isEmpty()) {
+      comando = comando
+          .param("termosRegex", termosBusca.stream().map(ApelidosBusca::regexInicioDePalavra).toArray(String[]::new))
+          .param("termos", termosBusca.toArray(String[]::new))
+          .param("termosPrefixo", termosBusca.stream().map(t -> t + "%").toArray(String[]::new));
     }
     if (precoMinimo != null) {
       comando = comando.param("precoMinimo", precoMinimo);
