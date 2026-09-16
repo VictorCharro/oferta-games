@@ -135,7 +135,19 @@ public class RepositorioJogos {
     String filtrosDeOferta = String.join(" ", filtroOfertaPlataforma, filtroLojaBloqueada,
         filtroOfertaLojasPreferidas);
 
-    boolean prePaginado = podePrePaginar(ordenacao, precoMinimo, precoMaximo, descontoMinimo);
+    // Busca por titulo ordena por RELEVANCIA antes de qualquer outra coisa: titulo igual ao termo,
+    // depois titulo que comeca com ele, depois o resto (ai sim pelo rank). Sem isso, procurar
+    // "resonance" ou "grand theft auto vi" enterrava o jogo certo atras de dezenas de homonimos com
+    // rank melhor, e lancamento ainda sem rank caia no fim de 190 mil. A ordenacao pre-paginada nao
+    // sabe fazer isso, entao busca sempre usa o caminho normal.
+    boolean prePaginado = filtroBusca.isEmpty()
+        && podePrePaginar(ordenacao, precoMinimo, precoMaximo, descontoMinimo);
+    String ordemRelevancia = filtroBusca.isEmpty() ? "" : """
+        CASE
+          WHEN lower(g.title) = lower(:termo) THEN 0
+          WHEN lower(g.title) LIKE lower(:termo) || '%' THEN 1
+          ELSE 2
+        END ASC, length(g.title) ASC, """;
     String sql = prePaginado
         ? sqlPrePaginado(ordenacao, filtrosDeJogo, filtrosDeOferta)
         : """
@@ -156,7 +168,7 @@ public class RepositorioJogos {
             %s
             ORDER BY %s
             LIMIT :tamanho OFFSET :deslocamento
-            """.formatted(filtrosDeOferta, filtrosDeJogo, filtroPreco, ordenarPor(ordenacao));
+            """.formatted(filtrosDeOferta, filtrosDeJogo, filtroPreco, ordemRelevancia + ordenarPor(ordenacao));
 
     var comando = jdbc.sql(sql).param("tamanho", tamanho).param("deslocamento", deslocamento);
     if (prePaginado) {
@@ -165,7 +177,7 @@ public class RepositorioJogos {
       comando = comando.param("limiteResto", deslocamento + tamanho);
     }
     if (busca != null && !busca.isBlank()) {
-      comando = comando.param("busca", "%" + busca.trim() + "%");
+      comando = comando.param("busca", "%" + busca.trim() + "%").param("termo", busca.trim());
     }
     if (precoMinimo != null) {
       comando = comando.param("precoMinimo", precoMinimo);
