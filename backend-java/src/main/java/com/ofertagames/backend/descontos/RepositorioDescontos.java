@@ -44,12 +44,13 @@ public class RepositorioDescontos {
    * <p>Regras que valem a pena conhecer:
    *
    * <ul>
-   *   <li><b>exige {@code regular_price > 0}</b>: e o que separa "de graca por tempo limitado" (For
-   *       Honor, sorteio da Epic) de "sempre gratuito" (PUBG, Dota 2, Warframe). Ate 16/09/2026
-   *       qualquer oferta com {@code price = 0} valia como 100% off, e a pagina /gratuitos — que e
-   *       so este topo filtrado por 100% — enchia de free-to-play assim que a descoberta de jogos
-   *       novos importou os grandes F2P da Steam. Free-to-play continua no catalogo e na busca, so
-   *       nao conta como promocao;</li>
+   *   <li><b>oferta a preco 0 so conta se o jogo for pago em alguma loja</b> (desconto de 100% com
+   *       {@code regular_price}, como o gratis semanal da Epic, ou de graca numa loja e vendido em
+   *       outra). E o que separa "de graca agora" de "sempre gratuito" (PUBG, Dota 2, Warframe),
+   *       que nao tem preco em lugar nenhum. Ate 16/09/2026 qualquer {@code price = 0} valia como
+   *       100% off e a pagina /gratuitos — que e so este topo filtrado por 100% — encheu de
+   *       free-to-play assim que a descoberta de jogos novos importou os grandes F2P da Steam.
+   *       Free-to-play continua no catalogo e na busca, so nao conta como promocao;</li>
    *   <li>desconto so conta a partir de 1% ({@code price < regular_price * 0.99}), pra ruido de
    *       conversao cambial nao virar "promocao";</li>
    *   <li>{@code tipo = "dlc"} filtra DLC <b>na query</b>. Filtrar depois, no frontend, deixava o
@@ -107,7 +108,14 @@ public class RepositorioDescontos {
             CASE WHEN o.price = 0 THEN 100 ELSE ROUND((1 - o.price / o.regular_price) * 100)::integer END AS discount_pct
           FROM offers o
           JOIN games g ON g.id = o.game_id
-          WHERE o.regular_price IS NOT NULL AND o.regular_price > 0 AND o.price < o.regular_price * 0.99
+          WHERE (
+              (o.regular_price IS NOT NULL AND o.regular_price > 0 AND o.price < o.regular_price * 0.99)
+              OR (o.price = 0 AND EXISTS (
+                    SELECT 1 FROM offers pago
+                    WHERE pago.game_id = g.id AND pago.price > 0
+                      %s
+                  ))
+            )
             %s
             %s
             %s
@@ -127,6 +135,7 @@ public class RepositorioDescontos {
         ) barato ON true
         ORDER BY %s
         """.formatted(
+            LojasBloqueadas.filtroSql("pago"),
             LojasBloqueadas.filtroSql("o"),
             ConteudosNaoJogos.filtroSql("g"),
             JogosBloqueados.filtroSql("g"),
