@@ -44,9 +44,12 @@ public class RepositorioDescontos {
    * <p>Regras que valem a pena conhecer:
    *
    * <ul>
-   *   <li>{@code price = 0} conta sempre como 100% off, mesmo sem {@code regular_price}: jogo
-   *       permanentemente gratuito nao tem preco normal de onde derivar desconto, mas e gratuito de
-   *       verdade;</li>
+   *   <li><b>exige {@code regular_price > 0}</b>: e o que separa "de graca por tempo limitado" (For
+   *       Honor, sorteio da Epic) de "sempre gratuito" (PUBG, Dota 2, Warframe). Ate 16/09/2026
+   *       qualquer oferta com {@code price = 0} valia como 100% off, e a pagina /gratuitos — que e
+   *       so este topo filtrado por 100% — enchia de free-to-play assim que a descoberta de jogos
+   *       novos importou os grandes F2P da Steam. Free-to-play continua no catalogo e na busca, so
+   *       nao conta como promocao;</li>
    *   <li>desconto so conta a partir de 1% ({@code price < regular_price * 0.99}), pra ruido de
    *       conversao cambial nao virar "promocao";</li>
    *   <li>{@code tipo = "dlc"} filtra DLC <b>na query</b>. Filtrar depois, no frontend, deixava o
@@ -104,10 +107,7 @@ public class RepositorioDescontos {
             CASE WHEN o.price = 0 THEN 100 ELSE ROUND((1 - o.price / o.regular_price) * 100)::integer END AS discount_pct
           FROM offers o
           JOIN games g ON g.id = o.game_id
-          WHERE (
-              o.price = 0
-              OR (o.regular_price IS NOT NULL AND o.regular_price > 0 AND o.price < o.regular_price * 0.99)
-            )
+          WHERE o.regular_price IS NOT NULL AND o.regular_price > 0 AND o.price < o.regular_price * 0.99
             %s
             %s
             %s
