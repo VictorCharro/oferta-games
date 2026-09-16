@@ -61,6 +61,7 @@ public class ControladorAdministracao {
         mapearStatus(execucao.consultar("instant-gaming-casamento")),
         mapearStatus(execucao.consultar("instant-gaming-precos")),
         mapearStatus(execucao.consultar("descoberta")),
+        mapearStatus(execucao.consultar("ranking")),
         jogos.resumirFilaColeta(),
         jogos.contarPendentesDetalhes(),
         jogos.contarPendentesConquistas(),
@@ -80,6 +81,7 @@ public class ControladorAdministracao {
       case "conquistas-catalogo" -> () -> execucao.executar("conquistas-catalogo", sincronizacao::sincronizarRodadaConquistasCatalogo);
       case "instant-gaming-escaneamento" -> () -> execucao.executar("instant-gaming-escaneamento", sincronizacao::sincronizarRodadaInstantGamingEscaneamento);
       case "instant-gaming-casamento" -> () -> execucao.executar("instant-gaming-casamento", sincronizacao::sincronizarRodadaInstantGamingCasamento);
+      case "ranking" -> () -> execucao.executar("ranking", sincronizacao::sincronizarRodadaRanking);
       case "descoberta" -> () -> execucao.executar("descoberta", sincronizacao::sincronizarRodadaDescoberta);
       case "instant-gaming-precos" -> () -> execucao.executar("instant-gaming-precos", sincronizacao::sincronizarRodadaInstantGamingPrecos);
       default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de coleta inválido");
@@ -129,6 +131,7 @@ public class ControladorAdministracao {
       StatusColetaAdministrativa instantGamingCasamento,
       StatusColetaAdministrativa instantGamingPrecos,
       StatusColetaAdministrativa descoberta,
+      StatusColetaAdministrativa ranking,
       RepositorioJogos.ResumoFilaColeta fila,
       long pendentesDetalhes,
       long pendentesConquistas,

@@ -66,6 +66,21 @@ public class ClienteItad {
     return ids;
   }
 
+  /**
+   * Jogos mais populares da ITAD (colecoes + listas de desejo), do mais pro menos popular.
+   * A API so pagina ate o offset 500, entao no maximo 1.000 jogos.
+   */
+  public List<ItemPopularItad> buscarMaisPopulares(int deslocamento, int limite) {
+    return restClient.get()
+        .uri(uri -> uri.path("/stats/most-popular/v1")
+            .queryParam("offset", deslocamento)
+            .queryParam("limit", limite)
+            .build())
+        .header("ITAD-API-Key", chaveApi)
+        .retrieve()
+        .body(new ParameterizedTypeReference<List<ItemPopularItad>>() {});
+  }
+
   /** Titulo, slug, tipo e capa de um jogo pelo id da ITAD. */
   public InfoJogoItad buscarInfoJogo(String idItad) {
     return restClient.get()

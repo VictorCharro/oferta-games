@@ -79,6 +79,16 @@ class AgendadorColetas {
     execucao.executar("descoberta", sincronizacao::sincronizarRodadaDescoberta);
   }
 
+  // Ranking de popularidade (ServicoRankingJogos), 1x por dia: as listas de origem mudam por dia,
+  // nao por hora, e a rodada custa ~30 chamadas externas. Sem ele o rank ficava congelado no valor
+  // da importacao inicial de cada jogo (Home sempre com os mesmos jogos).
+  @Scheduled(
+      fixedDelayString = "${app.sync.scheduler.ranking-delay-ms:86400000}",
+      initialDelayString = "${app.sync.scheduler.ranking-initial-delay-ms:120000}")
+  void atualizarRanking() {
+    execucao.executar("ranking", sincronizacao::sincronizarRodadaRanking);
+  }
+
   // Instant Gaming nao tem API: varredura por id numerico de produto (permitida pelo robots.txt
   // deles, diferente da busca do site). Ritmo de manutencao (15min): a descoberta ja cobriu o
   // catalogo quase todo, entao agora e so acompanhar produtos novos entrando no catalogo deles.

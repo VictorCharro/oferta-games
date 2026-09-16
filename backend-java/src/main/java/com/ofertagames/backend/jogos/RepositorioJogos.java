@@ -483,6 +483,27 @@ public class RepositorioJogos {
     }
   }
 
+  /**
+   * Grava o ranking de popularidade de uma leva de jogos (job de ranking). Um UPDATE so, com as
+   * duas listas em paralelo, em vez de um por jogo.
+   *
+   * @return quantos jogos do catalogo tiveram o rank alterado
+   */
+  public int atualizarRanksPorItadId(Map<String, Integer> ranksPorItadId) {
+    if (ranksPorItadId.isEmpty()) return 0;
+    List<String> ids = new ArrayList<>(ranksPorItadId.keySet());
+    List<Integer> ranks = ids.stream().map(ranksPorItadId::get).toList();
+    return jdbc.sql("""
+        UPDATE games g
+        SET rank = novo.rank
+        FROM (SELECT unnest(CAST(:ids AS uuid[])) AS itad_id, unnest(CAST(:ranks AS integer[])) AS rank) novo
+        WHERE g.itad_id = novo.itad_id AND g.rank IS DISTINCT FROM novo.rank
+        """)
+        .param("ids", ids.toArray(String[]::new))
+        .param("ranks", ranks.toArray(Integer[]::new))
+        .update();
+  }
+
   /** Quais desses app ids da Steam ja estao em algum jogo do catalogo (descoberta de jogos novos). */
   public Set<Integer> steamAppIdsExistentes(List<Integer> appIds) {
     if (appIds.isEmpty()) return Set.of();
