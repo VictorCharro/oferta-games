@@ -150,8 +150,9 @@ public class RepositorioJogos {
     String ordemRelevancia = filtroBusca.isEmpty() ? "" : """
         CASE
           WHEN lower(g.title) = ANY(CAST(:termos AS text[])) THEN 0
-          WHEN lower(g.title) LIKE ANY(CAST(:termosPrefixo AS text[])) THEN 1
-          ELSE 2
+          WHEN lower(g.title) LIKE ANY(CAST(:prefixosApelido AS text[])) THEN 1
+          WHEN lower(g.title) LIKE ANY(CAST(:termosPrefixo AS text[])) THEN 2
+          ELSE 3
         END ASC, length(g.title) ASC, """;
     String sql = prePaginado
         ? sqlPrePaginado(ordenacao, filtrosDeJogo, filtrosDeOferta)
@@ -185,7 +186,10 @@ public class RepositorioJogos {
       comando = comando
           .param("termosRegex", termosBusca.stream().map(ApelidosBusca::regexInicioDePalavra).toArray(String[]::new))
           .param("termos", termosBusca.toArray(String[]::new))
-          .param("termosPrefixo", termosBusca.stream().map(t -> t + "%").toArray(String[]::new));
+          .param("termosPrefixo", termosBusca.stream().map(t -> t + "%").toArray(String[]::new))
+          // O nome por extenso da sigla vem antes do que so comeca com as letras digitadas: quem
+          // busca "cod" quer Call of Duty, nao "Coda".
+          .param("prefixosApelido", termosBusca.stream().skip(1).map(t -> t + "%").toArray(String[]::new));
     }
     if (precoMinimo != null) {
       comando = comando.param("precoMinimo", precoMinimo);
