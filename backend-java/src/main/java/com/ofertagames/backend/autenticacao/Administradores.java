@@ -12,8 +12,9 @@ import org.springframework.web.server.ResponseStatusException;
  * Quem pode usar as rotas {@code /api/admin/**}.
  *
  * <p>Era um UID fixo em {@code ControladorAdministracao}: trocar ou adicionar admin exigia commit e
- * deploy (issue #30). Agora vem de {@code ADMIN_USER_IDS} (lista separada por virgula), com o UID de
- * antes como padrao, pra nada mudar enquanto a variavel nao for definida.
+ * deploy (issue #30). Agora vem so de {@code ADMIN_USER_IDS} (lista separada por virgula). Sem padrao
+ * no codigo desde 18/09/2026, quando o repositorio foi preparado pra ficar publico: variavel vazia =
+ * ninguem e admin (toda rota de admin responde 403), nunca um UID embutido.
  */
 @Component
 public class Administradores {
@@ -21,7 +22,7 @@ public class Administradores {
   private final Set<String> ids;
 
   Administradores(ServicoAutenticacao autenticacao,
-      @Value("${app.admin.user-ids:0a6eb06b-756e-4434-899b-33420bed8609}") String ids) {
+      @Value("${app.admin.user-ids:}") String ids) {
     this.autenticacao = autenticacao;
     this.ids = Arrays.stream(ids.split(","))
         .map(String::trim)

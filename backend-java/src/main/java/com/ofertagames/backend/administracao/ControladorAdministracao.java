@@ -49,6 +49,13 @@ public class ControladorAdministracao {
     this.executorManual = executorManual;
   }
 
+  /** 204 pra admin, 401/403 pro resto: e o que o guard do frontend pergunta antes de abrir /admin. */
+  @GetMapping("/acesso")
+  ResponseEntity<Void> acesso(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
+    exigirAdministrador(autorizacao);
+    return ResponseEntity.noContent().build();
+  }
+
   @GetMapping("/coleta")
   StatusAdministrativoColeta consultar(@RequestHeader(value = "Authorization", required = false) String autorizacao) {
     exigirAdministrador(autorizacao);

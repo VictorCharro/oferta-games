@@ -63,7 +63,7 @@ O Caddy e executado no mesmo compose e entrega HTTPS na frente do backend, que n
 O workflow `.github/workflows/deploy-oracle.yml` atualiza o backend na VM por SSH em cada push relevante para `master`; exige os segredos `ORACLE_HOST` e `ORACLE_SSH_PRIVATE_KEY_B64` no GitHub. **Deploy automatico funcionando (06/08/2026)**: o bloqueio de billing (resolvido em ~31/07) foi seguido por outra falha (`Load key "/home/runner/.ssh/id_oracle": error in libcrypto` / `Permission denied (publickey)`) mesmo com uma chave nova gerada e testada via SSH direto — o problema era o secret `ORACLE_SSH_PRIVATE_KEY` (texto puro) se corrompendo na ida/volta pelo GitHub (provavel questao de quebra de linha). Corrigido gerando um par de chaves novo, adicionando a publica em `~/.ssh/authorized_keys` da VM, e guardando a privada em base64 no secret `ORACLE_SSH_PRIVATE_KEY_B64` — o workflow decodifica com `base64 -d` antes de usar. O secret antigo (`ORACLE_SSH_PRIVATE_KEY`) foi removido. O deploy manual continua disponivel como alternativa:
 
 ```powershell
-.\scripts\deploy-oracle.ps1 -ChaveSsh "C:\Users\VFulls\Downloads\oferta-games.key"
+.\scripts\deploy-oracle.ps1 -ChaveSsh "<caminho da chave SSH da VM>"
 ```
 
 O script conecta na VM, atualiza o `master`, recria somente o container do backend e valida o health check. A chave da VM usada para baixar o repositorio continua somente leitura.
@@ -589,7 +589,7 @@ Toda rota exige token e valida que a colecao e do usuario autenticado; colecao d
 - `GET /actuator/health`
 - `GET /sitemap.xml`, `GET /sitemap-estatico.xml`, `GET /sitemap-jogos-{pagina}.xml` — publicos, sem auth (ver "SEO (SSR), sitemap e headers de seguranca" acima).
 
-Os endpoints autenticados recebem token Bearer do Supabase. A administracao exige o UID autorizado no backend: `0a6eb06b-756e-4434-899b-33420bed8609`.
+Os endpoints autenticados recebem token Bearer do Supabase. A administracao exige um UID listado em `ADMIN_USER_IDS` (variavel de ambiente do backend; sem padrao no codigo desde 18/09/2026). O guard do frontend pergunta ao backend (`GET /api/admin/acesso`, 204 ou 401/403) em vez de comparar com um UID fixo.
 
 ## Frontend e UX
 

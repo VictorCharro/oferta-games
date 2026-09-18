@@ -8,7 +8,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class ValidadorBlocosTest {
-  private static final String USUARIO = "0a6eb06b-756e-4434-899b-33420bed8609";
+  private static final String USUARIO = "11111111-2222-3333-4444-555555555555";
   private static final String BUCKET = "https://gxukrzmiloqdmtcgigqm.supabase.co/storage/v1/object/public/avatars/" + USUARIO + "/blocks/b1-123";
   private final ValidadorBlocos validador = new ValidadorBlocos(new ObjectMapper());
 
