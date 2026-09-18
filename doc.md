@@ -874,6 +874,12 @@ Resultado da auditoria de ponta a ponta (issues #15 a #30). Cada item tem o deta
 - **CSP no SSR** (`server.ts`): aplicada so com `object-src/base-uri/form-action/frame-ancestors`; a politica completa vai em `Content-Security-Policy-Report-Only`. Integracao nova que carrega script/estilo/iframe de outro dominio: conferir o console e ajustar a Report-Only antes de promover.
 - **`GET /error` direto responde 404** (antes 500 com status 999).
 
+### Repositorio publico (18/09/2026)
+
+O repositorio foi revisado pra virar publico (portfolio). Conferido: os segredos reais de producao (`.env` da VM) comparados um a um com os 533 commits, as 32 issues com comentarios, os PRs e os logs do GitHub Actions — nenhum aparece. O que e publico de proposito: URL do site e da API, URL e chave `anon` do Supabase (vao no navegador; a protecao e o RLS) e o e-mail de contato. A chave `anon` do projeto Supabase antigo tambem esta no historico, mas o projeto foi apagado (o dominio nem resolve). Tirado nessa revisao: o UID do admin (agora so em `ADMIN_USER_IDS`) e caminhos locais do computador do dono.
+
+Regras daqui pra frente: valor de segredo so em `.env` da VM, segredos do GitHub e variaveis da Vercel; `.env.example` so com valor ficticio; nada de UID, e-mail pessoal ou caminho local em codigo, doc ou issue; backups ficam em `backups-locais/` (ignorado pelo Git).
+
 ### E-mails de conta e recuperacao de senha (15/09/2026)
 
 - **SMTP provisorio**: o Supabase so libera editar os templates com SMTP proprio. Enquanto nao ha dominio, o envio sai pelo Gmail `ofertagamescontato@gmail.com` (senha de app, configurada pelo dono no painel; limite de ~500 e-mails/dia do Gmail). Rate limit de e-mails do Supabase Auth em **60/h** (padrao 30). Na migracao pro dominio (#19/#20), trocar por Resend/Brevo com `nao-responda@dominio`.
