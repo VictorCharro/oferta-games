@@ -37,4 +37,12 @@ public class ControladorDescontos {
         .cacheControl(CacheHttp.publico())
         .body(topo.subList(0, tamanho));
   }
+
+  /** Lancamentos e pre-vendas populares, com o menor preco atual (secao "Lancamentos em alta" da Home). */
+  @GetMapping("/lancamentos")
+  ResponseEntity<List<DescontoJogo>> listarLancamentos() {
+    return ResponseEntity.ok()
+        .cacheControl(CacheHttp.publico())
+        .body(descontos.listarLancamentos());
+  }
 }

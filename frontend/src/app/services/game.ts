@@ -163,6 +163,11 @@ export class GameService {
     return this.http.get<TopDeal[]>(`${this.api}/deals/top?size=${size}&sort=${sort}&type=${type}`);
   }
 
+  /** Lancamentos e pre-vendas populares com o menor preco atual, com ou sem desconto. */
+  getLancamentos(): Observable<TopDeal[]> {
+    return this.http.get<TopDeal[]>(`${this.api}/deals/lancamentos`);
+  }
+
   getGameDetails(slug: string): Observable<GameDetails> {
     return this.http.get<GameDetails>(`${this.api}/games/${slug}/detalhes`);
   }

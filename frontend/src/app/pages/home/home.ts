@@ -9,6 +9,9 @@ import { SeoService } from '../../services/seo';
 import { temHistoricoParaGrafico } from '../../components/price-history-chart/price-history-chart';
 import { trocarPorCapaPadrao } from '../../services/capa';
 
+/** Piso de desconto da secao de promocoes dos mais populares e do banner. */
+const DESCONTO_MINIMO_DESTAQUE = 20;
+
 export interface DealCardView {
   slug: string;
   title: string;
@@ -33,6 +36,7 @@ export class Home implements OnInit, OnDestroy {
 
   featuredDeals: TopDeal[] = [];
   famousGames: DealCardView[] = [];
+  lancamentos: DealCardView[] = [];
   favoritesDeals: FavoriteGame[] = [];
   preferredPlatformDeals: DealCardView[] = [];
   freeWeek: DealCardView[] = [];
@@ -92,6 +96,18 @@ export class Home implements OnInit, OnDestroy {
       }
     });
 
+    // Lancamentos quase nunca estao em promocao, entao nunca apareciam nas secoes de desconto:
+    // aqui entram pelo preco atual, com ou sem desconto.
+    this.gameService.getLancamentos().subscribe({
+      next: (jogos) => {
+        this.lancamentos = jogos
+          .filter(d => !resolveDlc(d.title, d.isDlc) && this.matchesPreferences(d))
+          .slice(0, 20)
+          .map(d => this.fromTopDeal(d));
+        this.cdr.detectChanges();
+      }
+    });
+
     this.favSub = this.favoritesService.list$.subscribe(list => {
       this.favoritesDeals = list.slice(0, 15);
       this.cdr.detectChanges();
@@ -108,9 +124,15 @@ export class Home implements OnInit, OnDestroy {
     this.error = false;
     this.gameService.getTopDeals(100, 'rank').subscribe({
       next: (deals) => {
-        const paid = deals.filter(d => Number(d.discountPct) < 100 && !resolveDlc(d.title, d.isDlc) && this.matchesPreferences(d));
-        this.featuredDeals = this.shuffle(paid).slice(0, 5);
-        this.famousGames = this.shuffle(paid).slice(0, 20).map(d => this.fromTopDeal(d));
+        // Promocao de verdade nos jogos mais populares: a partir de 20%. Sem esse piso entravam
+        // "descontos" de 2% e 10% em jogo famoso (EA FC 27, Elden Ring), que nao sao destaque.
+        // A lista ja chega ordenada por popularidade (ranking diario); o sorteio entre os 40
+        // primeiros so varia a Home a cada visita sem sair do topo.
+        const paid = deals.filter(d => Number(d.discountPct) >= DESCONTO_MINIMO_DESTAQUE && Number(d.discountPct) < 100
+          && !resolveDlc(d.title, d.isDlc) && this.matchesPreferences(d));
+        const topo = paid.slice(0, 40);
+        this.featuredDeals = this.shuffle(topo).slice(0, 5);
+        this.famousGames = this.shuffle(topo).slice(0, 20).map(d => this.fromTopDeal(d));
         this.loading = false;
         this.startAutoplay();
         this.carregarHistoricoSlideAtual();

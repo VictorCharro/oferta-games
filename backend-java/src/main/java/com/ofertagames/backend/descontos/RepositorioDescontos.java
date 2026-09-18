@@ -159,4 +159,73 @@ public class RepositorioDescontos {
             rs.getObject("discount_pct", Integer.class)))
         .list();
   }
+
+  /**
+   * Lancamentos em alta pra Home (18/09/2026): jogos populares lancados nos ultimos 60 dias ou com
+   * lancamento previsto nos proximos 180, com o menor preco atual — tenham desconto ou nao.
+   *
+   * <p>Existe porque lancamento quase nunca esta em promocao, entao nunca aparecia nas secoes de
+   * desconto da Home, por mais popular que fosse. "Popular" = rank ate 3.000 (ver
+   * ServicoRankingJogos); jogo sem rank fica de fora pra lista nao encher de lancamento obscuro.
+   *
+   * <p>{@code game_details.release_date} e texto da Steam em pt-BR ("24/set./2026"). O formato e
+   * interpretado aqui; o que nao bate ("Em breve", "2027", "4º trimestre") fica de fora.
+   */
+  @Cacheable(value = ConfiguracaoCache.CACHE_DESCONTOS, key = "'lancamentos'", sync = true)
+  public List<DescontoJogo> listarLancamentos() {
+    String sql = """
+        WITH datas AS (
+          SELECT gd.game_id,
+                 make_date(
+                   split_part(gd.release_date, '/', 3)::int,
+                   CASE split_part(gd.release_date, '/', 2)
+                     WHEN 'jan.' THEN 1 WHEN 'fev.' THEN 2 WHEN 'mar.' THEN 3 WHEN 'abr.' THEN 4
+                     WHEN 'mai.' THEN 5 WHEN 'jun.' THEN 6 WHEN 'jul.' THEN 7 WHEN 'ago.' THEN 8
+                     WHEN 'set.' THEN 9 WHEN 'out.' THEN 10 WHEN 'nov.' THEN 11 WHEN 'dez.' THEN 12
+                   END,
+                   split_part(gd.release_date, '/', 1)::int) AS lancamento
+          FROM game_details gd
+          WHERE gd.release_date ~ '^[0-9]{1,2}/(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[.]/[0-9]{4}$'
+        )
+        SELECT g.slug, g.title, g.cover_url, g.is_dlc, g.rank,
+               barato.store_name, barato.price, barato.regular_price, barato.url,
+               CASE WHEN barato.regular_price > 0 AND barato.price < barato.regular_price * 0.99
+                    THEN ROUND((1 - barato.price / barato.regular_price) * 100)::integer ELSE 0 END AS discount_pct
+        FROM datas d
+        JOIN games g ON g.id = d.game_id
+        JOIN LATERAL (
+          SELECT o.store_name, o.price, o.regular_price, o.url
+          FROM offers o
+          WHERE o.game_id = g.id AND o.price > 0
+            %s
+          ORDER BY o.price ASC
+          LIMIT 1
+        ) barato ON true
+        WHERE d.lancamento BETWEEN current_date - 60 AND current_date + 180
+          AND g.rank IS NOT NULL AND g.rank <= 3000
+          %s
+          %s
+          %s
+        ORDER BY g.rank ASC, d.lancamento DESC
+        LIMIT 30
+        """.formatted(
+            LojasBloqueadas.filtroSql("o"),
+            ConteudosNaoJogos.filtroSql("g"),
+            JogosBloqueados.filtroSql("g"),
+            ClassificadorDlc.filtroApenasJogosSql("g"));
+
+    return jdbc.sql(sql)
+        .query((rs, linha) -> new DescontoJogo(
+            rs.getString("slug"),
+            rs.getString("title"),
+            rs.getString("cover_url"),
+            rs.getObject("is_dlc", Boolean.class),
+            rs.getObject("rank", Integer.class),
+            rs.getString("store_name"),
+            rs.getBigDecimal("price"),
+            rs.getBigDecimal("regular_price"),
+            rs.getString("url"),
+            rs.getObject("discount_pct", Integer.class)))
+        .list();
+  }
 }

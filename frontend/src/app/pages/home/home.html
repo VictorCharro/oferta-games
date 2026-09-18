@@ -70,10 +70,18 @@
     <app-deals-carousel [deals]="preferredPlatformDeals"></app-deals-carousel>
   </section>
 
-  <!-- Descontaços -->
+  <!-- Lancamentos em alta: com ou sem desconto (lancamento quase nunca esta em promocao) -->
+  <section class="section" *ngIf="lancamentos.length">
+    <div class="section-header">
+      <h2>Lançamentos em alta</h2>
+    </div>
+    <app-deals-carousel [deals]="lancamentos"></app-deals-carousel>
+  </section>
+
+  <!-- Promocoes nos mais populares (a partir de 20%) -->
   <section class="section" *ngIf="famousGames.length">
     <div class="section-header">
-      <h2>Descontaços</h2>
+      <h2>Promoções nos jogos mais populares</h2>
       <a routerLink="/mais-vendidos">Ver todos</a>
     </div>
     <app-deals-carousel [deals]="famousGames"></app-deals-carousel>
