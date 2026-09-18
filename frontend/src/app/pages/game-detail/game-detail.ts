@@ -909,6 +909,12 @@ export class GameDetail implements OnInit, OnDestroy {
     return offers.reduce<Offer | null>((best, offer) => !best || offer.price < best.price ? offer : best, null);
   }
 
+  /** Preco regular da melhor oferta, so quando e maior que o preco atual (senao nao ha o que riscar). */
+  precoAnteriorDaMelhor(offers: Offer[]): number | null {
+    const melhor = this.bestOffer(offers);
+    return melhor?.regularPrice && melhor.regularPrice > melhor.price ? melhor.regularPrice : null;
+  }
+
   discount(offer: Offer): number {
     if (!offer.regularPrice) return 0;
     return Math.round((1 - offer.price / offer.regularPrice) * 100);

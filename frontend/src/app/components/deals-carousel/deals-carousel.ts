@@ -89,6 +89,11 @@ export class DealsCarousel implements AfterViewInit, OnChanges, OnDestroy {
     return resolveDlc(deal.title, deal.isDlc);
   }
 
+  /** Preco "de" riscado so quando ele e maior que o atual: lancamento sem desconto mostra so o preco. */
+  temPrecoAnterior(deal: DealCardView): boolean {
+    return deal.regularPrice != null && Number(deal.regularPrice) > Number(deal.price);
+  }
+
   formatPrice(price: number | string | null): string {
     const n = Number(price);
     if (price == null || isNaN(n)) return '—';

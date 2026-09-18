@@ -2156,3 +2156,7 @@
 }
 
 .error-state { text-align: center; padding: 80px 0; color: var(--text-muted); }
+
+// Coluna "Preco regular" da tabela de lojas: so risca quando a loja esta com desconto. Sem desconto o
+// preco regular e o proprio preco atual, e riscar dava a impressao de promocao que nao existe.
+.price-original.sem-desconto { text-decoration: none; }

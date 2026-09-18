@@ -634,6 +634,7 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - **Sidebar:** navegacao principal. O item de monitoramento deve se chamar **Jogos Monitorados** e usar o icone correspondente, nunca o de favoritos pessoais.
 - **Topbar:** busca global, alternancia de tema, notificacoes e menu da conta. Ao clicar em Perfil, deve resolver o handle do usuario e navegar diretamente para `/:handle`, nunca permanecer em `/perfil`.
 - **Notificacoes:** sino da topbar; lista quedas de preco de Jogos Monitorados, permite marcar como lida ou remover e mostra badge de nao lidas.
+- **Preco riscado (18/09/2026):** o preco "de" so aparece riscado quando e maior que o atual — no card do carrossel (`temPrecoAnterior`), no preco do topo da pagina do jogo (`precoAnteriorDaMelhor`) e na coluna "Preco regular" da tabela de lojas (sem desconto, o valor aparece sem risco). Antes, lancamento sem desconto mostrava "R$ 299,00 ~~R$ 299,00~~".
 - **Card de jogo:** exibe capa, desconto, preco, loja e plataforma quando conhecidos. O icone de acao nele monitora preco, nao adiciona aos favoritos pessoais.
 
 ### Home, catalogo e monitoramento

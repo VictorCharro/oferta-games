@@ -6,6 +6,21 @@ Também tem perfil gamer compartilhável, com biblioteca, horas jogadas e conqui
 
 Site: https://ofertagames.vercel.app
 
+![Home do Oferta Games](docs/prints/home.png)
+
+<table>
+  <tr>
+    <td width="68%"><img src="docs/prints/jogo.png" alt="Página de um jogo com o preço em cada loja e o histórico de 90 dias"></td>
+    <td width="32%"><img src="docs/prints/mobile.png" alt="Página de jogo no celular"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Página do jogo: preço em cada loja e histórico de 90 dias</sub></td>
+    <td align="center"><sub>Versão para celular</sub></td>
+  </tr>
+</table>
+
+![Perfil público com biblioteca, horas jogadas, conquistas e platinados](docs/prints/perfil.png)
+
 ## Funcionalidades
 
 - **Catálogo** com cerca de 190 mil jogos e DLCs, filtros (plataforma, loja, preço, desconto) e busca que entende siglas ("gta", "cod", "re 4").

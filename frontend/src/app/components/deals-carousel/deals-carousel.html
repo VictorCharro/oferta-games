@@ -11,7 +11,7 @@
         <p class="deal-title">{{ deal.title }}</p>
         <div class="deal-prices" *ngIf="deal.discountPct < 100; else freeLabel">
           <span class="price-current">{{ formatPrice(deal.price) }}</span>
-          <span class="price-original" *ngIf="deal.regularPrice">{{ formatPrice(deal.regularPrice) }}</span>
+          <span class="price-original" *ngIf="temPrecoAnterior(deal)">{{ formatPrice(deal.regularPrice) }}</span>
         </div>
         <ng-template #freeLabel><span class="price-current">Grátis</span></ng-template>
         <span *ngIf="deal.storeName" class="deal-store">

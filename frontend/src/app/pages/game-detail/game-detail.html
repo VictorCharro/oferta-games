@@ -12,7 +12,7 @@
             <span class="label">Melhor preço<ng-container *ngIf="bestOffer(game.offers)?.storeName as loja"> · {{ loja }}</ng-container></span>
             <span class="hero-best-price-row">
               <span class="price-current large">{{ formatPrice(bestPrice(game.offers)!) }}</span>
-              <span class="price-original" *ngIf="bestOffer(game.offers)?.regularPrice as regular">{{ formatPrice(regular) }}</span>
+              <span class="price-original" *ngIf="precoAnteriorDaMelhor(game.offers) as regular">{{ formatPrice(regular) }}</span>
             </span>
             <span class="voucher-badge" *ngIf="bestOffer(game.offers)?.voucherCode as codigo" [title]="'Use o cupom ' + codigo + ' no carrinho da loja pra garantir esse preço'">Cupom {{ codigo }}</span>
           </div>
@@ -187,7 +187,7 @@
           </span>
           <span class="offer-discount" *ngIf="discount(offer) > 0">-{{ discount(offer) }}%</span>
           <span class="offer-discount none" *ngIf="discount(offer) === 0">—</span>
-          <span class="price-original">{{ offer.regularPrice ? formatPrice(offer.regularPrice) : '—' }}</span>
+          <span class="price-original" [class.sem-desconto]="discount(offer) <= 0">{{ offer.regularPrice ? formatPrice(offer.regularPrice) : '—' }}</span>
           <span class="price-current">{{ formatPrice(offer.price) }}<span class="voucher-badge" *ngIf="offer.voucherCode" [title]="'Use o cupom ' + offer.voucherCode + ' no carrinho da loja pra garantir esse preço'">Cupom {{ offer.voucherCode }}</span></span>
           <span class="offer-cta">Ver oferta →</span>
         </a>
