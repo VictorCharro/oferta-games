@@ -31,8 +31,11 @@ export class Favorites implements OnInit, OnDestroy {
     this.favoritesService.load();
   }
 
+  // `?.` de proposito: o Angular pode destruir a pagina antes do ngOnInit rodar (sair logo depois de
+  // entrar, ou um redirecionamento no meio da abertura). Sem isso vinha "Cannot read properties of
+  // undefined (reading 'unsubscribe')", registrado na aba Erros do admin em 15/09/2026.
   ngOnDestroy() {
-    this.sub.unsubscribe();
+    this.sub?.unsubscribe();
     this.carregadoSub?.unsubscribe();
   }
 }

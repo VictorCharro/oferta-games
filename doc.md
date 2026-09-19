@@ -629,6 +629,8 @@ Os endpoints autenticados recebem token Bearer do Supabase. A administracao exig
 - `app-load-error` (`components/load-error/`): componente reutilizavel de erro de carregamento (`message` + evento `retry`), reaproveita o estilo global `.empty-state` com um botao "Tentar novamente". Usado em Catalogo, Home (bloco de destaques), Gratuitos, Mais Vendidos e Busca — as 5 paginas que carregam a lista principal via uma chamada HTTP unica. Antes, o `error:` do `.subscribe()` so desligava o loading sem mostrar nada, deixando a tela vazia sem explicacao quando a API falhava.
 - Rota coringa (`**`) renderiza `pages/not-found/` (404 com link pra Home) em vez de redirecionar silenciosamente pra `/`. A rota `:handle` (perfil publico) continua casando primeiro com qualquer path de 1 segmento — o 404 real só é alcançado por paths com mais de 1 segmento que não bateram em nenhuma rota anterior.
 
+- **`ngOnDestroy` sempre com `?.unsubscribe()` (19/09/2026)**: o Angular pode destruir um componente antes do `ngOnInit` rodar (sair da pagina logo depois de entrar, redirecionamento no meio da abertura — ex.: a trava de recuperacao de senha). Inscricao criada no `ngOnInit` ainda e `undefined` nesse caso, e `this.sub.unsubscribe()` quebrava com "Cannot read properties of undefined (reading 'unsubscribe')" (pego pela aba Erros do admin em /monitorados). Corrigido em Jogos Monitorados, card de jogo e topbar.
+
 ### Componentes globais
 
 - **Sidebar:** navegacao principal. O item de monitoramento deve se chamar **Jogos Monitorados** e usar o icone correspondente, nunca o de favoritos pessoais.

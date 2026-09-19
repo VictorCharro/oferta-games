@@ -92,7 +92,7 @@ export class Topbar implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.sub.unsubscribe();
+    this.sub?.unsubscribe();
     this.avatarSub?.unsubscribe();
     this.routeSub?.unsubscribe();
     this.searchSub?.unsubscribe();

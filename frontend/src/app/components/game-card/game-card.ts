@@ -39,7 +39,7 @@ export class GameCard implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.sub.unsubscribe();
+    this.sub?.unsubscribe();
   }
 
   get monitoring(): boolean {
