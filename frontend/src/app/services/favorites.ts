@@ -38,10 +38,15 @@ export class FavoritesService {
   private revisao = 0;
 
   constructor(private http: HttpClient, private auth: AuthService) {
-    this.auth.user$.subscribe(user => {
-      this.revisao++;
-      if (user) this.load();
-      else {
+    this.auth.user$.subscribe(async user => {
+      const revisao = ++this.revisao;
+      this._slugs.next(new Set());
+      this._list.next([]);
+      this._carregado.next(false);
+      if (user) {
+        await this.loadingPromise;
+        if (revisao === this.revisao) await this.load();
+      } else {
         this._slugs.next(new Set());
         this._list.next([]);
         // Só é "carregado" como lista vazia depois que a sessão foi consultada; enquanto ela não
@@ -76,17 +81,17 @@ export class FavoritesService {
 
   private async loadFavorites() {
     const revisao = this.revisao;
-    const headers = await this.authHeaders();
-    if (revisao !== this.revisao) return;
-    if (!headers) {
-      this._slugs.next(new Set());
-      this._list.next([]);
-      this.loading = false;
-      this._carregado.next(true);
-      return;
-    }
-
     try {
+      const headers = await this.authHeaders();
+      if (revisao !== this.revisao) return;
+      if (!headers) {
+        this._slugs.next(new Set());
+        this._list.next([]);
+        this.loading = false;
+        this._carregado.next(true);
+        return;
+      }
+
       const list = await firstValueFrom(this.http.get<FavoriteGame[]>(`${this.api}/favorites`, { headers }));
       if (revisao !== this.revisao) return;
       this._list.next(list);
