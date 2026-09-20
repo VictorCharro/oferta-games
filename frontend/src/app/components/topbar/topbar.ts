@@ -1,6 +1,6 @@
 import { Component, ElementRef, HostListener, ChangeDetectorRef, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
-import { Subject, Subscription } from 'rxjs';
+import { Subject, Subscription, catchError, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, switchMap } from 'rxjs/operators';
 import { ThemeService } from '../../services/theme';
 import { MenuMobileService } from '../../services/menu-mobile';
@@ -10,6 +10,7 @@ import { SearchService } from '../../services/search';
 import { PerfisService } from '../../services/perfis';
 import { MinhaMensagem, NotificationsService, PriceNotification } from '../../services/notifications';
 
+/** Navegacao global e sugestoes; falhas de uma consulta nao encerram a entrada de busca. */
 @Component({
   selector: 'app-topbar',
   standalone: false,
@@ -80,8 +81,9 @@ export class Topbar implements OnInit, OnDestroy {
         distinctUntilChanged(),
         switchMap(q => {
           const trimmed = q.trim();
-          if (trimmed.length < 2) return [];
-          return this.gameService.searchGames(trimmed);
+          if (trimmed.length < 2) return of([]);
+          // Recuperar dentro do switchMap mantem a inscricao para os proximos termos.
+          return this.gameService.searchGames(trimmed).pipe(catchError(() => of([])));
         })
       )
       .subscribe(results => {
