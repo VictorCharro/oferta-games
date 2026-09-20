@@ -19,6 +19,7 @@ import { StatusResposta } from '../../services/status-resposta';
 import { mensagemDaApi } from '../../services/mensagem-api';
 import { removerImagensOrfas } from '../../services/imagens-blocos';
 
+/** Perfil e editor; listas derivadas da biblioteca sao recalculadas apenas quando ela muda. */
 @Component({
   selector: 'app-public-profile',
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule],
@@ -33,6 +34,22 @@ export class PublicProfile implements OnInit, OnDestroy {
   @Input() previewBlocos: PerfilBloco[] | null = null;
 
   profile: PerfilPublico | null = null;
+  private bibliotecaCalculada: PerfilPublico['biblioteca'] | null = null;
+  private bibliotecaPorHoras: PerfilPublico['biblioteca'] = [];
+  private bibliotecaPlatinados: PerfilPublico['biblioteca'] = [];
+
+  private calcularBiblioteca() {
+    const biblioteca = this.profile?.biblioteca ?? null;
+    if (biblioteca === this.bibliotecaCalculada) return;
+    this.bibliotecaCalculada = biblioteca;
+    this.bibliotecaPorHoras = [...(biblioteca ?? [])]
+      .sort((a, b) => (b.minutosJogadas ?? 0) - (a.minutosJogadas ?? 0));
+    this.bibliotecaPlatinados = (biblioteca ?? [])
+      .filter(game => game.conquistasTotal != null && game.conquistasDesbloqueadas != null
+        && game.conquistasTotal > 0 && game.conquistasDesbloqueadas >= game.conquistasTotal)
+      .sort((a, b) => (a.platinumPosition ?? Number.MAX_SAFE_INTEGER) - (b.platinumPosition ?? Number.MAX_SAFE_INTEGER)
+        || (b.minutosJogadas ?? 0) - (a.minutosJogadas ?? 0));
+  }
   missing = false;
   /** A API falhou (nao foi 404/400): mostra "tente de novo" e o SSR responde 503 em vez de 404. */
   falhaCarregamento = false;
@@ -1137,10 +1154,7 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   // "Mais jogados" nao tem dado proprio: e a mesma biblioteca (Steam + Xbox) ordenada por horas.
   maisJogadosPreview(block: PerfilBloco) {
-    if (!this.profile) return [];
-    return [...this.profile.biblioteca]
-      .sort((a, b) => (b.minutosJogadas || 0) - (a.minutosJogadas || 0))
-      .slice(0, this.previewLimit(block.tamanho));
+    return this.libraryPreview(block);
   }
 
   // A lista ja vem pronta do backend (nome e icone cruzados com o catalogo, ver
@@ -1183,22 +1197,13 @@ export class PublicProfile implements OnInit, OnDestroy {
   libraryPreview(block: PerfilBloco) {
     // Nao usa a getter libraryGames aqui: ela reflete a busca/ordenacao da aba Biblioteca,
     // e essa preview aparece no resumo (fora dessa aba), entao nao deve ser afetada por elas.
-    if (!this.profile) return [];
-    return [...this.profile.biblioteca]
-      .sort((a, b) => (b.minutosJogadas ?? 0) - (a.minutosJogadas ?? 0))
-      .slice(0, this.previewLimit(block.tamanho));
+    this.calcularBiblioteca();
+    return this.bibliotecaPorHoras.slice(0, this.previewLimit(block.tamanho));
   }
 
   get platinumGames(): PerfilPublico['biblioteca'] {
-    if (!this.profile) return [];
-    return this.profile.biblioteca
-      .filter(game => game.conquistasTotal != null && game.conquistasDesbloqueadas != null && game.conquistasTotal > 0 && game.conquistasDesbloqueadas >= game.conquistasTotal)
-      .sort((a, b) => {
-        if (a.platinumPosition != null && b.platinumPosition != null) return a.platinumPosition - b.platinumPosition;
-        if (a.platinumPosition != null) return -1;
-        if (b.platinumPosition != null) return 1;
-        return (b.minutosJogadas ?? 0) - (a.minutosJogadas ?? 0);
-      });
+    this.calcularBiblioteca();
+    return this.bibliotecaPlatinados;
   }
 
   platinumPreview(block: PerfilBloco) {
@@ -1210,6 +1215,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     const ordenados = this.platinumGames;
     moveItemInArray(ordenados, event.previousIndex, event.currentIndex);
     ordenados.forEach((game, indice) => { game.platinumPosition = indice; });
+    this.bibliotecaCalculada = null;
     this.cdr.detectChanges();
     try {
       // So persiste a ordem dos platinados Steam por enquanto: o endpoint de reordenar e
