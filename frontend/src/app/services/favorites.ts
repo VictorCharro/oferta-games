@@ -11,6 +11,7 @@ export interface FavoriteGame extends GameSummary {
   favoritedAt: string;
 }
 
+/** Monitorados confirmados pela API; falhas de escrita preservam o estado anterior. */
 @Injectable({ providedIn: 'root' })
 export class FavoritesService {
   private api = URL_API;
@@ -34,9 +35,11 @@ export class FavoritesService {
 
   loading = false;
   private loadingPromise: Promise<void> | null = null;
+  private revisao = 0;
 
   constructor(private http: HttpClient, private auth: AuthService) {
     this.auth.user$.subscribe(user => {
+      this.revisao++;
       if (user) this.load();
       else {
         this._slugs.next(new Set());
@@ -72,7 +75,9 @@ export class FavoritesService {
   }
 
   private async loadFavorites() {
+    const revisao = this.revisao;
     const headers = await this.authHeaders();
+    if (revisao !== this.revisao) return;
     if (!headers) {
       this._slugs.next(new Set());
       this._list.next([]);
@@ -83,6 +88,7 @@ export class FavoritesService {
 
     try {
       const list = await firstValueFrom(this.http.get<FavoriteGame[]>(`${this.api}/favorites`, { headers }));
+      if (revisao !== this.revisao) return;
       this._list.next(list);
       this._slugs.next(new Set(list.map(g => g.slug)));
       this._carregado.next(true);
@@ -103,25 +109,36 @@ export class FavoritesService {
   }
 
   async remove(slug: string) {
+    const usuarioId = this.auth.user?.id;
     const headers = await this.authHeaders();
-    if (!headers) return;
+    if (!headers) throw new Error('Sessão não encontrada');
+
+    await firstValueFrom(this.http.delete(`${this.api}/favorites/${slug}`, { headers }));
+    if (usuarioId !== this.auth.user?.id) return;
+    this.revisao++;
 
     const set = new Set(this._slugs.value);
     set.delete(slug);
     this._slugs.next(set);
     this._list.next(this._list.value.filter(g => g.slug !== slug));
-    await firstValueFrom(this.http.delete(`${this.api}/favorites/${slug}`, { headers }));
   }
 
   // Tambem serve pra editar a meta de um jogo ja monitorado (upsert no backend).
   async add(slug: string, targetPrice: number | null = null) {
+    const usuarioId = this.auth.user?.id;
     const headers = await this.authHeaders();
-    if (!headers) return;
+    if (!headers) throw new Error('Sessão não encontrada');
+
+    await firstValueFrom(this.http.post(`${this.api}/favorites`, { slug, targetPrice }, { headers }));
+    if (usuarioId !== this.auth.user?.id) return;
+    this.revisao++;
 
     const set = new Set(this._slugs.value);
     set.add(slug);
     this._slugs.next(set);
-    await firstValueFrom(this.http.post(`${this.api}/favorites`, { slug, targetPrice }, { headers }));
+    this._list.next(this._list.value.map(g => g.slug === slug ? { ...g, targetPrice } : g));
+    // Aguarda leitura antiga descartada pela revisao antes de pedir o estado atualizado.
+    await this.loadingPromise;
     await this.load();
   }
 }

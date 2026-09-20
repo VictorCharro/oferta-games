@@ -692,7 +692,10 @@ export class GameDetail implements OnInit, OnDestroy {
     this.salvandoMeta = true;
     try {
       await this.favoritesService.add(this.game.slug, targetPrice);
+      this.erroMonitoramento = '';
       this.fecharMenuMeta();
+    } catch {
+      this.erroMonitoramento = 'Não foi possível salvar o monitoramento. Tente novamente.';
     } finally {
       this.salvandoMeta = false;
       this.cdr.detectChanges();
@@ -704,12 +707,17 @@ export class GameDetail implements OnInit, OnDestroy {
     this.salvandoMeta = true;
     try {
       await this.favoritesService.remove(this.game.slug);
+      this.erroMonitoramento = '';
       this.fecharMenuMeta();
+    } catch {
+      this.erroMonitoramento = 'Não foi possível remover o monitoramento. Tente novamente.';
     } finally {
       this.salvandoMeta = false;
       this.cdr.detectChanges();
     }
   }
+
+  erroMonitoramento = '';
 
   get personalFavorite(): boolean {
     return this.game ? this.profileFavoritesService.isFavorite(this.game.slug) : false;

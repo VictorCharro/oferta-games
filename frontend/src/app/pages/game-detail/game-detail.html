@@ -1,3 +1,4 @@
+<p *ngIf="erroMonitoramento" role="alert">{{ erroMonitoramento }}</p>
 <div class="game-detail-wrap" *ngIf="!loading && game">
 <div class="page-content" [class.medindo]="!capaCarregada">
   <div class="game-hero" [style.backgroundImage]="'url(' + (game.coverUrl || '') + ')'">

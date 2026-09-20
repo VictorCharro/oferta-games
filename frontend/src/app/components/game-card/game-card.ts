@@ -10,6 +10,7 @@ import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-
 import { irParaLogin } from '../../services/ir-para-login';
 import { trocarPorCapaPadrao } from '../../services/capa';
 
+/** Card de oferta com monitoramento confirmado pelo servidor e erro recuperavel. */
 @Component({
   selector: 'app-game-card',
   imports: [CommonModule, RouterModule],
@@ -17,6 +18,8 @@ import { trocarPorCapaPadrao } from '../../services/capa';
   styleUrl: './game-card.scss',
 })
 export class GameCard implements OnInit, OnDestroy {
+  erroMonitoramento = '';
+  salvandoMonitoramento = false;
   /** Capa que nao carregou vira a imagem padrao (ver services/capa). */
   readonly capaIndisponivel = trocarPorCapaPadrao;
 
@@ -80,13 +83,23 @@ export class GameCard implements OnInit, OnDestroy {
     return storePlatforms(storeName, this.displayStoreUrl);
   }
 
-  toggleMonitoring(event: Event) {
+  async toggleMonitoring(event: Event) {
     event.preventDefault();
     event.stopPropagation();
     if (!this.auth.isLoggedIn) {
       irParaLogin(this.router, 'monitorar este jogo');
       return;
     }
-    this.favoritesService.toggle(this.game);
+    if (this.salvandoMonitoramento) return;
+    this.salvandoMonitoramento = true;
+    this.erroMonitoramento = '';
+    try {
+      await this.favoritesService.toggle(this.game);
+    } catch {
+      this.erroMonitoramento = 'Não foi possível alterar o monitoramento. Tente novamente.';
+    } finally {
+      this.salvandoMonitoramento = false;
+      this.cdr.markForCheck();
+    }
   }
 }
