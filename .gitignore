@@ -65,3 +65,6 @@ out/
 
 # Marcador do commit publicado, gravado pelo deploy na VM (ver deploy-oracle.yml).
 .deployed-sha
+
+# Vínculo e metadados locais da CLI Supabase; não fazem parte do schema/migrations.
+supabase/.temp/
