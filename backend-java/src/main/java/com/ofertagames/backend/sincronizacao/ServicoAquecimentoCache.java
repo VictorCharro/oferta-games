@@ -78,6 +78,7 @@ class ServicoAquecimentoCache {
     descontos.listarTopo("rank", "all");
     descontos.listarTopo("discount", "all");
     descontos.listarTopo("discount", "dlc");
+    descontos.listarLancamentos();
   }
 
   private void limpar(String nomeCache) {
