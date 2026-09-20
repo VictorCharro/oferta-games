@@ -434,7 +434,7 @@ public class ServicoConexoesSteam {
   // Tipo usado tambem pra biblioteca Xbox (campo "plataforma"), pra nao duplicar toda a
   // renderizacao/agregacao de biblioteca no frontend - so o construtor de 9 args (Steam) e
   // mantido com "steam" implicito, pra nao precisar mexer nos outros pontos que ja o usam.
-  public record JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl, String catalogSlug, Integer platinumPosition, String plataforma) {
+  public record JogoBibliotecaSteam(int appId, String titulo, Integer minutosJogadas, String iconeHash, Integer conquistasDesbloqueadas, Integer conquistasTotal, String capaUrl, String catalogSlug, Integer platinumPosition, String plataforma) {
     public JogoBibliotecaSteam(int appId, String titulo, int minutosJogadas, String iconeHash, int conquistasDesbloqueadas, int conquistasTotal, String capaUrl, String catalogSlug, Integer platinumPosition) {
       this(appId, titulo, minutosJogadas, iconeHash, conquistasDesbloqueadas, conquistasTotal, capaUrl, catalogSlug, platinumPosition, "steam");
     }

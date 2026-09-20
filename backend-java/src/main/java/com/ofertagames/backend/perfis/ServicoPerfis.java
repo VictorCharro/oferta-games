@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+/** Monta perfis e aplica privacidade tanto nos totais quanto nos itens aninhados. */
 @Service
 class ServicoPerfis {
   private static final Set<String> IDENTIFICADORES_RESERVADOS = Set.of(
@@ -111,10 +112,14 @@ class ServicoPerfis {
     ServicoConexoesXbox.StatusConexaoXbox statusXbox = xbox.status(perfil.usuarioId());
     boolean dono = perfil.usuarioId().equals(visitanteId);
     boolean mostrarBiblioteca = dono || perfil.mostrarBiblioteca();
+    boolean mostrarHoras = dono || perfil.mostrarHoras();
+    boolean mostrarConquistas = dono || perfil.mostrarConquistas();
     List<ServicoConexoesSteam.JogoBibliotecaSteam> jogosSteam = mostrarBiblioteca ? enriquecerComCatalogSlug(steam.biblioteca(perfil.usuarioId())) : List.of();
     List<ServicoConexoesSteam.JogoBibliotecaSteam> jogosXbox = mostrarBiblioteca ? xbox.biblioteca(perfil.usuarioId()) : List.of();
-    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = java.util.stream.Stream.concat(jogosSteam.stream(), jogosXbox.stream()).toList();
+    List<ServicoConexoesSteam.JogoBibliotecaSteam> jogos = java.util.stream.Stream.concat(jogosSteam.stream(), jogosXbox.stream())
+        .map(j -> protegerJogo(j, mostrarHoras, mostrarConquistas)).toList();
     List<FavoritoPerfilJogo> favoritos = dono || perfil.mostrarFavoritos() ? favoritosPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
+    favoritos = favoritos.stream().map(j -> protegerFavorito(j, mostrarHoras, mostrarConquistas)).toList();
     List<ColecaoPerfil> colecoesBrutas = dono || perfil.mostrarColecoes() ? colecoesPerfil.listarPorUsuario(perfil.usuarioId()) : List.of();
     // A wishlist da Steam tem toggle proprio (dentro do Organizar da aba Colecoes, nao em
     // Privacidade). Desmarcado, some pra todo mundo, inclusive o dono - ele ve exatamente o que
@@ -124,6 +129,8 @@ class ServicoPerfis {
     boolean temColecaoWishlistSteam = colecoesBrutas.stream().anyMatch(ColecaoPerfil::origemSistema);
     List<ColecaoPerfil> colecoes = colecoesBrutas.stream()
         .filter(c -> !c.origemSistema() || perfil.mostrarWishlistSteam())
+        .map(c -> new ColecaoPerfil(c.id(), c.nome(), c.origemSistema(), c.jogos().stream()
+            .map(j -> protegerFavorito(j, mostrarHoras, mostrarConquistas)).toList()))
         .toList();
     // Mesmo toggle dos contadores de conquista da faixa de estatisticas: quem esconde conquistas
     // nao deve expor quais foram as ultimas.
@@ -131,6 +138,8 @@ class ServicoPerfis {
         dono || perfil.mostrarConquistas() ? steam.conquistasRecentes(perfil.usuarioId(), 20) : List.of();
     boolean mostrarAtividades = dono || perfil.mostrarAtividades();
     List<AtividadePerfil> atividadeRecente = mostrarAtividades ? carregarAtividades(perfil.usuarioId()) : List.of();
+    if (!mostrarConquistas) atividadeRecente = atividadeRecente.stream()
+        .filter(a -> a.tipo() == null || !a.tipo().startsWith("CONQUISTA")).toList();
     boolean mostrarPlataforma = dono || perfil.mostrarHoras() || perfil.mostrarConquistas() || perfil.mostrarBiblioteca();
     List<String> plataformasConectadas = new java.util.ArrayList<>();
     if (status.conectada() && mostrarPlataforma) plataformasConectadas.add("steam");
@@ -149,6 +158,19 @@ class ServicoPerfis {
         atividadeRecente,
         perfil.mostrarAtividades(), blocosPublicos(perfil, dono), perfil.mostrarWishlistSteam(), temColecaoWishlistSteam,
         conquistasRecentes);
+  }
+
+  /** null significa oculto, e nao zero horas/conquistas. */
+  static ServicoConexoesSteam.JogoBibliotecaSteam protegerJogo(ServicoConexoesSteam.JogoBibliotecaSteam j, boolean horas, boolean conquistas) {
+    return new ServicoConexoesSteam.JogoBibliotecaSteam(j.appId(), j.titulo(), horas ? j.minutosJogadas() : null,
+        j.iconeHash(), conquistas ? j.conquistasDesbloqueadas() : null, conquistas ? j.conquistasTotal() : null,
+        j.capaUrl(), j.catalogSlug(), conquistas ? j.platinumPosition() : null, j.plataforma());
+  }
+
+  static FavoritoPerfilJogo protegerFavorito(FavoritoPerfilJogo j, boolean horas, boolean conquistas) {
+    return new FavoritoPerfilJogo(j.slug(), j.steamAppId(), j.titulo(), j.capaUrl(), j.iconeHash(), j.ehDlc(),
+        horas ? j.minutosJogadas() : null, conquistas ? j.conquistasDesbloqueadas() : null,
+        conquistas ? j.conquistasTotal() : null, j.precoMinimo(), j.precoRegular(), j.favoritadoEm());
   }
 
   ResultadoAtualizacao solicitarAtualizacao(String handle, String visitanteId) {
@@ -195,7 +217,7 @@ class ServicoPerfis {
         .filter(bloco -> dono || !"atividade".equals(bloco.tipo()) || perfil.mostrarAtividades())
         // Platinados e derivado da biblioteca (conquistasDesbloqueadas/Total de cada jogo Steam),
         // entao depende dos mesmos dados dela, nao so do toggle de conquistas.
-        .filter(bloco -> dono || !"platinados".equals(bloco.tipo()) || perfil.mostrarBiblioteca())
+        .filter(bloco -> dono || !"platinados".equals(bloco.tipo()) || (perfil.mostrarBiblioteca() && perfil.mostrarConquistas()))
         // Wishlist depende de show_collections (o dado vem de profile_collections) E do toggle
         // proprio show_steam_wishlist - esse ultimo esconde de TODO MUNDO, inclusive o dono
         // (mesma regra da colecao na aba Colecoes, ver "Colecoes de sistema").
@@ -204,7 +226,7 @@ class ServicoPerfis {
         // faixa de estatisticas): esconder conquistas esconde o bloco tambem.
         .filter(bloco -> dono || !"conquistas-recentes".equals(bloco.tipo()) || perfil.mostrarConquistas())
         // "Mais jogados" e so a biblioteca ordenada por horas: segue o toggle da biblioteca.
-        .filter(bloco -> dono || !"mais-jogados".equals(bloco.tipo()) || perfil.mostrarBiblioteca())
+        .filter(bloco -> dono || !"mais-jogados".equals(bloco.tipo()) || (perfil.mostrarBiblioteca() && perfil.mostrarHoras()))
         .toList();
   }
 

@@ -1185,19 +1185,19 @@ export class PublicProfile implements OnInit, OnDestroy {
     // e essa preview aparece no resumo (fora dessa aba), entao nao deve ser afetada por elas.
     if (!this.profile) return [];
     return [...this.profile.biblioteca]
-      .sort((a, b) => b.minutosJogadas - a.minutosJogadas)
+      .sort((a, b) => (b.minutosJogadas ?? 0) - (a.minutosJogadas ?? 0))
       .slice(0, this.previewLimit(block.tamanho));
   }
 
   get platinumGames(): PerfilPublico['biblioteca'] {
     if (!this.profile) return [];
     return this.profile.biblioteca
-      .filter(game => game.conquistasTotal > 0 && game.conquistasDesbloqueadas >= game.conquistasTotal)
+      .filter(game => game.conquistasTotal != null && game.conquistasDesbloqueadas != null && game.conquistasTotal > 0 && game.conquistasDesbloqueadas >= game.conquistasTotal)
       .sort((a, b) => {
         if (a.platinumPosition != null && b.platinumPosition != null) return a.platinumPosition - b.platinumPosition;
         if (a.platinumPosition != null) return -1;
         if (b.platinumPosition != null) return 1;
-        return b.minutosJogadas - a.minutosJogadas;
+        return (b.minutosJogadas ?? 0) - (a.minutosJogadas ?? 0);
       });
   }
 
@@ -1247,7 +1247,7 @@ export class PublicProfile implements OnInit, OnDestroy {
   }
 
   achievementProgress(game: PerfilPublico['biblioteca'][number]): number | null {
-    return game.conquistasTotal > 0 ? Math.round((game.conquistasDesbloqueadas / game.conquistasTotal) * 100) : null;
+    return game.conquistasTotal != null && game.conquistasDesbloqueadas != null && game.conquistasTotal > 0 ? Math.round((game.conquistasDesbloqueadas / game.conquistasTotal) * 100) : null;
   }
 
   favoriteAchievementProgress(game: PerfilPublico['favoritos'][number]): number | null {
@@ -1376,8 +1376,8 @@ export class PublicProfile implements OnInit, OnDestroy {
     );
     return [...games].sort((a, b) => {
       if (this.libraryOrder === 'nome') return a.titulo.localeCompare(b.titulo, 'pt-BR');
-      if (this.libraryOrder === 'conquistas') return (b.conquistasDesbloqueadas / Math.max(1, b.conquistasTotal)) - (a.conquistasDesbloqueadas / Math.max(1, a.conquistasTotal));
-      return b.minutosJogadas - a.minutosJogadas;
+      if (this.libraryOrder === 'conquistas') return ((b.conquistasDesbloqueadas ?? 0) / Math.max(1, b.conquistasTotal ?? 0)) - ((a.conquistasDesbloqueadas ?? 0) / Math.max(1, a.conquistasTotal ?? 0));
+      return (b.minutosJogadas ?? 0) - (a.minutosJogadas ?? 0);
     });
   }
 
