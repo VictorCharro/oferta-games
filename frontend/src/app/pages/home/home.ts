@@ -1,4 +1,6 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, TransferState, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { sortearHome } from '../../services/sorteio-home';
 import { Subscription, catchError, of } from 'rxjs';
 import { GameService, TopDeal, GameSummary, PontoHistoricoPreco } from '../../services/game';
 import { FavoritesService, FavoriteGame } from '../../services/favorites';
@@ -24,6 +26,7 @@ export interface DealCardView {
   isDlc?: boolean | null;
 }
 
+/** Ofertas da Home com sorteio compartilhado pelo SSR e estados de falha por secao. */
 @Component({
   selector: 'app-home',
   standalone: false,
@@ -31,6 +34,9 @@ export interface DealCardView {
   styleUrl: './home.scss',
 })
 export class Home implements OnInit, OnDestroy {
+  private readonly estado = inject(TransferState);
+  private readonly navegador = isPlatformBrowser(inject(PLATFORM_ID));
+  falhasSecoes: string[] = [];
   /** Capa que nao carregou vira a imagem padrao (ver services/capa). */
   readonly capaIndisponivel = trocarPorCapaPadrao;
 
@@ -65,9 +71,19 @@ export class Home implements OnInit, OnDestroy {
       description: 'Compare preços de jogos nas melhores lojas e encontre as maiores promoções.',
       path: '/',
     });
-    this.loadPreferredPlatformDeals();
     this.carregarDestaques();
 
+    this.carregarSecoes();
+
+    this.favSub = this.favoritesService.list$.subscribe(list => {
+      this.favoritesDeals = list.slice(0, 15);
+      this.cdr.detectChanges();
+    });
+  }
+
+  carregarSecoes() {
+    this.falhasSecoes = [];
+    this.loadPreferredPlatformDeals();
     this.gameService.getTopDeals(200, 'discount').subscribe({
       next: (deals) => {
         this.freeWeek = deals
@@ -78,7 +94,8 @@ export class Home implements OnInit, OnDestroy {
         const active = deals.filter(d => Number(d.discountPct) < 100 && this.matchesPreferences(d));
         this.topDiscountGames = active.filter(d => d.rank != null && !resolveDlc(d.title, d.isDlc)).slice(0, 20).map(d => this.fromTopDeal(d));
         this.cdr.detectChanges();
-      }
+      },
+      error: () => this.falhaSecao('ofertas'),
     });
 
     // Busca DLCs direto (type=dlc) em vez de tentar achar dentro dos 200 mais descontados gerais:
@@ -93,7 +110,8 @@ export class Home implements OnInit, OnDestroy {
           .slice(0, 20)
           .map(d => this.fromTopDeal(d));
         this.cdr.detectChanges();
-      }
+      },
+      error: () => this.falhaSecao('ofertas'),
     });
 
     // Lancamentos quase nunca estao em promocao, entao nunca apareciam nas secoes de desconto:
@@ -105,13 +123,15 @@ export class Home implements OnInit, OnDestroy {
           .slice(0, 20)
           .map(d => this.fromTopDeal(d));
         this.cdr.detectChanges();
-      }
+      },
+      error: () => this.falhaSecao('ofertas'),
     });
 
-    this.favSub = this.favoritesService.list$.subscribe(list => {
-      this.favoritesDeals = list.slice(0, 15);
-      this.cdr.detectChanges();
-    });
+  }
+
+  private falhaSecao(nome: string) {
+    this.falhasSecoes = [...new Set([...this.falhasSecoes, nome])];
+    this.cdr.markForCheck();
   }
 
   ngOnDestroy() {
@@ -131,8 +151,8 @@ export class Home implements OnInit, OnDestroy {
         const paid = deals.filter(d => Number(d.discountPct) >= DESCONTO_MINIMO_DESTAQUE && Number(d.discountPct) < 100
           && !resolveDlc(d.title, d.isDlc) && this.matchesPreferences(d));
         const topo = paid.slice(0, 40);
-        this.featuredDeals = this.shuffle(topo).slice(0, 5);
-        this.famousGames = this.shuffle(topo).slice(0, 20).map(d => this.fromTopDeal(d));
+        this.featuredDeals = sortearHome(topo, this.estado, 'banner', this.navegador).slice(0, 5);
+        this.famousGames = sortearHome(topo, this.estado, 'populares', this.navegador).slice(0, 20).map(d => this.fromTopDeal(d));
         this.loading = false;
         this.startAutoplay();
         this.carregarHistoricoSlideAtual();
@@ -227,7 +247,7 @@ export class Home implements OnInit, OnDestroy {
 
   private startAutoplay() {
     this.stopAutoplay();
-    if (this.featuredDeals.length <= 1) return;
+    if (!this.navegador || this.featuredDeals.length <= 1) return;
     this.autoplayTimer = setInterval(() => {
       this.featuredIndex = (this.featuredIndex + 1) % this.featuredDeals.length;
       this.carregarHistoricoSlideAtual();
@@ -264,15 +284,6 @@ export class Home implements OnInit, OnDestroy {
       clearInterval(this.autoplayTimer);
       this.autoplayTimer = undefined;
     }
-  }
-
-  private shuffle<T>(arr: T[]): T[] {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
   }
 
   formatPrice(price: number | string | null): string {
@@ -314,6 +325,7 @@ export class Home implements OnInit, OnDestroy {
         this.preferredPlatformDeals = games.map(game => this.fromGameSummary(game));
         this.cdr.detectChanges();
       },
+      error: () => this.falhaSecao('plataforma favorita'),
     });
   }
 

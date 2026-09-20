@@ -1,3 +1,4 @@
+<app-load-error *ngIf="falhasSecoes.length" message="Algumas ofertas não puderam ser carregadas." (retry)="carregarSecoes()"></app-load-error>
 <div class="page-content">
 
   <app-load-error
