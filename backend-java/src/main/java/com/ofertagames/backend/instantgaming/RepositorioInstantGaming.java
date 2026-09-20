@@ -152,6 +152,13 @@ class RepositorioInstantGaming {
         .list();
   }
 
+  /** Menor preco visivel antes/depois da escrita, para alertas tambem nesta fonte. */
+  BigDecimal precoMinimo(long jogoId) {
+    return jdbcCatalogo.sql("SELECT MIN(o.price) FROM offers o WHERE o.game_id = :id "
+        + LojasBloqueadas.filtroSql("o"))
+        .param("id", jogoId).query(BigDecimal.class).optional().orElse(null);
+  }
+
   void salvarPreco(long jogoId, BigDecimal preco, String moeda, String url) {
     jdbcCatalogo.sql("""
         INSERT INTO offers (game_id, source, store_name, price, regular_price, currency, url, updated_at)

@@ -1,6 +1,7 @@
 package com.ofertagames.backend.instantgaming;
 
 import com.ofertagames.backend.comum.GeradorSlug;
+import com.ofertagames.backend.notificacoes.RepositorioNotificacoes;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 
@@ -32,10 +33,12 @@ public class ServicoInstantGaming {
 
   private final ClienteInstantGaming cliente;
   private final RepositorioInstantGaming repositorio;
+  private final RepositorioNotificacoes notificacoes;
 
-  ServicoInstantGaming(ClienteInstantGaming cliente, RepositorioInstantGaming repositorio) {
+  ServicoInstantGaming(ClienteInstantGaming cliente, RepositorioInstantGaming repositorio, RepositorioNotificacoes notificacoes) {
     this.cliente = cliente;
     this.repositorio = repositorio;
+    this.notificacoes = notificacoes;
   }
 
   public ResumoFilaInstantGaming resumirFila() {
@@ -140,7 +143,9 @@ public class ServicoInstantGaming {
       repositorio.removerOferta(jogoId);
       return false;
     }
+    var anterior = repositorio.precoMinimo(jogoId);
     repositorio.salvarPreco(jogoId, produto.get().preco(), produto.get().moeda(), comLinkAfiliado(produto.get().url()));
+    notificacoes.registrarQueda(jogoId, anterior, repositorio.precoMinimo(jogoId));
     return true;
   }
 

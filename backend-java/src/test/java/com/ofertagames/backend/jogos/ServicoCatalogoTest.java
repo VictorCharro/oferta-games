@@ -69,6 +69,28 @@ class ServicoCatalogoTest {
   }
 
   @Test
+  void refreshManualEncerraOfertasAusentesEEmiteAlerta() {
+    when(jogos.buscarParaAtualizar("jogo")).thenReturn(Optional.of(jogo(1L, "itad-1", null)));
+    when(itad.buscarPrecos("itad-1")).thenReturn(List.of(new ResultadoPrecoItad("itad-1", List.of())));
+    when(jogos.precosMinimos(List.of(1L))).thenReturn(
+        java.util.Map.of(1L, BigDecimal.TEN), java.util.Map.of(1L, BigDecimal.ONE));
+
+    servico.atualizarPrecos("jogo");
+
+    verify(jogos).substituirOfertasItad(1L, List.of());
+    verify(notificacoes).registrarQueda(1L, BigDecimal.TEN, BigDecimal.ONE);
+  }
+
+  @Test
+  void refreshManualPreservaOfertasQuandoItadOmiteJogo() {
+    when(jogos.buscarParaAtualizar("jogo")).thenReturn(Optional.of(jogo(1L, "itad-1", null)));
+    when(itad.buscarPrecos("itad-1")).thenReturn(List.of());
+    servico.atualizarPrecos("jogo");
+    verify(jogos, never()).substituirOfertasItad(anyLong(), anyList());
+    verify(notificacoes, never()).registrarQueda(anyLong(), any(), any());
+  }
+
+  @Test
   void recusaComCooldownQuandoRefreshManualFoiRecente() {
     JogoParaAtualizar jogo = jogo(1L, "itad-1", Instant.now().minusSeconds(60));
     when(jogos.buscarParaAtualizar("jogo")).thenReturn(Optional.of(jogo));
@@ -88,7 +110,7 @@ class ServicoCatalogoTest {
     JogoParaAtualizar jogo = jogo(1L, "itad-1", Instant.now().minusSeconds(400));
     when(jogos.buscarParaAtualizar("jogo")).thenReturn(Optional.of(jogo));
     when(itad.buscarPrecos("itad-1")).thenReturn(List.of(ofertaItad("itad-1", BigDecimal.TEN)));
-    when(jogos.salvarOfertas(anyList())).thenReturn(1);
+    when(jogos.substituirOfertasItad(anyLong(), anyList())).thenReturn(1);
     when(jogos.listarDlcsDoJogo(1L)).thenReturn(List.of());
     when(instantGaming.atualizarPrecoImediato(anyLong(), anyString())).thenReturn(false);
 
@@ -104,7 +126,7 @@ class ServicoCatalogoTest {
     JogoParaAtualizar jogo = jogo(1L, "itad-1", null);
     when(jogos.buscarParaAtualizar("jogo")).thenReturn(Optional.of(jogo));
     when(itad.buscarPrecos("itad-1")).thenReturn(List.of(ofertaItad("itad-1", BigDecimal.TEN)));
-    when(jogos.salvarOfertas(anyList())).thenReturn(1);
+    when(jogos.substituirOfertasItad(anyLong(), anyList())).thenReturn(1);
     when(jogos.listarDlcsDoJogo(1L)).thenReturn(List.of());
     when(instantGaming.atualizarPrecoImediato(anyLong(), anyString())).thenReturn(false);
 
@@ -128,7 +150,7 @@ class ServicoCatalogoTest {
     when(itad.buscarPrecos("itad-base")).thenReturn(List.of(ofertaItad("itad-base", BigDecimal.TEN)));
     when(itad.buscarPrecos("itad-dlc1")).thenReturn(List.of(ofertaItad("itad-dlc1", BigDecimal.ONE)));
     when(itad.buscarPrecos("itad-dlc2")).thenReturn(List.of());
-    when(jogos.salvarOfertas(anyList())).thenReturn(1);
+    when(jogos.substituirOfertasItad(anyLong(), anyList())).thenReturn(1);
     when(instantGaming.atualizarPrecoImediato(anyLong(), anyString())).thenReturn(false);
 
     ResultadoAtualizacaoJogo resultado = servico.atualizarPrecos("jogo-base");
@@ -152,7 +174,7 @@ class ServicoCatalogoTest {
     when(jogos.buscarParaAtualizarPorSlugs(List.of("dlc-sem-preco"))).thenReturn(List.of(dlcSemPreco));
 
     when(itad.buscarPrecos("itad-base")).thenReturn(List.of(ofertaItad("itad-base", BigDecimal.TEN)));
-    when(jogos.salvarOfertas(anyList())).thenReturn(1);
+    when(jogos.substituirOfertasItad(anyLong(), anyList())).thenReturn(1);
     when(instantGaming.atualizarPrecoImediato(anyLong(), anyString())).thenReturn(false);
 
     ResultadoAtualizacaoJogo resultado = servico.atualizarPrecos("jogo-base");

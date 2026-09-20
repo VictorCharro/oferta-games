@@ -857,7 +857,10 @@ public class RepositorioJogos {
     jdbc.sql("DELETE FROM offers WHERE game_id = :jogoId AND source = 'itad'")
         .param("jogoId", jogoId)
         .update();
-    return salvarOfertas(ofertas);
+    int gravadas = salvarOfertas(ofertas);
+    // A remocao da ITAD pode deixar outra fonte como menor preco, mesmo sem novos INSERTs.
+    registrarHistoricoDePrecos(List.of(jogoId));
+    return gravadas;
   }
 
   /**
@@ -879,7 +882,9 @@ public class RepositorioJogos {
     List<OfertaParaSalvar> ofertas = ofertasPorJogo.values().stream()
         .flatMap(List::stream)
         .toList();
-    return salvarOfertas(ofertas);
+    int gravadas = salvarOfertas(ofertas);
+    registrarHistoricoDePrecos(jogosIds);
+    return gravadas;
   }
 
   /**

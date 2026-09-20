@@ -204,10 +204,13 @@ public class ServicoCatalogo {
     if (temItad) {
       List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(itad.buscarPrecos(jogo.itadId()), List.of());
       ResultadoPrecoItad resultado = resultados.isEmpty() ? null : resultados.get(0);
-      if (resultado != null && resultado.deals() != null) {
+      if (resultado != null) {
+        List<OfertaPrecoItad> ofertasRecebidas = Objects.requireNonNullElse(resultado.deals(), List.of());
         List<OfertaParaSalvar> ofertasParaSalvar = new ArrayList<>();
-        for (OfertaPrecoItad oferta : resultado.deals()) {
-          if (oferta.shop() == null || oferta.price() == null || oferta.url() == null) {
+        for (OfertaPrecoItad oferta : ofertasRecebidas) {
+          if (oferta == null || oferta.shop() == null || oferta.shop().name() == null
+              || oferta.shop().name().isBlank() || oferta.price() == null || oferta.price().amount() == null
+              || oferta.url() == null || oferta.url().isBlank()) {
             continue;
           }
 
@@ -221,8 +224,12 @@ public class ServicoCatalogo {
               oferta.url(),
               oferta.voucher()));
         }
-        atualizadas += jogos.salvarOfertas(ofertasParaSalvar);
-        atualizarMetadadosSteamSeNecessario(jogo, resultado.deals());
+        // Resposta presente e vazia encerra as ofertas; jogo omitido preserva os precos anteriores.
+        var anteriores = jogos.precosMinimos(List.of(jogo.id()));
+        atualizadas += jogos.substituirOfertasItad(jogo.id(), ofertasParaSalvar);
+        var atuais = jogos.precosMinimos(List.of(jogo.id()));
+        notificacoes.registrarQueda(jogo.id(), anteriores.get(jogo.id()), atuais.get(jogo.id()));
+        atualizarMetadadosSteamSeNecessario(jogo, ofertasRecebidas);
       }
     }
     boolean instantGamingAtualizado = instantGaming.atualizarPrecoImediato(jogo.id(), jogo.titulo());
@@ -394,7 +401,10 @@ public class ServicoCatalogo {
               oferta.voucher()));
         }
       }
+      var anteriores = jogos.precosMinimos(List.of(jogoId));
       atualizadas += jogos.substituirOfertasItad(jogoId, ofertasAtuais);
+      var atuais = jogos.precosMinimos(List.of(jogoId));
+      notificacoes.registrarQueda(jogoId, anteriores.get(jogoId), atuais.get(jogoId));
     }
 
     return atualizadas;
