@@ -878,7 +878,7 @@ public class RepositorioJogos {
         .update();
     int gravadas = salvarOfertas(ofertas);
     // A remocao da ITAD pode deixar outra fonte como menor preco, mesmo sem novos INSERTs.
-    registrarHistoricoDePrecos(List.of(jogoId));
+    if (ofertas.isEmpty()) registrarHistoricoDePrecos(List.of(jogoId));
     return gravadas;
   }
 
@@ -902,7 +902,9 @@ public class RepositorioJogos {
         .flatMap(List::stream)
         .toList();
     int gravadas = salvarOfertas(ofertas);
-    registrarHistoricoDePrecos(jogosIds);
+    registrarHistoricoDePrecos(ofertasPorJogo.entrySet().stream()
+        .filter(entrada -> entrada.getValue().isEmpty())
+        .map(Map.Entry::getKey).toList());
     return gravadas;
   }
 
