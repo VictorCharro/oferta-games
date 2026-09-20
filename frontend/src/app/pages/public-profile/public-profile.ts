@@ -27,6 +27,9 @@ import { removerImagensOrfas } from '../../services/imagens-blocos';
   styleUrl: './public-profile.scss',
 })
 export class PublicProfile implements OnInit, OnDestroy {
+  trackBloco = (_: number, bloco: PerfilBloco) => bloco.id;
+  trackBiblioteca = (_: number, jogo: PerfilPublico['biblioteca'][number]) => `${jogo.plataforma}:${jogo.appId}`;
+  trackJogoPerfil = (_: number, jogo: PerfilPublico['favoritos'][number]) => jogo.steamAppId != null ? `steam:${jogo.steamAppId}` : `catalogo:${jogo.slug}`;
   // Modo preview: a pagina /perfil/blocos embute este mesmo componente pra mostrar como o perfil
   // vai ficar com o rascunho de blocos, antes de salvar. Com previewHandle setado o componente
   // ignora a rota, nao mexe no SEO e se comporta como visitante (sem nenhum chrome de edicao).
