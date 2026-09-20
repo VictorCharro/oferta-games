@@ -164,8 +164,8 @@ public class RepositorioJogos {
               g.is_dlc AS is_dlc,
               MIN(o.price) AS min_price,
               MAX(o.regular_price) AS regular_price,
-              (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
-              (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
+              (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+              (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.url IS NOT NULL))[1] AS url
             FROM games g
             LEFT JOIN offers o ON o.game_id = g.id %s
             WHERE 1=1
@@ -318,8 +318,8 @@ public class RepositorioJogos {
           SELECT
             MIN(o.price) AS min_price,
             MAX(o.regular_price) AS regular_price,
-            (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
-            (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
+            (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+            (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.url IS NOT NULL))[1] AS url
           FROM offers o
           WHERE o.game_id = p.id %s
         ) oferta ON true
@@ -388,8 +388,8 @@ public class RepositorioJogos {
           g.is_dlc AS is_dlc,
           MIN(o.price) AS min_price,
           MAX(o.regular_price) AS regular_price,
-          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
-          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
+          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.url IS NOT NULL))[1] AS url
         FROM games g
         LEFT JOIN offers o ON o.game_id = g.id %s
         WHERE g.steam_app_id IN (:appIds)
@@ -429,8 +429,8 @@ public class RepositorioJogos {
           g.is_dlc AS is_dlc,
           MIN(o.price) AS min_price,
           MAX(o.regular_price) AS regular_price,
-          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
-          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
+          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.url IS NOT NULL))[1] AS url
         FROM games g
         JOIN game_details gd ON gd.game_id = g.id
         LEFT JOIN offers o ON o.game_id = g.id %s
@@ -569,8 +569,8 @@ public class RepositorioJogos {
           g.is_dlc AS is_dlc,
           MIN(o.price) AS min_price,
           MAX(o.regular_price) AS regular_price,
-          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
-          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST) FILTER (WHERE o.url IS NOT NULL))[1] AS url
+          (ARRAY_AGG(o.store_name ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.store_name IS NOT NULL))[1] AS store_name,
+          (ARRAY_AGG(o.url ORDER BY o.price ASC NULLS LAST, o.id ASC) FILTER (WHERE o.url IS NOT NULL))[1] AS url
         FROM games g
         LEFT JOIN offers o ON o.game_id = g.id %s
         WHERE g.itad_id::text IN (:itadIds)
@@ -793,7 +793,7 @@ public class RepositorioJogos {
           SELECT ph.price
           FROM price_history ph
           WHERE ph.game_id = atual.game_id
-          ORDER BY ph.captured_at DESC
+          ORDER BY ph.captured_at DESC, ph.id DESC
           LIMIT 1
         ) ultimo ON true
         WHERE %s

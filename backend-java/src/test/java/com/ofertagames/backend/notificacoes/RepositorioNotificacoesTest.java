@@ -13,6 +13,7 @@ class RepositorioNotificacoesTest {
     var catalogo = mock(JdbcClient.class);
     String sql = "SELECT DISTINCT game_id FROM favorites WHERE game_id IN (:ids)";
     when(contas.sql(sql).param("ids", List.of(1L)).query(Long.class).list()).thenReturn(List.of());
+    clearInvocations(contas);
     var repositorio = new RepositorioNotificacoes(contas, catalogo);
     repositorio.registrarQuedas(Map.of(1L, BigDecimal.TEN), Map.of(1L, BigDecimal.ONE));
     verifyNoInteractions(catalogo);
