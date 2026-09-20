@@ -141,9 +141,9 @@
       </div>
 
       <app-load-error
-        *ngIf="error && games.length === 0"
+        *ngIf="error"
         message="Não foi possível carregar o catálogo."
-        (retry)="load(true)"
+        (retry)="load(false)"
       ></app-load-error>
     </div>
 

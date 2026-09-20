@@ -7,6 +7,7 @@ import { SearchService } from '../../services/search';
 import { PreferencesService } from '../../services/preferences';
 import { SeoService } from '../../services/seo';
 
+/** Catalogo paginado; so confirma o cursor depois de receber a pagina com sucesso. */
 @Component({
   selector: 'app-catalog',
   standalone: false,
@@ -176,7 +177,7 @@ export class Catalog implements OnInit, OnDestroy {
 
   private checkLoadMore() {
     // window/document nao existem em Node (SSR); scroll infinito so faz sentido no browser.
-    if (!this.hasMore || this.loading || typeof window === 'undefined') return;
+    if (!this.hasMore || this.loading || this.error || typeof window === 'undefined') return;
     const scrolledToBottom =
       window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 600;
     if (scrolledToBottom) {
@@ -185,7 +186,7 @@ export class Catalog implements OnInit, OnDestroy {
   }
 
   load(reset = false) {
-    if (reset) { this.page = 0; this.games = []; }
+    if (reset) { this.page = 0; this.games = []; this.hasMore = true; }
     this.loading = true;
     this.error = false;
     const requestVersion = ++this.requestVersion;
@@ -202,6 +203,7 @@ export class Catalog implements OnInit, OnDestroy {
       next: (data) => {
         if (requestVersion !== this.requestVersion) return;
         this.games = [...this.games, ...data];
+        this.page++;
         this.hasMore = data.length === this.pageSize;
         this.loading = false;
         this.cdr.detectChanges();
@@ -243,7 +245,7 @@ export class Catalog implements OnInit, OnDestroy {
   }
 
   loadMore() {
-    this.page++;
+    if (this.loading || !this.hasMore) return;
     this.load(false);
   }
 }
