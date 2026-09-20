@@ -513,19 +513,23 @@ public class RepositorioJogos {
    *
    * @return quantos jogos do catalogo tiveram o rank alterado
    */
-  public int atualizarRanksPorItadId(Map<String, Integer> ranksPorItadId) {
+  @Transactional("transactionManagerCatalogo")
+  public int atualizarRanksPorItadId(Map<String, Integer> ranksPorItadId, boolean expirarAntigos) {
     if (ranksPorItadId.isEmpty()) return 0;
     List<String> ids = new ArrayList<>(ranksPorItadId.keySet());
     List<Integer> ranks = ids.stream().map(ranksPorItadId::get).toList();
-    return jdbc.sql("""
+    int atualizados = jdbc.sql("""
         UPDATE games g
-        SET rank = novo.rank
+        SET rank = novo.rank, rank_updated_at = now()
         FROM (SELECT unnest(CAST(:ids AS uuid[])) AS itad_id, unnest(CAST(:ranks AS integer[])) AS rank) novo
-        WHERE g.itad_id = novo.itad_id AND g.rank IS DISTINCT FROM novo.rank
+        WHERE g.itad_id = novo.itad_id
         """)
         .param("ids", ids.toArray(String[]::new))
         .param("ranks", ranks.toArray(Integer[]::new))
         .update();
+    // Falha parcial de fonte nao prova que um jogo saiu das listas: nesse caso nao expira nada.
+    if (expirarAntigos) jdbc.sql("UPDATE games SET rank = NULL WHERE rank IS NOT NULL AND rank_updated_at < now() - interval '7 days'").update();
+    return atualizados;
   }
 
   /** Quais desses app ids da Steam ja estao em algum jogo do catalogo (descoberta de jogos novos). */

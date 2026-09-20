@@ -38,7 +38,7 @@ import org.springframework.stereotype.Service;
  * </ol>
  *
  * <p>So atualiza jogo que ja esta no catalogo — quem importa jogo novo e {@link ServicoDescobertaJogos}.
- * Jogo fora das tres listas mantem o rank que tinha.
+ * Rank expira apos sete dias sem aparicao, somente quando todas as fontes responderam por completo.
  */
 @Service
 public class ServicoRankingJogos {
@@ -61,14 +61,17 @@ public class ServicoRankingJogos {
   /** @return quantos jogos tiveram o rank alterado */
   public int atualizarRanking() {
     Map<String, Integer> ranks = new HashMap<>();
-    melhorPosicao(ranks, rankingDaSteam());
-    melhorPosicao(ranks, rankingDosMaisPopulares());
-    melhorPosicao(ranks, rankingDasOfertas());
+    FonteRanking steam = rankingDaSteam();
+    FonteRanking populares = rankingDosMaisPopulares();
+    FonteRanking ofertas = rankingDasOfertas();
+    melhorPosicao(ranks, steam.ranks());
+    melhorPosicao(ranks, populares.ranks());
+    melhorPosicao(ranks, ofertas.ranks());
     if (ranks.isEmpty()) {
       logger.warn("Ranking: nenhuma fonte respondeu, rank mantido como estava");
       return 0;
     }
-    int alterados = jogos.atualizarRanksPorItadId(ranks);
+    int alterados = jogos.atualizarRanksPorItadId(ranks, steam.completa() && populares.completa() && ofertas.completa());
     logger.info("Ranking atualizado: {} jogos nas listas, {} com rank novo", ranks.size(), alterados);
     return alterados;
   }
@@ -78,12 +81,17 @@ public class ServicoRankingJogos {
   }
 
   /** Listas da Steam convertidas pra id da ITAD (mesma conversao da descoberta de jogos novos). */
-  private Map<String, Integer> rankingDaSteam() {
+  private FonteRanking rankingDaSteam() {
     Set<Integer> appIds = new LinkedHashSet<>();
+    boolean completa = true;
     for (String lista : ServicoDescobertaJogos.LISTAS_STEAM) {
-      appIds.addAll(steam.listarAppsDaBusca(lista, ServicoDescobertaJogos.ITENS_POR_LISTA));
+      try {
+        var ids = steam.listarAppsDaBusca(lista, ServicoDescobertaJogos.ITENS_POR_LISTA);
+        if (ids == null || ids.isEmpty()) completa = false;
+        else appIds.addAll(ids);
+      } catch (RuntimeException falha) { completa = false; }
     }
-    if (appIds.isEmpty()) return Map.of();
+    if (appIds.isEmpty()) return new FonteRanking(Map.of(), false);
     List<Integer> ordem = new ArrayList<>(appIds);
     Map<String, Integer> ranks = new HashMap<>();
     try {
@@ -93,44 +101,53 @@ public class ServicoRankingJogos {
         if (idItad != null) ranks.merge(idItad, i + 1, Math::min);
       }
     } catch (RuntimeException falha) {
+      completa = false;
       logger.warn("Ranking: listas da Steam ficaram de fora ({})", falha.toString());
     }
-    return ranks;
+    return new FonteRanking(ranks, completa && !ranks.isEmpty());
   }
 
-  private Map<String, Integer> rankingDosMaisPopulares() {
+  private FonteRanking rankingDosMaisPopulares() {
     Map<String, Integer> ranks = new HashMap<>();
+    boolean completa = true;
     for (int deslocamento = 0; deslocamento <= TAMANHO_PAGINA_POPULARES; deslocamento += TAMANHO_PAGINA_POPULARES) {
       try {
         List<ItemPopularItad> pagina = Objects.requireNonNullElse(
             itad.buscarMaisPopulares(deslocamento, TAMANHO_PAGINA_POPULARES), List.of());
+        if (pagina.isEmpty()) completa = false;
         for (ItemPopularItad item : pagina) {
           if (item.id() != null && item.position() > 0) ranks.merge(item.id(), item.position(), Math::min);
         }
       } catch (RuntimeException falha) {
+        completa = false;
         logger.warn("Ranking: pagina {} dos mais populares ficou de fora ({})", deslocamento, falha.toString());
       }
     }
-    return ranks;
+    return new FonteRanking(ranks, completa && !ranks.isEmpty());
   }
 
-  private Map<String, Integer> rankingDasOfertas() {
+  private FonteRanking rankingDasOfertas() {
     Map<String, Integer> ranks = new HashMap<>();
+    boolean completa = true;
     for (int pagina = 0; pagina < PAGINAS_OFERTAS; pagina++) {
       int deslocamento = pagina * TAMANHO_PAGINA_OFERTAS;
       try {
         RespostaOfertasItad resposta = itad.buscarOfertas(TAMANHO_PAGINA_OFERTAS, deslocamento);
         List<ItemOfertaItad> itens = resposta == null ? List.of() : Objects.requireNonNullElse(resposta.list(), List.of());
+        if (resposta == null || resposta.list() == null || (pagina == 0 && itens.isEmpty())) completa = false;
         for (int i = 0; i < itens.size(); i++) {
           ItemOfertaItad item = itens.get(i);
           if (item != null && item.id() != null) ranks.merge(item.id(), deslocamento + i + 1, Math::min);
         }
         if (!Boolean.TRUE.equals(resposta == null ? null : resposta.hasMore())) break;
       } catch (RuntimeException falha) {
+        completa = false;
         logger.warn("Ranking: pagina {} das ofertas ficou de fora ({})", pagina, falha.toString());
         break;
       }
     }
-    return ranks;
+    return new FonteRanking(ranks, completa && !ranks.isEmpty());
   }
+
+  private record FonteRanking(Map<String, Integer> ranks, boolean completa) {}
 }
