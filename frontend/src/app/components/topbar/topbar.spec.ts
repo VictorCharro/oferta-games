@@ -8,8 +8,8 @@ describe('sugestoes da topbar', () => {
     const searchGames = vi.fn().mockReturnValueOnce(throwError(() => new Error('503')))
       .mockReturnValue(of([{ slug: 'portal', title: 'Portal' }]));
     const vazio = of([]);
-    const topbar = new Topbar({} as any, {} as any,
-      { user$: vazio, sessaoResolvida$: vazio, avatar$: vazio } as any,
+    const topbar = new Topbar({} as any,
+      { user$: vazio, sessaoResolvida$: vazio, avatar$: vazio } as any, {} as any,
       { url: '/', events: new Subject() } as any,
       { searchGames } as any, {} as any, {} as any,
       { list$: vazio, mensagens$: vazio } as any, { detectChanges() {} } as any);
