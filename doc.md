@@ -29,6 +29,19 @@ URLs de producao atuais:
 
 ## Deploy e Operacao
 
+### Revisao de confiabilidade e performance (20/09/2026)
+
+- **Preparacao do deploy:** o schema completo do catalogo esta em `backend-java/sql/catalogo/000_base.sql`, apenas para banco vazio. Em banco existente, aplicar `001_validade_ranking.sql` antes do backend e `002_busca_titulo.sql` sem transacao externa (indice concorrente). Nao executar esses arquivos no Supabase. Instrucoes, limites e medicao local no README dessa pasta. Esta revisao foi validada localmente; nao implica migrations ou deploy executados em producao.
+- **Busca e falhas HTTP:** o autocomplete recupera erros dentro do `switchMap`, mantendo as proximas buscas ativas. O catalogo avanca a pagina apenas apos sucesso; falha em pagina seguinte permite repetir aquela pagina. As secoes secundarias da Home mostram falha e tentativa novamente.
+- **Precos consistentes:** favoritos e colecoes do perfil excluem `LojasBloqueadas` ao calcular o menor preco. Ofertas empatadas no catalogo usam `id` como desempate estavel. Refresh manual substitui somente ofertas ITAD do jogo presente na resposta; resposta omitida preserva precos, lista explicitamente vazia remove ofertas dessa fonte. DLCs sao consultados em lotes de ate 200 ids.
+- **Alertas:** refresh manual e Instant Gaming tambem comparam o minimo antes/depois. A rodada agendada consulta em lote quais jogos com queda possuem monitoradores antes de buscar seus detalhes e inserir notificacoes. Os dois bancos continuam independentes: nao ha transacao distribuida ou fila duravel de alertas.
+- **Monitorados:** POST/DELETE precisam ter sucesso antes de mudar o estado local; falhas ficam visiveis nos controles. Leituras anteriores a uma escrita ou troca de conta sao descartadas; a nova conta recebe uma leitura propria.
+- **Privacidade:** horas e contagens de conquistas ocultas passam como `null` tambem nos jogos da biblioteca, favoritos e colecoes. Atividades de conquistas e blocos dependentes dessas permissoes sao filtrados para visitantes. O dono continua vendo seus dados.
+- **Historico:** preserva o ultimo preco anterior ao corte de retencao. A leitura apresenta esse valor no inicio da janela, evitando perder a referencia de jogos sem mudanca recente. Remocao de ofertas ITAD registra eventual novo minimo de outra fonte.
+- **Home:** a ordem sorteada no SSR e transferida ao navegador por `TransferState`, evitando novo sorteio na hidratacao. O HTML em cache na CDN compartilha a mesma ordem durante sua validade; nao ha promessa de sorteio diferente por visita. Autoplay roda apenas no navegador. O aquecimento apos invalidacao inclui a chave de lancamentos.
+- **Perfil:** ordenacoes de horas/platinados sao reutilizadas enquanto a referencia da biblioteca nao mudar; reordenacao manual invalida o calculo. Cards e blocos usam `trackBy` com identidade de jogo/plataforma. Criar um array novo com `slice` por si so nao recria cards quando os objetos mantem a identidade.
+- **Validacao:** testes Java de regressao e quatro testes SQL em PostgreSQL 17 local descartavel (historico, ranking, reconciliacao e busca); testes Angular e build de producao. O indice trigrama acelerou termos seletivos, mas a medicao tambem mostrou regressao para um termo amplo; manter o limite de concorrencia e acompanhar planos em producao.
+
 O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de heap `-Xmx384m`. O Render esta desligado e nao deve receber novos deploys. Nao existe workflow de sincronizacao recorrente no GitHub Actions.
 
 ### Variaveis do backend
@@ -194,7 +207,7 @@ Tabela `price_history` (`game_id`, `price`, `captured_at`) guarda a evolucao do 
 
 - **So grava quando o menor preco muda de verdade**, nao a cada sincronizacao: `RepositorioJogos.registrarHistoricoDePrecos` faz um unico `INSERT ... SELECT` comparando o `MIN(price)` atual das ofertas com a ultima linha gravada daquele jogo (`IS DISTINCT FROM`), so inserindo quando e diferente (ou quando ainda nao ha nenhuma linha). Isso mantem o volume da tabela proporcional a mudancas reais de preco, e nao ao ritmo dos jobs agendados (que tocam milhares de jogos a cada 10min mesmo sem nenhum preco ter mudado — gravar em toda sincronizacao geraria da ordem de 1M linhas/dia).
 - Chamado a partir de `RepositorioJogos.salvarOfertas` (cobre os tres caminhos que escrevem ofertas da ITAD: refresh manual, `substituirOfertasItad` e o lote agendado `substituirOfertasItadEmLote`) e, separadamente, de dentro de `RepositorioInstantGaming` (`salvarPreco`/`removerOferta`) — duplicado ali de proposito, ja que esse pacote nao depende de `jogos` (ver nota de dependencia circular no topo de `RepositorioInstantGaming.java`).
-- **Retencao de 90 dias**: poda diaria via `AgendadorColetas.podarHistoricoDePrecos` → `ServicoSincronizacao.podarHistoricoDePrecos` → `RepositorioJogos.podarHistoricoDePrecos(90)` (`DELETE ... WHERE captured_at < now() - 90 dias`), mesma trava/mecanismo `ServicoExecucaoColeta` dos outros jobs.
+- **Retencao de 90 dias**: poda diaria via `AgendadorColetas.podarHistoricoDePrecos` → `ServicoSincronizacao.podarHistoricoDePrecos` → `RepositorioJogos.podarHistoricoDePrecos(90)` (preserva a ultima linha anterior ao corte como ancora, alem dos pontos dentro dos 90 dias), mesma trava/mecanismo `ServicoExecucaoColeta` dos outros jobs.
 - **Sem dado retroativo**: a tabela comeca vazia em 22/08/2026 — nao ha como recuperar preco historico anterior a essa data. O frontend so mostra o grafico quando ha 2+ pontos (`temHistoricoSuficiente`); com 0 ou 1 ponto mostra uma nota "ainda estamos acompanhando" em vez de um grafico vazio/quebrado.
 - Grafico e um SVG simples desenhado a mao em `game-detail.ts`/`.html` (sem biblioteca de charts, pra nao pesar o bundle) — linha+area com gradiente, ultimo ponto destacado e nota do menor preco do periodo.
 
@@ -297,7 +310,7 @@ Desde 10/09/2026 (ver "Migracao do catalogo pra fora do Supabase" em "Deploy e O
 
 ```text
 games
-  id, itad_id, title, slug, cover_url, rank, is_dlc, steam_app_id
+  id, itad_id, title, slug, cover_url, rank, rank_updated_at, is_dlc, steam_app_id
   last_price_sync_at, last_steam_sync_at, created_at
 
 offers
@@ -782,7 +795,7 @@ Ate aqui o catalogo so ganhava jogo novo quando alguem buscava pelo nome (`busca
 
 `games.rank` ordena a Home, o catalogo (em "Popularidade" e dentro dos destaques), a busca (depois da relevancia) e a fila de precos (rank <= 200 = "relevantes"). Ate 16/09 ele era gravado **uma vez**, na importacao inicial de cada jogo, e nunca mudava: a Home mostrava sempre os mesmos jogos, o topo do catalogo tinha The Darkness II e jogo vindo da busca (Resonance, GTA VI) ficava sem rank, no fim de 190 mil.
 
-`ServicoRankingJogos` roda 1x por dia (`ranking-delay-ms`, card "Ranking de popularidade" no admin) e combina tres fontes pelo **menor** valor (o jogo fica com a melhor posicao que tiver): listas da Steam (`topsellers`, `popularnew`, `popularcomingsoon`, as mesmas da descoberta, convertidas pra id da ITAD), ITAD `/stats/most-popular/v1` (a API so pagina ate o offset 500: no maximo 1.000 jogos) e ITAD `/deals/v2?sort=rank` (25 paginas de 200). So atualiza jogo que ja existe (`RepositorioJogos.atualizarRanksPorItadId`, um UPDATE com `unnest`); jogo fora das listas mantem o rank que tinha. Primeira rodada: 5.555 jogos nas listas, 5.345 com rank novo (Baldur's Gate 3 = 1, Cyberpunk = 2, Elden Ring = 3). Limite: jogo que ainda nao tem pagina na Steam nem aparece nas listas da ITAD (GTA VI em 09/2026) fica sem rank; a busca por relevancia cobre esse caso.
+`ServicoRankingJogos` roda 1x por dia (`ranking-delay-ms`, card "Ranking de popularidade" no admin) e combina tres fontes pelo **menor** valor (o jogo fica com a melhor posicao que tiver): listas da Steam (`topsellers`, `popularnew`, `popularcomingsoon`, as mesmas da descoberta, convertidas pra id da ITAD), ITAD `/stats/most-popular/v1` (a API so pagina ate o offset 500: no maximo 1.000 jogos) e ITAD `/deals/v2?sort=rank` (25 paginas de 200). So atualiza jogo que ja existe (`RepositorioJogos.atualizarRanksPorItadId`, um UPDATE com `unnest`); desde 20/09/2026, jogo fora das listas por sete dias perde o rank, somente numa coleta com todas as fontes completas; falhas parciais preservam os ausentes. A presenca e registrada em games.rank_updated_at mesmo quando o numero do rank nao muda. Primeira rodada: 5.555 jogos nas listas, 5.345 com rank novo (Baldur's Gate 3 = 1, Cyberpunk = 2, Elden Ring = 3). Limite: jogo que ainda nao tem pagina na Steam nem aparece nas listas da ITAD (GTA VI em 09/2026) fica sem rank; a busca por relevancia cobre esse caso.
 
 ### Recoleta de jogo live-service (12/09/2026)
 
