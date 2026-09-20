@@ -2,6 +2,7 @@ package com.ofertagames.backend.favoritosperfil;
 
 import com.ofertagames.backend.comum.ConteudosNaoJogos;
 import com.ofertagames.backend.comum.JogosBloqueados;
+import com.ofertagames.backend.comum.LojasBloqueadas;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -155,16 +156,17 @@ public class RepositorioFavoritosPerfil {
           oferta.regular_price AS regular_price
         FROM games g
         LEFT JOIN LATERAL (
-          SELECT price, regular_price
-          FROM offers
-          WHERE game_id = g.id
-          ORDER BY price ASC
+          SELECT o.price, o.regular_price
+          FROM offers o
+          WHERE o.game_id = g.id
+            %s
+          ORDER BY o.price ASC, o.store_name ASC
           LIMIT 1
         ) oferta ON true
         WHERE g.id IN (:ids)
           %s
           %s
-        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+        """.formatted(LojasBloqueadas.filtroSql("o"), ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
         .param("ids", ids)
         .query((rs, linha) -> new DadosJogoCatalogo(
             rs.getLong("id"),
