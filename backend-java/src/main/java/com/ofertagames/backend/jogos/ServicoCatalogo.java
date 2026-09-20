@@ -182,8 +182,17 @@ public class ServicoCatalogo {
     // jogo base deve atualizar o preco delas junto, pra quem clica "Atualizar precos" nao precisar
     // repetir a acao em cada DLC. Busca todas de uma vez (evita 1 query por DLC).
     List<String> slugsDlcs = jogos.listarDlcsDoJogo(jogo.id()).stream().map(ResumoJogo::slug).toList();
-    for (JogoParaAtualizar jogoDlc : jogos.buscarParaAtualizarPorSlugs(slugsDlcs)) {
-      atualizadas += atualizarPrecosDoJogo(jogoDlc, false);
+    List<JogoParaAtualizar> dlcs = jogos.buscarParaAtualizarPorSlugs(slugsDlcs);
+    List<String> idsDlcs = dlcs.stream().map(JogoParaAtualizar::itadId)
+        .filter(id -> id != null && !id.isBlank()).distinct().toList();
+    Map<String, ResultadoPrecoItad> precosDlcs = new LinkedHashMap<>();
+    for (int inicio = 0; inicio < idsDlcs.size(); inicio += 200) {
+      for (var preco : Objects.requireNonNullElse(itad.buscarPrecos(idsDlcs.subList(inicio, Math.min(inicio + 200, idsDlcs.size()))), List.<ResultadoPrecoItad>of())) {
+        if (preco != null && preco.id() != null) precosDlcs.put(preco.id(), preco);
+      }
+    }
+    for (JogoParaAtualizar jogoDlc : dlcs) {
+      atualizadas += atualizarPrecosDoJogo(jogoDlc, false, precosDlcs.get(jogoDlc.itadId()));
     }
 
     return new ResultadoAtualizacaoJogo(true, atualizadas);
@@ -199,11 +208,17 @@ public class ServicoCatalogo {
    */
   private int atualizarPrecosDoJogo(JogoParaAtualizar jogo, boolean obrigatorio) {
     boolean temItad = jogo.itadId() != null && !jogo.itadId().isBlank();
+    List<ResultadoPrecoItad> resultados = temItad
+        ? Objects.requireNonNullElse(itad.buscarPrecos(jogo.itadId()), List.of()) : List.of();
+    ResultadoPrecoItad resultado = resultados.stream().filter(r -> r != null && jogo.itadId().equals(r.id())).findFirst().orElse(null);
+    return atualizarPrecosDoJogo(jogo, obrigatorio, resultado);
+  }
 
+  /** Recebe o preco ja consultado: DLCs compartilham chamadas ITAD de ate 200 IDs. */
+  private int atualizarPrecosDoJogo(JogoParaAtualizar jogo, boolean obrigatorio, ResultadoPrecoItad resultado) {
+    boolean temItad = jogo.itadId() != null && !jogo.itadId().isBlank();
     int atualizadas = 0;
     if (temItad) {
-      List<ResultadoPrecoItad> resultados = Objects.requireNonNullElse(itad.buscarPrecos(jogo.itadId()), List.of());
-      ResultadoPrecoItad resultado = resultados.isEmpty() ? null : resultados.get(0);
       if (resultado != null) {
         List<OfertaPrecoItad> ofertasRecebidas = Objects.requireNonNullElse(resultado.deals(), List.of());
         List<OfertaParaSalvar> ofertasParaSalvar = new ArrayList<>();
@@ -326,9 +341,7 @@ public class ServicoCatalogo {
       Map<Long, java.math.BigDecimal> precosAnteriores = jogos.precosMinimos(jogosIds);
       ofertasAtualizadas = jogos.substituirOfertasItadEmLote(ofertasPorJogo);
       Map<Long, java.math.BigDecimal> precosAtuais = jogos.precosMinimos(jogosIds);
-      for (Long jogoId : jogosIds) {
-        notificacoes.registrarQueda(jogoId, precosAnteriores.get(jogoId), precosAtuais.get(jogoId));
-      }
+      notificacoes.registrarQuedas(precosAnteriores, precosAtuais);
     }
 
     int semPreco = jogosPorIdItad.size() - ofertasPorJogo.size();

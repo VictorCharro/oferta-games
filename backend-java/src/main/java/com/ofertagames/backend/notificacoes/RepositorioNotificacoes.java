@@ -53,7 +53,20 @@ public class RepositorioNotificacoes {
    */
   public void registrarQueda(long jogoId, BigDecimal precoAnterior, BigDecimal precoAtual) {
     if (precoAnterior == null || precoAtual == null || precoAtual.compareTo(precoAnterior) >= 0) return;
+    registrarQuedas(Map.of(jogoId, precoAnterior), Map.of(jogoId, precoAtual));
+  }
 
+  /** Uma leitura no Supabase por lote; so procura loja/grava alerta para jogos monitorados. */
+  public void registrarQuedas(Map<Long, BigDecimal> anteriores, Map<Long, BigDecimal> atuais) {
+    List<Long> quedas = atuais.keySet().stream().filter(id -> anteriores.get(id) != null
+        && atuais.get(id) != null && atuais.get(id).compareTo(anteriores.get(id)) < 0).toList();
+    if (quedas.isEmpty()) return;
+    List<Long> monitorados = jdbc.sql("SELECT DISTINCT game_id FROM favorites WHERE game_id IN (:ids)")
+        .param("ids", quedas).query(Long.class).list();
+    for (Long id : monitorados) registrarQuedaMonitorada(id, anteriores.get(id), atuais.get(id));
+  }
+
+  private void registrarQuedaMonitorada(long jogoId, BigDecimal precoAnterior, BigDecimal precoAtual) {
     boolean quedaRelevante = VariacaoPrecoRelevante.relevante(precoAnterior, precoAtual);
     String lojaMaisBarata = buscarLojaMaisBarata(jogoId);
     jdbc.sql("""

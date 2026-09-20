@@ -148,8 +148,8 @@ class ServicoCatalogoTest {
     when(jogos.buscarParaAtualizarPorSlugs(List.of("dlc-1", "dlc-2"))).thenReturn(List.of(dlc1, dlc2));
 
     when(itad.buscarPrecos("itad-base")).thenReturn(List.of(ofertaItad("itad-base", BigDecimal.TEN)));
-    when(itad.buscarPrecos("itad-dlc1")).thenReturn(List.of(ofertaItad("itad-dlc1", BigDecimal.ONE)));
-    when(itad.buscarPrecos("itad-dlc2")).thenReturn(List.of());
+    when(itad.buscarPrecos(List.of("itad-dlc1", "itad-dlc2"))).thenReturn(List.of(ofertaItad("itad-dlc1", BigDecimal.ONE)));
+
     when(jogos.substituirOfertasItad(anyLong(), anyList())).thenReturn(1);
     when(instantGaming.atualizarPrecoImediato(anyLong(), anyString())).thenReturn(false);
 
@@ -158,6 +158,8 @@ class ServicoCatalogoTest {
     // base (1 oferta salva) + dlc1 (1 oferta salva) + dlc2 (sem preco, nao conta) = 2.
     assertEquals(2, resultado.updated());
     // Cooldown/refresh manual e so registrado pro jogo principal, nao pras DLCs.
+    verify(itad).buscarPrecos(List.of("itad-dlc1", "itad-dlc2"));
+    verify(itad, never()).buscarPrecos("itad-dlc1");
     verify(jogos, times(1)).marcarRefreshManual(1L);
     verify(jogos, never()).marcarRefreshManual(2L);
     verify(jogos, never()).marcarRefreshManual(3L);
