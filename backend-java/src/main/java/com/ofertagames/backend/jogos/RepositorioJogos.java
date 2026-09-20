@@ -814,9 +814,17 @@ public class RepositorioJogos {
    */
   public List<PontoHistoricoPreco> listarHistoricoDePrecos(long jogoId, int dias) {
     return jdbc.sql("""
-        SELECT price, store_name, captured_at
-        FROM price_history
-        WHERE game_id = :jogoId AND captured_at >= now() - make_interval(days => :dias)
+        WITH limite AS (SELECT now() - make_interval(days => :dias) AS inicio),
+        anterior AS (
+          SELECT price, store_name, captured_at
+          FROM price_history, limite
+          WHERE game_id = :jogoId AND captured_at < inicio
+          ORDER BY captured_at DESC, id DESC LIMIT 1
+        )
+        SELECT price, store_name, captured_at FROM price_history, limite
+        WHERE game_id = :jogoId AND captured_at >= inicio
+        UNION ALL
+        SELECT price, store_name, inicio AS captured_at FROM anterior, limite
         ORDER BY captured_at ASC
         """)
         .param("jogoId", jogoId)
@@ -838,7 +846,14 @@ public class RepositorioJogos {
    * @return quantidade de linhas removidas
    */
   public int podarHistoricoDePrecos(int diasRetencao) {
-    return jdbc.sql("DELETE FROM price_history WHERE captured_at < now() - make_interval(days => :dias)")
+    // Guarda a ultima mudanca anterior a janela: ela define o preco vigente no inicio dos 90 dias.
+    return jdbc.sql("""
+        WITH antigos AS (
+          SELECT id, row_number() OVER (PARTITION BY game_id ORDER BY captured_at DESC, id DESC) AS posicao
+          FROM price_history WHERE captured_at < now() - make_interval(days => :dias)
+        )
+        DELETE FROM price_history ph USING antigos a WHERE ph.id = a.id AND a.posicao > 1
+        """)
         .param("dias", diasRetencao)
         .update();
   }
