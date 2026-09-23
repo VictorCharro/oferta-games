@@ -73,4 +73,27 @@ describe('SeoService', () => {
     expect(tags.length).toBe(1);
     expect(tags[0].content).toBe('Dois');
   });
+
+  it('tituloCompleto usa o título como está, sem o sufixo do site (Home: nome na frente)', () => {
+    seo.set({ title: 'Oferta Games: compare preços', description: 'Desc', tituloCompleto: true });
+    expect(title.getTitle()).toBe('Oferta Games: compare preços');
+    expect(meta.getTag('property="og:title"')?.content).toBe('Oferta Games: compare preços');
+
+    // Sem a opção, o sufixo continua sendo acrescentado como sempre.
+    seo.set({ title: 'Jogo X', description: 'Desc' });
+    expect(title.getTitle()).toBe('Jogo X | Oferta Games');
+  });
+
+  it('dadosDoSite() publica o WebSite com o nome do site, e set() limpa depois', () => {
+    seo.set({ title: 'Início', description: 'Desc', path: '/' });
+    seo.dadosDoSite();
+    const dados = JSON.parse(document.getElementById('seo-json-ld')!.textContent!);
+    expect(dados['@type']).toBe('WebSite');
+    expect(dados.name).toBe('Oferta Games');
+    expect(dados.url).toBe('https://ofertagames.vercel.app/');
+
+    // Outra página não pode herdar o WebSite: o Google lê esse dado da pagina inicial.
+    seo.set({ title: 'Jogo X', description: 'Desc' });
+    expect(document.getElementById('seo-json-ld')).toBeNull();
+  });
 });

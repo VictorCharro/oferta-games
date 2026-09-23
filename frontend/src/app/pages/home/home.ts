@@ -66,11 +66,15 @@ export class Home implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    // Nome do site na frente e descricao concreta (lojas, historico, alerta): o titulo "Início" nao
+    // dizia o que o site e, e o Google reescrevia o resultado pra "Oferta Games: Início".
     this.seo.set({
-      title: 'Início',
-      description: 'Compare preços de jogos nas melhores lojas e encontre as maiores promoções.',
+      title: 'Oferta Games: compare preços de jogos e ache promoções',
+      tituloCompleto: true,
+      description: 'Compare preços de jogos na Steam, Epic, Nuuvem, Instant Gaming e outras lojas. Veja o menor preço, o histórico e seja avisado quando o jogo baixar.',
       path: '/',
     });
+    this.seo.dadosDoSite();
     this.carregarDestaques();
 
     this.carregarSecoes();

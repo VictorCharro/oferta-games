@@ -8,6 +8,12 @@ export interface SeoConfig {
   path?: string;
   /** Pagina que nao deve ir pro indice do Google (nao encontrado, erro, area logada). */
   noindex?: boolean;
+  /**
+   * O titulo ja traz o nome do site: nao acrescenta o sufixo " | Oferta Games". Usado na Home, onde
+   * o nome vai NA FRENTE (`Oferta Games: ...`) em vez de atras, que e o que o Google mostra como
+   * titulo do resultado.
+   */
+  tituloCompleto?: boolean;
 }
 
 const SITE_NAME = 'Oferta Games';
@@ -29,7 +35,7 @@ export class SeoService {
   constructor(private title: Title, private meta: Meta) {}
 
   set(config: SeoConfig) {
-    const fullTitle = `${config.title} | ${SITE_NAME}`;
+    const fullTitle = config.tituloCompleto ? config.title : `${config.title} | ${SITE_NAME}`;
     const url = SITE_URL + (config.path ?? '');
     const image = config.image || DEFAULT_IMAGE;
 
@@ -71,6 +77,22 @@ export class SeoService {
     this.set({
       title: 'Compare preços e encontre as melhores promoções',
       description: 'Compare preços de jogos nas melhores lojas e encontre as maiores promoções.',
+    });
+  }
+
+  /**
+   * Nome do site pro Google (schema.org `WebSite`). E o que ele usa no lugar do dominio no
+   * resultado de busca: sem isto, o site aparecia como "Vercel" (o dominio e *.vercel.app). Chamar
+   * so na Home — o Google le esse dado da pagina inicial. E uma dica, nao uma ordem: ele pode
+   * seguir mostrando o dominio, principalmente enquanto o site e novo.
+   */
+  dadosDoSite() {
+    this.dadosEstruturados({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      alternateName: ['OfertaGames'],
+      url: SITE_URL + '/',
     });
   }
 
