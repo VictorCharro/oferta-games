@@ -21,6 +21,9 @@
     }
   ],
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "https://api.163.176.220.243.sslip.io/sitemap.xml" },
+    { "source": "/sitemap-estatico.xml", "destination": "https://api.163.176.220.243.sslip.io/sitemap-estatico.xml" },
+    { "source": "/sitemap-jogos-(.*).xml", "destination": "https://api.163.176.220.243.sslip.io/sitemap-jogos-$1.xml" },
     { "source": "/(.*)", "destination": "/api" }
   ]
 }

@@ -6,4 +6,4 @@ Disallow: /configuracoes
 Disallow: /monitorados
 Disallow: /admin/
 
-Sitemap: https://api.163.176.220.243.sslip.io/sitemap.xml
+Sitemap: https://ofertagames.vercel.app/sitemap.xml
