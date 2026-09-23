@@ -7,6 +7,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!--
+    Verificacao de propriedade no Google Search Console (22/09/2026). Nao e segredo: toda pagina
+    verificada serve esta tag publicamente, e ela so prova posse do dominio pra quem ja tem acesso
+    a conta do Search Console. Nao remover — apagar a tag derruba a verificacao e o site perde o
+    acesso aos relatorios de indexacao.
+
+    Esta amarrada ao dominio ofertagames.vercel.app. Na migracao pro dominio proprio (#19), a
+    propriedade nova gera OUTRA tag; trocar aqui na hora da migracao.
+  -->
+  <meta name="google-site-verification" content="GrBdmXx852UWq2-ofyQsuSvU_sLr3LgOHCBt7uldkdM">
+
+  <!--
     Estas meta tags precisam ficar AQUI, no topo do <head>, e nao serem criadas pelo SeoService.
 
     O SeoService usa Meta.updateTag() quando a tag ja existe e Meta.addTag() quando nao existe.
