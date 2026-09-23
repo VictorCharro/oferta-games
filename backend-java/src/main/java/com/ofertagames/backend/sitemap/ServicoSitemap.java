@@ -1,6 +1,8 @@
 package com.ofertagames.backend.sitemap;
 
 import com.ofertagames.backend.jogos.RepositorioJogos;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -8,6 +10,11 @@ import org.springframework.stereotype.Service;
 /**
  * Gera o sitemap.xml. Dividido em paginas (indice + sub-sitemaps) porque o catalogo passa de 100k
  * jogos, acima do limite de 50.000 URLs por arquivo do protocolo de sitemaps.
+ *
+ * <p><b>O sitemap e uma recomendacao de rastreamento, nao um espelho do catalogo.</b> Quem entra e
+ * em que ordem esta em {@code RepositorioJogos.listarJogosParaSitemap} (so jogo com oferta, sem
+ * DLC, ordenado por rank). Pagina que fica de fora continua acessivel e indexavel; ela so nao
+ * ocupa uma vaga do orcamento de rastreamento, que e curto enquanto o site e novo.
  *
  * <p><b>Sao dois dominios diferentes, e trocar um pelo outro quebra o sitemap inteiro:</b>
  *
@@ -67,25 +74,29 @@ public class ServicoSitemap {
     StringBuilder xml = new StringBuilder();
     abrirUrlset(xml);
     for (String caminho : List.of("", "/catalogo", "/mais-vendidos", "/gratuitos")) {
-      adicionarUrl(xml, caminho, "daily");
+      // Estas quatro mudam de conteudo sozinhas (preco novo a cada 10 min), sem uma data unica que
+      // as represente, entao aqui o changefreq e o unico sinal possivel. Nas paginas de jogo e o
+      // contrario: existe uma data real, e ai vale lastmod (ver adicionarUrlDeJogo).
+      xml.append("  <url><loc>").append(frontendUrl).append(caminho)
+          .append("</loc><changefreq>daily</changefreq></url>\n");
     }
     fecharUrlset(xml);
     return xml.toString();
   }
 
+  /** @param pagina 1-indexed, como aparece na URL ({@code sitemap-jogos-1.xml}) */
   public String gerarPaginaDeJogos(int pagina) {
-    List<String> slugs = jogos.listarSlugsParaSitemap(pagina - 1, TAMANHO_PAGINA);
     StringBuilder xml = new StringBuilder();
     abrirUrlset(xml);
-    for (String slug : slugs) {
-      adicionarUrl(xml, "/jogo/" + slug, "weekly");
+    for (RepositorioJogos.JogoParaSitemap jogo : jogos.listarJogosParaSitemap(pagina - 1, TAMANHO_PAGINA)) {
+      adicionarUrlDeJogo(xml, jogo);
     }
     fecharUrlset(xml);
     return xml.toString();
   }
 
   public int totalPaginasDeJogos() {
-    long total = jogos.contarSlugsParaSitemap();
+    long total = jogos.contarJogosParaSitemap();
     return (int) Math.ceil(total / (double) TAMANHO_PAGINA);
   }
 
@@ -98,8 +109,22 @@ public class ServicoSitemap {
     xml.append("</urlset>\n");
   }
 
-  private void adicionarUrl(StringBuilder xml, String caminho, String changefreq) {
-    xml.append("  <url><loc>").append(frontendUrl).append(caminho)
-        .append("</loc><changefreq>").append(changefreq).append("</changefreq></url>\n");
+  /**
+   * <p>Sem {@code changefreq}: o Google declarou publicamente que ignora o campo, e ele so
+   * disputava espaco com o {@code lastmod}, que e o sinal que a pagina de jogo tem de verdade.
+   *
+   * <p>Data sem hora (o protocolo aceita as duas formas) porque a precisao real e essa: o
+   * historico guarda quando o preco mudou, nao um horario que valha propagar. Jogo sem data
+   * conhecida sai <b>sem</b> a tag, nunca com uma inventada — {@code lastmod} so serve enquanto o
+   * crawler puder confiar nele.
+   */
+  private void adicionarUrlDeJogo(StringBuilder xml, RepositorioJogos.JogoParaSitemap jogo) {
+    xml.append("  <url><loc>").append(frontendUrl).append("/jogo/").append(jogo.slug()).append("</loc>");
+    if (jogo.atualizadoEm() != null) {
+      xml.append("<lastmod>")
+          .append(DateTimeFormatter.ISO_LOCAL_DATE.format(jogo.atualizadoEm().atZone(ZoneOffset.UTC)))
+          .append("</lastmod>");
+    }
+    xml.append("</url>\n");
   }
 }

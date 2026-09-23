@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import com.ofertagames.backend.jogos.RepositorioJogos;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,15 +28,19 @@ class ServicoSitemapTest {
     servico = new ServicoSitemap(jogos, FRONTEND + "/", BACKEND + "/");
   }
 
+  private static RepositorioJogos.JogoParaSitemap jogo(String slug, Instant atualizadoEm) {
+    return new RepositorioJogos.JogoParaSitemap(slug, atualizadoEm);
+  }
+
   @Test
   void calculaTotalDePaginasArredondandoPraCima() {
-    when(jogos.contarSlugsParaSitemap()).thenReturn(110_299L);
+    when(jogos.contarJogosParaSitemap()).thenReturn(110_299L);
     assertEquals(12, servico.totalPaginasDeJogos());
   }
 
   @Test
   void indiceApontaProsSubSitemapsNoBACKEND() {
-    when(jogos.contarSlugsParaSitemap()).thenReturn(25_000L);
+    when(jogos.contarJogosParaSitemap()).thenReturn(25_000L);
     String indice = servico.gerarIndice();
     assertTrue(indice.contains("<loc>" + BACKEND + "/sitemap-estatico.xml</loc>"));
     assertTrue(indice.contains("<loc>" + BACKEND + "/sitemap-jogos-1.xml</loc>"));
@@ -49,7 +54,7 @@ class ServicoSitemapTest {
    */
   @Test
   void indiceNaoPodeApontarProFrontend() {
-    when(jogos.contarSlugsParaSitemap()).thenReturn(25_000L);
+    when(jogos.contarJogosParaSitemap()).thenReturn(25_000L);
     String indice = servico.gerarIndice();
     assertFalse(indice.contains(FRONTEND), "os <loc> do indice sao sub-sitemaps servidos pelo backend");
   }
@@ -57,7 +62,7 @@ class ServicoSitemapTest {
   @Test
   void removeBarraFinalDasDuasUrlsPraNaoDuplicar() {
     // configurar() injeta as duas URLs com barra final; garante que nao vira "//sitemap".
-    when(jogos.contarSlugsParaSitemap()).thenReturn(1L);
+    when(jogos.contarJogosParaSitemap()).thenReturn(1L);
     assertFalse(servico.gerarIndice().contains("//sitemap"));
     assertFalse(servico.gerarEstatico().contains("app//"));
   }
@@ -75,7 +80,8 @@ class ServicoSitemapTest {
 
   @Test
   void paginaDeJogosMontaUrlPorSlugNoFRONTEND() {
-    when(jogos.listarSlugsParaSitemap(0, ServicoSitemap.TAMANHO_PAGINA)).thenReturn(List.of("baldurs-gate-3", "cult-of-the-lamb"));
+    when(jogos.listarJogosParaSitemap(0, ServicoSitemap.TAMANHO_PAGINA)).thenReturn(List.of(
+        jogo("baldurs-gate-3", null), jogo("cult-of-the-lamb", null)));
     String xml = servico.gerarPaginaDeJogos(1);
     assertTrue(xml.contains("<loc>" + FRONTEND + "/jogo/baldurs-gate-3</loc>"));
     assertTrue(xml.contains("<loc>" + FRONTEND + "/jogo/cult-of-the-lamb</loc>"));
@@ -84,9 +90,49 @@ class ServicoSitemapTest {
 
   @Test
   void paginaDeJogosUsaDeslocamentoCorretoParaPaginasSeguintes() {
-    when(jogos.listarSlugsParaSitemap(2, ServicoSitemap.TAMANHO_PAGINA)).thenReturn(List.of("jogo-x"));
+    when(jogos.listarJogosParaSitemap(2, ServicoSitemap.TAMANHO_PAGINA)).thenReturn(List.of(jogo("jogo-x", null)));
     // pagina 3 (1-indexed) deve pedir a pagina 2 (0-indexed) ao repositorio.
     String xml = servico.gerarPaginaDeJogos(3);
     assertTrue(xml.contains("jogo-x"));
+  }
+
+  @Test
+  void lastmodSaiComoDataSemHora() {
+    when(jogos.listarJogosParaSitemap(0, ServicoSitemap.TAMANHO_PAGINA))
+        .thenReturn(List.of(jogo("hollow-knight", Instant.parse("2026-09-14T23:45:07Z"))));
+    assertTrue(servico.gerarPaginaDeJogos(1).contains(
+        "<loc>" + FRONTEND + "/jogo/hollow-knight</loc><lastmod>2026-09-14</lastmod>"));
+  }
+
+  /**
+   * {@code lastmod} so vale enquanto o crawler pode confiar nele: jogo sem data conhecida sai sem
+   * a tag, nunca com a data de hoje (que faria toda URL alegar "mudei agora" e o Google passar a
+   * ignorar o campo no sitemap inteiro).
+   */
+  @Test
+  void jogoSemDataConhecidaSaiSemLastmod() {
+    when(jogos.listarJogosParaSitemap(0, ServicoSitemap.TAMANHO_PAGINA)).thenReturn(List.of(jogo("jogo-novo", null)));
+    String xml = servico.gerarPaginaDeJogos(1);
+    assertTrue(xml.contains("<loc>" + FRONTEND + "/jogo/jogo-novo</loc></url>"));
+    assertFalse(xml.contains("<lastmod>"));
+  }
+
+  /** O Google ignora changefreq; deixar nas paginas de jogo so competia com o lastmod. */
+  @Test
+  void paginaDeJogosNaoUsaChangefreq() {
+    when(jogos.listarJogosParaSitemap(0, ServicoSitemap.TAMANHO_PAGINA))
+        .thenReturn(List.of(jogo("elden-ring", Instant.parse("2026-09-01T10:00:00Z"))));
+    assertFalse(servico.gerarPaginaDeJogos(1).contains("changefreq"));
+  }
+
+  @Test
+  void preservaAOrdemQueORepositorioDevolveu() {
+    // A ordem e por rank (o repositorio ordena); o XML nao pode reordenar, senao a pagina 1 deixa
+    // de ser "os mais populares".
+    when(jogos.listarJogosParaSitemap(0, ServicoSitemap.TAMANHO_PAGINA)).thenReturn(List.of(
+        jogo("baldurs-gate-3", null), jogo("cyberpunk-2077", null), jogo("elden-ring", null)));
+    String xml = servico.gerarPaginaDeJogos(1);
+    assertTrue(xml.indexOf("baldurs-gate-3") < xml.indexOf("cyberpunk-2077"));
+    assertTrue(xml.indexOf("cyberpunk-2077") < xml.indexOf("elden-ring"));
   }
 }

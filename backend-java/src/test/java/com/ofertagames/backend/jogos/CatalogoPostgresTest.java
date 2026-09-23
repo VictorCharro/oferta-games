@@ -84,6 +84,54 @@ class CatalogoPostgresTest {
     assertEquals(2, jogos.listarHistoricoDePrecos(-99001L, 90).size());
   }
 
+  /**
+   * O sitemap deixou de ser o catalogo inteiro em 22/09/2026: so jogo com oferta em loja visivel,
+   * sem DLC, ordenado por rank. Este teste existe porque a mudanca e inteira em SQL — os testes de
+   * {@code ServicoSitemapTest} usam o repositorio mockado e nao pegariam um filtro errado aqui.
+   */
+  @Test void sitemapTrazSoJogoComOfertaVisivelOrdenadoPorRank() {
+    template.update("INSERT INTO games(id,title,slug,rank,is_dlc) VALUES "
+        + "(-99001,'Popular','popular-revisao',5,false),"
+        + "(-99002,'Sem rank','sem-rank-revisao',NULL,false),"
+        + "(-99003,'Menos popular','menos-popular-revisao',900,false),"
+        + "(-99004,'Sem oferta','sem-oferta-revisao',1,false),"
+        + "(-99005,'Uma DLC','uma-dlc-revisao',2,true),"
+        + "(-99006,'So loja bloqueada','so-bloqueada-revisao',3,false)");
+    template.update("INSERT INTO offers(game_id,source,store_name,price,url,updated_at) VALUES "
+        + "(-99001,'itad','Steam',10,'https://example.com',now()),"
+        + "(-99002,'itad','Steam',10,'https://example.com',now()),"
+        + "(-99003,'itad','Steam',10,'https://example.com',now()),"
+        + "(-99005,'itad','Steam',10,'https://example.com',now()),"
+        + "(-99006,'itad','GOG',10,'https://example.com',now())");
+
+    var slugs = jogos.listarJogosParaSitemap(0, 500).stream()
+        .map(RepositorioJogos.JogoParaSitemap::slug)
+        .filter(s -> s.endsWith("-revisao"))
+        .toList();
+
+    assertEquals(List.of("popular-revisao", "menos-popular-revisao", "sem-rank-revisao"), slugs,
+        "ordem por rank com os sem rank no fim; fora: sem oferta, DLC e so em loja bloqueada");
+  }
+
+  @Test void lastmodDoSitemapVemDoHistoricoENaoDaSincronizacao() {
+    template.update("INSERT INTO games(id,title,slug,rank,is_dlc,created_at,last_price_sync_at) VALUES "
+        + "(-99001,'Com historico','com-historico-revisao',1,false,now()-interval '90 days',now()),"
+        + "(-99002,'Sem historico','sem-historico-revisao',2,false,now()-interval '40 days',now())");
+    template.update("INSERT INTO offers(game_id,source,store_name,price,url,updated_at) VALUES "
+        + "(-99001,'itad','Steam',10,'https://example.com',now()),"
+        + "(-99002,'itad','Steam',10,'https://example.com',now())");
+    template.update("INSERT INTO price_history(game_id,price,captured_at) VALUES "
+        + "(-99001,20,now()-interval '30 days'),(-99001,10,now()-interval '3 days')");
+
+    var porSlug = new HashMap<String, Instant>();
+    for (var jogo : jogos.listarJogosParaSitemap(0, 500)) porSlug.put(jogo.slug(), jogo.atualizadoEm());
+
+    // Com historico: a ULTIMA mudanca de preco (3 dias), nao o last_price_sync_at de agora.
+    assertEquals(3, Duration.between(porSlug.get("com-historico-revisao"), Instant.now()).toDays());
+    // Sem historico: cai no created_at, tambem nao no last_price_sync_at.
+    assertEquals(40, Duration.between(porSlug.get("sem-historico-revisao"), Instant.now()).toDays());
+  }
+
   @Test void medeBuscaComEsemIndiceTrigramaSemAlterarResultados() {
     var termos = List.of("portal", "gta", "re", "dark");
     Map<String, List<ResumoJogo>> antes = new LinkedHashMap<>();

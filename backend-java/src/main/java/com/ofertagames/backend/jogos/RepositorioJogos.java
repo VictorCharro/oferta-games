@@ -445,35 +445,102 @@ public class RepositorioJogos {
         .list();
   }
 
-  // Usado pelo sitemap.xml: precisa so do slug, paginado (o catalogo tem 100k+ jogos, acima do
-  // limite de 50k URLs por arquivo de sitemap do Google).
-  public long contarSlugsParaSitemap() {
-    return jdbc.sql("""
-        SELECT COUNT(*)
-        FROM games g
+  /**
+   * Quais jogos entram no sitemap.xml.
+   *
+   * <p><b>O sitemap nao e o catalogo inteiro (22/09/2026).</b> Ate aqui ele listava os 190 mil
+   * jogos por {@code id}, ou seja, na ordem em que foram importados — e o Google, que tem
+   * orcamento de rastreamento pequeno pra site novo, gastava ele nas primeiras 10 mil URLs, que
+   * eram add-on de simulador, bundle e "super detonado". Tres cortes, todos pelo mesmo motivo
+   * (pagina que nao merece ser rastreada consome a vez de uma que merece):
+   *
+   * <ul>
+   *   <li><b>precisa ter oferta em loja visivel</b> — jogo sem nenhuma oferta rende uma pagina sem
+   *       preco, que e justamente o conteudo que o visitante veio buscar;</li>
+   *   <li><b>DLC fica de fora</b> — a pagina dela existe e continua acessivel por link do jogo
+   *       base (e assim que o Google a descobre), mas nao vale uma vaga no sitemap;</li>
+   *   <li>os filtros de dominio de sempre ({@code ConteudosNaoJogos}, {@code JogosBloqueados}).</li>
+   * </ul>
+   *
+   * <p>Usado por {@code contarJogosParaSitemap} e {@code listarJogosParaSitemap}, que <b>precisam
+   * usar exatamente o mesmo filtro</b>: o controller valida o numero da pagina pela contagem, e
+   * uma divergencia entre os dois faria a ultima pagina responder 404 ou vir vazia.
+   */
+  private static String filtroSitemap() {
+    return """
         WHERE g.slug IS NOT NULL
+          AND EXISTS (SELECT 1 FROM offers o WHERE o.game_id = g.id %s)
           %s
           %s
-        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+          %s
+        """.formatted(
+            LojasBloqueadas.filtroSql("o"),
+            ConteudosNaoJogos.filtroSql("g"),
+            JogosBloqueados.filtroSql("g"),
+            ClassificadorDlc.filtroApenasJogosSql("g"));
+  }
+
+  /**
+   * Cacheada porque e uma contagem do catalogo inteiro (com {@code EXISTS} por linha) numa URL
+   * publica e sem login: o controller a chama pra validar o numero da pagina, entao um crawler
+   * percorrendo o indice a dispararia uma vez por sub-sitemap, e recarregar {@code /sitemap.xml}
+   * em rajada custaria o mesmo que uma consulta pesada do catalogo. O total muda devagar (jogo
+   * novo entrando), entao servir por ate um TTL nao tem custo pratico.
+   */
+  @Cacheable(value = ConfiguracaoCache.CACHE_CATALOGO, key = "'sitemapTotal'", sync = true)
+  public long contarJogosParaSitemap() {
+    return jdbc.sql("SELECT COUNT(*) FROM games g " + filtroSitemap())
         .query(Long.class)
         .single();
   }
 
-  public List<String> listarSlugsParaSitemap(int pagina, int tamanho) {
+  /**
+   * Uma pagina do sitemap, <b>ordenada por rank</b> (mais popular primeiro), pra pagina 1 conter
+   * os jogos que as pessoas de fato procuram. Jogo sem rank vai pro fim, nao pra fora.
+   *
+   * <p>{@code atualizadoEm} vira o {@code <lastmod>} e sai do <b>historico de preco</b>, nao de
+   * {@code last_price_sync_at}: a sincronizacao carimba todo jogo a cada volta da fila, mesmo sem
+   * nada ter mudado, entao usar ela faria toda URL alegar "mudei hoje" e o Google passaria a
+   * ignorar o campo inteiro (lastmod so vale enquanto for confiavel). {@code price_history} so
+   * ganha linha quando o menor preco muda de verdade — e exatamente "quando esta pagina mudou".
+   * Jogo que nunca mudou de preco desde que o historico existe cai em {@code created_at}.
+   *
+   * <p>O LATERAL roda <b>depois</b> do LIMIT, de proposito: a ordenacao so usa colunas de
+   * {@code games}, entao a pagina e escolhida primeiro e o historico e consultado so pras linhas
+   * que sobraram. Sem isso ele seria avaliado pros ~30 mil jogos elegiveis a cada requisicao (o
+   * mesmo erro que o LATERAL de {@code RepositorioDescontos} ja tinha custado 28s).
+   *
+   * @param pagina 0-indexed
+   */
+  public List<JogoParaSitemap> listarJogosParaSitemap(int pagina, int tamanho) {
     return jdbc.sql("""
-        SELECT g.slug
-        FROM games g
-        WHERE g.slug IS NOT NULL
+        SELECT p.slug, COALESCE(ultimo.captured_at, p.created_at) AS atualizado_em
+        FROM (
+          SELECT g.id, g.slug, g.rank, g.created_at
+          FROM games g
           %s
-          %s
-        ORDER BY g.id ASC
-        LIMIT :tamanho OFFSET :deslocamento
-        """.formatted(ConteudosNaoJogos.filtroSql("g"), JogosBloqueados.filtroSql("g")))
+          ORDER BY g.rank ASC NULLS LAST, g.id ASC
+          LIMIT :tamanho OFFSET :deslocamento
+        ) p
+        LEFT JOIN LATERAL (
+          SELECT ph.captured_at
+          FROM price_history ph
+          WHERE ph.game_id = p.id
+          ORDER BY ph.captured_at DESC
+          LIMIT 1
+        ) ultimo ON true
+        ORDER BY p.rank ASC NULLS LAST, p.id ASC
+        """.formatted(filtroSitemap()))
         .param("tamanho", tamanho)
         .param("deslocamento", pagina * tamanho)
-        .query(String.class)
+        .query((rs, linha) -> new JogoParaSitemap(
+            rs.getString("slug"),
+            rs.getTimestamp("atualizado_em") == null ? null : rs.getTimestamp("atualizado_em").toInstant()))
         .list();
   }
+
+  /** @param atualizadoEm quando o preco mudou pela ultima vez; {@code null} quando nao se sabe */
+  public record JogoParaSitemap(String slug, java.time.Instant atualizadoEm) {}
 
   public Optional<Long> buscarIdPorSlug(String slug) {
     return jdbc.sql("SELECT id FROM games WHERE slug = :slug "
