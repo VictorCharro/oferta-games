@@ -108,7 +108,8 @@ public class EstadoColeta {
     return valor == null ? null : valor.toInstant();
   }
 
-  private static String resumirErro(RuntimeException erro) {
+  /** Package-private: reaproveitado por {@link ServicoExecucaoColeta} pro texto do aviso de WhatsApp. */
+  static String resumirErro(RuntimeException erro) {
     String mensagem = erro.getMessage();
     return erro.getClass().getSimpleName() + (mensagem == null || mensagem.isBlank() ? "" : ": " + mensagem);
   }

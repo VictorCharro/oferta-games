@@ -1,5 +1,6 @@
 package com.ofertagames.backend.erros;
 
+import com.ofertagames.backend.alertas.NotificadorWhatsapp;
 import com.ofertagames.backend.comum.LimitePorJanela;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -20,6 +21,13 @@ import org.springframework.stereotype.Component;
  * <p>Nunca pode derrubar quem chama: falha ao registrar vira so um log. E tem dois freios pra nao
  * virar vetor de abuso (o endpoint do navegador e anonimo): teto global de relatos por hora e teto
  * de linhas distintas na tabela — erro repetido so incrementa o contador de uma linha existente.
+ *
+ * <p><b>Aviso por WhatsApp (22/09/2026):</b> so na <b>primeira ocorrencia</b> de uma assinatura
+ * nova, ou quando uma ja marcada como resolvida <b>volta a acontecer</b> — nunca a cada ocorrencia
+ * de um erro ja ativo e conhecido, que so incrementa {@code occurrences} (ja visivel na aba Erros).
+ * Sem essa distincao, um bug que afeta muita gente de uma vez geraria uma rajada de mensagens bem
+ * na hora que mais importa saber — e e exatamente esse volume que faz o CallMeBot (nao-oficial,
+ * sem SLA) parar de entregar. Ver {@link NotificadorWhatsapp}.
  */
 @Component
 public class RegistroErros {
@@ -29,10 +37,12 @@ public class RegistroErros {
   static final int MAX_ERROS_DISTINTOS = 5000;
 
   private final JdbcClient jdbc;
+  private final NotificadorWhatsapp whatsapp;
   private final LimitePorJanela relatosNavegador = new LimitePorJanela(RELATOS_NAVEGADOR_POR_HORA, Duration.ofHours(1));
 
-  RegistroErros(JdbcClient jdbc) {
+  RegistroErros(JdbcClient jdbc, NotificadorWhatsapp whatsapp) {
     this.jdbc = jdbc;
+    this.whatsapp = whatsapp;
   }
 
   boolean aceitarRelatoNavegador() {
@@ -44,6 +54,13 @@ public class RegistroErros {
       String msg = cortar(mensagem == null || mensagem.isBlank() ? "(sem mensagem)" : mensagem.strip(), 500);
       String det = cortar(detalhe, 4000);
       String assinatura = assinatura(origem, msg, det);
+
+      // Le o estado ANTES do UPDATE abaixo, que ja zera resolved_at: e o unico jeito de saber se
+      // esta ocorrencia reabriu um erro resolvido, em vez de so continuar um que ja estava ativo.
+      // null = assinatura nunca vista; true = existia e estava resolvida; false = existia e ja ativa.
+      Boolean estavaResolvido = jdbc.sql("SELECT resolved_at IS NOT NULL FROM app_errors WHERE signature = :assinatura")
+          .param("assinatura", assinatura).query(Boolean.class).optional().orElse(null);
+
       int atualizadas = jdbc.sql("""
           UPDATE app_errors
           SET occurrences = occurrences + 1, last_seen_at = now(), resolved_at = NULL,
@@ -52,7 +69,10 @@ public class RegistroErros {
           """)
           .param("assinatura", assinatura).param("pagina", cortar(pagina, 300)).param("ua", cortar(userAgent, 300))
           .update();
-      if (atualizadas > 0) return;
+      if (atualizadas > 0) {
+        if (Boolean.TRUE.equals(estavaResolvido)) whatsapp.avisarErroReaberto(origem, msg, pagina);
+        return;
+      }
       long distintos = jdbc.sql("SELECT count(*) FROM app_errors").query(Long.class).single();
       if (distintos >= MAX_ERROS_DISTINTOS) return;
       jdbc.sql("""
@@ -63,6 +83,7 @@ public class RegistroErros {
           .param("origem", origem).param("assinatura", assinatura).param("mensagem", msg).param("detalhe", det)
           .param("pagina", cortar(pagina, 300)).param("ua", cortar(userAgent, 300))
           .update();
+      whatsapp.avisarErroNovo(origem, msg, pagina);
     } catch (RuntimeException falha) {
       logger.warn("Nao foi possivel registrar erro de {}: {}", origem, falha.toString());
     }

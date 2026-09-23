@@ -60,6 +60,12 @@ app:
   # (variavel SSR_API_TOKEN). Vazio desliga a isencao, sem quebrar nada.
   ssr:
     token: ${SSR_API_TOKEN:}
+  # Aviso por WhatsApp (CallMeBot) de falha de job de coleta e erro novo/reaberto (ver
+  # NotificadorWhatsapp). Vazio desliga o aviso sem quebrar nada — nunca bloqueia quem chama.
+  alerta:
+    whatsapp:
+      telefone: ${ALERTA_WHATSAPP_TELEFONE:}
+      apikey: ${ALERTA_WHATSAPP_APIKEY:}
   # UIDs (auth.users) com acesso a /api/admin/**, separados por virgula. Ver Administradores.
   admin:
     user-ids: ${ADMIN_USER_IDS:}

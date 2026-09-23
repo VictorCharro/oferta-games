@@ -1,5 +1,6 @@
 package com.ofertagames.backend.sincronizacao;
 
+import com.ofertagames.backend.alertas.NotificadorWhatsapp;
 import jakarta.annotation.PreDestroy;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -27,12 +28,14 @@ public class ServicoExecucaoColeta {
 
   private final RepositorioControleColeta controle;
   private final EstadoColeta estado;
+  private final NotificadorWhatsapp whatsapp;
   /** Se esta instancia esta com a trava agora — ver liberarTravaAoParar. */
   private final AtomicBoolean segurandoTrava = new AtomicBoolean(false);
 
-  ServicoExecucaoColeta(RepositorioControleColeta controle, EstadoColeta estado) {
+  ServicoExecucaoColeta(RepositorioControleColeta controle, EstadoColeta estado, NotificadorWhatsapp whatsapp) {
     this.controle = controle;
     this.estado = estado;
+    this.whatsapp = whatsapp;
   }
 
   /**
@@ -62,6 +65,7 @@ public class ServicoExecucaoColeta {
       return true;
     } catch (RuntimeException erro) {
       estado.falhar(tipo, erro, duracaoEmMs(inicio));
+      whatsapp.avisarFalhaDeColeta(tipo, EstadoColeta.resumirErro(erro));
       throw erro;
     } finally {
       controle.liberar(BLOQUEIO_COLETA);

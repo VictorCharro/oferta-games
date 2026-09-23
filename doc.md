@@ -63,6 +63,8 @@ O `Dockerfile` faz o build Maven em imagem Java 21 e inicia o JAR com limite de 
 | `APP_SYNC_SCHEDULER_PRICE_DELAY_MS` | nao | Padrao `600000` (10 min) |
 | `APP_SYNC_SCHEDULER_STEAM_DELAY_MS` | nao | Padrao `900000` (15 min) |
 | `SYNC_SECRET_KEY` | sim para endpoint legado | Protege `POST /api/sync` |
+| `ALERTA_WHATSAPP_TELEFONE` | nao | Numero com DDI que RECEBE o aviso de erro (CallMeBot) — ver "Quando algo cair" |
+| `ALERTA_WHATSAPP_APIKEY` | nao | Apikey do CallMeBot pareada com esse numero — ver "Quando algo cair" |
 | `PORT` | nao | Fornecida pelo Render; padrao `8080` |
 
 Nunca colocar essas variaveis no Git ou em arquivos do frontend.
@@ -188,6 +190,10 @@ O site era 100% CSR (client-side rendering): o servidor mandava um HTML quase va
 - **Logs do backend**: `ssh -i <chave> ubuntu@163.176.220.243 'docker logs --since 1h oferta-games-backend'`. Coletas: aba Coleta do admin.
 - **Uso e velocidade reais**: Vercel > oferta-games-frontend > Analytics e Speed Insights.
 - **Backup**: `/opt/backups/backup.log` na VM (ver `deploy/oracle/README-catalogo-db.md`).
+- **Aviso por WhatsApp (22/09/2026)**: `alertas.NotificadorWhatsapp` manda mensagem pro dono, via CallMeBot (nao-oficial, gratis, ja usado pelo dono noutro projeto com o mesmo numero), em dois gatilhos:
+  - **Falha de qualquer job de coleta** (o mesmo `estado.falhar` que grava `ultimo_erro` em `coleta_status`) — sempre avisa, e um evento raro por natureza.
+  - **Erro de runtime**, em `RegistroErros.registrar` — so na **primeira ocorrencia** de uma assinatura nova, ou quando uma ja marcada como resolvida **reabre**. Nunca em toda ocorrencia de um erro ja ativo (isso so incrementa o contador, ja visivel na aba Erros): um bug que afeta muita gente de uma vez geraria uma rajada de mensagens bem na hora que mais importa, e e exatamente esse volume que faz o CallMeBot parar de entregar.
+  - Teto proprio de 20 avisos/hora (`LimitePorJanela`, independente do teto de relatos do navegador), acima disso so loga. Desligado por padrao (`ALERTA_WHATSAPP_TELEFONE`/`ALERTA_WHATSAPP_APIKEY` vazios em `deploy/oracle/.env`, ver `.env.example`) — nunca bloqueia nem atrasa quem chama, roda em thread propria.
 
 ## Coletas e Atualizacao de Catalogo
 
