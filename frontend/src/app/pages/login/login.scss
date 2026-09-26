@@ -23,8 +23,7 @@
   h1 { font-size: 24px; font-weight: 700; }
   .logo-oferta { color: var(--color-purple); }
 
-  // Erro de envio: balanca de leve pros lados. Com movimento reduzido o styles.scss zera a
-  // duracao, e a mensagem vermelha continua sendo o aviso.
+  // Erro de envio: balanca de leve pros lados.
   &.tremer { animation: login-tremer 400ms var(--curva-saida); }
 }
 

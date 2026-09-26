@@ -70,22 +70,9 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-// Quem ativa "reduzir movimento" no sistema (no Windows: "Efeitos de animacao" desligado) nao
-// recebe o que se move SOZINHO ou em loop: animacoes de keyframe (brilho do skeleton, pulsos,
-// entrada de aviso) terminam na hora, e o autoplay do banner nao liga (JS, ver home.ts).
-// As TRANSICOES continuam de proposito: sao curtas, de cor/opacidade/pequeno deslocamento, e so
-// acontecem porque o usuario passou o mouse ou clicou. Reduzir movimento nao e zerar feedback;
-// a primeira versao desta regra zerava tudo e o site parecia quebrado (botao sem resposta visual).
-// .01ms e nao 0: com 0 alguns navegadores nao disparam animationend, e codigo que espera esse
-// evento ficaria travado.
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .01ms !important;
-    animation-delay: 0s !important; // senao um atraso de entrada escondia o conteudo mesmo sem animar
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-  }
-}
+// Sem regra de "reduzir movimento" (prefers-reduced-motion), por decisao do dono (26/09/2026): as
+// animacoes sao parte do padrao visual do site e rodam igual pra todo mundo, mesmo com "Efeitos de
+// animacao" desligado no Windows. Nao recriar essa regra nem checar matchMedia no JS sem pedido dele.
 
 // Brilho que passa pelos blocos de carregamento (skeleton). Global porque o mesmo keyframe estava
 // copiado em 7 paginas; os componentes usam `animation: shimmer ...` e acham este aqui.

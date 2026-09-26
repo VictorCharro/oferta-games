@@ -262,9 +262,6 @@ export class Home implements OnInit, OnDestroy {
   private startAutoplay() {
     this.stopAutoplay();
     if (!this.navegador || this.featuredDeals.length <= 1) return;
-    // Quem pediu "reduzir movimento" no sistema nao ve o banner trocar sozinho: a regra global de
-    // CSS so alcanca animacao de CSS, e este timer e JS. As setas, os pontos e o arrastar continuam.
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     this.cicloAutoplay++;
     this.autoplayTimer = setInterval(() => {
       this.featuredIndex = (this.featuredIndex + 1) % this.featuredDeals.length;
@@ -273,7 +270,7 @@ export class Home implements OnInit, OnDestroy {
     }, this.autoplayIntervalMs);
   }
 
-  /** O banner esta trocando sozinho agora (false: pausado pelo mouse, aba oculta ou reduzir movimento). */
+  /** O banner esta trocando sozinho agora (false: pausado pelo mouse ou aba oculta). */
   get autoplayRodando(): boolean {
     return this.autoplayTimer != null;
   }
