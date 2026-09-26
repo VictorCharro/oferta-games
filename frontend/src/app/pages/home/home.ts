@@ -70,10 +70,10 @@ export class Home implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Nome do site na frente e descricao concreta (lojas, historico, alerta): o titulo "Início" nao
-    // dizia o que o site e, e o Google reescrevia o resultado pra "Oferta Games: Início".
+    // Titulo so com o nome do site (decisao do dono, 26/09/2026): o que o site faz fica na descricao.
+    // Antes era "Início", que nao dizia o que o site e, e o Google reescrevia pra "Oferta Games: Início".
     this.seo.set({
-      title: 'Oferta Games: compare preços de jogos e ache promoções',
+      title: 'Oferta Games',
       tituloCompleto: true,
       description: 'Compare preços de jogos na Steam, Epic, Nuuvem, Instant Gaming e outras lojas. Veja o menor preço, o histórico e seja avisado quando o jogo baixar.',
       path: '/',

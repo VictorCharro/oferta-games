@@ -9,9 +9,8 @@ export interface SeoConfig {
   /** Pagina que nao deve ir pro indice do Google (nao encontrado, erro, area logada). */
   noindex?: boolean;
   /**
-   * O titulo ja traz o nome do site: nao acrescenta o sufixo " | Oferta Games". Usado na Home, onde
-   * o nome vai NA FRENTE (`Oferta Games: ...`) em vez de atras, que e o que o Google mostra como
-   * titulo do resultado.
+   * O titulo ja traz o nome do site: nao acrescenta o sufixo " | Oferta Games". Usado na Home, cujo
+   * titulo e so "Oferta Games" (sem isto sairia "Oferta Games | Oferta Games").
    */
   tituloCompleto?: boolean;
 }
