@@ -52,6 +52,10 @@
         <img src="notificacao.png" alt="" />
         <span class="notification-badge" *ngIf="unreadNotifications">{{ unreadNotifications > 9 ? '9+' : unreadNotifications }}</span>
       </button>
+      <!-- Fundo escurecido: so aparece em tela <=900px (ver topbar.scss), onde o painel ocupa
+           quase a largura toda e sem ele parecia pagina, nao menu. Esta DENTRO do .notifications-menu,
+           entao o clique de fora do document nao o ve: fecha pelo proprio (click). -->
+      <div class="notifications-fundo" *ngIf="notificationsOpen" (click)="notificationsOpen = false" aria-hidden="true"></div>
       <div class="notifications-panel" *ngIf="notificationsOpen" animate.enter="menu-entrar" animate.leave="menu-sair">
         <div class="notifications-heading"><strong>Notificações</strong><button type="button" *ngIf="unreadNotifications" (click)="markAllNotificationsRead()">Marcar todas como lidas</button></div>
         <div class="notification-list" *ngIf="notifications.length || respostasNaoLidas.length; else noNotifications">

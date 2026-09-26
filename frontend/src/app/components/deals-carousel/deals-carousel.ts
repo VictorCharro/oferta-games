@@ -18,8 +18,10 @@ export class DealsCarousel implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('row') rowRef!: ElementRef<HTMLElement>;
   @ViewChild('prevBtn') prevBtnRef!: ElementRef<HTMLElement>;
   @ViewChild('nextBtn') nextBtnRef!: ElementRef<HTMLElement>;
+  @ViewChild('carrossel') carrosselRef!: ElementRef<HTMLElement>;
 
   private observer?: MutationObserver;
+  private observadorEntrada?: IntersectionObserver;
 
   ngAfterViewInit() {
     // MutationObserver nao existe em Node (SSR); esse rastreio de scroll so faz sentido no
@@ -29,6 +31,25 @@ export class DealsCarousel implements AfterViewInit, OnChanges, OnDestroy {
     this.observer = new MutationObserver(() => this.scheduleUpdate());
     this.observer.observe(row, { childList: true });
     this.scheduleUpdate();
+    this.animarAoAparecer();
+  }
+
+  /**
+   * Cards entram em cascata na PRIMEIRA vez que a secao rola pra dentro da tela. So nas secoes
+   * que estavam fora da tela ao abrir: as visiveis ja chegaram prontas do SSR, e esconder pra
+   * animar de novo seria uma piscada. Por isso a primeira leitura do observer, que ja vem com o
+   * estado inicial, so decide se a secao fica de fora.
+   */
+  private animarAoAparecer() {
+    if (typeof IntersectionObserver === 'undefined') return;
+    let primeiraLeitura = true;
+    this.observadorEntrada = new IntersectionObserver(([entrada]) => {
+      const visivel = entrada.isIntersecting;
+      if (!primeiraLeitura && visivel) this.carrosselRef.nativeElement.classList.add('aparecer');
+      if (visivel) this.observadorEntrada?.disconnect();
+      primeiraLeitura = false;
+    }, { threshold: 0.15 });
+    this.observadorEntrada.observe(this.carrosselRef.nativeElement);
   }
 
   ngOnChanges() {
@@ -37,6 +58,7 @@ export class DealsCarousel implements AfterViewInit, OnChanges, OnDestroy {
 
   ngOnDestroy() {
     this.observer?.disconnect();
+    this.observadorEntrada?.disconnect();
   }
 
   @HostListener('window:resize')

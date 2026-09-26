@@ -8,8 +8,21 @@
     <app-monitored-game-card *ngFor="let game of games" [game]="game"></app-monitored-game-card>
   </div>
 
-  <div class="games-grid" *ngIf="loading">
-    <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6]"></div>
+  <!-- Esqueleto no formato do card monitorado (capa 16:9 + linhas de titulo, loja, preco, meta e
+       barra), pra lista chegar sem pulo de altura. O retangulo 3:4 de antes era bem mais alto que
+       o card real e a pagina encolhia quando os dados chegavam. -->
+  <div class="games-grid" *ngIf="loading" aria-busy="true">
+    <div class="skeleton-monitor" *ngFor="let i of [1,2,3,4,5,6]" aria-hidden="true">
+      <div class="sk sk-capa"></div>
+      <div class="sk-info">
+        <div class="sk sk-titulo"></div>
+        <div class="sk sk-loja"></div>
+        <div class="sk sk-rotulo"></div>
+        <div class="sk sk-preco"></div>
+        <div class="sk sk-meta"></div>
+        <div class="sk sk-barra"></div>
+      </div>
+    </div>
   </div>
 
   <div class="empty-state" *ngIf="!loading && !games.length">

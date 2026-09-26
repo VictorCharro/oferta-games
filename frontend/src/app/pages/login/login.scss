@@ -1,5 +1,7 @@
 .login-page {
+  position: relative;
   min-height: 100vh;
+  padding: 56px 16px 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -20,6 +22,32 @@
 
   h1 { font-size: 24px; font-weight: 700; }
   .logo-oferta { color: var(--color-purple); }
+
+  // Erro de envio: balanca de leve pros lados. Com movimento reduzido o styles.scss zera a
+  // duracao, e a mensagem vermelha continua sendo o aviso.
+  &.tremer { animation: login-tremer 400ms var(--curva-saida); }
+}
+
+@keyframes login-tremer {
+  0%, 100% { translate: 0; }
+  20% { translate: -8px; }
+  40% { translate: 7px; }
+  60% { translate: -5px; }
+  80% { translate: 3px; }
+}
+
+// Sem ela, quem abriu o login por engano so saia pelo botao voltar do navegador.
+.login-voltar-site {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-decoration: none;
+  transition: color var(--dur-rapido), background var(--dur-rapido);
+  &:hover { color: var(--text-primary); background: var(--bg-card); }
 }
 
 .login-logo {
@@ -43,8 +71,25 @@
   gap: 4px;
   width: 100%;
   margin-bottom: 8px;
+  position: relative;
+
+  // Fundo do modo ativo: uma peca so que desliza entre Entrar e Criar conta, em vez de
+  // piscar de um botao pro outro. Metade da largura menos o padding (4px) e o gap (4px).
+  &::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 6px);
+    border-radius: 6px;
+    background: var(--bg-card);
+    transition: translate var(--dur-lento) var(--curva-entrada);
+  }
+  &.em-cadastro::before { translate: calc(100% + 4px); }
 
   button {
+    position: relative;
     flex: 1;
     padding: 8px;
     border-radius: 6px;
@@ -54,10 +99,9 @@
     color: var(--text-muted);
     border: none;
     cursor: pointer;
-    transition: all var(--dur-rapido);
+    transition: color var(--dur-medio);
 
     &.active {
-      background: var(--bg-card);
       color: var(--text-primary);
       font-weight: 600;
     }
@@ -91,6 +135,31 @@ form {
     &::placeholder { color: var(--text-muted); }
     &:focus { outline: none; border-color: var(--color-purple); }
   }
+}
+
+.campo-senha {
+  position: relative;
+  display: flex;
+
+  input { flex: 1; min-width: 0; padding-right: 44px; }
+}
+
+.ver-senha {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  translate: 0 -50%;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--dur-rapido);
+  &:hover, &[aria-pressed="true"] { color: var(--text-primary); }
 }
 
 .social-buttons {
@@ -147,6 +216,19 @@ form {
 }
 
 .btn-full { width: 100%; justify-content: center; margin-top: 4px; }
+
+// Enviando: o texto fica e ganha um giro ao lado, em vez de trocar por "Aguarde..." e o botao
+// mudar de largura.
+.btn-primary { display: inline-flex; align-items: center; gap: 8px; }
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: login-girar 700ms linear infinite;
+}
+@keyframes login-girar { to { rotate: 360deg; } }
 
 .msg-error { color: var(--color-red); font-size: 13px; text-align: center; margin: 0; }
 .msg-success { color: var(--color-green); font-size: 13px; text-align: center; margin: 0; }

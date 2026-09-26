@@ -243,14 +243,6 @@
 }
 
 
-.loading-more {
-  display: flex;
-  justify-content: center;
-  margin-top: 8px;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
 // Issue #12: abaixo de 900px o painel de 220px comeria ~60% de uma tela de celular (medido:
 // sobravam 131px pra grade de cards). Mesmo padrao ja aprovado do menu de navegacao (#9) — drawer
 // que desliza por cima da pagina — mas pela DIREITA, pra nao se confundir com o de navegacao

@@ -1,11 +1,12 @@
 <div class="login-page">
-  <div class="login-card">
+  <a routerLink="/" class="login-voltar-site">← Voltar ao site</a>
+  <div class="login-card" [class.tremer]="tremendo" (animationend)="fimDoTremor($event)">
     <img src="logo.png" class="login-logo" alt="Oferta Games" />
     <h1><span class="logo-oferta">Oferta</span>Games</h1>
     <p class="login-sub">{{ mode === 'login' ? 'Entre na sua conta' : mode === 'register' ? 'Crie sua conta grátis' : 'Recuperar acesso' }}</p>
     <p class="login-motivo" *ngIf="motivo && mode !== 'recuperar'">Entre para {{ motivo }}.</p>
 
-    <div class="mode-tabs" *ngIf="mode !== 'recuperar'">
+    <div class="mode-tabs" *ngIf="mode !== 'recuperar'" [class.em-cadastro]="mode === 'register'">
       <button [class.active]="mode === 'login'" (click)="trocarModo('login')">Entrar</button>
       <button [class.active]="mode === 'register'" (click)="trocarModo('register')">Criar conta</button>
     </div>
@@ -19,7 +20,9 @@
         </div>
         <p class="msg-error" *ngIf="error">{{ error }}</p>
         <p class="msg-success" *ngIf="success">{{ success }}</p>
-        <button type="submit" class="btn-primary btn-full" [disabled]="loading">{{ loading ? 'Aguarde...' : 'Enviar link' }}</button>
+        <button type="submit" class="btn-primary btn-full" [disabled]="loading" [attr.aria-busy]="loading">
+          <span class="btn-spinner" *ngIf="loading" aria-hidden="true"></span>Enviar link
+        </button>
       </form>
       <button type="button" class="link-voltar" (click)="trocarModo('login')">← Voltar para entrar</button>
     </ng-container>
@@ -49,7 +52,13 @@
       </div>
       <div class="field">
         <label>Senha</label>
-        <input type="password" [(ngModel)]="password" name="password" [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'" placeholder="••••••••" />
+        <div class="campo-senha">
+          <input [type]="mostrarSenha ? 'text' : 'password'" [(ngModel)]="password" name="password" [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'" [placeholder]="mode === 'login' ? 'Sua senha' : 'Mínimo de 6 caracteres'" />
+          <button type="button" class="ver-senha" (click)="mostrarSenha = !mostrarSenha" [attr.aria-label]="mostrarSenha ? 'Esconder senha' : 'Mostrar senha'" [attr.aria-pressed]="mostrarSenha">
+            <svg *ngIf="!mostrarSenha" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg *ngIf="mostrarSenha" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
         <button *ngIf="mode === 'login'" type="button" class="link-esqueci" (click)="trocarModo('recuperar')">Esqueci minha senha</button>
       </div>
 
@@ -57,8 +66,8 @@
       <p class="msg-success" *ngIf="success">{{ success }}</p>
       <button *ngIf="aguardandoConfirmacao" type="button" class="link-reenviar" (click)="reenviarConfirmacao()" [disabled]="loading">Não recebeu? Reenviar e-mail de confirmação</button>
 
-      <button type="submit" class="btn-primary btn-full" [disabled]="loading">
-        {{ loading ? 'Aguarde...' : (mode === 'login' ? 'Entrar' : 'Criar conta') }}
+      <button type="submit" class="btn-primary btn-full" [disabled]="loading" [attr.aria-busy]="loading">
+        <span class="btn-spinner" *ngIf="loading" aria-hidden="true"></span>{{ mode === 'login' ? 'Entrar' : 'Criar conta' }}
       </button>
       <p class="login-termos" *ngIf="mode === 'register'">
         Ao criar a conta você concorda com os <a routerLink="/termos" target="_blank">Termos de Uso</a> e a

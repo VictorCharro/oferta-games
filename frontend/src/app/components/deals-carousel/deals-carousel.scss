@@ -44,6 +44,17 @@
   &:hover { transform: translateY(-4px); border-color: var(--color-purple); }
 }
 
+// Entrada em cascata (ver animarAoAparecer). --i vem do template, limitado a 8 pra fila
+// comprida nao demorar: do nono card em diante entram juntos.
+.aparecer .deal-card {
+  animation: card-aparecer var(--dur-lento) var(--curva-entrada) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes card-aparecer {
+  from { opacity: 0; translate: 0 14px; }
+}
+
 .deal-cover {
   position: relative;
   aspect-ratio: 16/9;

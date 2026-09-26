@@ -177,16 +177,16 @@
 
   <section class="profile-stat-strip" aria-label="Estatísticas do perfil">
     <div class="profile-strip-item">
-      <img src="biblioteca.png" alt="" /><div><strong>{{ profile.totalJogosBiblioteca ?? '--' }}</strong><span>Jogos na biblioteca</span></div>
+      <img src="biblioteca.png" alt="" /><div><strong [appContarNumero]="profile.totalJogosBiblioteca"></strong><span>Jogos na biblioteca</span></div>
     </div>
     <div class="profile-strip-item">
-      <img src="horas-jogadas.png" alt="" /><div><strong>{{ profile.totalMinutos != null ? hoursOnly(profile.totalMinutos) : '--' }}</strong><span>Horas jogadas</span></div>
+      <img src="horas-jogadas.png" alt="" /><div><strong [appContarNumero]="horasInteiras(profile.totalMinutos)" sufixo="h"></strong><span>Horas jogadas</span></div>
     </div>
     <div class="profile-strip-item">
-      <img src="conquistas.png" alt="" /><div><strong>{{ profile.conquistasDesbloqueadas ?? '--' }}</strong><span>Conquistas desbloqueadas</span></div>
+      <img src="conquistas.png" alt="" /><div><strong [appContarNumero]="profile.conquistasDesbloqueadas"></strong><span>Conquistas desbloqueadas</span></div>
     </div>
     <div class="profile-strip-item" *ngIf="profile.jogosPlatinados">
-      <img src="trofeu.png" alt="" /><div><strong>{{ profile.jogosPlatinados }}</strong><span>{{ profile.jogosPlatinados === 1 ? 'Jogo platinado' : 'Jogos platinados' }}</span></div>
+      <img src="trofeu.png" alt="" /><div><strong [appContarNumero]="profile.jogosPlatinados"></strong><span>{{ profile.jogosPlatinados === 1 ? 'Jogo platinado' : 'Jogos platinados' }}</span></div>
     </div>
     <!-- Mesma estrutura dos outros itens (valor em cima, rotulo embaixo): aqui os icones das
          plataformas fazem o papel do valor, pra faixa toda ficar na mesma linha de base. -->
@@ -301,6 +301,7 @@
     class="custom-layout"
     *ngIf="activeTab === 'resumo'"
     [appEntradaAnimada]="animarTrocaDeAba"
+    [appEntradaCascata]="animarTrocaDeAba"
     cdkDropList
     (cdkDropListDropped)="dropBlock($event)"
   >
@@ -311,6 +312,7 @@
       [class.custom-text-color]="!!block.corTexto"
       [class.editor-open]="isBlockMenuOpen(block)"
       [ngStyle]="blockStyle(block)"
+      [style.--i]="i < 8 ? i : 8"
       cdkDrag
       [cdkDragDisabled]="!editingLayout"
     >

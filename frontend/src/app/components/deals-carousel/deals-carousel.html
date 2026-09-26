@@ -1,7 +1,7 @@
-<div class="carousel">
+<div class="carousel" #carrossel>
   <button class="carousel-nav prev" #prevBtn (click)="scroll(-1)">‹</button>
   <div class="deals-row" #row (scroll)="onScroll()">
-    <a *ngFor="let deal of deals" class="deal-card" [routerLink]="['/jogo', deal.slug]">
+    <a *ngFor="let deal of deals; let i = index" class="deal-card" [style.--i]="i < 8 ? i : 8" [routerLink]="['/jogo', deal.slug]">
       <div class="deal-cover">
         <img appFadeImagem [src]="deal.coverUrl || 'no-cover.svg'" [alt]="deal.title" loading="lazy" decoding="async" (error)="capaIndisponivel($event)" />
         <span *ngIf="deal.discountPct > 0 && deal.discountPct < 100" class="badge-discount">-{{ deal.discountPct }}%</span>

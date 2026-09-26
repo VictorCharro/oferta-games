@@ -128,6 +128,18 @@ img.capa-fade {
   to { opacity: 1; translate: 0 0; }
 }
 
+// Filhos entrando um depois do outro (diretiva EntradaCascata). --i e o indice de cada filho,
+// limitado no template pra fila longa nao demorar. "backwards": o atraso segura o filho invisivel
+// ate a vez dele, e depois da animacao nada fica preso ao estilo final.
+.cascata-entrar > * {
+  animation: cascata-entrar var(--dur-lento) var(--curva-entrada) backwards;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+@keyframes cascata-entrar {
+  from { opacity: 0; translate: 0 12px; }
+}
+
 // Barra de abas com indicador que desliza (diretiva AbasDeslizantes). A classe so e posta no
 // navegador: no HTML do servidor cada aba ainda desenha o proprio sublinhado (o ::after de cada
 // pagina), e na hidratacao o indicador assume no mesmo lugar. Cada pagina ajusta a aparencia por

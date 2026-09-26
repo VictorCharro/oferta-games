@@ -20,11 +20,13 @@ import { mensagemDaApi } from '../../services/mensagem-api';
 import { removerImagensOrfas } from '../../services/imagens-blocos';
 import { AbasDeslizantes } from '../../diretivas/abas-deslizantes';
 import { EntradaAnimada } from '../../diretivas/entrada-animada';
+import { EntradaCascata } from '../../diretivas/entrada-cascata';
+import { ContarNumero } from '../../diretivas/contar-numero';
 
 /** Perfil e editor; listas derivadas da biblioteca sao recalculadas apenas quando ela muda. */
 @Component({
   selector: 'app-public-profile',
-  imports: [CommonModule, FormsModule, RouterModule, DragDropModule, AbasDeslizantes, EntradaAnimada],
+  imports: [CommonModule, FormsModule, RouterModule, DragDropModule, AbasDeslizantes, EntradaAnimada, EntradaCascata, ContarNumero],
   templateUrl: './public-profile.html',
   styleUrl: './public-profile.scss',
 })
@@ -1297,6 +1299,11 @@ export class PublicProfile implements OnInit, OnDestroy {
   // So pro card "Horas jogadas" do topo do perfil — "3906h 34m" quebrava em 2 linhas nesse
   // numero grande (23px bold) na largura estreita do card em mobile. Os cards de jogo (que usam
   // hours() acima, em fonte bem menor) nao tem esse problema, entao mantem minutos.
+  /** Horas jogadas pra faixa de estatisticas (a diretiva ContarNumero poe o "h"). */
+  horasInteiras(minutes: number | null | undefined): number | null {
+    return minutes == null ? null : Math.round(minutes / 60);
+  }
+
   hoursOnly(minutes: number | null): string {
     if (minutes == null) return '';
     return `${Math.round(minutes / 60)}h`;

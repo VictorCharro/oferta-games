@@ -37,6 +37,9 @@ export class Login implements OnInit {
   destino = '/';
   /** Motivo de ter caido no login, vindo da acao que exigiu conta ("favoritar este jogo"). */
   motivo = '';
+  /** Liga a animacao de "balancar" do cartao; desliga sozinho no animationend pra poder repetir. */
+  tremendo = false;
+  mostrarSenha = false;
 
   constructor(
     private auth: AuthService,
@@ -67,6 +70,17 @@ export class Login implements OnInit {
     this.aguardandoConfirmacao = false;
   }
 
+  fimDoTremor(evento: AnimationEvent) {
+    // animationend borbulha: so o fim do proprio tremor desliga a classe, nao o de um filho.
+    if (evento.target === evento.currentTarget) this.tremendo = false;
+  }
+
+  /** Mostra o erro e balanca o cartao, pra falha nao passar despercebida numa mensagem pequena. */
+  private falhar(mensagem: string) {
+    this.error = mensagem;
+    this.tremendo = true;
+  }
+
   loginWithGoogle() { this.auth.loginWithGoogle(this.destino); }
   loginWithDiscord() { this.auth.loginWithDiscord(this.destino); }
 
@@ -74,8 +88,8 @@ export class Login implements OnInit {
     this.error = '';
     this.success = '';
     if (this.mode === 'recuperar') return this.recuperar();
-    if (!this.email || !this.password) { this.error = 'Preencha todos os campos.'; return; }
-    if (this.mode === 'register' && !this.name) { this.error = 'Informe seu nome.'; return; }
+    if (!this.email || !this.password) { this.falhar('Preencha todos os campos.'); return; }
+    if (this.mode === 'register' && !this.name) { this.falhar('Informe seu nome.'); return; }
 
     this.loading = true;
     this.cdr.detectChanges();
@@ -83,7 +97,7 @@ export class Login implements OnInit {
     if (this.mode === 'login') {
       const err = await this.auth.login(this.email, this.password);
       if (err) {
-        this.error = this.translateError(err);
+        this.falhar(this.translateError(err));
         // Conta criada mas nao confirmada: oferece o reenvio ali mesmo, sem mandar criar de novo.
         this.aguardandoConfirmacao = err.includes('Email not confirmed');
         this.loading = false;
@@ -93,7 +107,7 @@ export class Login implements OnInit {
       this.router.navigateByUrl(this.destino);
     } else {
       const err = await this.auth.register(this.email, this.password, this.name);
-      if (err) { this.error = this.translateError(err); this.loading = false; this.cdr.detectChanges(); return; }
+      if (err) { this.falhar(this.translateError(err)); this.loading = false; this.cdr.detectChanges(); return; }
       this.success = 'Conta criada! Enviamos um link de confirmação para o seu e-mail.';
       this.aguardandoConfirmacao = true;
       this.loading = false;
@@ -102,14 +116,14 @@ export class Login implements OnInit {
   }
 
   private async recuperar() {
-    if (!this.email) { this.error = 'Informe o e-mail da sua conta.'; return; }
+    if (!this.email) { this.falhar('Informe o e-mail da sua conta.'); return; }
     this.loading = true;
     this.cdr.detectChanges();
     const err = await this.auth.solicitarRedefinicaoSenha(this.email);
     this.loading = false;
     // Mesmo texto pra e-mail cadastrado ou nao: a tela nao pode confirmar quem tem conta. So erro
     // de limite/formato aparece, porque ai a pessoa precisa fazer algo diferente.
-    if (err && !err.includes('User not found')) this.error = this.translateError(err);
+    if (err && !err.includes('User not found')) this.falhar(this.translateError(err));
     else this.success = 'Se existir uma conta com esse e-mail, você vai receber um link para criar uma nova senha em alguns minutos.';
     this.cdr.detectChanges();
   }
@@ -120,7 +134,7 @@ export class Login implements OnInit {
     this.cdr.detectChanges();
     const err = await this.auth.reenviarConfirmacao(this.email);
     this.loading = false;
-    if (err) this.error = this.translateError(err);
+    if (err) this.falhar(this.translateError(err));
     else this.success = 'Enviamos o link de confirmação de novo. Confira também a caixa de spam.';
     this.cdr.detectChanges();
   }

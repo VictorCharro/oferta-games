@@ -128,16 +128,17 @@
         </div>
       </div>
 
-      <div class="games-grid" [class.large]="viewMode === 'large'" *ngIf="!loading || games.length > 0">
+      <div class="games-grid" [class.large]="viewMode === 'large'" *ngIf="!loading || games.length > 0" [attr.aria-busy]="loading">
         <app-game-card *ngFor="let game of games" [game]="game"></app-game-card>
+        <!-- Pagina seguinte chegando: cards fantasmas no fim da grade, no lugar exato onde os novos
+             vao cair, em vez de um "Carregando..." solto embaixo. -->
+        <ng-container *ngIf="loading && games.length > 0">
+          <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6]" aria-hidden="true"></div>
+        </ng-container>
       </div>
 
       <div class="games-grid" *ngIf="loading && games.length === 0">
         <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10,11,12]"></div>
-      </div>
-
-      <div class="loading-more" *ngIf="loading && games.length > 0">
-        <span>Carregando...</span>
       </div>
 
       <app-load-error
