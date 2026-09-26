@@ -9,6 +9,7 @@ import { GameService, GameSummary } from '../../services/game';
 import { SearchService } from '../../services/search';
 import { PerfisService } from '../../services/perfis';
 import { MinhaMensagem, NotificationsService, PriceNotification } from '../../services/notifications';
+import { AcessoAdminService } from '../../services/acesso-admin';
 
 /** Navegacao global e sugestoes; falhas de uma consulta nao encerram a entrada de busca. */
 @Component({
@@ -47,11 +48,13 @@ export class Topbar implements OnInit, OnDestroy {
     private searchService: SearchService,
     private perfisService: PerfisService,
     private notificationsService: NotificationsService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private acessoAdmin: AcessoAdminService
   ) {}
 
   ngOnInit() {
-    this.sub = this.auth.user$.subscribe(() => this.cdr.detectChanges());
+    // Trocou de conta (ou saiu): o atalho de admin some ate o menu perguntar de novo.
+    this.sub = this.auth.user$.subscribe(() => { this.ehAdmin = false; this.cdr.detectChanges(); });
     // Sem isto o bloco de login fica escondido: o template depende de sessaoResolvida, e a virada
     // dela pode nao coincidir com uma emissao de user$ (quando ja estava null e continua null).
     this.sessaoSub = this.auth.sessaoResolvida$.subscribe(() => this.cdr.detectChanges());
@@ -164,7 +167,19 @@ export class Topbar implements OnInit, OnDestroy {
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
-  toggleDropdown() { this.dropdownOpen = !this.dropdownOpen; }
+  /**
+   * Mostra o atalho "Administração" no menu da conta pra quem e admin (26/09/2026). A pergunta ao
+   * backend so acontece ao abrir o menu (e fica guardada), e nao em todo carregamento de pagina pra
+   * todo visitante.
+   */
+  ehAdmin = false;
+
+  toggleDropdown() {
+    this.dropdownOpen = !this.dropdownOpen;
+    if (this.dropdownOpen && this.auth.isLoggedIn) {
+      this.acessoAdmin.ehAdmin().then(sim => { this.ehAdmin = sim; this.cdr.markForCheck(); });
+    }
+  }
   toggleNotifications() {
     this.notificationsOpen = !this.notificationsOpen;
     // Busca respostas novas ao abrir o sino: sem isso so chegariam no proximo login/recarga.

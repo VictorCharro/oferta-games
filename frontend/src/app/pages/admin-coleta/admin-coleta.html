@@ -54,7 +54,7 @@
     <section *ngIf="abaAtiva === 'geral'" class="grade-geral" [appEntradaAnimada]="animarTrocaDeAba">
       <article class="painel">
         <header class="painel-topo"><h2>Precisa de atenção</h2></header>
-        <p class="vazio" *ngIf="!itensAtencao.length">Tudo em dia: nenhuma denúncia, problema relatado ou coleta com erro.</p>
+        <p class="vazio positivo" *ngIf="!itensAtencao.length">Tudo em dia: nenhuma denúncia, problema relatado ou coleta com erro.</p>
         <ul class="linhas">
           <li *ngFor="let item of itensAtencao">
             <div class="linha-texto">
@@ -90,7 +90,7 @@
         <h2>Denúncias abertas</h2>
         <small>agrupadas por perfil</small>
       </header>
-      <p class="vazio" *ngIf="!gruposDenuncias.length">Nenhuma denúncia pendente.</p>
+      <p class="vazio positivo" *ngIf="!gruposDenuncias.length">Nenhuma denúncia pendente.</p>
       <ul class="linhas">
         <li *ngFor="let g of gruposDenuncias">
           <div class="linha-texto">
@@ -115,7 +115,7 @@
         Perfis bloqueados{{ mostrarBloqueados ? ' (' + bloqueados.length + ')' : '' }} <span aria-hidden="true">{{ mostrarBloqueados ? '▴' : '▾' }}</span>
       </button>
       <ng-container *ngIf="mostrarBloqueados">
-        <p class="vazio" *ngIf="!bloqueados.length">Nenhum perfil bloqueado.</p>
+        <p class="vazio positivo" *ngIf="!bloqueados.length">Nenhum perfil bloqueado.</p>
         <ul class="linhas">
           <li *ngFor="let b of bloqueados">
             <div class="linha-texto">
@@ -140,7 +140,7 @@
         <button *ngFor="let t of tiposComMensagem" type="button" class="filtro" [class.ativo]="filtroMensagem === t" (click)="selecionarFiltroMensagem(t)">{{ rotuloTipo[t] }} <span>{{ contarTipo(t) }}</span></button>
         <button type="button" class="filtro" [class.ativo]="filtroMensagem === 'lidas'" (click)="selecionarFiltroMensagem('lidas')">Lidas</button>
       </header>
-      <p class="vazio" *ngIf="!mensagensFiltradas.length">{{ filtroMensagem === 'lidas' ? 'Nenhuma mensagem lida ainda.' : 'Nenhuma mensagem nova.' }}</p>
+      <p class="vazio" [class.positivo]="filtroMensagem !== 'lidas'" *ngIf="!mensagensFiltradas.length">{{ filtroMensagem === 'lidas' ? 'Nenhuma mensagem lida ainda.' : 'Nenhuma mensagem nova.' }}</p>
       <ul class="linhas">
         <li *ngFor="let m of mensagensFiltradas">
           <div class="linha-texto">
@@ -193,7 +193,7 @@
         <button type="button" class="filtro" [class.ativo]="verErrosResolvidos" (click)="alternarErrosResolvidos(true)">Resolvidos</button>
         <small class="dica-erros">Erros no navegador dos usuários e 500 do backend, agrupados. Se um resolvido acontecer de novo, ele reabre.</small>
       </header>
-      <p class="vazio" *ngIf="!errosVisiveis.length">{{ verErrosResolvidos ? 'Nenhum erro resolvido ainda.' : 'Nenhum erro aberto.' }}</p>
+      <p class="vazio" [class.positivo]="!verErrosResolvidos" *ngIf="!errosVisiveis.length">{{ verErrosResolvidos ? 'Nenhum erro resolvido ainda.' : 'Nenhum erro aberto.' }}</p>
       <ul class="linhas">
         <li *ngFor="let e of errosVisiveis">
           <div class="linha-texto">
@@ -229,7 +229,8 @@
 
       <ng-container *ngIf="status as dados">
         <div class="status-grid">
-          <article class="status-card" *ngFor="let cartao of cartoesDoGrupo(dados)">
+          <article class="status-card" *ngFor="let cartao of cartoesDoGrupo(dados)"
+            [class.acabou-ok]="recemTerminadas.get(cartao.tipo) === 'ok'" [class.acabou-erro]="recemTerminadas.get(cartao.tipo) === 'erro'">
             <div class="card-top">
               <div>
                 <p class="label">{{ cartao.titulo }}</p>
@@ -238,14 +239,25 @@
                   {{ textoEstado(cartao.coleta) }}
                 </strong>
               </div>
-              <button class="btn-primary pequeno" type="button" (click)="disparar(cartao.tipo)"
-                [disabled]="cartao.coleta.emExecucao || disparando !== null">
-                {{ cartao.coleta.emExecucao ? 'Rodando...' : (disparando === cartao.tipo ? 'Solicitando...' : 'Rodar agora') }}
-              </button>
+              <!-- Rodando e um ESTADO, nao um botao: antes era o mesmo botao azul do "Rodar agora", so
+                   desabilitado, e parecia clicavel. Com outra coleta rodando o botao mostra "Aguardando":
+                   a trava e uma so, e o backend ignora o disparo (ver ServicoExecucaoColeta). -->
+              <span class="estado-rodando" *ngIf="cartao.coleta.emExecucao; else botaoRodar">
+                <span class="spinner" aria-hidden="true"></span> Rodando
+              </span>
+              <ng-template #botaoRodar>
+                <button class="btn-primary pequeno" type="button" (click)="disparar(cartao.tipo)"
+                  [disabled]="disparando !== null || coletasRodando > 0"
+                  [title]="coletasRodando > 0 ? 'Outra coleta está rodando. Só uma roda por vez: tente quando ela terminar.' : ''">
+                  {{ disparando === cartao.tipo ? 'Solicitando...' : (coletasRodando > 0 ? 'Aguardando' : 'Rodar agora') }}
+                </button>
+              </ng-template>
             </div>
-            <div class="progresso" *ngIf="progresso(cartao.coleta) as p" [title]="'Estimativa pela duração da última rodada'">
-              <div class="progresso-barra"><div [style.width.%]="p"></div></div>
-              <small>~{{ p }}% (estimado pela última rodada, {{ formatarDuracao(cartao.coleta.ultimaDuracaoMs) }})</small>
+            <div class="progresso" *ngIf="barraProgresso(cartao) as barra"
+                 [class.concluida]="barra.estado === 'ok'" [class.falhou]="barra.estado === 'erro'"
+                 [title]="barra.estado === 'rodando' ? 'Estimativa pela duração da última rodada' : ''">
+              <div class="progresso-barra"><div [style.width.%]="barra.pct"></div></div>
+              <small>{{ barra.texto }}</small>
             </div>
             <dl>
               <div><dt>Última conclusão</dt><dd>{{ formatarData(cartao.coleta.ultimaConclusao) }}</dd></div>

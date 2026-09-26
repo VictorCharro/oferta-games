@@ -100,6 +100,9 @@
         <a routerLink="/configuracoes" class="dropdown-item" (click)="dropdownOpen = false">
           <img src="configuracoes.png" /> Configurações
         </a>
+        <a *ngIf="ehAdmin" routerLink="/admin/coleta" class="dropdown-item" (click)="dropdownOpen = false">
+          <img src="configuracoes.png" /> Administração
+        </a>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item danger" (click)="logout()">
           <img src="logout.png" /> Sair

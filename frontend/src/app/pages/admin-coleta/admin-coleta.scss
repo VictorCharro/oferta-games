@@ -104,6 +104,12 @@
   small { color: var(--text-muted); font-size: 12px; }
 }
 .vazio { margin: 0; padding: 18px 16px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 13px; }
+// "Nada pendente" e noticia boa: um check verde diz isso antes de ler (26/09/2026). Vazio neutro
+// ("nenhuma mensagem lida ainda") continua sem o check.
+.vazio.positivo { display: flex; align-items: center; gap: 10px; color: var(--text-secondary);
+  &::before { content: "✓"; display: grid; place-items: center; flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(74, 222, 128, 0.14); color: var(--color-green); font-size: 12px; font-weight: 700; }
+}
 .linhas { margin: 0; padding: 0; list-style: none;
   li { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 14px 16px; border-top: 1px solid var(--border-color); }
 }
@@ -209,7 +215,41 @@
   small { display: block; margin-top: 6px; color: var(--text-muted); font-size: 11px; }
 }
 .progresso-barra { height: 5px; border-radius: 5px; background: var(--bg-card-hover); overflow: hidden;
-  div { height: 100%; border-radius: 5px; background: var(--color-purple); transition: width .6s ease; }
+  div { height: 100%; border-radius: 5px; background: var(--color-purple); transition: width .6s ease, background var(--dur-lento); }
+}
+
+// Acabou de terminar (ver AdminColeta.barraProgresso): a mesma barra anda ate 100% e troca de cor.
+.progresso.concluida { .progresso-barra div { background: var(--color-green); } small { color: var(--color-green); font-weight: 600; } }
+.progresso.falhou { .progresso-barra div { background: var(--color-red); } small { color: var(--color-red); font-weight: 600; } }
+
+// O card pisca uma vez na cor do resultado.
+.status-card { transition: border-color var(--dur-lento); }
+.status-card.acabou-ok { animation: card-terminou-ok 1.8s var(--curva-entrada); }
+.status-card.acabou-erro { animation: card-terminou-erro 1.8s var(--curva-entrada); }
+
+@keyframes card-terminou-ok {
+  0%, 40% { border-color: var(--color-green); box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18); }
+  100% { border-color: var(--border-color); box-shadow: none; }
+}
+
+@keyframes card-terminou-erro {
+  0%, 40% { border-color: var(--color-red); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
+  100% { border-color: var(--border-color); box-shadow: none; }
+}
+
+// Rodando e estado, nao botao: fundo neutro com spinner, na mesma altura do "Rodar agora".
+.estado-rodando {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid rgba(41, 168, 224, 0.35);
+  border-radius: 8px;
+  background: rgba(41, 168, 224, 0.08);
+  color: var(--color-purple);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 18px 0 0;
   div { border-top: 1px solid var(--border-color); padding-top: 10px; }

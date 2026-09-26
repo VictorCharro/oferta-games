@@ -134,6 +134,7 @@ export class AdminColeta implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destruido = true;
     for (const t of [this.atualizador, this.flashTimer, this.buscaTimer]) if (t) clearTimeout(t);
+    this.timersTermino.forEach(t => clearTimeout(t));
     this.urlsAnexos.forEach(url => URL.revokeObjectURL(url));
   }
 
@@ -167,7 +168,7 @@ export class AdminColeta implements OnInit, OnDestroy {
       this.administracao.listarMensagensContato(),
       this.administracao.listarErros(),
     ]);
-    if (status.status === 'fulfilled') this.status = status.value;
+    if (status.status === 'fulfilled') this.aplicarStatus(status.value);
     if (denuncias.status === 'fulfilled') this.denuncias = denuncias.value;
     if (mensagens.status === 'fulfilled') this.mensagens = mensagens.value;
     if (erros.status === 'fulfilled') this.erros = erros.value;
@@ -183,7 +184,7 @@ export class AdminColeta implements OnInit, OnDestroy {
 
   private async carregarStatus() {
     try {
-      this.status = await this.administracao.consultarColeta();
+      this.aplicarStatus(await this.administracao.consultarColeta());
       this.atualizadoEm = new Date();
     } catch { /* o proximo ciclo tenta de novo; erro persistente aparece no Atualizar manual */ }
     this.cdr.detectChanges();
@@ -503,6 +504,47 @@ export class AdminColeta implements OnInit, OnDestroy {
    * Progresso estimado pela duracao da ultima rodada (o backend nao sabe quanto falta). Trava em 95%
    * pra nao parecer concluido quando a rodada atual demora mais que a anterior.
    */
+  /**
+   * Coletas que acabaram de terminar entre uma atualizacao e outra (tipo -> resultado), so pelo tempo
+   * do destaque no card (26/09/2026). Antes, ao terminar, a barra sumia no meio (~70%) e o card
+   * trocava de texto de uma vez: nao dava pra perceber que tinha acabado, nem se deu certo.
+   */
+  recemTerminadas = new Map<TipoColeta, 'ok' | 'erro'>();
+  private timersTermino = new Map<TipoColeta, ReturnType<typeof setTimeout>>();
+
+  /** Troca o status comparando com o anterior: quem rodava e parou de rodar acabou de terminar. */
+  private aplicarStatus(novo: StatusAdministrativoColeta) {
+    const anterior = this.status;
+    this.status = novo;
+    if (!anterior) return;
+    const rodavam = new Set(this.todasColetas(anterior).filter(c => c.coleta.emExecucao).map(c => c.tipo));
+    for (const c of this.todasColetas(novo)) {
+      if (rodavam.has(c.tipo) && !c.coleta.emExecucao) this.marcarTermino(c.tipo, c.coleta.ultimoErro ? 'erro' : 'ok');
+    }
+  }
+
+  private marcarTermino(tipo: TipoColeta, resultado: 'ok' | 'erro') {
+    clearTimeout(this.timersTermino.get(tipo));
+    this.recemTerminadas.set(tipo, resultado);
+    this.timersTermino.set(tipo, setTimeout(() => {
+      this.recemTerminadas.delete(tipo);
+      this.timersTermino.delete(tipo);
+      if (!this.destruido) this.cdr.detectChanges();
+    }, 2500));
+  }
+
+  /**
+   * Barra do card: uma so pra "rodando" e "acabou de terminar", de proposito. Sendo o mesmo elemento,
+   * ela ANDA do ultimo valor ate 100% (transicao de width) em vez de sumir e reaparecer cheia.
+   */
+  barraProgresso(cartao: CartaoColeta): { pct: number; estado: 'rodando' | 'ok' | 'erro'; texto: string } | null {
+    const terminou = this.recemTerminadas.get(cartao.tipo);
+    if (terminou) return { pct: 100, estado: terminou, texto: terminou === 'ok' ? 'Concluída' : 'Falhou' };
+    const p = this.progresso(cartao.coleta);
+    if (p == null) return null;
+    return { pct: p, estado: 'rodando', texto: `~${p}% (estimado pela última rodada, ${this.formatarDuracao(cartao.coleta.ultimaDuracaoMs)})` };
+  }
+
   progresso(c: StatusColeta): number | null {
     if (!c.emExecucao || c.duracaoAtualMs == null || !c.ultimaDuracaoMs) return null;
     return Math.min(95, Math.round((c.duracaoAtualMs / c.ultimaDuracaoMs) * 100));
