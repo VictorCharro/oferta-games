@@ -6,7 +6,7 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
-import { AuthService } from '../../services/auth';
+import { AuthService, CHAVE_AVATAR_PERSONALIZADO } from '../../services/auth';
 import { ColecaoPerfil, ConquistaRecente, PerfilBloco, PerfilPublico, PerfisService } from '../../services/perfis';
 import { TIPOS_COM_VISUALIZACAO, TIPOS_UNICOS, ajusteImagemDoBloco, blocosPadrao, novoBloco, visualizacaoDoBloco } from '../../services/perfil-blocos';
 import { ColecoesPerfilService } from '../../services/colecoes-perfil';
@@ -1582,7 +1582,8 @@ export class PublicProfile implements OnInit, OnDestroy {
     const { data } = supabase.storage.from('avatars').getPublicUrl(caminho);
     const avatarUrl = `${data.publicUrl}?v=${Date.now()}`;
     const metadata = this.auth.user.user_metadata ?? {};
-    const { error: erroAuth } = await supabase.auth.updateUser({ data: { ...metadata, avatar_url: avatarUrl } });
+    // Chave propria, nunca avatar_url: essa o login pelo Google sobrescreve (ver CHAVE_AVATAR_PERSONALIZADO).
+    const { error: erroAuth } = await supabase.auth.updateUser({ data: { ...metadata, [CHAVE_AVATAR_PERSONALIZADO]: avatarUrl } });
     if (erroAuth) { this.message = 'Não foi possível salvar a foto.'; this.cdr.detectChanges(); return; }
 
     try {
