@@ -34,6 +34,10 @@
   // position:fixed, quebrando o calculo de posicao do popover (ele e fixed exatamente pra escapar
   // do overflow do carrossel).
   &:hover { border-color: var(--color-purple); }
+
+  // Meta atingida: borda verde fixa, pra achar de relance na lista quais jogos ja chegaram.
+  // So cor, sem transform (ver acima).
+  &.meta-atingida { border-color: rgba(74, 222, 128, 0.45); }
 }
 
 .monitor-cover {
@@ -242,10 +246,13 @@
   gap: 5px;
   font-size: 12px;
   font-weight: 600;
-  color: #e35d5d;
+  color: var(--text-secondary);
+
+  &.perto { color: var(--color-yellow); }
 
   &.reached {
     color: var(--color-green);
+    animation: meta-texto-pop var(--dur-lento) var(--curva-entrada) 0.5s both;
   }
 }
 
@@ -266,12 +273,36 @@
 .monitor-progress-bar {
   height: 100%;
   border-radius: 999px;
-  background: #e35d5d;
-  transition: width var(--dur-lento);
+  background: var(--color-purple);
+  // Enche do zero ao aparecer (scaleX, e nao width, pra nao brigar com o width real vindo do
+  // template). Depois disso, mudanca de meta ou de preco anima pela transicao de width.
+  transform-origin: left center;
+  animation: meta-barra-encher 0.8s var(--curva-entrada);
+  transition: width var(--dur-lento), background var(--dur-lento);
 
+  &.perto { background: var(--color-yellow); }
+
+  // Atingida: depois de encher, um brilho unico passa pela barra.
   &.reached {
     background: var(--color-green);
+    animation: meta-barra-encher 0.8s var(--curva-entrada), meta-brilho 1.2s ease-out 0.8s;
   }
+}
+
+@keyframes meta-barra-encher {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes meta-brilho {
+  0% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); filter: brightness(1); }
+  35% { box-shadow: 0 0 12px rgba(74, 222, 128, 0.8); filter: brightness(1.35); }
+  100% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); filter: brightness(1); }
+}
+
+@keyframes meta-texto-pop {
+  0% { opacity: 0; scale: 0.85; }
+  100% { opacity: 1; scale: 1; }
 }
 
 .monitor-progress-pct {

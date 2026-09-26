@@ -56,6 +56,10 @@ export class Home implements OnInit, OnDestroy {
   private favSub!: Subscription;
   private autoplayTimer?: ReturnType<typeof setInterval>;
   private readonly autoplayIntervalMs = 6000;
+  /** Duracao da barra de progresso do ponto ativo; sai do mesmo numero do timer, nunca separado. */
+  readonly intervaloAutoplayCss = `${this.autoplayIntervalMs}ms`;
+  /** Conta os reinicios do timer (ver .ciclo-par em home.html). */
+  cicloAutoplay = 0;
 
   constructor(
     private gameService: GameService,
@@ -258,14 +262,20 @@ export class Home implements OnInit, OnDestroy {
   private startAutoplay() {
     this.stopAutoplay();
     if (!this.navegador || this.featuredDeals.length <= 1) return;
-    // Quem pediu "reduzir movimento" no sistema nao ve o banner trocar sozinho: o CSS global so
-    // zera transicoes, e este timer e JS. As setas, os pontos e o arrastar continuam funcionando.
+    // Quem pediu "reduzir movimento" no sistema nao ve o banner trocar sozinho: a regra global de
+    // CSS so alcanca animacao de CSS, e este timer e JS. As setas, os pontos e o arrastar continuam.
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    this.cicloAutoplay++;
     this.autoplayTimer = setInterval(() => {
       this.featuredIndex = (this.featuredIndex + 1) % this.featuredDeals.length;
       this.carregarHistoricoSlideAtual();
       this.cdr.detectChanges();
     }, this.autoplayIntervalMs);
+  }
+
+  /** O banner esta trocando sozinho agora (false: pausado pelo mouse, aba oculta ou reduzir movimento). */
+  get autoplayRodando(): boolean {
+    return this.autoplayTimer != null;
   }
 
   temHistoricoParaChart(slug: string): boolean {

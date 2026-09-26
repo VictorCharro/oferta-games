@@ -9,7 +9,7 @@
 
   <!-- Banner principal / carrossel -->
   <div class="banner" *ngIf="featuredDeals.length" (mouseenter)="pausarAutoplay()" (mouseleave)="retomarAutoplay()">
-    <button class="banner-nav prev" (click)="prevFeatured()">‹</button>
+    <button type="button" class="banner-nav prev" (click)="prevFeatured()" aria-label="Destaque anterior">‹</button>
     <div class="banner-viewport"
          (touchstart)="onBannerTouchStart($event)"
          (touchmove)="onBannerTouchMove($event)"
@@ -46,11 +46,17 @@
         </a>
       </div>
     </div>
-    <button class="banner-nav next" (click)="nextFeatured()">›</button>
-    <div class="banner-dots">
-      <span *ngFor="let d of featuredDeals; let i = index"
-            class="dot" [class.active]="i === featuredIndex"
-            (click)="goToFeatured(i)"></span>
+    <button type="button" class="banner-nav next" (click)="nextFeatured()" aria-label="Próximo destaque">›</button>
+    <!-- O ponto ativo enche durante o intervalo do autoplay (ver .dot-progresso em home.scss).
+         ciclo-par alterna o nome da animacao a cada reinicio do timer, o que obriga o navegador a
+         recomecar a barra do zero junto com ele. -->
+    <div class="banner-dots" [class.rodando]="autoplayRodando" [class.ciclo-par]="cicloAutoplay % 2 === 0"
+         [style.--banner-intervalo]="intervaloAutoplayCss">
+      <button type="button" *ngFor="let d of featuredDeals; let i = index"
+              class="dot" [class.active]="i === featuredIndex"
+              [attr.aria-label]="'Ir para o destaque ' + (i + 1) + ': ' + d.title"
+              [attr.aria-current]="i === featuredIndex ? 'true' : null"
+              (click)="goToFeatured(i)"><span class="dot-progresso" aria-hidden="true"></span></button>
     </div>
   </div>
 

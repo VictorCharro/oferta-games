@@ -81,6 +81,7 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
+    animation-delay: 0s !important; // senao um atraso de entrada escondia o conteudo mesmo sem animar
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
   }

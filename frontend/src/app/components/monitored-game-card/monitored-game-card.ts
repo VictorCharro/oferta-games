@@ -72,7 +72,20 @@ export class MonitoredGameCard implements OnDestroy {
     if (this.game.targetPrice == null) return 0;
     const atual = this.precoAtual();
     if (atual <= 0) return 100;
-    return Math.max(0, Math.min(100, Math.round((Number(this.game.targetPrice) / atual) * 100)));
+    const pct = Math.max(0, Math.min(100, Math.round((Number(this.game.targetPrice) / atual) * 100)));
+    // Sem este teto, preco 0,4% acima da meta arredondava pra 100% e a barra ficava cheia com a
+    // meta ainda nao atingida. So mostra 100 quando e verdade.
+    return this.metaAtingida ? pct : Math.min(pct, 99);
+  }
+
+  /**
+   * Faixa de proximidade da meta, que decide a cor da barra e do texto (26/09/2026). Antes a barra
+   * era sempre vermelha ate atingir, o que parecia erro. Longe = cor da marca, perto (70%+) = ambar,
+   * atingida = verde.
+   */
+  get faixaMeta(): 'longe' | 'perto' | 'atingida' {
+    if (this.metaAtingida) return 'atingida';
+    return this.progressoPct >= 70 ? 'perto' : 'longe';
   }
 
   abrirMenuMeta(event: Event) {

@@ -194,17 +194,45 @@
     display: flex;
     gap: 8px;
 
+    // Botao (teclado e leitor de tela), com o visual de antes. O ponto ativo vira uma pilula.
     .dot {
+      position: relative;
       width: 8px;
       height: 8px;
-      border-radius: 50%;
+      padding: 0;
+      border: 0;
+      border-radius: 999px;
       background: var(--border-color);
       cursor: pointer;
-      transition: background var(--dur-medio);
-      &.active { background: var(--color-purple); }
+      transition: background var(--dur-medio), width var(--dur-lento) var(--curva-entrada);
+      // Area de toque maior que o ponto visivel (8px e pequeno demais pro dedo).
+      &::after { content: ''; position: absolute; inset: -8px -4px; }
+      &:focus-visible { outline: 2px solid var(--color-purple); outline-offset: 3px; }
+      &.active { width: 24px; background: var(--color-purple); }
     }
+
+    // Enchimento do ponto ativo. So aparece com o autoplay rodando: pausado (mouse em cima, aba
+    // oculta, reduzir movimento) o ponto fica cheio e parado, sem prometer uma troca que nao vem.
+    .dot-progresso {
+      position: absolute;
+      inset: 0;
+      width: 0;
+      border-radius: inherit;
+      background: var(--color-purple);
+    }
+
+    &.rodando .dot.active {
+      background: rgba(41, 168, 224, 0.3);
+      .dot-progresso { animation: banner-progresso-a var(--banner-intervalo, 6s) linear forwards; }
+    }
+    &.rodando.ciclo-par .dot.active .dot-progresso { animation-name: banner-progresso-b; }
   }
 }
+
+// Duas copias identicas de proposito: trocar o nome da animacao e o que faz o navegador
+// recomecar do zero quando o timer reinicia (clique num ponto, mouse saindo do banner).
+@keyframes banner-progresso-a { from { width: 0; } to { width: 100%; } }
+@keyframes banner-progresso-b { from { width: 0; } to { width: 100%; } }
 
 // Capa 320 + texto 300 (cabe o preco com desconto e o riscado) + grafico no minimo 220 + 2 vaos de
 // 32 = 904px de conteudo. Abaixo disso o grafico sai e o texto fica com o espaco.

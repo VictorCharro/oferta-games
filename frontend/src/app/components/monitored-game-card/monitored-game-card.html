@@ -1,4 +1,4 @@
-<a class="monitor-card" [routerLink]="['/jogo', game.slug]">
+<a class="monitor-card" [routerLink]="['/jogo', game.slug]" [class.meta-atingida]="metaAtingida">
   <div class="monitor-cover">
     <img appFadeImagem [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" loading="lazy" decoding="async" (error)="capaIndisponivel($event)" />
     <button
@@ -51,14 +51,14 @@
     <button type="button" class="monitor-set-goal" *ngIf="game.targetPrice == null" (click)="abrirMenuMeta($event)">Toque para definir uma meta de preço</button>
     <ng-container *ngIf="game.targetPrice != null">
       <span class="monitor-target">Meta: {{ formatPrice(game.targetPrice) }}</span>
-      <span class="monitor-diff" [class.reached]="metaAtingida">
+      <span class="monitor-diff" [class.reached]="metaAtingida" [class.perto]="faixaMeta === 'perto'">
         <span aria-hidden="true">{{ metaAtingida ? '✓' : '↑' }}</span>
         <ng-container *ngIf="metaAtingida; else acimaMeta">Meta atingida!</ng-container>
         <ng-template #acimaMeta>{{ formatPrice(diferencaMeta) }} acima da meta</ng-template>
       </span>
       <div class="monitor-progress">
         <div class="monitor-progress-track">
-          <div class="monitor-progress-bar" [class.reached]="metaAtingida" [style.width.%]="progressoPct"></div>
+          <div class="monitor-progress-bar" [class.reached]="metaAtingida" [class.perto]="faixaMeta === 'perto'" [style.width.%]="progressoPct"></div>
         </div>
         <span class="monitor-progress-pct">{{ progressoPct }}%</span>
       </div>
