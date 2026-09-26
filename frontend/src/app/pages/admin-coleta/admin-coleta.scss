@@ -14,7 +14,7 @@
 .refresh { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 130px; }
 .spinner { width: 14px; height: 14px; border: 2px solid var(--border-color); border-top-color: var(--color-purple); border-radius: 50%; animation: girar .7s linear infinite; }
 @keyframes girar { to { transform: rotate(360deg); } }
-.atualizado-em { color: var(--text-muted); font-size: 11px; transition: color .2s; &.flash { color: var(--color-green); font-weight: 600; } }
+.atualizado-em { color: var(--text-muted); font-size: 11px; transition: color var(--dur-medio); &.flash { color: var(--color-green); font-weight: 600; } }
 
 .message { margin-bottom: 16px; padding: 11px 14px; border-radius: 6px; font-size: 13px;
   &.success { color: var(--color-green); background: rgba(74, 222, 128, .08); border: 1px solid rgba(74, 222, 128, .2); }
@@ -36,7 +36,7 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color .15s, background .15s;
+  transition: border-color var(--dur-rapido), background var(--dur-rapido);
   &:hover { border-color: var(--color-purple); background: var(--bg-card-hover); }
   span { color: var(--text-secondary); font-size: 12px; }
   strong { font-size: 26px; line-height: 1.1; color: var(--text-primary);
@@ -49,6 +49,7 @@
 
 // ---------- Abas ----------
 .admin-tabs {
+  --aba-indicador-recuo: 8px; // indicador deslizante (AbasDeslizantes), mesmo recuo do sublinhado antigo
   display: flex;
   gap: 4px;
   padding: 0 8px;

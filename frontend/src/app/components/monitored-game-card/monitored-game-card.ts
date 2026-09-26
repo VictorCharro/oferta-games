@@ -5,6 +5,8 @@ import { AuthService } from '../../services/auth';
 import { storeBrand } from '../../services/store-brand';
 import { irParaLogin } from '../../services/ir-para-login';
 import { trocarPorCapaPadrao } from '../../services/capa';
+import { AvisosService } from '../../services/avisos';
+import { mensagemMeta } from '../../services/mensagem-monitoramento';
 
 /** Card monitorado com edicao de meta; mantem o formulario aberto quando a escrita falha. */
 @Component({
@@ -22,7 +24,6 @@ export class MonitoredGameCard implements OnDestroy {
   menuMetaAberto = false;
   metaPrecoInput = '';
   salvandoMeta = false;
-  erroMonitoramento = '';
   // Posicao calculada em pixels de viewport (position: fixed) - o card fica dentro de uma
   // faixa com scroll horizontal (`.monitor-row`, overflow-x: auto), que por causa da regra do
   // CSS de so poder cortar 1 eixo acaba virando overflow-y: auto tambem e cortaria um popover
@@ -37,7 +38,8 @@ export class MonitoredGameCard implements OnDestroy {
     private auth: AuthService,
     private router: Router,
     private el: ElementRef<HTMLElement>,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private avisos: AvisosService
   ) {}
 
   ngOnDestroy() {
@@ -149,10 +151,11 @@ export class MonitoredGameCard implements OnDestroy {
     this.cdr.detectChanges();
     try {
       await this.favoritesService.add(this.game.slug, targetPrice);
-      this.erroMonitoramento = '';
       this.fecharMenuMeta();
+      // Este card so existe pra jogo ja monitorado: salvar aqui e sempre edicao de meta.
+      this.avisos.sucesso(mensagemMeta(this.game.title, true, targetPrice));
     } catch {
-      this.erroMonitoramento = 'Não foi possível salvar a meta. Tente novamente.';
+      this.avisos.erro('Não foi possível salvar a meta. Tente novamente.');
     } finally {
       this.salvandoMeta = false;
       this.cdr.detectChanges();
@@ -166,11 +169,12 @@ export class MonitoredGameCard implements OnDestroy {
     this.salvandoMeta = true;
     this.cdr.detectChanges();
     try {
+      const titulo = this.game.title;
       await this.favoritesService.remove(this.game.slug);
-      this.erroMonitoramento = '';
       this.fecharMenuMeta();
+      this.avisos.info(`${titulo} não está mais sendo monitorado.`);
     } catch {
-      this.erroMonitoramento = 'Não foi possível remover o monitoramento. Tente novamente.';
+      this.avisos.erro('Não foi possível remover o monitoramento. Tente novamente.');
     } finally {
       this.salvandoMeta = false;
       this.cdr.detectChanges();

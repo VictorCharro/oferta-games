@@ -31,7 +31,7 @@
     />
     <!-- So visivel em mobile, com a busca aberta — fecha e volta a mostrar hamburguer/logo/acoes. -->
     <button type="button" class="search-close-btn" (click)="fecharBuscaMobile()" aria-label="Fechar busca">✕</button>
-    <div class="search-suggestions" *ngIf="showSuggestions">
+    <div class="search-suggestions" *ngIf="showSuggestions" animate.enter="menu-entrar" animate.leave="menu-sair">
       <a *ngFor="let g of suggestions" class="suggestion-item" [routerLink]="['/jogo', g.slug]" (click)="closeSuggestions()">
         <img [src]="g.coverUrl || 'no-cover.svg'" [alt]="g.title" />
         <div class="suggestion-info">
@@ -52,7 +52,7 @@
         <img src="notificacao.png" alt="" />
         <span class="notification-badge" *ngIf="unreadNotifications">{{ unreadNotifications > 9 ? '9+' : unreadNotifications }}</span>
       </button>
-      <div class="notifications-panel" *ngIf="notificationsOpen">
+      <div class="notifications-panel" *ngIf="notificationsOpen" animate.enter="menu-entrar" animate.leave="menu-sair">
         <div class="notifications-heading"><strong>Notificações</strong><button type="button" *ngIf="unreadNotifications" (click)="markAllNotificationsRead()">Marcar todas como lidas</button></div>
         <div class="notification-list" *ngIf="notifications.length || respostasNaoLidas.length; else noNotifications">
           <!-- Respostas do Fale conosco: somem daqui depois de lidas (continuam em /contato). -->
@@ -93,7 +93,7 @@
           <span class="avatar-name">{{ auth.displayName }}</span>
         </div>
       </div>
-      <div class="dropdown" *ngIf="dropdownOpen">
+      <div class="dropdown" *ngIf="dropdownOpen" animate.enter="menu-entrar" animate.leave="menu-sair">
         <button type="button" class="dropdown-item" (click)="abrirPerfil()">
           <img src="perfil.png" /> Perfil
         </button>

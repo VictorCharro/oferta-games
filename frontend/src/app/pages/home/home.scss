@@ -9,6 +9,10 @@
   display: flex;
   align-items: center;
   overflow: hidden;
+  // O grafico some pela largura do PROPRIO banner (ver @container abaixo), nao pela da tela: a
+  // regra antiga (@media max-width 1100px) ignorava a barra lateral de 220px, e entre 1100 e ~1360px
+  // de tela o texto ficava com ~110px e o preco invadia o grafico.
+  container: banner / inline-size;
 
   .banner-viewport {
     width: 100%;
@@ -75,7 +79,8 @@
   .banner-price {
     display: flex;
     align-items: center;
-    gap: 10px;
+    flex-wrap: wrap; // tela estreita: o preco riscado desce de linha em vez de ser cortado
+    gap: 4px 10px;
     font-size: 22px;
   }
 
@@ -136,9 +141,11 @@
   }
 
   .banner-chart {
-    flex: 0 0 300px;
+    // Encolhe ate 220px antes de sumir, em vez de ficar travado em 300px. Sem margem a direita: o
+    // espaco da seta ja e reservado pelo padding do .banner.
+    flex: 0 1 300px;
+    min-width: 220px;
     align-self: flex-start;
-    margin-right: 48px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -169,7 +176,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: border-color 0.2s, color 0.2s;
+    transition: border-color var(--dur-medio), color var(--dur-medio);
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -193,14 +200,23 @@
       border-radius: 50%;
       background: var(--border-color);
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background var(--dur-medio);
       &.active { background: var(--color-purple); }
     }
   }
 }
 
-@media (max-width: 1100px) {
-  .banner .banner-chart { display: none; }
+// Capa 320 + texto 300 (cabe o preco com desconto e o riscado) + grafico no minimo 220 + 2 vaos de
+// 32 = 904px de conteudo. Abaixo disso o grafico sai e o texto fica com o espaco.
+@container banner (max-width: 903px) {
+  .banner .banner-chart { display: none; } // mesmo peso da regra que o mostra (aninhada em .banner)
+}
+
+// Com o grafico na tela, o texto reivindica seus 300px e quem cede espaco e o grafico (ate 220).
+// Sem este minimo o texto tem base 0 (flex: 1) e e ele que encolhe: em 1366px ficava com 246px
+// enquanto o grafico seguia com 300. So vale nessa faixa; no celular o banner empilha.
+@container banner (min-width: 904px) {
+  .banner .banner-info { min-width: 300px; }
 }
 
 @media (max-width: 768px) {
@@ -309,7 +325,3 @@
   .deal-card { flex-basis: 132px; &.skeleton { min-height: 145px; } }
 }
 
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}

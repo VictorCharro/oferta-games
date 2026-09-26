@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color var(--dur-medio), color var(--dur-medio);
   cursor: pointer;
   &:hover { border-color: var(--color-purple); color: var(--color-purple); }
   &.prev { margin-right: 8px; }
@@ -38,7 +38,7 @@
   border-radius: var(--border-radius);
   overflow: hidden;
   border: 1px solid var(--border-color);
-  transition: transform 0.2s, border-color 0.2s;
+  transition: transform var(--dur-medio), border-color var(--dur-medio);
   cursor: pointer;
 
   &:hover { transform: translateY(-4px); border-color: var(--color-purple); }

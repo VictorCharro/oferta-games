@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef, afterNextRender, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -30,21 +30,40 @@ import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-
 import { SITE_URL, SeoService } from '../../services/seo';
 import { StatusResposta } from '../../services/status-resposta';
 import { irParaLogin } from '../../services/ir-para-login';
+import { AvisosService } from '../../services/avisos';
+import { mensagemMeta } from '../../services/mensagem-monitoramento';
+import { MudancaOferta, compararOfertas } from './comparar-ofertas';
+import { AbasDeslizantes } from '../../diretivas/abas-deslizantes';
+import { EntradaAnimada } from '../../diretivas/entrada-animada';
 
 @Component({
   selector: 'app-game-detail',
-  imports: [CommonModule, FormsModule, RouterModule, GameCard, PriceHistoryChart],
+  imports: [CommonModule, FormsModule, RouterModule, GameCard, PriceHistoryChart, AbasDeslizantes, EntradaAnimada],
   templateUrl: './game-detail.html',
   styleUrl: './game-detail.scss',
 })
 export class GameDetail implements OnInit, OnDestroy {
+  /**
+   * O conteudo da aba so entra com fade DEPOIS da primeira renderizacao no navegador. Sem isto o
+   * conteudo que ja veio pronto do servidor sumia e reaparecia a cada carregamento de pagina. Toda
+   * troca de aba depois disso (clique na aba, "Ver todos", etc.) anima. afterNextRender nao roda no SSR.
+   */
+  animarTrocaDeAba = false;
+  private readonly ligarAnimacaoDeAba = afterNextRender(() => { this.animarTrocaDeAba = true; });
   game: GameDetailModel | null = null;
   loading = true;
   /** A API falhou (nao foi 404): a tela diz "tente de novo" e o SSR responde 503, nao 404. */
   falhaCarregamento = false;
   private readonly statusResposta = inject(StatusResposta);
   refreshing = false;
-  refreshMsg = '';
+  /**
+   * O que mudou em cada loja no ultimo "Atualizar preços" (ver compararOfertas). Fica preenchido so
+   * o tempo da animacao de destaque da linha; depois volta a vazio.
+   */
+  mudancasOfertas = new Map<string, MudancaOferta>();
+  /** O menor preco da pagina baixou no ultimo "Atualizar preços": o preco do topo pisca. */
+  melhorPrecoCaiu = false;
+  private timerMudancas?: ReturnType<typeof setTimeout>;
   cooldownSegundos = 0;
   private cooldownInterval?: ReturnType<typeof setInterval>;
   activeTab: 'precos' | 'sobre' | 'review' | 'conquistas' = 'precos';
@@ -106,7 +125,8 @@ export class GameDetail implements OnInit, OnDestroy {
     private reviewsService: GameReviewsService,
     private auth: AuthService,
     private cdr: ChangeDetectorRef,
-    private seo: SeoService
+    private seo: SeoService,
+    private avisos: AvisosService
   ) {}
 
   // A capa acompanha a altura do cartao de ficha tecnica (medida em runtime, ja que o conteudo do
@@ -230,7 +250,7 @@ export class GameDetail implements OnInit, OnDestroy {
         this.loading = true;
         this.falhaCarregamento = false;
         this.refreshing = false;
-        this.refreshMsg = '';
+        this.limparMudancas();
         this.pararCooldown();
         this.activeTab = 'precos';
         this.subTabReview = 'steam';
@@ -288,6 +308,7 @@ export class GameDetail implements OnInit, OnDestroy {
     this.profileFavoriteSub?.unsubscribe();
     this.hls?.destroy();
     if (this.cooldownInterval) clearInterval(this.cooldownInterval);
+    clearTimeout(this.timerMudancas);
     this.seo.reset();
   }
 
@@ -689,13 +710,15 @@ export class GameDetail implements OnInit, OnDestroy {
     const targetPrice = valor ? Number(valor) : null;
     if (valor && (isNaN(targetPrice!) || targetPrice! < 0)) return;
 
+    const jaMonitorava = this.monitoring;
+    const titulo = this.game.title;
     this.salvandoMeta = true;
     try {
       await this.favoritesService.add(this.game.slug, targetPrice);
-      this.erroMonitoramento = '';
       this.fecharMenuMeta();
+      this.avisos.sucesso(mensagemMeta(titulo, jaMonitorava, targetPrice));
     } catch {
-      this.erroMonitoramento = 'Não foi possível salvar o monitoramento. Tente novamente.';
+      this.avisos.erro('Não foi possível salvar o monitoramento. Tente novamente.');
     } finally {
       this.salvandoMeta = false;
       this.cdr.detectChanges();
@@ -707,17 +730,15 @@ export class GameDetail implements OnInit, OnDestroy {
     this.salvandoMeta = true;
     try {
       await this.favoritesService.remove(this.game.slug);
-      this.erroMonitoramento = '';
       this.fecharMenuMeta();
+      this.avisos.info(`${this.game.title} não está mais sendo monitorado.`);
     } catch {
-      this.erroMonitoramento = 'Não foi possível remover o monitoramento. Tente novamente.';
+      this.avisos.erro('Não foi possível remover o monitoramento. Tente novamente.');
     } finally {
       this.salvandoMeta = false;
       this.cdr.detectChanges();
     }
   }
-
-  erroMonitoramento = '';
 
   get personalFavorite(): boolean {
     return this.game ? this.profileFavoritesService.isFavorite(this.game.slug) : false;
@@ -824,34 +845,70 @@ export class GameDetail implements OnInit, OnDestroy {
   // pelo 429. O botao mostra a contagem regressiva em vez de uma mensagem separada embaixo.
   private static readonly COOLDOWN_PADRAO_SEGUNDOS = 300;
 
+  /**
+   * "Atualizar preços". O botao so para de girar quando os precos NOVOS ja estao na tela: antes a
+   * mensagem "Ofertas atualizadas" aparecia assim que o backend respondia, com a tabela ainda
+   * antiga, e ficava la pra sempre. Agora as linhas que mudaram piscam e um aviso resume o que
+   * aconteceu (ou diz que nada mudou, pra pessoa saber que o botao funcionou).
+   */
   refresh() {
     if (!this.game || this.refreshing || this.cooldownSegundos > 0) return;
     this.refreshing = true;
-    this.refreshMsg = '';
+    this.limparMudancas();
     this.cdr.detectChanges();
     const slug = this.game.slug;
+    const antes = this.game.offers;
     this.gameService.refreshGame(slug).subscribe({
-      next: (res) => {
-        this.refreshMsg = 'Ofertas atualizadas';
-        this.refreshing = false;
+      next: () => {
         this.iniciarCooldown(GameDetail.COOLDOWN_PADRAO_SEGUNDOS);
-        this.cdr.detectChanges();
         this.gameService.getGame(slug).subscribe({
-          next: (d) => { this.game = d; this.cdr.detectChanges(); },
-          error: () => {}
+          next: (d) => {
+            const comparacao = compararOfertas(antes, d.offers);
+            this.game = d;
+            this.refreshing = false;
+            this.mostrarMudancas(comparacao.porLoja, comparacao.melhorPrecoCaiu);
+            if (comparacao.houveMudanca) this.avisos.sucesso(comparacao.resumo);
+            else this.avisos.info(comparacao.resumo);
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            // O backend atualizou, so a releitura falhou: nao da pra mostrar o que mudou.
+            this.refreshing = false;
+            this.avisos.info('Preços atualizados. Recarregue a página pra ver os valores novos.');
+            this.cdr.detectChanges();
+          },
         });
         this.carregarHistoricoPrecos(slug);
       },
       error: (erro: HttpErrorResponse) => {
         this.refreshing = false;
         if (erro.status === 429) {
+          // O proprio botao mostra a contagem regressiva; aviso aqui seria redundante.
           this.iniciarCooldown(erro.error?.segundosRestantes ?? GameDetail.COOLDOWN_PADRAO_SEGUNDOS);
         } else {
-          this.refreshMsg = 'Erro ao atualizar. Tente novamente.';
+          this.avisos.erro('Não foi possível atualizar os preços. Tente novamente.');
         }
         this.cdr.detectChanges();
       }
     });
+  }
+
+  mudancaDaOferta(loja: string): MudancaOferta | undefined {
+    return this.mudancasOfertas.get(loja);
+  }
+
+  private mostrarMudancas(porLoja: Map<string, MudancaOferta>, melhorPrecoCaiu: boolean) {
+    clearTimeout(this.timerMudancas);
+    this.mudancasOfertas = porLoja;
+    this.melhorPrecoCaiu = melhorPrecoCaiu;
+    // Um pouco mais que a animacao oferta-destaque em game-detail.scss (1.6s).
+    this.timerMudancas = setTimeout(() => { this.limparMudancas(); this.cdr.detectChanges(); }, 1800);
+  }
+
+  private limparMudancas() {
+    clearTimeout(this.timerMudancas);
+    this.mudancasOfertas = new Map();
+    this.melhorPrecoCaiu = false;
   }
 
   private iniciarCooldown(segundos: number) {

@@ -27,7 +27,7 @@
 
   <div class="nav-label">BIBLIOTECA</div>
   <nav class="nav-section" (click)="menuMobile.close()">
-    <a routerLink="/monitorados" routerLinkActive="active" class="nav-item">
+    <a routerLink="/monitorados" routerLinkActive="active" class="nav-item" [class.destaque]="destacarMonitorados">
       <img class="nav-icon" src="jogos-monitorados-modo-escuro.png" alt="Jogos Monitorados" /> Jogos Monitorados
     </a>
   </nav>

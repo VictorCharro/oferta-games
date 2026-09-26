@@ -1,0 +1,11 @@
+<div class="avisos" aria-live="polite">
+  <!-- *ngFor e nao @for: o resto do site so usa *ngFor, e o @for puxaria pro pacote inicial um
+       codigo novo do Angular (~6 kB) so por causa deste componente. -->
+  <div *ngFor="let aviso of servico.avisos$ | async; trackBy: porId"
+       class="aviso" [ngClass]="'aviso-' + aviso.tipo" [class.saindo]="aviso.saindo"
+       [attr.role]="aviso.tipo === 'erro' ? 'alert' : 'status'">
+    <span class="aviso-icone" aria-hidden="true">{{ icone(aviso.tipo) }}</span>
+    <span class="aviso-texto">{{ aviso.texto }}</span>
+    <button type="button" class="aviso-fechar" (click)="servico.fechar(aviso.id)" aria-label="Fechar aviso">×</button>
+  </div>
+</div>

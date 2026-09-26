@@ -1,4 +1,3 @@
-<p *ngIf="erroMonitoramento" role="alert">{{ erroMonitoramento }}</p>
 <div class="game-detail-wrap" *ngIf="!loading && game">
 <div class="page-content" [class.medindo]="!capaCarregada">
   <div class="game-hero" [style.backgroundImage]="'url(' + (game.coverUrl || '') + ')'">
@@ -12,7 +11,7 @@
           <div class="hero-best" *ngIf="game.offers.length">
             <span class="label">Melhor preço<ng-container *ngIf="bestOffer(game.offers)?.storeName as loja"> · {{ loja }}</ng-container></span>
             <span class="hero-best-price-row">
-              <span class="price-current large">{{ formatPrice(bestPrice(game.offers)!) }}</span>
+              <span class="price-current large" [class.preco-caiu]="melhorPrecoCaiu">{{ formatPrice(bestPrice(game.offers)!) }}</span>
               <span class="price-original" *ngIf="precoAnteriorDaMelhor(game.offers) as regular">{{ formatPrice(regular) }}</span>
             </span>
             <span class="voucher-badge" *ngIf="bestOffer(game.offers)?.voucherCode as codigo" [title]="'Use o cupom ' + codigo + ' no carrinho da loja pra garantir esse preço'">Cupom {{ codigo }}</span>
@@ -29,10 +28,9 @@
           >Ver oferta<ng-container *ngIf="bestOffer(game.offers)?.storeName as loja"> na {{ loja }}</ng-container></a>
           <div class="hero-actions">
             <div class="refresh-group">
-              <button class="btn-outline refresh-btn" (click)="refresh()" [disabled]="refreshing || cooldownSegundos > 0" [class.cooldown]="cooldownSegundos > 0">
+              <button class="btn-outline refresh-btn" (click)="refresh()" [disabled]="refreshing || cooldownSegundos > 0" [class.cooldown]="cooldownSegundos > 0" [class.atualizando]="refreshing" [attr.aria-busy]="refreshing">
                 <span class="btn-icon-glyph" aria-hidden="true">↻</span><span class="btn-label-text">{{ rotuloBotaoRefresh }}</span>
               </button>
-              <span class="refresh-msg" *ngIf="refreshMsg">{{ refreshMsg }}</span>
             </div>
             <div class="detail-monitor">
               <button
@@ -143,14 +141,14 @@
     </div>
   </div>
 
-  <section class="detail-tabs">
+  <section class="detail-tabs" appAbasDeslizantes>
     <button type="button" [class.active]="activeTab === 'precos'" (click)="activeTab = 'precos'">Preços</button>
     <button type="button" *ngIf="temSobre" [class.active]="activeTab === 'sobre'" (click)="activeTab = 'sobre'">Sobre</button>
     <button type="button" *ngIf="temReview" [class.active]="activeTab === 'review'" (click)="activeTab = 'review'">Review</button>
     <button type="button" *ngIf="temConquistas" [class.active]="activeTab === 'conquistas'" (click)="activeTab = 'conquistas'">Conquistas</button>
   </section>
 
-  <div class="offers-section" *ngIf="activeTab === 'precos'">
+  <div class="offers-section" *ngIf="activeTab === 'precos'" [appEntradaAnimada]="animarTrocaDeAba">
     <div class="precos-split" [class.com-grafico]="game.offers.length">
       <div class="offers-table" *ngIf="game.offers.length; else noOffers">
         <div class="offer-header">
@@ -161,7 +159,10 @@
           <span>Preço Atual</span>
           <span></span>
         </div>
-        <a *ngFor="let offer of game.offers" class="offer-row" [href]="offer.url" target="_blank" rel="noopener">
+        <a *ngFor="let offer of game.offers" class="offer-row" [href]="offer.url" target="_blank" rel="noopener"
+           [class.preco-caiu]="mudancaDaOferta(offer.storeName) === 'caiu'"
+           [class.preco-subiu]="mudancaDaOferta(offer.storeName) === 'subiu'"
+           [class.oferta-nova]="mudancaDaOferta(offer.storeName) === 'nova'">
           <!-- Agrupador novo: em mobile (ver @media) vira uma coluna (nome em cima, cupom
                embaixo) sem precisar de hacks de "forcar quebra de linha" — e UM item flex so do
                .offer-row, o empilhamento acontece TODO por dentro dele. Em desktop e transparente
@@ -229,7 +230,7 @@
     </div>
   </div>
 
-  <div class="about-section" *ngIf="activeTab === 'sobre' && detalhes">
+  <div class="about-section" *ngIf="activeTab === 'sobre' && detalhes" [appEntradaAnimada]="animarTrocaDeAba">
     <div class="about-media">
       <div class="about-media-main">
         <ng-container *ngIf="midiaAtual as midia">
@@ -300,7 +301,7 @@
     </div>
   </div>
 
-  <div class="review-section" *ngIf="activeTab === 'review'">
+  <div class="review-section" *ngIf="activeTab === 'review'" [appEntradaAnimada]="animarTrocaDeAba">
     <div class="review-subtabs">
       <button type="button" [class.active]="subTabReview === 'steam'" (click)="trocarSubTabReview('steam')">Steam</button>
       <button type="button" [class.active]="subTabReview === 'ofertagames'" (click)="trocarSubTabReview('ofertagames')">Oferta Games</button>
@@ -523,7 +524,7 @@
     </div>
   </div>
 
-  <div class="achievements-section" *ngIf="activeTab === 'conquistas' && conquistas">
+  <div class="achievements-section" *ngIf="activeTab === 'conquistas' && conquistas" [appEntradaAnimada]="animarTrocaDeAba">
     <div class="achievements-summary">
       <section class="review-card achievements-progress-card">
         <h3>Progresso de conquistas</h3>

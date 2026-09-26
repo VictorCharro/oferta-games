@@ -215,7 +215,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+  transition: border-color var(--dur-medio), background var(--dur-medio), transform var(--dur-medio);
 
   &:hover {
     border-color: var(--color-purple);
@@ -352,7 +352,7 @@
   cursor: pointer;
   font-size: 16px;
   font-weight: 700;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color var(--dur-medio), background var(--dur-medio);
 }
 .detail-collections-btn:hover,
 .detail-collections-btn.active {
@@ -448,10 +448,15 @@
   white-space: nowrap;
 }
 
-.refresh-msg {
-  font-size: 13px;
-  color: var(--color-green);
+// "Atualizar preços" em andamento: o ↻ aparece (no desktop ele e escondido) e gira ate os precos
+// novos chegarem na tela. O resultado sai num aviso (AvisosService), nao mais num texto fixo aqui.
+.refresh-btn.atualizando .btn-icon-glyph {
+  display: inline-block;
+  margin-right: 6px;
+  animation: refresh-girar 0.8s linear infinite;
 }
+
+@keyframes refresh-girar { to { transform: rotate(360deg); } }
 
 // Redesenho da tela do jogo em mobile, a partir de feedback real testando no aparelho: a capa com
 // fundo desfocado colidia com o texto, o botao grande era "Atualizar precos" (uma acao
@@ -558,7 +563,6 @@
   .refresh-group {
     border: 1px solid rgba(255, 255, 255, .4);
     .refresh-btn { border: 0 !important; background: none !important; padding: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .refresh-msg { font-size: 9px; text-align: center; }
   }
 
   .btn-icon-glyph { display: block; font-size: 16px; line-height: 1; }
@@ -567,6 +571,7 @@
   // classes, ".btn-icon-glyph" sozinho (1 classe) nunca a venceria. Sem isto o botao Atualizar
   // ficava so texto (2 linhas), destoando dos outros 3 (icone em cima + rotulo embaixo).
   .refresh-btn .btn-icon-glyph { display: block; }
+  .refresh-btn.atualizando .btn-icon-glyph { margin-right: 0; }
   // color:#fff — monitor/favoritar nunca precisaram de cor de texto antes (so tinham icone), sem
   // isto o texto cai no preto padrao do navegador, quase invisivel no fundo escuro do card.
   .btn-label-text { display: block; font-size: 9px; font-weight: 600; color: #fff; white-space: nowrap; }
@@ -1116,7 +1121,7 @@
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition: background var(--dur-rapido) ease, color var(--dur-rapido) ease;
 
   &:hover:not(:disabled) {
     background: var(--color-purple);
@@ -1886,7 +1891,7 @@
   padding: 16px 20px;
   align-items: center;
   border-bottom: 1px solid var(--border-color);
-  transition: background 0.15s;
+  transition: background var(--dur-rapido);
   cursor: pointer;
 
   &:last-child { border-bottom: none; }
@@ -2150,13 +2155,38 @@
   &:last-child { border-bottom: none; }
 }
 
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
 
 .error-state { text-align: center; padding: 80px 0; color: var(--text-muted); }
 
 // Coluna "Preco regular" da tabela de lojas: so risca quando a loja esta com desconto. Sem desconto o
 // preco regular e o proprio preco atual, e riscar dava a impressao de promocao que nao existe.
 .price-original.sem-desconto { text-decoration: none; }
+
+// Depois de "Atualizar preços": a linha que mudou pisca uma vez (verde baixou, vermelho subiu) e a
+// loja nova entra com fade. O preco do topo pisca verde quando o menor preco da pagina baixou.
+// Ver GameDetail.mostrarMudancas / compararOfertas.
+.offer-row.preco-caiu { animation: oferta-destaque-verde 1.6s var(--curva-entrada); }
+.offer-row.preco-subiu { animation: oferta-destaque-vermelho 1.6s var(--curva-entrada); }
+.offer-row.oferta-nova { animation: oferta-entrar var(--dur-lento) var(--curva-entrada); }
+.price-current.preco-caiu { animation: preco-topo-caiu 1.6s var(--curva-entrada); transform-origin: left center; }
+
+@keyframes oferta-destaque-verde {
+  0%, 35% { background-color: rgba(74, 222, 128, 0.16); box-shadow: inset 3px 0 0 var(--color-green); }
+  100% { background-color: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+
+@keyframes oferta-destaque-vermelho {
+  0%, 35% { background-color: rgba(239, 68, 68, 0.14); box-shadow: inset 3px 0 0 var(--color-red); }
+  100% { background-color: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+
+@keyframes oferta-entrar {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes preco-topo-caiu {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.08); text-shadow: 0 0 18px rgba(74, 222, 128, 0.55); }
+  100% { transform: scale(1); text-shadow: none; }
+}

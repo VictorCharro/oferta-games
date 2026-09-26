@@ -1,0 +1,80 @@
+// Canto inferior direito no desktop (fora do caminho da leitura e dos menus do topo); no celular,
+// centralizado embaixo, onde o polegar alcanca o X.
+.avisos {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 300; // acima do drawer mobile (200) e do backdrop (150)
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none; // a area vazia nao pode bloquear clique na pagina
+}
+
+.aviso {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 240px;
+  max-width: 380px;
+  padding: 12px 12px 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--color-purple);
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  color: var(--text-primary);
+  font-size: 14px;
+  // Entra subindo e aparecendo; sai mais rapido do que entrou (ver --curva-saida).
+  animation: aviso-entrar var(--dur-medio) var(--curva-entrada);
+
+  &.saindo { animation: aviso-sair var(--dur-medio) var(--curva-saida) forwards; }
+}
+
+.aviso-sucesso { border-left-color: var(--color-green); .aviso-icone { background: var(--color-green); } }
+.aviso-erro    { border-left-color: var(--color-red);   .aviso-icone { background: var(--color-red); } }
+.aviso-info    { border-left-color: var(--color-purple); .aviso-icone { background: var(--color-purple); } }
+
+.aviso-icone {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0b1220;
+}
+
+.aviso-texto { flex: 1; line-height: 1.35; }
+
+.aviso-fechar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background var(--dur-rapido), color var(--dur-rapido);
+  &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+}
+
+@keyframes aviso-entrar {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes aviso-sair {
+  to { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+
+@media (max-width: 620px) {
+  .avisos { left: 16px; right: 16px; bottom: 16px; align-items: stretch; }
+  .aviso { min-width: 0; max-width: none; }
+}

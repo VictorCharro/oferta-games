@@ -18,6 +18,16 @@
   --border-radius: 16px;
   --border-radius-sm: 8px;
   --border-radius-xs: 6px;
+
+  // Movimento (26/09/2026). Tres duracoes pro site inteiro, no lugar das 11 que existiam soltas
+  // (0.1s, .15s, 0.18s, 0.2s, 0.25s...). Regra de uso: rapido pra hover/foco/cor, medio pra
+  // algo que entra ou sai da tela (menu, aviso), lento so pra deslocamento maior. A curva de
+  // entrada desacelera (o elemento chega freando), a de saida acelera (vai embora rapido).
+  --dur-rapido: 150ms;
+  --dur-medio: 200ms;
+  --dur-lento: 300ms;
+  --curva-entrada: cubic-bezier(0.2, 0, 0, 1);
+  --curva-saida: cubic-bezier(0.4, 0, 1, 1);
 }
 
 [data-theme="light"] {
@@ -59,6 +69,82 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+// Quem ativa "reduzir movimento" no sistema (no Windows: "Efeitos de animacao" desligado) nao
+// recebe o que se move SOZINHO ou em loop: animacoes de keyframe (brilho do skeleton, pulsos,
+// entrada de aviso) terminam na hora, e o autoplay do banner nao liga (JS, ver home.ts).
+// As TRANSICOES continuam de proposito: sao curtas, de cor/opacidade/pequeno deslocamento, e so
+// acontecem porque o usuario passou o mouse ou clicou. Reduzir movimento nao e zerar feedback;
+// a primeira versao desta regra zerava tudo e o site parecia quebrado (botao sem resposta visual).
+// .01ms e nao 0: com 0 alguns navegadores nao disparam animationend, e codigo que espera esse
+// evento ficaria travado.
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// Brilho que passa pelos blocos de carregamento (skeleton). Global porque o mesmo keyframe estava
+// copiado em 7 paginas; os componentes usam `animation: shimmer ...` e acham este aqui.
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+// Capa que ainda esta baixando fica invisivel e aparece com fade quando termina (diretiva
+// FadeImagem). A classe so e posta no navegador e so em imagem que ainda nao carregou: capa ja
+// pronta, e o HTML vindo do servidor, nunca ficam escondidos.
+img.capa-fade {
+  opacity: 0;
+  transition: opacity var(--dur-lento) var(--curva-entrada);
+  &.carregada { opacity: 1; }
+}
+
+// Menus que abrem e fecham (sugestoes da busca, notificacoes, menu da conta). Usadas pelo
+// animate.enter / animate.leave nativo do Angular, que so tira o elemento do DOM quando a animacao
+// de saida termina. `translate`/`scale` separados, e nao `transform`: nao desfazem um transform
+// que o proprio menu use pra se posicionar. A saida e mais rapida que a entrada.
+.menu-entrar { animation: menu-entrar var(--dur-medio) var(--curva-entrada); }
+.menu-sair { animation: menu-sair var(--dur-rapido) var(--curva-saida) forwards; pointer-events: none; }
+
+@keyframes menu-entrar {
+  from { opacity: 0; translate: 0 -6px; scale: .98; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+
+@keyframes menu-sair {
+  to { opacity: 0; translate: 0 -4px; scale: .98; }
+}
+
+// Conteudo da aba que acabou de ser escolhida entra com um fade curto (animate.enter). So na entrada:
+// a aba anterior sai na hora, senao as duas disputariam o mesmo espaco durante a troca.
+.aba-conteudo-entrar { animation: aba-conteudo-entrar var(--dur-medio) var(--curva-entrada); }
+
+@keyframes aba-conteudo-entrar {
+  from { opacity: 0; translate: 0 4px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+// Barra de abas com indicador que desliza (diretiva AbasDeslizantes). A classe so e posta no
+// navegador: no HTML do servidor cada aba ainda desenha o proprio sublinhado (o ::after de cada
+// pagina), e na hidratacao o indicador assume no mesmo lugar. Cada pagina ajusta a aparencia por
+// variavel (--aba-indicador-altura, --aba-indicador-recuo, --aba-indicador-raio, --aba-indicador-brilho).
+.abas-deslizantes > button::after { content: none !important; }
+
+.aba-indicador {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: var(--aba-indicador-altura, 2px);
+  border-radius: var(--aba-indicador-raio, 0);
+  background: var(--color-purple);
+  box-shadow: var(--aba-indicador-brilho, none);
+  pointer-events: none;
+  transition: translate var(--dur-lento) var(--curva-entrada), width var(--dur-lento) var(--curva-entrada);
+  &.sem-transicao { transition: none; }
+}
 
 // Reserva o espaco da barra de rolagem vertical sempre, mesmo em paginas/abas curtas o bastante
 // pra nao precisar dela. Sem isso, trocar de aba (ex: pagina do jogo) entre um conteudo curto e
@@ -174,7 +260,7 @@ app-public-profile .profile-strip-item {
   gap: 11px;
   padding: 10px 16px;
   border-right: 1px solid var(--border-color);
-  transition: background .15s ease;
+  transition: background var(--dur-rapido) ease;
 }
 app-public-profile .profile-strip-item:hover { background: var(--bg-card-hover); }
 app-public-profile .profile-strip-item:last-child { border-right: 0; }
@@ -230,7 +316,7 @@ app-public-profile .profile-game-card {
   background: var(--bg-input);
   aspect-ratio: 16 / 9;
   /* Eleva de leve no hover; a borda acende em ciano pra dar o retorno sem precisar de glow forte. */
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  transition: transform var(--dur-rapido) ease, border-color var(--dur-rapido) ease, box-shadow var(--dur-rapido) ease;
 }
 /* Dentro de um bloco do perfil a altura quem manda e a linha do grid (grid-auto-rows:1fr), nao a
    proporcao: com aspect-ratio fixo o card nao esticava e o espaco sobrando so migrava pro vao
@@ -239,7 +325,7 @@ app-public-profile .profile-game-card {
 app-public-profile .profile-block .profile-game-card { aspect-ratio: auto; height: 100%; }
 app-public-profile .profile-game-card:hover { border-color: rgba(41, 168, 224, .55); box-shadow: 0 10px 24px rgba(5, 9, 18, .5); transform: translateY(-2px); }
 app-public-profile .profile-game-card > a { display: block; width: 100%; height: 100%; color: inherit; text-decoration: none; }
-app-public-profile .profile-game-card > a > img { width: 100%; height: 100%; object-fit: cover; transition: transform .18s ease; }
+app-public-profile .profile-game-card > a > img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--dur-rapido) ease; }
 app-public-profile .profile-game-card:hover > a > img { transform: scale(1.035); }
 app-public-profile .game-card-shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 22%, rgba(5, 9, 18, .14) 42%, rgba(5, 9, 18, .94) 100%); pointer-events: none; }
 app-public-profile .profile-game-card.cover-unavailable > a { background: radial-gradient(circle at 18% 18%, rgba(41, 168, 224, .24), transparent 42%), linear-gradient(145deg, #17243a, #080d18 72%); }
@@ -256,7 +342,7 @@ app-public-profile .gallery-remove { padding: 5px 7px; border-radius: 6px; backg
 app-public-profile .gallery-favorite { width: 28px; height: 28px; border-color: rgba(255, 255, 255, .28); border-radius: 6px; background: rgba(8, 13, 24, .9); }
 app-public-profile .gallery-favorite img { width: 17px; height: 17px; }
 app-public-profile .library-game-card:hover > a > img { filter: blur(2px) brightness(.72); }
-app-public-profile .library-hover-actions { position: absolute; inset: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 12px; opacity: 0; transition: opacity .18s ease; pointer-events: none; }
+app-public-profile .library-hover-actions { position: absolute; inset: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 12px; opacity: 0; transition: opacity var(--dur-rapido) ease; pointer-events: none; }
 app-public-profile .library-game-card:hover .library-hover-actions { opacity: 1; }
 app-public-profile .library-hover-btn { pointer-events: auto; padding: 7px 12px; border: 1px solid rgba(255, 255, 255, .32); border-radius: 999px; background: rgba(8, 13, 24, .82); color: #fff; font-size: 11px; font-weight: 700; text-align: center; text-decoration: none; white-space: nowrap; }
 app-public-profile .library-hover-btn:hover { border-color: var(--color-purple); background: rgba(41, 168, 224, .3); }
@@ -274,8 +360,8 @@ app-public-profile .favorite-drag-handle:active { cursor: grabbing; }
 app-public-profile .favorites-gallery .profile-game-card.cdk-drag-preview { overflow: hidden; box-shadow: 0 18px 40px rgba(0, 0, 0, .5); }
 app-public-profile .favorites-gallery .cdk-drag-placeholder { opacity: .3; }
 app-public-profile .favorites-gallery .cdk-drag-preview .favorite-drag-handle { display: none; }
-app-public-profile .favorites-gallery.cdk-drop-list-dragging .profile-game-card:not(.cdk-drag-placeholder) { transition: transform .2s cubic-bezier(0, 0, .2, 1); }
-app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(0, 0, .2, 1); }
+app-public-profile .favorites-gallery.cdk-drop-list-dragging .profile-game-card:not(.cdk-drag-placeholder) { transition: transform var(--dur-medio) cubic-bezier(0, 0, .2, 1); }
+app-public-profile .cdk-drag-animating { transition: transform var(--dur-medio) cubic-bezier(0, 0, .2, 1); }
 
 @media (max-width: 900px) {
   app-public-profile .profile-stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -332,7 +418,7 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
   padding: 10px 20px;
   font-weight: 600;
   font-size: 14px;
-  transition: background 0.2s;
+  transition: background var(--dur-medio);
   &:hover { background: var(--color-purple-hover); }
 }
 
@@ -344,7 +430,7 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
   padding: 10px 20px;
   font-weight: 500;
   font-size: 14px;
-  transition: border-color 0.2s;
+  transition: border-color var(--dur-medio);
   &:hover { border-color: var(--color-purple); color: var(--color-purple); }
 }
 
@@ -401,7 +487,7 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
     align-items: center;
     gap: 6px;
     margin-left: auto;
-    transition: border-color 0.2s;
+    transition: border-color var(--dur-medio);
     &:hover { border-color: var(--color-purple); color: var(--color-purple); }
   }
 }
@@ -429,7 +515,7 @@ app-public-profile .cdk-drag-animating { transition: transform .2s cubic-bezier(
     border: 1px solid var(--border-color);
     font-size: 14px;
     font-weight: 500;
-    transition: all 0.2s;
+    transition: all var(--dur-medio);
     &:hover { border-color: var(--color-purple); color: var(--color-purple); }
     &.active { background: var(--color-purple); color: #fff; border-color: var(--color-purple); }
     &:disabled { opacity: 0.4; cursor: not-allowed; }

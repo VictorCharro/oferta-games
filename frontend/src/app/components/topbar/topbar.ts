@@ -72,7 +72,8 @@ export class Topbar implements OnInit, OnDestroy {
         this.suggestions = [];
         this.showSuggestions = false;
         this.searchService.setQuery('');
-        this.cdr.detectChanges();
+        // Idem acima: fechar menu animado precisa do ciclo completo (markForCheck) pra sair do DOM.
+        this.cdr.markForCheck();
       });
 
     this.searchSub = this.searchInput$
@@ -89,7 +90,10 @@ export class Topbar implements OnInit, OnDestroy {
       .subscribe(results => {
         this.suggestions = results.slice(0, 6);
         this.showSuggestions = this.suggestions.length > 0;
-        this.cdr.detectChanges();
+        // markForCheck, e nao detectChanges: o menu de sugestoes tem animate.enter/animate.leave, e o
+        // Angular so insere/remove esse elemento no ciclo completo da aplicacao. Com detectChanges
+        // local o menu nao aparecia ate a proxima tecla (26/09/2026).
+        this.cdr.markForCheck();
       });
   }
 

@@ -17,7 +17,7 @@
   gap: 16px;
   padding: 14px 20px;
   border-bottom: 1px solid var(--border-color);
-  transition: background 0.15s;
+  transition: background var(--dur-rapido);
   cursor: pointer;
 
   &:last-child { border-bottom: none; }
@@ -64,7 +64,3 @@
   &:last-child { border-bottom: none; }
 }
 
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}

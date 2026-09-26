@@ -203,7 +203,7 @@
 
   <!-- Icones em SVG inline (nao PNG como a sidebar): o icone precisa acompanhar a cor da aba
        ativa (ciano) e da inativa (cinza), e so currentColor faz isso sem duplicar arquivo. -->
-  <section class="tabs" aria-label="Secoes do perfil">
+  <section class="tabs" aria-label="Secoes do perfil" appAbasDeslizantes>
     <button type="button" [class.active]="activeTab === 'resumo'" (click)="activeTab = 'resumo'">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" /></svg>
       Resumo
@@ -300,6 +300,7 @@
   <section
     class="custom-layout"
     *ngIf="activeTab === 'resumo'"
+    [appEntradaAnimada]="animarTrocaDeAba"
     cdkDropList
     (cdkDropListDropped)="dropBlock($event)"
   >
@@ -629,7 +630,7 @@
     </article>
   </section>
 
-  <section class="panel favorites-only" *ngIf="activeTab === 'jogosFavoritos'">
+  <section class="panel favorites-only" *ngIf="activeTab === 'jogosFavoritos'" [appEntradaAnimada]="animarTrocaDeAba">
     <div class="panel-heading">
       <h2>Jogos favoritos</h2>
       <div class="favorites-heading-actions">
@@ -678,7 +679,7 @@
     >
   </section>
 
-  <section class="panel collections-panel" *ngIf="activeTab === 'colecoes'">
+  <section class="panel collections-panel" *ngIf="activeTab === 'colecoes'" [appEntradaAnimada]="animarTrocaDeAba">
     <div class="panel-heading">
       <h2>Coleções</h2>
       <div class="panel-heading-actions">
@@ -815,7 +816,7 @@
     </div>
   </section>
 
-  <section class="panel library-list-panel" *ngIf="activeTab === 'biblioteca'">
+  <section class="panel library-list-panel" *ngIf="activeTab === 'biblioteca'" [appEntradaAnimada]="animarTrocaDeAba">
     <div class="panel-heading">
       <h2>Biblioteca</h2>
       <span

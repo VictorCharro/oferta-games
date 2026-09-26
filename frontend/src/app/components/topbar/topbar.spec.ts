@@ -12,7 +12,7 @@ describe('sugestoes da topbar', () => {
       { user$: vazio, sessaoResolvida$: vazio, avatar$: vazio } as any, {} as any,
       { url: '/', events: new Subject() } as any,
       { searchGames } as any, {} as any, {} as any,
-      { list$: vazio, mensagens$: vazio } as any, { detectChanges() {} } as any);
+      { list$: vazio, mensagens$: vazio } as any, { detectChanges() {}, markForCheck() {} } as any);
     try {
       topbar.ngOnInit();
       topbar.onSearchInput('erro');

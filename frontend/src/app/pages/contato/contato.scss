@@ -80,7 +80,7 @@ textarea { resize: vertical; min-height: 140px; }
   &.desativado { opacity: .5; pointer-events: none; }
 }
 .progresso { flex: 1 1 160px; align-self: center; height: 6px; border-radius: 6px; background: var(--bg-card-hover); overflow: hidden;
-  div { height: 100%; background: var(--color-purple); transition: width .2s; }
+  div { height: 100%; background: var(--color-purple); transition: width var(--dur-medio); }
 }
 
 .aviso-resposta { margin: -4px 0 0; font-size: 13px !important; }

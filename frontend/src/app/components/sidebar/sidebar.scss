@@ -62,10 +62,17 @@
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--dur-rapido);
   border-left: 3px solid transparent;
 
   img.nav-icon { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
+
+  // Jogo novo entrou nos monitorados: o item acende e o icone salta uma vez, mostrando pra onde
+  // o jogo foi (ver Sidebar.destacarMonitorados).
+  &.destaque {
+    animation: nav-destaque 1.1s var(--curva-entrada);
+    img.nav-icon { animation: nav-icone-salto 0.5s var(--curva-entrada); }
+  }
 
   &:hover {
     background: var(--bg-card);
@@ -108,7 +115,7 @@
     padding: 9px;
     font-size: 13px;
     font-weight: 600;
-    transition: background 0.2s;
+    transition: background var(--dur-medio);
 
     &:hover { background: var(--color-purple-hover); }
   }
@@ -121,7 +128,7 @@
   .sidebar {
     width: min(78vw, 300px);
     transform: translateX(-100%);
-    transition: transform 0.25s ease;
+    transition: transform var(--dur-lento) ease;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
     z-index: 200; // acima do backdrop (150) e da topbar (99)
 
@@ -175,4 +182,15 @@
   a:hover { color: var(--text-primary); text-decoration: underline; }
   span { margin: 0 6px; }
   .contato { display: block; margin-bottom: 4px; }
+}
+
+@keyframes nav-destaque {
+  0% { background: transparent; }
+  20% { background: rgba(41, 168, 224, 0.22); color: var(--text-primary); }
+  100% { background: transparent; }
+}
+
+@keyframes nav-icone-salto {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.3); }
 }

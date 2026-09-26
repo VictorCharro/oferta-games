@@ -9,17 +9,29 @@ import { AuthService } from '../../services/auth';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 import { irParaLogin } from '../../services/ir-para-login';
 import { trocarPorCapaPadrao } from '../../services/capa';
+import { FadeImagem } from '../../diretivas/fade-imagem';
+import { AvisosService } from '../../services/avisos';
+import { mensagemMeta } from '../../services/mensagem-monitoramento';
 
-/** Card de oferta com monitoramento confirmado pelo servidor e erro recuperavel. */
+/**
+ * Card de oferta com monitoramento confirmado pelo servidor.
+ *
+ * Feedback do botao de monitorar (26/09/2026): enquanto o servidor nao responde, o botao pulsa
+ * (`salvando`); ao confirmar, da um "pop" (`confirmado`) e um aviso diz o que aconteceu. Antes nao
+ * havia nada entre o clique e a resposta, e o erro aparecia como texto dentro do card, empurrando o
+ * layout.
+ */
 @Component({
   selector: 'app-game-card',
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FadeImagem],
   templateUrl: './game-card.html',
   styleUrl: './game-card.scss',
 })
 export class GameCard implements OnInit, OnDestroy {
-  erroMonitoramento = '';
   salvandoMonitoramento = false;
+  /** Liga por um instante depois de confirmar, so pra disparar a animacao de "pop" do botao. */
+  confirmado = false;
+  private timerConfirmado?: ReturnType<typeof setTimeout>;
   /** Capa que nao carregou vira a imagem padrao (ver services/capa). */
   readonly capaIndisponivel = trocarPorCapaPadrao;
 
@@ -34,7 +46,8 @@ export class GameCard implements OnInit, OnDestroy {
     private favoritesService: FavoritesService,
     private auth: AuthService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private avisos: AvisosService
   ) {}
 
   ngOnInit() {
@@ -43,6 +56,7 @@ export class GameCard implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.sub?.unsubscribe();
+    clearTimeout(this.timerConfirmado);
   }
 
   get monitoring(): boolean {
@@ -91,15 +105,27 @@ export class GameCard implements OnInit, OnDestroy {
       return;
     }
     if (this.salvandoMonitoramento) return;
+    const estavaMonitorando = this.monitoring;
     this.salvandoMonitoramento = true;
-    this.erroMonitoramento = '';
+    this.cdr.markForCheck();
     try {
       await this.favoritesService.toggle(this.game);
+      this.animarConfirmacao();
+      // O aviso diz o que muda pra pessoa (o alerta de preco), nao so "salvo".
+      if (estavaMonitorando) this.avisos.info(`${this.game.title} não está mais sendo monitorado.`);
+      else this.avisos.sucesso(mensagemMeta(this.game.title, false, null));
     } catch {
-      this.erroMonitoramento = 'Não foi possível alterar o monitoramento. Tente novamente.';
+      this.avisos.erro('Não foi possível alterar o monitoramento. Tente novamente.');
     } finally {
       this.salvandoMonitoramento = false;
       this.cdr.markForCheck();
     }
+  }
+
+  private animarConfirmacao() {
+    clearTimeout(this.timerConfirmado);
+    this.confirmado = true;
+    // Tempo da animacao monitor-pop em game-card.scss (--dur-lento) com folga.
+    this.timerConfirmado = setTimeout(() => { this.confirmado = false; this.cdr.markForCheck(); }, 450);
   }
 }

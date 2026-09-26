@@ -39,7 +39,7 @@
       </button>
     </section>
 
-    <nav class="admin-tabs" role="tablist">
+    <nav class="admin-tabs" role="tablist" appAbasDeslizantes>
       <button *ngFor="let aba of abas" type="button" role="tab" [attr.aria-selected]="abaAtiva === aba.id"
         [class.active]="abaAtiva === aba.id" (click)="selecionarAba(aba.id)">
         {{ aba.rotulo }}
@@ -51,7 +51,7 @@
     </nav>
 
     <!-- ===== Visao geral ===== -->
-    <section *ngIf="abaAtiva === 'geral'" class="grade-geral">
+    <section *ngIf="abaAtiva === 'geral'" class="grade-geral" [appEntradaAnimada]="animarTrocaDeAba">
       <article class="painel">
         <header class="painel-topo"><h2>Precisa de atenção</h2></header>
         <p class="vazio" *ngIf="!itensAtencao.length">Tudo em dia: nenhuma denúncia, problema relatado ou coleta com erro.</p>
@@ -85,7 +85,7 @@
     </section>
 
     <!-- ===== Moderacao ===== -->
-    <section *ngIf="abaAtiva === 'moderacao'" class="painel">
+    <section *ngIf="abaAtiva === 'moderacao'" class="painel" [appEntradaAnimada]="animarTrocaDeAba">
       <header class="painel-topo">
         <h2>Denúncias abertas</h2>
         <small>agrupadas por perfil</small>
@@ -134,7 +134,7 @@
     </section>
 
     <!-- ===== Mensagens ===== -->
-    <section *ngIf="abaAtiva === 'mensagens'" class="painel">
+    <section *ngIf="abaAtiva === 'mensagens'" class="painel" [appEntradaAnimada]="animarTrocaDeAba">
       <header class="painel-topo filtros">
         <button type="button" class="filtro" [class.ativo]="filtroMensagem === 'todas'" (click)="selecionarFiltroMensagem('todas')">Todas <span>{{ mensagens.length }}</span></button>
         <button *ngFor="let t of tiposComMensagem" type="button" class="filtro" [class.ativo]="filtroMensagem === t" (click)="selecionarFiltroMensagem(t)">{{ rotuloTipo[t] }} <span>{{ contarTipo(t) }}</span></button>
@@ -187,7 +187,7 @@
     </section>
 
     <!-- ===== Erros ===== -->
-    <section *ngIf="abaAtiva === 'erros'" class="painel">
+    <section *ngIf="abaAtiva === 'erros'" class="painel" [appEntradaAnimada]="animarTrocaDeAba">
       <header class="painel-topo filtros">
         <button type="button" class="filtro" [class.ativo]="!verErrosResolvidos" (click)="alternarErrosResolvidos(false)">Abertos <span>{{ erros.length }}</span></button>
         <button type="button" class="filtro" [class.ativo]="verErrosResolvidos" (click)="alternarErrosResolvidos(true)">Resolvidos</button>
@@ -220,7 +220,7 @@
     </section>
 
     <!-- ===== Coleta ===== -->
-    <section *ngIf="abaAtiva === 'coleta'">
+    <section *ngIf="abaAtiva === 'coleta'" [appEntradaAnimada]="animarTrocaDeAba">
       <div class="filtros grupo-coleta">
         <button type="button" class="filtro" [class.ativo]="grupoColeta === 'precos-steam'" (click)="grupoColeta = 'precos-steam'">Preços e Steam</button>
         <button type="button" class="filtro" [class.ativo]="grupoColeta === 'detalhes-conquistas'" (click)="grupoColeta = 'detalhes-conquistas'">Detalhes e conquistas</button>
@@ -285,7 +285,7 @@
     </section>
 
     <!-- ===== Ferramentas ===== -->
-    <section *ngIf="abaAtiva === 'ferramentas'" class="painel ferramenta">
+    <section *ngIf="abaAtiva === 'ferramentas'" class="painel ferramenta" [appEntradaAnimada]="animarTrocaDeAba">
       <header class="painel-topo">
         <div>
           <h2>Preencher jogo agora</h2>

@@ -63,7 +63,7 @@
     border-radius: 9px;
     cursor: pointer;
     text-decoration: none;
-    transition: background .15s, color .15s;
+    transition: background var(--dur-rapido), color var(--dur-rapido);
 
     &:hover { color: var(--text-primary); background: var(--bg-card-hover); }
     &.ativo { background: var(--color-purple); color: #fff; }
@@ -133,7 +133,7 @@
   border-radius: 12px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  transition: border-color .15s, opacity .15s;
+  transition: border-color var(--dur-rapido), opacity var(--dur-rapido);
 
   &:hover { border-color: color-mix(in srgb, var(--color-purple) 45%, var(--border-color)); }
   &.inativo { opacity: .55; }
@@ -176,7 +176,7 @@
   border-radius: 999px;
   background: var(--border-color);
   cursor: pointer;
-  transition: background .15s;
+  transition: background var(--dur-rapido);
 
   .knob {
     position: absolute;
@@ -186,7 +186,7 @@
     height: 16px;
     border-radius: 50%;
     background: var(--text-muted);
-    transition: transform .15s, background .15s;
+    transition: transform var(--dur-rapido), background var(--dur-rapido);
   }
 
   &.on {
@@ -425,7 +425,7 @@
   border: 1px solid transparent;
   background: var(--bg-input);
   cursor: pointer;
-  transition: border-color .15s, opacity .15s;
+  transition: border-color var(--dur-rapido), opacity var(--dur-rapido);
 
   &:hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-purple) 45%, transparent); }
   &:disabled { opacity: .4; cursor: default; }

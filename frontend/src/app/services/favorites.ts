@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { BehaviorSubject, Subject, firstValueFrom } from 'rxjs';
 import { AuthService } from './auth';
 import { supabase } from './supabase';
 import { GameSummary } from './game';
@@ -21,6 +21,14 @@ export class FavoritesService {
 
   private _list = new BehaviorSubject<FavoriteGame[]>([]);
   list$ = this._list.asObservable();
+
+  /**
+   * Slug de um jogo que ACABOU de entrar nos monitorados (nao dispara ao carregar a lista nem ao
+   * so editar a meta de um que ja estava). Usado pela sidebar pra destacar o item "Jogos
+   * Monitorados" e mostrar pra onde o jogo foi.
+   */
+  private _adicionado = new Subject<string>();
+  adicionado$ = this._adicionado.asObservable();
 
   /**
    * Se a lista já reflete a resposta do servidor (ou a certeza de que não há o que buscar, no caso
@@ -138,10 +146,12 @@ export class FavoritesService {
     if (usuarioId !== this.auth.user?.id) return;
     this.revisao++;
 
+    const novo = !this._slugs.value.has(slug);
     const set = new Set(this._slugs.value);
     set.add(slug);
     this._slugs.next(set);
     this._list.next(this._list.value.map(g => g.slug === slug ? { ...g, targetPrice } : g));
+    if (novo) this._adicionado.next(slug);
     // Aguarda leitura antiga descartada pela revisao antes de pedir o estado atualizado.
     await this.loadingPromise;
     await this.load();

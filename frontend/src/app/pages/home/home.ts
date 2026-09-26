@@ -79,9 +79,15 @@ export class Home implements OnInit, OnDestroy {
 
     this.carregarSecoes();
 
+    // markForCheck, e nao detectChanges: a lista pode chegar no meio de uma renderizacao que ja esta
+    // em andamento (ao abrir a Home logado, com os monitorados ja carregados, o BehaviorSubject
+    // entrega a lista na hora da inscricao). O detectChanges ali era reentrante e disparava NG0100
+    // ("0" -> "1" em favoritesDeals.length) no modo de desenvolvimento, pego pela aba Erros em
+    // 26/09/2026. Sem zone.js, markForCheck agenda a renderizacao e o Angular refaz a tela marcada
+    // antes de conferir, no mesmo ciclo.
     this.favSub = this.favoritesService.list$.subscribe(list => {
       this.favoritesDeals = list.slice(0, 15);
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     });
   }
 
@@ -252,6 +258,9 @@ export class Home implements OnInit, OnDestroy {
   private startAutoplay() {
     this.stopAutoplay();
     if (!this.navegador || this.featuredDeals.length <= 1) return;
+    // Quem pediu "reduzir movimento" no sistema nao ve o banner trocar sozinho: o CSS global so
+    // zera transicoes, e este timer e JS. As setas, os pontos e o arrastar continuam funcionando.
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     this.autoplayTimer = setInterval(() => {
       this.featuredIndex = (this.featuredIndex + 1) % this.featuredDeals.length;
       this.carregarHistoricoSlideAtual();

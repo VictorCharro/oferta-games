@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, PendingTasks, ViewChild, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, PendingTasks, ViewChild, afterNextRender, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -18,15 +18,24 @@ import { SeoService } from '../../services/seo';
 import { StatusResposta } from '../../services/status-resposta';
 import { mensagemDaApi } from '../../services/mensagem-api';
 import { removerImagensOrfas } from '../../services/imagens-blocos';
+import { AbasDeslizantes } from '../../diretivas/abas-deslizantes';
+import { EntradaAnimada } from '../../diretivas/entrada-animada';
 
 /** Perfil e editor; listas derivadas da biblioteca sao recalculadas apenas quando ela muda. */
 @Component({
   selector: 'app-public-profile',
-  imports: [CommonModule, FormsModule, RouterModule, DragDropModule],
+  imports: [CommonModule, FormsModule, RouterModule, DragDropModule, AbasDeslizantes, EntradaAnimada],
   templateUrl: './public-profile.html',
   styleUrl: './public-profile.scss',
 })
 export class PublicProfile implements OnInit, OnDestroy {
+  /**
+   * O conteudo da aba so entra com fade DEPOIS da primeira renderizacao no navegador. Sem isto o
+   * conteudo que ja veio pronto do servidor sumia e reaparecia a cada carregamento de pagina. Toda
+   * troca de aba depois disso (clique na aba, "Ver todos", etc.) anima. afterNextRender nao roda no SSR.
+   */
+  animarTrocaDeAba = false;
+  private readonly ligarAnimacaoDeAba = afterNextRender(() => { this.animarTrocaDeAba = true; });
   trackBloco = (_: number, bloco: PerfilBloco) => bloco.id;
   trackBiblioteca = (_: number, jogo: PerfilPublico['biblioteca'][number]) => `${jogo.plataforma}:${jogo.appId}`;
   trackJogoPerfil = (_: number, jogo: PerfilPublico['favoritos'][number]) => jogo.steamAppId != null ? `steam:${jogo.steamAppId}` : `catalogo:${jogo.slug}`;

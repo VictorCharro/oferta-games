@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -16,6 +16,8 @@ import {
   TipoColeta,
 } from '../../services/administracao';
 import { GameService, GameSummary } from '../../services/game';
+import { AbasDeslizantes } from '../../diretivas/abas-deslizantes';
+import { EntradaAnimada } from '../../diretivas/entrada-animada';
 
 type Aba = 'geral' | 'moderacao' | 'mensagens' | 'erros' | 'coleta' | 'ferramentas';
 type GrupoColeta = 'precos-steam' | 'detalhes-conquistas' | 'instant-gaming';
@@ -53,11 +55,18 @@ const ABAS: Aba[] = ['geral', 'moderacao', 'mensagens', 'erros', 'coleta', 'ferr
  */
 @Component({
   selector: 'app-admin-coleta',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AbasDeslizantes, EntradaAnimada],
   templateUrl: './admin-coleta.html',
   styleUrl: './admin-coleta.scss',
 })
 export class AdminColeta implements OnInit, OnDestroy {
+  /**
+   * O conteudo da aba so entra com fade DEPOIS da primeira renderizacao no navegador. Sem isto o
+   * conteudo que ja veio pronto do servidor sumia e reaparecia a cada carregamento de pagina. Toda
+   * troca de aba depois disso (clique na aba, "Ver todos", etc.) anima. afterNextRender nao roda no SSR.
+   */
+  animarTrocaDeAba = false;
+  private readonly ligarAnimacaoDeAba = afterNextRender(() => { this.animarTrocaDeAba = true; });
   readonly abas: Array<{ id: Aba; rotulo: string }> = [
     { id: 'geral', rotulo: 'Visão geral' },
     { id: 'moderacao', rotulo: 'Moderação' },

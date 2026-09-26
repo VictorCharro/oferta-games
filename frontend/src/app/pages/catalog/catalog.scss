@@ -58,7 +58,7 @@
   font-size: 13px;
   font-weight: 600;
   text-align: left;
-  transition: border-color .15s, box-shadow .15s, background .15s;
+  transition: border-color var(--dur-rapido), box-shadow var(--dur-rapido), background var(--dur-rapido);
 
   &:hover { border-color: rgba(41, 168, 224, .55); background: var(--bg-card-hover); }
   &:focus-visible { border-color: var(--color-purple); box-shadow: 0 0 0 3px rgba(41, 168, 224, .14); }
@@ -70,7 +70,7 @@
   border-right: 2px solid var(--text-secondary);
   border-bottom: 2px solid var(--text-secondary);
   transform: rotate(45deg) translateY(-2px);
-  transition: transform .15s;
+  transition: transform var(--dur-rapido);
 }
 
 .custom-select.open {
@@ -164,7 +164,7 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity var(--dur-rapido);
   &:hover { opacity: 0.85; }
 }
 
@@ -179,7 +179,7 @@
   padding: 8px;
   font-size: 13px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color var(--dur-rapido), border-color var(--dur-rapido);
   &:hover { color: var(--color-purple); border-color: var(--color-purple); }
 }
 
@@ -211,7 +211,7 @@
     cursor: pointer;
     display: flex;
     align-items: center;
-    transition: all 0.15s;
+    transition: all var(--dur-rapido);
 
     &:hover { color: var(--text-primary); }
     &.active {
@@ -242,10 +242,6 @@
   aspect-ratio: 3/4;
 }
 
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
 
 .loading-more {
   display: flex;
@@ -285,7 +281,7 @@
     border-left: 1px solid var(--border-color);
     overflow-y: auto;
     transform: translateX(100%);
-    transition: transform 0.25s ease;
+    transition: transform var(--dur-lento) ease;
     // sticky so faz sentido dentro do fluxo normal da pagina (desktop); fixed dispensa e
     // "top: 80px" herdado colidiria com o cabecalho do proprio drawer.
     top: 0;

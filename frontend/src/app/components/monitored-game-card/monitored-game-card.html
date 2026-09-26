@@ -1,7 +1,6 @@
-<p *ngIf="erroMonitoramento" role="alert">{{ erroMonitoramento }}</p>
 <a class="monitor-card" [routerLink]="['/jogo', game.slug]">
   <div class="monitor-cover">
-    <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" loading="lazy" decoding="async" (error)="capaIndisponivel($event)" />
+    <img appFadeImagem [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" loading="lazy" decoding="async" (error)="capaIndisponivel($event)" />
     <button
       class="monitor-btn"
       type="button"

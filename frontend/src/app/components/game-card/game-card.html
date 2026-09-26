@@ -1,12 +1,15 @@
 <a class="game-card" [routerLink]="['/jogo', game.slug]">
   <div class="card-image">
-    <img [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" loading="lazy" decoding="async" (error)="capaIndisponivel($event)" />
+    <img appFadeImagem [src]="game.coverUrl || 'no-cover.svg'" [alt]="game.title" loading="lazy" decoding="async" (error)="capaIndisponivel($event)" />
     <span *ngIf="discount > 0" class="badge-discount">-{{ discount }}%</span>
     <span *ngIf="isDlcGame" class="badge-dlc">DLC</span>
     <button
       class="btn-monitor"
       (click)="toggleMonitoring($event)"
       [class.active]="monitoring"
+      [class.salvando]="salvandoMonitoramento"
+      [class.confirmado]="confirmado"
+      [attr.aria-busy]="salvandoMonitoramento"
       [title]="monitoring ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
       [attr.aria-label]="monitoring ? 'Remover dos jogos monitorados' : 'Adicionar aos jogos monitorados'"
     >
@@ -15,7 +18,6 @@
     </button>
   </div>
   <div class="card-body">
-    <p *ngIf="erroMonitoramento" role="alert">{{ erroMonitoramento }}</p>
     <h3 class="card-title">{{ game.title }}</h3>
     <div class="card-price">
       <span class="price-current">{{ formatPrice(game.minPrice) }}</span>

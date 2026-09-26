@@ -1,4 +1,4 @@
-import { ErrorHandler, Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { ErrorHandler, Injectable, PLATFORM_ID, inject, isDevMode } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { URL_API } from './url-api';
@@ -11,17 +11,20 @@ import { URL_API } from './url-api';
  * erros fora do Angular (window.onerror, promise rejeitada) tambem chegam aqui.
  *
  * Fica de fora: erro HTTP (o backend registra os proprios 500; 4xx e rede caindo nao sao bug) e
- * SSR (so roda no navegador). Freios: o mesmo erro vai uma vez por pagina carregada e no maximo 10
+ * SSR (so roda no navegador). Tambem nao relata em modo de desenvolvimento (`ng serve`): o localhost
+ * aponta pra API de producao, e um erro de teste local ia parar na aba Erros do admin como se fosse
+ * de um usuario (aconteceu em 26/09/2026). Em dev o erro continua no console. Freios: o mesmo erro vai uma vez por pagina carregada e no maximo 10
  * relatos, pra um erro em loop nao virar enxurrada.
  */
 @Injectable()
 export class RelatorErros implements ErrorHandler {
   private readonly noNavegador = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly relatar = !isDevMode();
   private readonly enviados = new Set<string>();
 
   handleError(erro: unknown): void {
     console.error(erro);
-    if (!this.noNavegador || erro instanceof HttpErrorResponse) return;
+    if (!this.noNavegador || !this.relatar || erro instanceof HttpErrorResponse) return;
     try {
       const real = (erro as { rejection?: unknown })?.rejection ?? erro;
       if (real instanceof HttpErrorResponse) return;
