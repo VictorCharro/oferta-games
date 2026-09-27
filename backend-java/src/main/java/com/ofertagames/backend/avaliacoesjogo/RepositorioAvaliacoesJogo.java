@@ -47,8 +47,11 @@ class RepositorioAvaliacoesJogo {
   }
 
   List<AvaliacaoJogo> listar(long gameId, String visitanteId) {
+    // NULL com tipo: sem o ::boolean o Postgres devolve a coluna como text, e o getObject(..., Boolean)
+    // do mapear falhava em toda linha. Visitante deslogado num jogo com avaliacao recebia 500
+    // ("conversion to class java.lang.Boolean from text not supported", 26/09/2026).
     String fragmentoVoto = visitanteId == null
-        ? "NULL AS meu_voto"
+        ? "NULL::boolean AS meu_voto"
         : "(SELECT util FROM game_review_votes v WHERE v.review_id = r.id AND v.user_id = CAST(:visitanteId AS uuid)) AS meu_voto";
     var comando = jdbc.sql("""
         SELECT r.id, p.display_name, p.avatar_url, r.rating, r.comentario, r.created_at,

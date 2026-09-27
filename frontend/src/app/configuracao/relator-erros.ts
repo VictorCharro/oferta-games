@@ -4,14 +4,26 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { URL_API } from './url-api';
 
 /**
+ * O erro nasceu numa extensao do navegador do visitante (tradutor, bloqueador, gerenciador de
+ * senha...), nao no site. Olha so a PRIMEIRA URL da pilha: e onde o erro foi lancado. Se o nosso
+ * codigo chamou algo que a extensao interceptou, a extensao aparece depois e o erro continua sendo
+ * relatado. Caso real (26/09/2026): "Cannot read properties of undefined (reading 'M_ID')" em
+ * chrome-extension://.../executors/200.js, sem nenhuma linha do site na pilha.
+ */
+export function vemDeExtensao(pilha: string | null | undefined): boolean {
+  const primeiraUrl = pilha?.match(/[a-z][a-z0-9+.-]*:\/\/[^\s)]+/i)?.[0] ?? '';
+  return /^(chrome|moz|safari-web|ms-browser)-extension:\/\//i.test(primeiraUrl);
+}
+
+/**
  * Manda pro backend os erros nao tratados do navegador (issue #29), que aparecem na aba "Erros" do
  * admin. Antes, uma excecao no navegador de um usuario era invisivel.
  *
  * Continua escrevendo no console como o ErrorHandler padrao. Com provideBrowserGlobalErrorListeners,
  * erros fora do Angular (window.onerror, promise rejeitada) tambem chegam aqui.
  *
- * Fica de fora: erro HTTP (o backend registra os proprios 500; 4xx e rede caindo nao sao bug) e
- * SSR (so roda no navegador). Tambem nao relata em modo de desenvolvimento (`ng serve`): o localhost
+ * Fica de fora: erro HTTP (o backend registra os proprios 500; 4xx e rede caindo nao sao bug),
+ * erro lancado por extensao do navegador (vemDeExtensao) e SSR (so roda no navegador). Tambem nao relata em modo de desenvolvimento (`ng serve`): o localhost
  * aponta pra API de producao, e um erro de teste local ia parar na aba Erros do admin como se fosse
  * de um usuario (aconteceu em 26/09/2026). Em dev o erro continua no console. Freios: o mesmo erro vai uma vez por pagina carregada e no maximo 10
  * relatos, pra um erro em loop nao virar enxurrada.
@@ -28,6 +40,7 @@ export class RelatorErros implements ErrorHandler {
     try {
       const real = (erro as { rejection?: unknown })?.rejection ?? erro;
       if (real instanceof HttpErrorResponse) return;
+      if (real instanceof Error && vemDeExtensao(real.stack)) return;
       const mensagem = real instanceof Error ? `${real.name}: ${real.message}` : String(real);
       if (this.enviados.has(mensagem) || this.enviados.size >= 10) return;
       this.enviados.add(mensagem);
