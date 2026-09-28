@@ -29,8 +29,12 @@
   font-size: 14px;
   // Entra subindo e aparecendo; sai mais rapido do que entrou (ver --curva-saida).
   animation: aviso-entrar var(--dur-medio) var(--curva-entrada);
+  @media (prefers-reduced-motion: reduce) { animation-name: menos-movimento-entrar; }
 
-  &.saindo { animation: aviso-sair var(--dur-medio) var(--curva-saida) forwards; }
+  &.saindo {
+    animation: aviso-sair var(--dur-medio) var(--curva-saida) forwards;
+    @media (prefers-reduced-motion: reduce) { animation-name: menos-movimento-sair; }
+  }
 }
 
 .aviso-sucesso { border-left-color: var(--color-green); .aviso-icone { background: var(--color-green); } }

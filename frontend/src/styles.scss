@@ -70,9 +70,35 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-// Sem regra de "reduzir movimento" (prefers-reduced-motion), por decisao do dono (26/09/2026): as
-// animacoes sao parte do padrao visual do site e rodam igual pra todo mundo, mesmo com "Efeitos de
-// animacao" desligado no Windows. Nao recriar essa regra nem checar matchMedia no JS sem pedido dele.
+// MENOS MOVIMENTO (prefers-reduced-motion; no Windows, "Efeitos de animacao" desligado), 28/09/2026.
+// Boa pratica de acessibilidade, nao "desligar tudo": quem liga a opcao costuma ter enjoo com coisa
+// se DESLOCANDO na tela, nao com cor ou opacidade mudando. Regra do site:
+//   - continua igual: spinner, brilho do skeleton, barra de progresso, troca de cor/brilho;
+//   - entrada com deslize (aviso, menu, aba, cascata, card) vira so fade, sem atraso em fila;
+//   - balanco, "pop" de escala e barra enchendo nao acontecem (keyframes vazios: o animationend
+//     continua disparando, entao o codigo que espera por ele segue funcionando);
+//   - o que o JS move sozinho (autoplay do banner, contagem, rolagem animada) checa
+//     prefereMenosMovimento() em services/movimento.ts.
+// COMO: em componente, um @media aninhado logo ao lado do `animation` troca o nome da animacao por
+// uma das tres abaixo. NAO redefinir o @keyframes do componente dentro de um @media: o Angular
+// renomeia os keyframes de componente (escopo), mas nao os que estao dentro de @media, e a versao
+// reduzida nunca pegaria (testado no build). Estas tres sao globais, entao nenhum escopo as renomeia.
+// Animacao nova com deslocamento ou escala precisa desse @media.
+@keyframes menos-movimento-entrar { from { opacity: 0; } }
+@keyframes menos-movimento-sair { to { opacity: 0; } }
+// "Nao faz nada" mas dura o mesmo tempo: quem espera o animationend continua recebendo.
+@keyframes menos-movimento-parado { to { visibility: visible; } }
+
+// Brilho da barra de "meta atingida" (monitored-game-card). Aqui e nao no componente: ver la.
+@keyframes meta-brilho {
+  0% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); filter: brightness(1); }
+  35% { box-shadow: 0 0 12px rgba(74, 222, 128, 0.8); filter: brightness(1.35); }
+  100% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); filter: brightness(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+}
 
 // Brilho que passa pelos blocos de carregamento (skeleton). Global porque o mesmo keyframe estava
 // copiado em 7 paginas; os componentes usam `animation: shimmer ...` e acham este aqui.
@@ -125,6 +151,15 @@ img.capa-fade {
 
 @keyframes cascata-entrar {
   from { opacity: 0; translate: 0 12px; }
+}
+
+// Menos movimento (ver o comentario no topo): menus, abas e cascata so com fade, tudo junto.
+@media (prefers-reduced-motion: reduce) {
+  @keyframes menu-entrar { from { opacity: 0; } }
+  @keyframes menu-sair { to { opacity: 0; } }
+  @keyframes aba-conteudo-entrar { from { opacity: 0; } }
+  @keyframes cascata-entrar { from { opacity: 0; } }
+  .cascata-entrar > * { animation-delay: 0s; }
 }
 
 // Barra de abas com indicador que desliza (diretiva AbasDeslizantes). A classe so e posta no

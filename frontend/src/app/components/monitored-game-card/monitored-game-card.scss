@@ -253,6 +253,8 @@
   &.reached {
     color: var(--color-green);
     animation: meta-texto-pop var(--dur-lento) var(--curva-entrada) 0.5s both;
+    // Menos movimento (ver styles.scss): aparece com fade, sem crescer.
+    @media (prefers-reduced-motion: reduce) { animation-name: menos-movimento-entrar; }
   }
 }
 
@@ -279,6 +281,9 @@
   transform-origin: left center;
   animation: meta-barra-encher 0.8s var(--curva-entrada);
   transition: width var(--dur-lento), background var(--dur-lento);
+  // Menos movimento (ver styles.scss): a barra ja aparece cheia. O brilho de meta atingida (so cor)
+  // continua: o mesmo @media no .reached abaixo so troca o primeiro nome da lista.
+  @media (prefers-reduced-motion: reduce) { animation-name: menos-movimento-parado; }
 
   &.perto { background: var(--color-yellow); }
 
@@ -286,6 +291,7 @@
   &.reached {
     background: var(--color-green);
     animation: meta-barra-encher 0.8s var(--curva-entrada), meta-brilho 1.2s ease-out 0.8s;
+    @media (prefers-reduced-motion: reduce) { animation-name: menos-movimento-parado, meta-brilho; }
   }
 }
 
@@ -294,11 +300,8 @@
   to { transform: scaleX(1); }
 }
 
-@keyframes meta-brilho {
-  0% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); filter: brightness(1); }
-  35% { box-shadow: 0 0 12px rgba(74, 222, 128, 0.8); filter: brightness(1.35); }
-  100% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); filter: brightness(1); }
-}
+// meta-brilho mora no styles.scss (global): o @media de menos movimento do .reached tambem cita
+// esse nome, e o Angular nao renomeia nome citado dentro de @media. Global, os dois batem.
 
 @keyframes meta-texto-pop {
   0% { opacity: 0; scale: 0.85; }

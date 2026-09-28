@@ -209,7 +209,10 @@
   strong { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 17px;
     &.rodando { color: var(--color-purple); } &.erro { color: var(--color-red); } &.ok { color: var(--color-green); } }
 }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-purple); animation: status-dot-pulse 1.2s ease-in-out infinite; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-purple); animation: status-dot-pulse 1.2s ease-in-out infinite;
+  // Menos movimento (ver styles.scss): ponto parado; o spinner e o texto "Rodando" mostram o estado.
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+}
 @keyframes status-dot-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
 .progresso { margin-top: 14px;
   small { display: block; margin-top: 6px; color: var(--text-muted); font-size: 11px; }

@@ -3,6 +3,7 @@ import { DealCardView } from '../../pages/home/home';
 import { resolveDlc } from '../../services/filters';
 import { PlatformBrand, storeBrand, storePlatforms } from '../../services/store-brand';
 import { trocarPorCapaPadrao } from '../../services/capa';
+import { prefereMenosMovimento } from '../../services/movimento';
 
 @Component({
   selector: 'app-deals-carousel',
@@ -97,6 +98,8 @@ export class DealsCarousel implements AfterViewInit, OnChanges, OnDestroy {
     const start = el.scrollLeft;
     const change = target - start;
     if (change === 0) return;
+    // Menos movimento: pula direto pro destino em vez de deslizar.
+    if (prefereMenosMovimento()) { el.scrollLeft = target; return; }
     const startTime = performance.now();
     const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
     const step = (now: number) => {

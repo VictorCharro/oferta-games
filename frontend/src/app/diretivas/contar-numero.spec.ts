@@ -26,6 +26,19 @@ describe('ContarNumero', () => {
     expect(el.textContent).toBe('1.234h');
   });
 
+  it('com menos movimento pedido no sistema escreve o valor final, sem contar', () => {
+    const original = globalThis.matchMedia;
+    globalThis.matchMedia = ((q: string) => ({ matches: q.includes('reduce') })) as unknown as typeof matchMedia;
+    try {
+      const { d, el } = criar({ noNavegador: true, jaPintou: true });
+      d.valor = 57;
+      d.ngOnChanges();
+      expect(el.textContent).toBe('57');
+    } finally {
+      globalThis.matchMedia = original;
+    }
+  });
+
   it('no servidor escreve o valor final', () => {
     const { d, el } = criar({ noNavegador: false, jaPintou: false });
     d.valor = 42;

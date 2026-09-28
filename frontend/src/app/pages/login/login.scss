@@ -23,8 +23,12 @@
   h1 { font-size: 24px; font-weight: 700; }
   .logo-oferta { color: var(--color-purple); }
 
-  // Erro de envio: balanca de leve pros lados.
-  &.tremer { animation: login-tremer 400ms var(--curva-saida); }
+  // Erro de envio: balanca de leve pros lados. Com menos movimento (ver styles.scss) nao balanca, mas
+  // a animacao "parada" dura o mesmo e o animationend continua tirando a classe.
+  &.tremer {
+    animation: login-tremer 400ms var(--curva-saida);
+    @media (prefers-reduced-motion: reduce) { animation-name: menos-movimento-parado; }
+  }
 }
 
 @keyframes login-tremer {

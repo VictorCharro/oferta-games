@@ -10,6 +10,7 @@ import { PreferencesService, UserPreferences } from '../../services/preferences'
 import { SeoService } from '../../services/seo';
 import { temHistoricoParaGrafico } from '../../components/price-history-chart/price-history-chart';
 import { trocarPorCapaPadrao } from '../../services/capa';
+import { prefereMenosMovimento } from '../../services/movimento';
 
 /** Piso de desconto da secao de promocoes dos mais populares e do banner. */
 const DESCONTO_MINIMO_DESTAQUE = 20;
@@ -262,6 +263,9 @@ export class Home implements OnInit, OnDestroy {
   private startAutoplay() {
     this.stopAutoplay();
     if (!this.navegador || this.featuredDeals.length <= 1) return;
+    // Menos movimento no sistema: o banner nao troca sozinho (setas, pontos e arrastar continuam).
+    // E JS, entao a regra de CSS do styles.scss nao alcanca.
+    if (prefereMenosMovimento()) return;
     this.cicloAutoplay++;
     this.autoplayTimer = setInterval(() => {
       this.featuredIndex = (this.featuredIndex + 1) % this.featuredDeals.length;
@@ -270,7 +274,7 @@ export class Home implements OnInit, OnDestroy {
     }, this.autoplayIntervalMs);
   }
 
-  /** O banner esta trocando sozinho agora (false: pausado pelo mouse ou aba oculta). */
+  /** O banner esta trocando sozinho agora (false: pausado pelo mouse, aba oculta ou menos movimento). */
   get autoplayRodando(): boolean {
     return this.autoplayTimer != null;
   }

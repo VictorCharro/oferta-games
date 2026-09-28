@@ -22,6 +22,7 @@ import { AbasDeslizantes } from '../../diretivas/abas-deslizantes';
 import { EntradaAnimada } from '../../diretivas/entrada-animada';
 import { EntradaCascata } from '../../diretivas/entrada-cascata';
 import { ContarNumero } from '../../diretivas/contar-numero';
+import { comportamentoDeRolagem } from '../../services/movimento';
 
 /** Perfil e editor; listas derivadas da biblioteca sao recalculadas apenas quando ela muda. */
 @Component({
@@ -1288,7 +1289,7 @@ export class PublicProfile implements OnInit, OnDestroy {
     if (this.editingLayout) return;
     this.librarySoPlatinados = soPlatinados;
     this.activeTab = 'biblioteca';
-    setTimeout(() => document.querySelector('.library-list-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    setTimeout(() => document.querySelector('.library-list-panel')?.scrollIntoView({ behavior: comportamentoDeRolagem(), block: 'start' }));
   }
 
   hours(minutes: number | null): string {

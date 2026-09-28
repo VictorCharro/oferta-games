@@ -71,7 +71,11 @@
   // o jogo foi (ver Sidebar.destacarMonitorados).
   &.destaque {
     animation: nav-destaque 1.1s var(--curva-entrada);
-    img.nav-icon { animation: nav-icone-salto 0.5s var(--curva-entrada); }
+    img.nav-icon {
+      animation: nav-icone-salto 0.5s var(--curva-entrada);
+      // Menos movimento (ver styles.scss): o fundo acende (cor), o icone nao pula.
+      @media (prefers-reduced-motion: reduce) { animation: none; }
+    }
   }
 
   &:hover {

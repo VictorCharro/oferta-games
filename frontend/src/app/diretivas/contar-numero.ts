@@ -1,6 +1,7 @@
 import { Directive, ElementRef, Input, OnChanges, OnDestroy, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { PrimeiraPintura } from '../services/primeira-pintura';
+import { prefereMenosMovimento } from '../services/movimento';
 
 /** Duracao da contagem. Curta de proposito: e um enfeite, o numero nao pode demorar a ser lido. */
 const DURACAO_MS = 900;
@@ -11,8 +12,8 @@ const DURACAO_MS = 900;
  * template, porque quem escreve o texto e a diretiva. null vira "--".
  *
  * <p>Conta so quando o numero nasce depois da primeira tela (ver PrimeiraPintura): no perfil que
- * chegou pronto do SSR o numero ja esta na tela e fica como esta. Tambem nao conta com a aba em
- * segundo plano (onde requestAnimationFrame nao roda e o numero ficaria
+ * chegou pronto do SSR o numero ja esta na tela e fica como esta. Tambem nao conta com menos
+ * movimento pedido no sistema nem com a aba em segundo plano (onde requestAnimationFrame nao roda e o numero ficaria
  * parado no 0). Depois da primeira vez, mudanca de valor so troca o texto.
  */
 @Directive({ selector: '[appContarNumero]', standalone: true })
@@ -31,7 +32,7 @@ export class ContarNumero implements OnChanges, OnDestroy {
     const alvo = this.valor;
     if (alvo == null) { this.el.textContent = '--'; return; }
     const podeContar = this.noNavegador && !this.jaApareceu && this.pintura.jaPintou && alvo > 0
-      && !document.hidden;
+      && !document.hidden && !prefereMenosMovimento();
     this.jaApareceu = true;
     if (!podeContar) { this.escrever(alvo); return; }
 

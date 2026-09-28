@@ -2167,8 +2167,13 @@
 // Ver GameDetail.mostrarMudancas / compararOfertas.
 .offer-row.preco-caiu { animation: oferta-destaque-verde 1.6s var(--curva-entrada); }
 .offer-row.preco-subiu { animation: oferta-destaque-vermelho 1.6s var(--curva-entrada); }
-.offer-row.oferta-nova { animation: oferta-entrar var(--dur-lento) var(--curva-entrada); }
-.price-current.preco-caiu { animation: preco-topo-caiu 1.6s var(--curva-entrada); transform-origin: left center; }
+.offer-row.oferta-nova { animation: oferta-entrar var(--dur-lento) var(--curva-entrada);
+  @media (prefers-reduced-motion: reduce) { animation-name: menos-movimento-entrar; }
+}
+// Menos movimento (ver styles.scss): o preco nao cresce. As linhas piscando em cor, acima, continuam.
+.price-current.preco-caiu { animation: preco-topo-caiu 1.6s var(--curva-entrada); transform-origin: left center;
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+}
 
 @keyframes oferta-destaque-verde {
   0%, 35% { background-color: rgba(74, 222, 128, 0.16); box-shadow: inset 3px 0 0 var(--color-green); }

@@ -49,6 +49,8 @@
 .aparecer .deal-card {
   animation: card-aparecer var(--dur-lento) var(--curva-entrada) both;
   animation-delay: calc(var(--i, 0) * 45ms);
+  // Menos movimento (ver styles.scss): so fade, todos juntos.
+  @media (prefers-reduced-motion: reduce) { animation-name: menos-movimento-entrar; animation-delay: 0s; }
 }
 
 @keyframes card-aparecer {

@@ -11,6 +11,7 @@ import { mensagemDaApi } from '../../services/mensagem-api';
 import { MinhaMensagem, NotificationsService } from '../../services/notifications';
 import { irParaLogin } from '../../services/ir-para-login';
 import { URL_API } from '../../configuracao/url-api';
+import { comportamentoDeRolagem } from '../../services/movimento';
 
 type TipoMensagem = MinhaMensagem['tipo'];
 
@@ -93,7 +94,7 @@ export class Contato implements OnInit, OnDestroy {
     for (const m of this.notificacoes.respostasNaoLidas) this.novas.add(m.id);
     await this.notificacoes.marcarRespostasLidas().catch(() => undefined);
     this.cdr.detectChanges();
-    if (rolar) setTimeout(() => document.getElementById('minhas')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    if (rolar) setTimeout(() => document.getElementById('minhas')?.scrollIntoView({ behavior: comportamentoDeRolagem(), block: 'start' }));
   }
 
   get dicaAtual(): string {

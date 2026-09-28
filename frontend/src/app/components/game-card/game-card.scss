@@ -109,11 +109,19 @@
     // clique e a resposta, e dava vontade de clicar de novo.
     &.salvando {
       .monitor-bg { opacity: 1; }
-      .monitor-icon { opacity: 1; animation: monitor-aguardando 0.9s ease-in-out infinite; }
+      .monitor-icon {
+        opacity: 1;
+        animation: monitor-aguardando 0.9s ease-in-out infinite;
+        // Menos movimento (ver styles.scss): nao pulsa em escala; o fundo visivel ja marca o estado.
+        @media (prefers-reduced-motion: reduce) { animation: none; }
+      }
     }
 
     // Confirmado: um "pop" curto. Vale pra adicionar e pra remover; o aviso e que diz qual foi.
-    &.confirmado { animation: monitor-pop var(--dur-lento) var(--curva-entrada); }
+    &.confirmado {
+      animation: monitor-pop var(--dur-lento) var(--curva-entrada);
+      @media (prefers-reduced-motion: reduce) { animation-name: menos-movimento-parado; }
+    }
   }
 }
 

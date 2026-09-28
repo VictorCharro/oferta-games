@@ -211,8 +211,8 @@
       &.active { width: 24px; background: var(--color-purple); }
     }
 
-    // Enchimento do ponto ativo. So aparece com o autoplay rodando: pausado (mouse em cima ou aba
-    // oculta) o ponto fica cheio e parado, sem prometer uma troca que nao vem.
+    // Enchimento do ponto ativo. So aparece com o autoplay rodando: pausado (mouse em cima, aba
+    // oculta, menos movimento) o ponto fica cheio e parado, sem prometer uma troca que nao vem.
     .dot-progresso {
       position: absolute;
       inset: 0;
