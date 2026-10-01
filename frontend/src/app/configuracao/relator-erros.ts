@@ -2,6 +2,7 @@ import { ErrorHandler, Injectable, PLATFORM_ID, inject, isDevMode } from '@angul
 import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { URL_API } from './url-api';
+import { ehChunkDesatualizado, recarregouHaPouco } from './versao-nova';
 
 /**
  * O erro nasceu numa extensao do navegador do visitante (tradutor, bloqueador, gerenciador de
@@ -23,7 +24,8 @@ export function vemDeExtensao(pilha: string | null | undefined): boolean {
  * erros fora do Angular (window.onerror, promise rejeitada) tambem chegam aqui.
  *
  * Fica de fora: erro HTTP (o backend registra os proprios 500; 4xx e rede caindo nao sao bug),
- * erro lancado por extensao do navegador (vemDeExtensao) e SSR (so roda no navegador). Tambem nao relata em modo de desenvolvimento (`ng serve`): o localhost
+ * erro lancado por extensao do navegador (vemDeExtensao), chunk de versao antiga que a recarga
+ * resolve (versao-nova.ts) e SSR (so roda no navegador). Tambem nao relata em modo de desenvolvimento (`ng serve`): o localhost
  * aponta pra API de producao, e um erro de teste local ia parar na aba Erros do admin como se fosse
  * de um usuario (aconteceu em 26/09/2026). Em dev o erro continua no console. Freios: o mesmo erro vai uma vez por pagina carregada e no maximo 10
  * relatos, pra um erro em loop nao virar enxurrada.
@@ -41,6 +43,9 @@ export class RelatorErros implements ErrorHandler {
       const real = (erro as { rejection?: unknown })?.rejection ?? erro;
       if (real instanceof HttpErrorResponse) return;
       if (real instanceof Error && vemDeExtensao(real.stack)) return;
+      // Chunk de versao antiga: o App ja recarrega na versao nova. So relata se o erro voltou
+      // logo depois dessa recarga, porque ai recarregar nao resolveu (ver versao-nova.ts).
+      if (ehChunkDesatualizado(real) && !recarregouHaPouco()) return;
       const mensagem = real instanceof Error ? `${real.name}: ${real.message}` : String(real);
       if (this.enviados.has(mensagem) || this.enviados.size >= 10) return;
       this.enviados.add(mensagem);
